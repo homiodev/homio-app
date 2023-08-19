@@ -1,16 +1,7 @@
 package org.homio.addon.camera.onvif.impl;
 
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LED;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
-
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
@@ -24,6 +15,12 @@ import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
+import static org.homio.addon.camera.VideoConstants.*;
 
 /**
  * responsible for handling commands, which are sent to one of the channels.
@@ -210,7 +207,7 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
 
     @Override
     public @Nullable String getMjpegUri() {
-        return "/cgi-bin/mjpg/video.cgi?channel=" + getEntity().getNvrChannel() + "&subtype=1";
+        return "/cgi-bin/mjpg/video.cgi?channel=" + nvrChannel + "&subtype=1";
     }
 
     @Override
@@ -222,7 +219,7 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
 
     @Override
     public @Nullable String getSnapshotUri() {
-        return "/cgi-bin/snapshot.cgi?channel=" + getEntity().getNvrChannel();
+        return "/cgi-bin/snapshot.cgi?channel=" + nvrChannel;
     }
 
     @Override
@@ -239,99 +236,98 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
             endIndex = content.indexOf(";", startIndex);
             String action = content.substring(startIndex, endIndex);
             switch (code) {
-                case "VideoMotion":
+                case "VideoMotion" -> {
                     if (action.equals("Start")) {
                         service.motionDetected(true, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
                     } else if (action.equals("Stop")) {
                         service.motionDetected(false, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
                     }
-                    break;
-                case "TakenAwayDetection":
+                }
+                case "TakenAwayDetection" -> {
                     if (action.equals("Start")) {
                         service.motionDetected(true, IpCameraBindingConstants.CHANNEL_ITEM_TAKEN);
                     } else if (action.equals("Stop")) {
                         service.motionDetected(false, IpCameraBindingConstants.CHANNEL_ITEM_TAKEN);
                     }
-                    break;
-                case "LeftDetection":
+                }
+                case "LeftDetection" -> {
                     if (action.equals("Start")) {
                         service.motionDetected(true, IpCameraBindingConstants.CHANNEL_ITEM_LEFT);
                     } else if (action.equals("Stop")) {
                         service.motionDetected(false, IpCameraBindingConstants.CHANNEL_ITEM_LEFT);
                     }
-                    break;
-                case "SmartMotionVehicle":
+                }
+                case "SmartMotionVehicle" -> {
                     if (action.equals("Start")) {
                         service.motionDetected(true, IpCameraBindingConstants.CHANNEL_CAR_ALARM);
                     } else if (action.equals("Stop")) {
                         service.motionDetected(false, IpCameraBindingConstants.CHANNEL_CAR_ALARM);
                     }
-                    break;
-                case "SmartMotionHuman":
+                }
+                case "SmartMotionHuman" -> {
                     if (action.equals("Start")) {
                         service.motionDetected(true, IpCameraBindingConstants.CHANNEL_HUMAN_ALARM);
                     } else if (action.equals("Stop")) {
                         service.motionDetected(false, IpCameraBindingConstants.CHANNEL_HUMAN_ALARM);
                     }
-                    break;
-                case "CrossLineDetection":
+                }
+                case "CrossLineDetection" -> {
                     if (action.equals("Start")) {
                         service.motionDetected(true, IpCameraBindingConstants.CHANNEL_LINE_CROSSING_ALARM);
                     } else if (action.equals("Stop")) {
                         service.motionDetected(false, IpCameraBindingConstants.CHANNEL_LINE_CROSSING_ALARM);
                     }
-                    break;
-                case "AudioMutation":
+                }
+                case "AudioMutation" -> {
                     if (action.equals("Start")) {
                         service.audioDetected(true);
                     } else if (action.equals("Stop")) {
                         service.audioDetected(false);
                     }
-                    break;
-                case "FaceDetection":
+                }
+                case "FaceDetection" -> {
                     if (action.equals("Start")) {
                         service.motionDetected(true, IpCameraBindingConstants.CHANNEL_FACE_DETECTED);
                     } else if (action.equals("Stop")) {
                         service.motionDetected(false, IpCameraBindingConstants.CHANNEL_FACE_DETECTED);
                     }
-                    break;
-                case "ParkingDetection":
+                }
+                case "ParkingDetection" -> {
                     if (action.equals("Start")) {
                         setAttribute(IpCameraBindingConstants.CHANNEL_PARKING_ALARM, OnOffType.ON);
                     } else if (action.equals("Stop")) {
                         setAttribute(IpCameraBindingConstants.CHANNEL_PARKING_ALARM, OnOffType.OFF);
                     }
-                    break;
-                case "CrossRegionDetection":
+                }
+                case "CrossRegionDetection" -> {
                     if (action.equals("Start")) {
                         service.motionDetected(true, IpCameraBindingConstants.CHANNEL_FIELD_DETECTION_ALARM);
                     } else if (action.equals("Stop")) {
                         service.motionDetected(false, IpCameraBindingConstants.CHANNEL_FIELD_DETECTION_ALARM);
                     }
-                    break;
-                case "VideoLoss":
-                case "VideoBlind":
+                }
+                case "VideoLoss", "VideoBlind" -> {
                     if (action.equals("Start")) {
                         setAttribute(IpCameraBindingConstants.CHANNEL_TOO_DARK_ALARM, OnOffType.ON);
                     } else if (action.equals("Stop")) {
                         setAttribute(IpCameraBindingConstants.CHANNEL_TOO_DARK_ALARM, OnOffType.OFF);
                     }
-                    break;
-                case "VideoAbnormalDetection":
+                }
+                case "VideoAbnormalDetection" -> {
                     if (action.equals("Start")) {
                         setAttribute(IpCameraBindingConstants.CHANNEL_SCENE_CHANGE_ALARM, OnOffType.ON);
                     } else if (action.equals("Stop")) {
                         setAttribute(IpCameraBindingConstants.CHANNEL_SCENE_CHANGE_ALARM, OnOffType.OFF);
                     }
-                    break;
-                case "VideoUnFocus":
+                }
+                case "VideoUnFocus" -> {
                     if (action.equals("Start")) {
                         setAttribute(IpCameraBindingConstants.CHANNEL_TOO_BLURRY_ALARM, OnOffType.ON);
                     } else if (action.equals("Stop")) {
                         setAttribute(IpCameraBindingConstants.CHANNEL_TOO_BLURRY_ALARM, OnOffType.OFF);
                     }
-                    break;
-                case "AlarmLocal":
+                }
+                case "AlarmLocal" -> {
                     if (action.equals("Start")) {
                         if (content.contains("index=0")) {
                             setAttribute(IpCameraBindingConstants.CHANNEL_EXTERNAL_ALARM_INPUT, OnOffType.ON);
@@ -345,25 +341,13 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
                             setAttribute(IpCameraBindingConstants.CHANNEL_EXTERNAL_ALARM_INPUT2, OnOffType.OFF);
                         }
                     }
-                    break;
-                case "LensMaskOpen":
-                    setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_PRIVACY_MODE, OnOffType.ON);
-                    break;
-                case "LensMaskClose":
-                    setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_PRIVACY_MODE, OnOffType.OFF);
-                    break;
-                case "TimeChange":
-                case "NTPAdjustTime":
-                case "StorageChange":
-                case "Reboot":
-                case "NewFile":
-                case "VideoMotionInfo":
-                case "RtspSessionDisconnect":
-                case "LeFunctionStatusSync":
-                case "RecordDelete":
-                    break;
-                default:
-                    log.debug("[{}]: Unrecognised Dahua event, Code={}, action={}", entityID, code, action);
+                }
+                case "LensMaskOpen" -> setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_PRIVACY_MODE, OnOffType.ON);
+                case "LensMaskClose" ->
+                        setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_PRIVACY_MODE, OnOffType.OFF);
+                case "TimeChange", "NTPAdjustTime", "StorageChange", "Reboot", "NewFile", "VideoMotionInfo", "RtspSessionDisconnect", "LeFunctionStatusSync", "RecordDelete" -> {
+                }
+                default -> log.debug("[{}]: Unrecognised Dahua event, Code={}, action={}", entityID, code, action);
             }
         } catch (IndexOutOfBoundsException e) {
             log.debug("[{}]: IndexOutOfBoundsException on Dahua event. Content was:{}", entityID, content);

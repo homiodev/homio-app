@@ -1,42 +1,11 @@
 package org.homio.app.utils;
 
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toSet;
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.homio.app.utils.UIFieldUtils.buildDynamicParameterMetadata;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import java.lang.annotation.Annotation;
-import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import lombok.SneakyThrows;
+import lombok.*;
 import lombok.extern.log4j.Log4j2;
-import lombok.val;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.api.EntityContext;
@@ -50,18 +19,7 @@ import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.OptionModel;
 import org.homio.api.ui.action.DynamicOptionLoader;
 import org.homio.api.ui.field.UIFieldType;
-import org.homio.api.ui.field.selection.UIFieldBeanListSelection;
-import org.homio.api.ui.field.selection.UIFieldBeanSelection;
-import org.homio.api.ui.field.selection.UIFieldClassSelection;
-import org.homio.api.ui.field.selection.UIFieldDevicePortSelection;
-import org.homio.api.ui.field.selection.UIFieldEmptySelection;
-import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
-import org.homio.api.ui.field.selection.UIFieldEntityTypeSelection;
-import org.homio.api.ui.field.selection.UIFieldSelection;
-import org.homio.api.ui.field.selection.UIFieldSelectionCondition;
-import org.homio.api.ui.field.selection.UIFieldSelectionParent;
-import org.homio.api.ui.field.selection.UIFieldStaticSelection;
-import org.homio.api.ui.field.selection.UIFieldTreeNodeSelection;
+import org.homio.api.ui.field.selection.*;
 import org.homio.api.ui.field.selection.dynamic.DynamicParameterFields;
 import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
 import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields.RequestDynamicParameter;
@@ -72,6 +30,23 @@ import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.impl.EntityContextServiceImpl;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.jetbrains.annotations.NotNull;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toSet;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.homio.app.utils.UIFieldUtils.buildDynamicParameterMetadata;
 
 @Log4j2
 public final class UIFieldSelectionUtil {

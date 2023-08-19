@@ -1,8 +1,5 @@
 package org.homio.addon.camera.service;
 
-import java.util.Set;
-import java.util.function.Consumer;
-
 import lombok.Setter;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.api.model.ActionResponseModel;
@@ -14,6 +11,9 @@ import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Set;
+import java.util.function.Consumer;
 
 public class VideoDeviceEndpoint extends BaseDeviceEndpoint<BaseVideoEntity> {
 

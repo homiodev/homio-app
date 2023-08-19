@@ -1,12 +1,12 @@
 package org.homio.app.console;
 
-import static org.homio.app.model.entity.user.UserBaseEntity.FILE_MANAGER_RESOURCE;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
 import org.springframework.stereotype.Component;
+
+import static org.homio.app.model.entity.user.UserBaseEntity.FILE_MANAGER_RESOURCE;
 
 @Component
 @RequiredArgsConstructor

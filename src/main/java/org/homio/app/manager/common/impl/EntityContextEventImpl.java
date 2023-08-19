@@ -1,29 +1,8 @@
 package org.homio.app.manager.common.impl;
 
-import static java.util.Collections.emptyMap;
-import static org.apache.xmlbeans.XmlBeans.getTitle;
-
 import com.pivovarit.function.ThrowingBiConsumer;
 import com.pivovarit.function.ThrowingRunnable;
 import jakarta.persistence.EntityManagerFactory;
-
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -36,11 +15,7 @@ import org.hibernate.event.internal.PostDeleteEventListenerStandardImpl;
 import org.hibernate.event.internal.PostInsertEventListenerStandardImpl;
 import org.hibernate.event.internal.PostUpdateEventListenerStandardImpl;
 import org.hibernate.event.service.spi.EventListenerRegistry;
-import org.hibernate.event.spi.EventSource;
-import org.hibernate.event.spi.EventType;
-import org.hibernate.event.spi.PostDeleteEvent;
-import org.hibernate.event.spi.PostInsertEvent;
-import org.hibernate.event.spi.PostUpdateEvent;
+import org.hibernate.event.spi.*;
 import org.hibernate.internal.SessionFactoryImpl;
 import org.homio.api.EntityContextBGP;
 import org.homio.api.EntityContextEvent;
@@ -59,6 +34,19 @@ import org.homio.app.manager.common.EntityContextImpl.ItemAction;
 import org.homio.app.service.mem.InMemoryDB;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
+import java.util.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+
+import static java.util.Collections.emptyMap;
+import static org.apache.xmlbeans.XmlBeans.getTitle;
 
 @Log4j2
 public class EntityContextEventImpl implements EntityContextEvent {

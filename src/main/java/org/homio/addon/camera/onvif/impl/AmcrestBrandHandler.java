@@ -1,17 +1,8 @@
 package org.homio.addon.camera.onvif.impl;
 
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LED;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
-
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
@@ -25,6 +16,12 @@ import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
+import static org.homio.addon.camera.VideoConstants.*;
 
 /**
  * responsible for handling commands, which are sent to one of the channels.
@@ -224,7 +221,7 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
 
     @Override
     public @Nullable String getMjpegUri() {
-        return "/cgi-bin/mjpg/video.cgi?channel=" + getEntity().getNvrChannel() + "&subtype=1";
+        return "/cgi-bin/mjpg/video.cgi?channel=" + nvrChannel + "&subtype=1";
     }
 
     @Override
@@ -237,7 +234,7 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
 
     @Override
     public @Nullable String getSnapshotUri() {
-        return "/cgi-bin/snapshot.cgi?channel=" + getEntity().getNvrChannel();
+        return "/cgi-bin/snapshot.cgi?channel=" + nvrChannel;
     }
 
     @Override

@@ -1,27 +1,6 @@
 package org.homio.app.manager.common.impl;
 
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.apache.commons.lang3.StringUtils.trimToEmpty;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-
 import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -29,11 +8,7 @@ import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContextUI;
 import org.homio.api.console.ConsolePlugin;
-import org.homio.api.entity.BaseEntity;
-import org.homio.api.entity.BaseEntityIdentifier;
-import org.homio.api.entity.HasFirmwareVersion;
-import org.homio.api.entity.HasStatusAndMsg;
-import org.homio.api.entity.UserEntity;
+import org.homio.api.entity.*;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.exception.ProhibitedExecution;
 import org.homio.api.model.ActionResponseModel;
@@ -66,6 +41,20 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.trimToEmpty;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 @Log4j2
 @RequiredArgsConstructor

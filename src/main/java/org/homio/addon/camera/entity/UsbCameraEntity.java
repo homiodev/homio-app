@@ -1,13 +1,6 @@
 package org.homio.addon.camera.entity;
 
-import static java.lang.String.join;
-
 import jakarta.persistence.Entity;
-
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.service.UsbCameraService;
 import org.homio.api.EntityContext;
@@ -24,6 +17,12 @@ import org.homio.api.ui.field.selection.UIFieldSelection;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+
+import static java.lang.String.join;
 
 @SuppressWarnings("unused")
 @Entity

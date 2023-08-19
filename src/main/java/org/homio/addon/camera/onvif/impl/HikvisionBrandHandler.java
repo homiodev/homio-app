@@ -96,7 +96,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
             } else {
                 String replyElement = Helper.fetchXML(content, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>", "<");
                 switch (replyElement) {
-                    case "MotionDetection version=":
+                    case "MotionDetection version=" -> {
                         service.storeHttpReply(
                                 "/ISAPI/System/Video/inputs/channels/" + nvrChannel + "01/motionDetection", content);
                         if (content.contains("<enabled>true</enabled>")) {
@@ -104,8 +104,8 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
                         } else if (content.contains("<enabled>false</enabled>")) {
                             setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, OnOffType.OFF);
                         }
-                        break;
-                    case "IOInputPort version=":
+                    }
+                    case "IOInputPort version=" -> {
                         service.storeHttpReply("/ISAPI/System/IO/inputs/" + nvrChannel, content);
                         if (content.contains("<enabled>true</enabled>")) {
                             setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_EXTERNAL_ALARM_INPUT, OnOffType.ON);
@@ -117,22 +117,22 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
                         } else if (content.contains("<triggering>high</triggering>")) {
                             setAttribute(IpCameraBindingConstants.CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT, OnOffType.ON);
                         }
-                        break;
-                    case "LineDetection":
+                    }
+                    case "LineDetection" -> {
                         service.storeHttpReply("/ISAPI/Smart/LineDetection/" + nvrChannel + "01", content);
                         if (content.contains("<enabled>true</enabled>")) {
                             setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_LINE_CROSSING_ALARM, OnOffType.ON);
                         } else if (content.contains("<enabled>false</enabled>")) {
                             setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_LINE_CROSSING_ALARM, OnOffType.OFF);
                         }
-                        break;
-                    case "TextOverlay version=":
+                    }
+                    case "TextOverlay version=" -> {
                         service.storeHttpReply(
                                 "/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1", content);
                         String text = Helper.fetchXML(content, "<enabled>true</enabled>", "<displayText>");
                         setAttribute(IpCameraBindingConstants.CHANNEL_TEXT_OVERLAY, new StringType(text));
-                        break;
-                    case "AudioDetection version=":
+                    }
+                    case "AudioDetection version=" -> {
                         service.storeHttpReply("/ISAPI/Smart/AudioDetection/channels/" + nvrChannel + "01",
                                 content);
                         if (content.contains("<enabled>true</enabled>")) {
@@ -140,23 +140,23 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
                         } else if (content.contains("<enabled>false</enabled>")) {
                             setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_AUDIO_ALARM, OnOffType.OFF);
                         }
-                        break;
-                    case "IOPortStatus version=":
+                    }
+                    case "IOPortStatus version=" -> {
                         if (content.contains("<ioState>active</ioState>")) {
                             setAttribute(IpCameraBindingConstants.CHANNEL_EXTERNAL_ALARM_INPUT, OnOffType.ON);
                         } else if (content.contains("<ioState>inactive</ioState>")) {
                             setAttribute(IpCameraBindingConstants.CHANNEL_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
                         }
-                        break;
-                    case "FieldDetection version=":
+                    }
+                    case "FieldDetection version=" -> {
                         service.storeHttpReply("/ISAPI/Smart/FieldDetection/" + nvrChannel + "01", content);
                         if (content.contains("<enabled>true</enabled>")) {
                             setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_FIELD_DETECTION_ALARM, OnOffType.ON);
                         } else if (content.contains("<enabled>false</enabled>")) {
                             setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_FIELD_DETECTION_ALARM, OnOffType.OFF);
                         }
-                        break;
-                    case "ResponseStatus version=":
+                    }
+                    case "ResponseStatus version=" -> {
                         ////////////////// External Alarm Input ///////////////
                         if (content.contains("<requestURL>/ISAPI/System/IO/inputs/" + nvrChannel + "/status</requestURL>")) {
                             // Stops checking the external alarm if camera does not have feature.
@@ -164,8 +164,8 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
                                 log.debug("[{}]: Stopping checks for alarm inputs as camera appears to be missing this feature.", entityID);
                             }
                         }
-                        break;
-                    default:
+                    }
+                    default -> {
                         if (content.contains("<EventNotificationAlert")) {
                             if (content.contains("hannelID>" + nvrChannel + "</")
                                     || content.contains("<channelID>0</channelID>")) {// some camera use c or
@@ -183,7 +183,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
                         } else {
                             log.debug("[{}]: Unhandled reply-{}.", entityID, content);
                         }
-                        break;
+                    }
                 }
             }
         } finally {
@@ -372,18 +372,18 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
 
     @Override
     public @Nullable String getSnapshotUri() {
-        return "/ISAPI/Streaming/channels/" + getEntity().getNvrChannel() + "01" + "/picture";
+        return "/ISAPI/Streaming/channels/" + nvrChannel + "01" + "/picture";
     }
 
     @Override
     public @Nullable String getMjpegUri() {
-        return "/ISAPI/Streaming/channels/" + getEntity().getNvrChannel() + "02" + "/httppreview";
+        return "/ISAPI/Streaming/channels/" + nvrChannel + "02" + "/httppreview";
     }
 
     @Override
     public void postInitializeCamera(EntityContext entityContext) {
         if (service.lowPriorityRequests.isEmpty()) {
-            service.lowPriorityRequests.add("/ISAPI/System/IO/inputs/" + getEntity().getNvrChannel() + "/status");
+            service.addLowRequestGet("/ISAPI/System/IO/inputs/" + nvrChannel + "/status");
         }
     }
 

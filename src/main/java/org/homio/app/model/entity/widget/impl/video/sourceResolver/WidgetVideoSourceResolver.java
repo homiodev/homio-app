@@ -1,11 +1,11 @@
 package org.homio.app.model.entity.widget.impl.video.sourceResolver;
 
-import java.util.Collection;
-
 import lombok.Getter;
 import lombok.Setter;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
+
+import java.util.Collection;
 
 public interface WidgetVideoSourceResolver {
 

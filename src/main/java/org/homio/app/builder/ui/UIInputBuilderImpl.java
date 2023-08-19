@@ -1,11 +1,5 @@
 package org.homio.app.builder.ui;
 
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.EntityContext;
@@ -21,6 +15,12 @@ import org.homio.api.ui.field.action.v1.layout.dialog.UIDialogLayoutBuilder;
 import org.homio.app.builder.ui.layout.UIDialogLayoutBuilderImpl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("rawtypes")
 @Getter

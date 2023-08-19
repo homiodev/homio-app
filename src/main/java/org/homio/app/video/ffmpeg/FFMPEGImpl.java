@@ -1,18 +1,5 @@
 package org.homio.app.video.ffmpeg;
 
-import static org.homio.api.EntityContextMedia.CHANNEL_FFMPEG_MOTION_ALARM;
-import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
-
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import lombok.Getter;
 import org.apache.logging.log4j.Logger;
 import org.homio.api.EntityContextMedia.FFMPEG;
@@ -21,6 +8,14 @@ import org.homio.api.EntityContextMedia.FFMPEGHandler;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.*;
+
+import static org.homio.api.EntityContextMedia.CHANNEL_FFMPEG_MOTION_ALARM;
+import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
 
 /**
  * Responsible for handling multiple ffmpeg conversions which are used for many tasks

@@ -2,16 +2,12 @@ package org.homio.app.model.entity.widget.impl.chart;
 
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.*;
 
 public interface HasHorizontalLine extends HasJsonData {
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "CHART_HL", order = 59, borderColor = "#953CEE")
+    @UIFieldGroup(order = 59, value = "CHART_HL", borderColor = "#953CEE")
     @UIFieldSlider(min = -1, max = 100)
     default Integer getSingleLinePos() {
         return getJsonData("slpos", -1);

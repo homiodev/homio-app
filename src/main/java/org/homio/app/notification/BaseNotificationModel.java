@@ -1,14 +1,14 @@
 package org.homio.app.notification;
 
-import static org.apache.commons.lang3.StringUtils.defaultString;
-
-import java.util.Date;
-import java.util.Objects;
-
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Date;
+import java.util.Objects;
+
+import static org.apache.commons.lang3.StringUtils.defaultString;
 
 @Getter
 @Setter

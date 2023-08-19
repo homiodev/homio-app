@@ -1,37 +1,16 @@
 package org.homio.app.ssh;
 
-import static com.sshtools.common.publickey.SshKeyPairGenerator.ECDSA;
-import static com.sshtools.common.publickey.SshKeyPairGenerator.ED25519;
-import static com.sshtools.common.publickey.SshKeyPairGenerator.SSH2_RSA;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.apache.commons.lang3.StringUtils.trimToNull;
-import static org.homio.api.ui.field.action.UIActionInput.Type.select;
-import static org.homio.api.ui.field.action.UIActionInput.Type.text;
-import static org.homio.api.ui.field.action.UIActionInput.Type.textarea;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.sshtools.client.SshClient;
-import com.sshtools.common.publickey.SshKeyPairGenerator;
-import com.sshtools.common.publickey.SshKeyUtils;
-import com.sshtools.common.publickey.SshPrivateKeyFile;
-import com.sshtools.common.publickey.SshPrivateKeyFileFactory;
-import com.sshtools.common.publickey.SshPublicKeyFile;
-import com.sshtools.common.publickey.SshPublicKeyFileFactory;
+import com.sshtools.common.publickey.*;
 import com.sshtools.common.ssh.components.SshKeyPair;
 import jakarta.persistence.Entity;
-
-import java.util.Objects;
-
 import lombok.SneakyThrows;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.types.IdentityEntity;
-import org.homio.api.model.ActionResponseModel;
-import org.homio.api.model.FileContentType;
-import org.homio.api.model.FileModel;
-import org.homio.api.model.Icon;
-import org.homio.api.model.OptionModel;
+import org.homio.api.model.*;
 import org.homio.api.service.EntityService;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
@@ -46,6 +25,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 
+import java.util.Objects;
+
+import static com.sshtools.common.publickey.SshKeyPairGenerator.*;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.trimToNull;
+import static org.homio.api.ui.field.action.UIActionInput.Type.*;
+
 @Entity
 @SuppressWarnings("unused")
 @UISidebarChildren(icon = "fas fa-terminal", color = "#0088CC")
@@ -59,7 +45,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @UIField(order = 1, inlineEditWhenEmpty = true, required = true)
-    @UIFieldGroup(value = "GENERAL", order = 1)
+    @UIFieldGroup(order = 1, value = "GENERAL")
     public String getHost() {
         return getJsonData("host");
     }
@@ -166,7 +152,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "FS", order = 20, borderColor = "#914991")
+    @UIFieldGroup(order = 20, value = "FS", borderColor = "#914991")
     public @NotNull String getFileSystemRoot() {
         return Objects.requireNonNull(getJsonData("fs_root", "/home"));
     }

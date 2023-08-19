@@ -1,11 +1,5 @@
 package org.homio.app.setting.console;
 
-import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
-
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
@@ -15,6 +9,12 @@ import org.homio.api.setting.console.ConsoleSettingPlugin;
 import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
 
 public class ConsoleVisibleTabsSetting
         implements ConsoleSettingPlugin<String>, SettingPluginOptions<String> {

@@ -1,11 +1,11 @@
 package org.homio.app.model.entity.widget.impl.video.sourceResolver;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
-
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 import org.homio.app.rest.MediaController;
 import org.springframework.stereotype.Component;
+
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 @Component
 public class URLWidgetVideoSourceResolver implements WidgetVideoSourceResolver {

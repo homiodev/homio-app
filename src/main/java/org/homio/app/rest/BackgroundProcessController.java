@@ -1,17 +1,13 @@
 package org.homio.app.rest;
 
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.app.json.BgpProcessResponse;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 @Log4j2
 @RestController

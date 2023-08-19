@@ -1,17 +1,17 @@
 package org.homio.addon.camera.service.util;
 
-import static org.apache.commons.lang3.StringUtils.defaultString;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.SneakyThrows;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.SneakyThrows;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import static org.apache.commons.lang3.StringUtils.defaultString;
 
 @Getter
 @Setter

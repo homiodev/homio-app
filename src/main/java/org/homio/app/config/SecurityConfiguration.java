@@ -1,8 +1,5 @@
 package org.homio.app.config;
 
-import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
-import static org.homio.app.config.WebSocketConfig.WEB_SOCKET_ENDPOINT;
-
 import jakarta.servlet.DispatcherType;
 import lombok.AllArgsConstructor;
 import lombok.val;
@@ -27,6 +24,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.validation.beanvalidation.MethodValidationPostProcessor;
+
+import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
+import static org.homio.app.config.WebSocketConfig.WEB_SOCKET_ENDPOINT;
 
 @Configuration
 @EnableWebSecurity

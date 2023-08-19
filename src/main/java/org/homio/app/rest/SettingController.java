@@ -1,21 +1,5 @@
 package org.homio.app.rest;
 
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
-import static org.homio.app.model.entity.SettingEntity.getKey;
-import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;
-import static org.springframework.util.MimeTypeUtils.APPLICATION_JSON_VALUE;
-
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
@@ -24,11 +8,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.OptionModel;
-import org.homio.api.setting.SettingPlugin;
-import org.homio.api.setting.SettingPluginOptions;
-import org.homio.api.setting.SettingPluginOptionsRemovable;
-import org.homio.api.setting.SettingPluginPackageInstall;
-import org.homio.api.setting.SettingType;
+import org.homio.api.setting.*;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
 import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
 import org.homio.api.util.Lang;
@@ -41,14 +21,15 @@ import org.homio.app.repository.SettingRepository;
 import org.homio.app.spring.ContextRefreshed;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+import static org.homio.app.model.entity.SettingEntity.getKey;
+import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;
+import static org.springframework.util.MimeTypeUtils.APPLICATION_JSON_VALUE;
 
 @RestController
 @RequestMapping(value = "/rest/setting", produces = APPLICATION_JSON_VALUE)

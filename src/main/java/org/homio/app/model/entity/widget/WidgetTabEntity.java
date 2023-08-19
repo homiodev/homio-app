@@ -1,14 +1,7 @@
 package org.homio.app.model.entity.widget;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.OneToMany;
-
-import java.util.Set;
-
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.homio.api.EntityContext;
@@ -21,6 +14,8 @@ import org.homio.api.model.JSON;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Set;
 
 @Getter
 @Setter

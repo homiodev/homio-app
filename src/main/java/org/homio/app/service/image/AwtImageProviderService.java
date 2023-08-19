@@ -2,24 +2,20 @@ package org.homio.app.service.image;
 
 import com.pivovarit.function.ThrowingBiFunction;
 import com.pivovarit.function.ThrowingFunction;
+import lombok.SneakyThrows;
+import org.apache.commons.lang3.tuple.Pair;
+import org.homio.api.model.StylePosition;
+import org.homio.api.service.ImageProviderService;
+import org.springframework.stereotype.Service;
 
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
+import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import javax.imageio.ImageIO;
-
-import lombok.SneakyThrows;
-import org.apache.commons.lang3.tuple.Pair;
-import org.homio.api.model.StylePosition;
-import org.homio.api.service.ImageProviderService;
-import org.springframework.stereotype.Service;
 
 @Service
 public class AwtImageProviderService implements ImageProviderService {

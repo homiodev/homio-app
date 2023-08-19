@@ -1,7 +1,5 @@
 package org.homio.app.auth;
 
-import java.util.Set;
-
 import lombok.RequiredArgsConstructor;
 import org.homio.app.model.entity.user.UserBaseEntity;
 import org.homio.app.repository.device.AllDeviceRepository;
@@ -10,6 +8,8 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
+
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor

@@ -1,5 +1,7 @@
 package org.homio.addon.camera.service.util;
 
+import lombok.SneakyThrows;
+
 import java.io.InputStream;
 import java.net.Authenticator;
 import java.net.PasswordAuthentication;
@@ -12,8 +14,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-
-import lombok.SneakyThrows;
 
 public class VideoUtils {
 

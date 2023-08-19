@@ -2,12 +2,7 @@ package org.homio.app.model.entity.widget.impl.fm;
 
 import jakarta.persistence.Entity;
 import org.homio.api.model.ActionResponseModel;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.api.ui.field.UIFieldSlider;
-import org.homio.api.ui.field.UIFieldTableLayout;
+import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;

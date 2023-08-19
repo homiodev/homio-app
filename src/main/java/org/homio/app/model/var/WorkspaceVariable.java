@@ -1,26 +1,7 @@
 package org.homio.app.model.var;
 
-import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.apache.commons.lang3.StringUtils.defaultString;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.ManyToOne;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.function.Consumer;
-
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -59,6 +40,12 @@ import org.homio.app.repository.VariableBackupRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
+
+import java.util.*;
+import java.util.function.Consumer;
+
+import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.*;
 
 @Entity
 @Setter
@@ -101,7 +88,7 @@ public class WorkspaceVariable extends BaseEntity
      * Is it possible to write to variable from UI
      */
     @UIField(order = 25, hideInEdit = true)
-    @UIFieldGroup(order = 10, value = "QUOTA")
+    @UIFieldGroup("QUOTA")
     @UIFieldInlineEntityWidth(15)
     private boolean readOnly = false;
 

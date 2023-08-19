@@ -1,16 +1,6 @@
 package org.homio.addon.camera.entity.storage;
 
-import static org.homio.api.EntityContextMedia.FFMPEGFormat.RECORD;
-
 import jakarta.persistence.Entity;
-
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.BaseVideoEntity;
@@ -27,6 +17,15 @@ import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.homio.api.EntityContextMedia.FFMPEGFormat.RECORD;
 
 @Log4j2
 @Entity

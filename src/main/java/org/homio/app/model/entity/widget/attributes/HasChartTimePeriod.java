@@ -1,10 +1,5 @@
 package org.homio.app.model.entity.widget.attributes;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.homio.api.entity.HasJsonData;
@@ -17,6 +12,11 @@ import org.homio.app.model.entity.widget.UIFieldFunction;
 import org.homio.app.model.entity.widget.UIFieldTimeSlider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public interface HasChartTimePeriod extends HasJsonData {
 

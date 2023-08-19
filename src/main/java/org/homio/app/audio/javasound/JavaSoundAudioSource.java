@@ -1,17 +1,17 @@
 package org.homio.app.audio.javasound;
 
-import java.util.Collections;
-import java.util.Set;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.DataLine;
-import javax.sound.sampled.TargetDataLine;
-
 import org.homio.api.audio.AudioFormat;
 import org.homio.api.audio.AudioSource;
 import org.homio.api.audio.AudioStream;
 import org.homio.api.audio.stream.JavaSoundInputStream;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
+
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.TargetDataLine;
+import java.util.Collections;
+import java.util.Set;
 
 @Component
 public class JavaSoundAudioSource implements AudioSource {

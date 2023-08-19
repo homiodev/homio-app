@@ -1,11 +1,5 @@
 package org.homio.app.workspace.block.core;
 
-import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
-import java.util.function.Function;
-
 import lombok.Getter;
 import org.homio.api.EntityContext;
 import org.homio.api.state.DecimalType;
@@ -13,6 +7,12 @@ import org.homio.api.state.OnOffType;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.springframework.stereotype.Component;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
+import java.util.function.Function;
 
 @Getter
 @Component

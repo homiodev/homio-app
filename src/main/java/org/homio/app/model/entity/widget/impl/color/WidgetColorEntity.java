@@ -1,27 +1,13 @@
 package org.homio.app.model.entity.widget.impl.color;
 
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldIgnore;
-import org.homio.api.ui.field.UIFieldKeyValue;
+import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.UIFieldKeyValue.KeyValueType;
-import org.homio.api.ui.field.UIFieldLayout;
 import org.homio.api.ui.field.UIFieldLayout.HorizontalAlign;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.api.ui.field.UIFieldSlider;
-import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.selection.UIFieldBeanSelection;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
@@ -34,6 +20,11 @@ import org.homio.app.model.entity.widget.attributes.HasName;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+
 @Entity
 public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
         implements
@@ -44,7 +35,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
         HasDynamicParameterFields {
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "NAME", order = 3)
+    @UIFieldGroup(order = 3, value = "NAME")
     @UIFieldOptionFontSize
     public String getName() {
         return super.getName();
@@ -91,7 +82,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     @UIField(order = 1)
     @UIFieldKeyValue(maxSize = 20, keyType = UIFieldType.String, valueType = UIFieldType.ColorPicker,
             defaultKey = "0", showKey = false, defaultValue = "#FFFFFF", keyValueType = KeyValueType.array)
-    @UIFieldGroup(value = "COLORS", order = 10)
+    @UIFieldGroup(order = 10, value = "COLORS")
     public String getColors() {
         return getJsonData("colors");
     }

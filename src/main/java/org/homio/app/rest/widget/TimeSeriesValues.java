@@ -1,9 +1,9 @@
 package org.homio.app.rest.widget;
 
-import java.util.Set;
-
 import lombok.Getter;
 import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
+
+import java.util.Set;
 
 @Getter
 public class TimeSeriesValues<T extends HasChartDataSource> {

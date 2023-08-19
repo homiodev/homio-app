@@ -1,17 +1,17 @@
 package org.homio.app.setting.console.ssh;
 
-import static java.lang.String.format;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 import org.homio.api.EntityContext;
 import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPluginOptions;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
+import static java.lang.String.format;
 
 public class ConsoleSshFontFamilySetting
         implements ConsoleSettingPlugin<String>, SettingPluginOptions<String> {

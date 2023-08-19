@@ -1,10 +1,6 @@
 package org.homio.app.workspace.block.core;
 
 import com.jayway.jsonpath.JsonPath;
-
-import java.util.HashMap;
-import java.util.Map;
-
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
@@ -20,6 +16,9 @@ import org.homio.app.model.CompileScriptContext;
 import org.homio.app.model.entity.ScriptEntity;
 import org.homio.app.workspace.WorkspaceBlockImpl;
 import org.springframework.stereotype.Component;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Getter
 @Component

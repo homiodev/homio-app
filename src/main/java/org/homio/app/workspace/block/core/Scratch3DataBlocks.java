@@ -1,8 +1,5 @@
 package org.homio.app.workspace.block.core;
 
-import java.text.NumberFormat;
-import java.util.function.BiFunction;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -13,6 +10,9 @@ import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.workspace.WorkspaceBlockImpl;
 import org.springframework.stereotype.Component;
+
+import java.text.NumberFormat;
+import java.util.function.BiFunction;
 
 @Getter
 @Component

@@ -71,7 +71,7 @@ public class SshCloudEntity extends IdentityEntity implements
     }
 
     @UIField(order = 1, hideInEdit = true, disableEdit = true)
-    @UIFieldGroup(value = "SSH", order = 5)
+    @UIFieldGroup(order = 5, value = "SSH")
     public boolean isPrimary() {
         return getJsonData("primary", false);
     }

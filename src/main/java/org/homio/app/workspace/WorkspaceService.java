@@ -1,20 +1,6 @@
 package org.homio.app.workspace;
 
 import com.pivovarit.function.ThrowingRunnable;
-
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Consumer;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -40,14 +26,15 @@ import org.homio.app.repository.device.WorkspaceRepository;
 import org.homio.app.setting.workspace.WorkspaceClearButtonSetting;
 import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.workspace.block.Scratch3Space;
-import org.homio.app.workspace.block.core.Scratch3ControlBlocks;
-import org.homio.app.workspace.block.core.Scratch3DataBlocks;
-import org.homio.app.workspace.block.core.Scratch3EventsBlocks;
-import org.homio.app.workspace.block.core.Scratch3MiscBlocks;
-import org.homio.app.workspace.block.core.Scratch3MutatorBlocks;
-import org.homio.app.workspace.block.core.Scratch3OperatorBlocks;
+import org.homio.app.workspace.block.core.*;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
+
+import java.time.Duration;
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Log4j2
 @Component

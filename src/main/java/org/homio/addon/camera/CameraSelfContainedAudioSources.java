@@ -1,8 +1,5 @@
 package org.homio.addon.camera;
 
-import java.util.ArrayList;
-import java.util.Collection;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.BaseVideoEntity;
@@ -13,6 +10,9 @@ import org.homio.api.audio.SelfContainedAudioSourceContainer;
 import org.homio.api.model.OptionModel;
 import org.onvif.ver10.schema.AudioSource;
 import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.Collection;
 
 @Log4j2
 @Component

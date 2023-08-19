@@ -1,13 +1,6 @@
 package org.homio.addon.camera.workspace;
 
-import static org.homio.api.EntityContextMedia.FFMPEGFormat.RTSP_ALARMS;
-import static org.homio.api.util.CommonUtils.addToListSafe;
-
 import com.pivovarit.function.ThrowingBiConsumer;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -20,6 +13,12 @@ import org.homio.api.state.DecimalType;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.homio.api.EntityContextMedia.FFMPEGFormat.RTSP_ALARMS;
+import static org.homio.api.util.CommonUtils.addToListSafe;
 
 @Log4j2
 @Getter

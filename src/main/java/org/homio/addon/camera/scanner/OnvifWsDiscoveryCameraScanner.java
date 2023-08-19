@@ -1,10 +1,5 @@
 package org.homio.addon.camera.scanner;
 
-import java.net.UnknownHostException;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.onvif.OnvifDiscovery;
@@ -14,6 +9,11 @@ import org.homio.api.service.scan.VideoStreamScanner;
 import org.homio.api.util.Lang;
 import org.homio.hquery.ProgressBar;
 import org.springframework.stereotype.Component;
+
+import java.net.UnknownHostException;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Log4j2
 @Component

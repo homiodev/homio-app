@@ -48,4 +48,8 @@ public class VideoConstants {
     public static final String ENDPOINT_STREAM_SECONDARY_FRAMERATE = "stream_secondary_frame_rate";
     public static final String ENDPOINT_STREAM_SECONDARY_H264_PROFILE = "stream_secondary_H264_profile";
 
+    public static final String ENDPOINT_CPU_LOADING = "cpu_load";
+
+    public static final String ENDPOINT_BANDWIDTH = "bandwidth";
+
 }

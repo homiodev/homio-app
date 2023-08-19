@@ -255,8 +255,10 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             entity.setStatus(status, reason);
             VideoDeviceEndpoint endpoint = getEndpoints().get(ENDPOINT_DEVICE_STATUS);
             if (endpoint != null) {
-                endpoint.setValue(new StringType(status.toString()), true);
+                endpoint.setValue(new StringType(status.toString()), false);
             }
+            // fully update entity due status/message/etc.. may be changed
+            entityContext.ui().updateItem(entity);
             updateNotificationBlock();
             return true;
         }

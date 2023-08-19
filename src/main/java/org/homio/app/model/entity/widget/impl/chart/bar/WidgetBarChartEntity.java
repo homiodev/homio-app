@@ -18,7 +18,7 @@ public class WidgetBarChartEntity
         implements HasChartTimePeriod, HasHorizontalLine, HasMinMaxChartValue, HasAxis {
 
     @UIField(order = 10)
-    @UIFieldGroup(value = "CHART_UI", order = 54, borderColor = "#673AB7")
+    @UIFieldGroup(order = 54, value = "CHART_UI", borderColor = "#673AB7")
     public BarChartType getDisplayType() {
         return getJsonDataEnum("displayType", BarChartType.Vertical);
     }

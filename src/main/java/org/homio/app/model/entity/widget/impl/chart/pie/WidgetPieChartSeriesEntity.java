@@ -2,11 +2,7 @@ package org.homio.app.model.entity.widget.impl.chart.pie;
 
 import jakarta.persistence.Entity;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.*;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasValueConverter;
@@ -16,7 +12,7 @@ public class WidgetPieChartSeriesEntity extends WidgetSeriesEntity<WidgetPieChar
         implements HasSingleValueDataSource, HasValueConverter {
 
     @UIField(order = 20, isRevert = true)
-    @UIFieldGroup(value = "CHART_UI", order = 54, borderColor = "#673AB7")
+    @UIFieldGroup(order = 54, value = "CHART_UI", borderColor = "#673AB7")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
     public String getChartColor() {

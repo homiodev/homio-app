@@ -1,12 +1,12 @@
 package org.homio.app.repository.widget;
 
-import java.util.List;
-
 import lombok.extern.log4j.Log4j2;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.repository.AbstractRepository;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Repository;
+
+import java.util.List;
 
 @Log4j2
 @Repository

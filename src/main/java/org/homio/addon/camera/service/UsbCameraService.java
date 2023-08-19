@@ -1,14 +1,5 @@
 package org.homio.addon.camera.service;
 
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.homio.api.EntityContextMedia.FFMPEGFormat.GENERAL;
-
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.addon.camera.CameraEntrypoint;
@@ -18,6 +9,15 @@ import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.model.Icon;
 import org.homio.api.util.CommonUtils;
+
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.homio.api.EntityContextMedia.FFMPEGFormat.GENERAL;
 
 @Log4j2
 public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCameraService> {

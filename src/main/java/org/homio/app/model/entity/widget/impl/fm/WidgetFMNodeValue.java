@@ -1,10 +1,5 @@
 package org.homio.app.model.entity.widget.impl.fm;
 
-import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
-import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
-import static org.springframework.http.MediaType.IMAGE_JPEG_VALUE;
-import static org.springframework.http.MediaType.IMAGE_PNG_VALUE;
-
 import co.elastic.thumbnails4j.core.Dimensions;
 import co.elastic.thumbnails4j.core.Thumbnailer;
 import co.elastic.thumbnails4j.doc.DOCThumbnailer;
@@ -14,16 +9,6 @@ import co.elastic.thumbnails4j.pdf.PDFThumbnailer;
 import co.elastic.thumbnails4j.pptx.PPTXThumbnailer;
 import co.elastic.thumbnails4j.xls.XLSThumbnailer;
 import co.elastic.thumbnails4j.xlsx.XLSXThumbnailer;
-
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.List;
-import javax.imageio.ImageIO;
-
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -31,6 +16,17 @@ import org.apache.commons.codec.binary.Base64OutputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.homio.api.fs.TreeNode;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
+
+import static org.springframework.http.MediaType.*;
 
 @Log4j2
 @Getter

@@ -1,11 +1,6 @@
 package org.homio.app.model.entity.widget.impl.video;
 
 import jakarta.persistence.Entity;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.StylePosition;
@@ -16,6 +11,10 @@ import org.homio.api.ui.field.selection.UIFieldSelection;
 import org.homio.api.ui.field.selection.UIFieldTreeNodeSelection;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 @SuppressWarnings("unused")
 @Entity

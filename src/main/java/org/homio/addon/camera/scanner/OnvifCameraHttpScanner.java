@@ -2,18 +2,6 @@ package org.homio.addon.camera.scanner;
 
 import de.onvif.soap.BadCredentialException;
 import de.onvif.soap.OnvifDeviceState;
-
-import java.net.ConnectException;
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -33,6 +21,13 @@ import org.homio.api.util.Lang;
 import org.homio.hquery.ProgressBar;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.springframework.stereotype.Component;
+
+import java.net.ConnectException;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Log4j2
 @Component
@@ -165,7 +160,6 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
         CameraBrandHandlerDescription brand = OnvifDiscovery.getBrandFromLoginPage(onvifDeviceState.getIp(), entityContext);
         String name = Lang.getServerMessage("NEW_DEVICE.ONVIF_CAMERA") + onvifDeviceState.getHOST_IP();
         // get IEEEAddress call init() internally
-        String ieeeAddress = onvifDeviceState.getIEEEAddress();
         handleDevice(headerConfirmButtonKey,
                 "onvif-http-" + onvifDeviceState.getHOST_IP(),
                 name, entityContext,
@@ -180,18 +174,8 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
                 },
                 () -> {
                     log.info("Saving onvif camera with host: <{}>", onvifDeviceState.getHOST_IP());
-                    OnvifCameraEntity entity = new OnvifCameraEntity()
-                            .setIp(onvifDeviceState.getIp())
-                            .setOnvifPort(onvifDeviceState.getOnvifPort())
-                            .setCameraType(brand.getID());
-                    entity.setUser(onvifDeviceState.getUsername());
-                    entity.setPassword(onvifDeviceState.getPassword());
-                    entity.setIeeeAddress(ieeeAddress);
-                    if (!requireAuth) {
-                        entity.setName(onvifDeviceState.getInitialDevices().getName());
-                        entity.setInfo(onvifDeviceState.getInitialDevices());
-                    }
-
+                    OnvifCameraEntity entity = new OnvifCameraEntity().setCameraType(brand.getID());
+                    entity.setInfo(onvifDeviceState, requireAuth);
                     entityContext.save(entity);
                 });
     }

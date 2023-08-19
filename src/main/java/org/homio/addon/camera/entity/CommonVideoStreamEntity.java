@@ -1,7 +1,5 @@
 package org.homio.addon.camera.entity;
 
-import static java.lang.String.join;
-
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,6 +11,8 @@ import org.homio.api.model.Icon;
 import org.homio.api.ui.field.UIField;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static java.lang.String.join;
 
 @Setter
 @Getter

@@ -1,40 +1,5 @@
 package org.homio.addon.camera.onvif.impl;
 
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_3DNR;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ANTI_FLICKER;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_BGCOLOR;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_BLACK_LIGHT;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_BLC;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_BLUE_GAIN;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_BRIGHT;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_CONTRAST;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_DATETIME_POSITION;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_DATETIME_SHOW;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_DAY_NIGHT;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_DRC;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_EXPOSURE;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_HUE;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_IMAGE_MIRROR;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_IMAGE_ROTATE;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_NAME_POSITION;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_NAME_SHOW;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_RECORD_AUDIO;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_RED_GAIN;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_SATURATION;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_SHARPEN;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_MAIN_BITRATE;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_MAIN_FRAMERATE;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_MAIN_H264_PROFILE;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_MAIN_RESOLUTION;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_SECONDARY_BITRATE;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_SECONDARY_FRAMERATE;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_SECONDARY_H264_PROFILE;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_SECONDARY_RESOLUTION;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_WATERMARK_SHOW;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_WHITE_BALANCE;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -42,45 +7,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.netty.channel.ChannelPipeline;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import lombok.SneakyThrows;
-import lombok.ToString;
+import lombok.*;
+import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoPlaybackStorage;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.impl.ReolinkBrandHandler.SearchRequest.Search;
 import org.homio.addon.camera.service.OnvifCameraService;
-import org.homio.addon.camera.ui.UICameraActionConditional;
 import org.homio.addon.camera.ui.UICameraSelectionAttributeValues;
 import org.homio.addon.camera.ui.UIVideoActionGetter;
 import org.homio.addon.camera.ui.UIVideoActionMetadata;
@@ -88,11 +22,7 @@ import org.homio.addon.camera.ui.UIVideoEndpointAction;
 import org.homio.api.EntityContext;
 import org.homio.api.exception.LoginFailedException;
 import org.homio.api.model.OptionModel;
-import org.homio.api.state.DecimalType;
-import org.homio.api.state.JsonType;
-import org.homio.api.state.OnOffType;
-import org.homio.api.state.State;
-import org.homio.api.state.StringType;
+import org.homio.api.state.*;
 import org.homio.api.ui.action.DynamicOptionLoader;
 import org.homio.api.ui.field.selection.UIFieldSelection;
 import org.homio.api.util.CommonUtils;
@@ -106,6 +36,31 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.homio.addon.camera.VideoConstants.*;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+
+@Log4j2
 @CameraBrandHandler("Reolink")
 public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         BrandCameraHasMotionAlarm, VideoPlaybackStorage {
@@ -154,6 +109,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         addConfig(new EndpointConfiguration(ENDPOINT_SATURATION, ConfigType.number, "Image", "saturation"));
         addConfig(new EndpointConfiguration(ENDPOINT_SHARPEN, ConfigType.number, "Image", "sharpen"));
 
+        addConfig(new EndpointConfiguration(ENDPOINT_RECORD_AUDIO, ConfigType.bool, "Isp", "nr3d"));
         addConfig(new EndpointConfiguration(ENDPOINT_STREAM_MAIN_RESOLUTION, ConfigType.select, "Enc", "mainStream/size"));
         addConfig(new EndpointConfiguration(ENDPOINT_STREAM_MAIN_BITRATE, ConfigType.select, "Enc", "mainStream/bitRate"));
         addConfig(new EndpointConfiguration(ENDPOINT_STREAM_MAIN_FRAMERATE, ConfigType.select, "Enc", "mainStream/frameRate"));
@@ -163,6 +119,9 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         addConfig(new EndpointConfiguration(ENDPOINT_STREAM_SECONDARY_BITRATE, ConfigType.select, "Enc", "mainStream/bitRate"));
         addConfig(new EndpointConfiguration(ENDPOINT_STREAM_SECONDARY_FRAMERATE, ConfigType.select, "Enc", "mainStream/frameRate"));
         addConfig(new EndpointConfiguration(ENDPOINT_STREAM_SECONDARY_H264_PROFILE, ConfigType.select, "Enc", "mainStream/profile"));
+
+        addConfig(new EndpointConfiguration(ENDPOINT_CPU_LOADING, ConfigType.number, "Performance", "cpuUsed"));
+        addConfig(new EndpointConfiguration(ENDPOINT_BANDWIDTH, ConfigType.number, "Performance", "codecRate"));
     }
 
     private static void addConfig(EndpointConfiguration configuration) {
@@ -463,6 +422,11 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         return isp == null ? null : OnOffType.of(isp.getJsonNode().path("nr3d").asInt() == 1);
     }
 
+    @UIVideoEndpointAction(ENDPOINT_3DNR)
+    public void set3DNR(boolean on) {
+        setSetting(ENDPOINT_3DNR, isp -> isp.set(boolToInt(on), "nr3d"));
+    }
+
     @UIVideoActionGetter(ENDPOINT_RECORD_AUDIO)
     public State getRecAudio() {
         JsonType enc = (JsonType) getAttribute("Enc");
@@ -583,12 +547,44 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     public @Nullable String getSnapshotUri() {
         loginIfRequire();
         return "/cgi-bin/api.cgi?cmd=Snap&channel=%s&rs=homio&token=%s".formatted(
-                service.getEntity().getNvrChannel(), token);
+                nvrChannel, token);
     }
 
-    @UIVideoEndpointAction(ENDPOINT_3DNR)
-    public void set3DNR(boolean on) {
-        setSetting(ENDPOINT_3DNR, isp -> isp.set(boolToInt(on), "nr3d"));
+    @Override
+    public void postInitializeCamera(EntityContext entityContext) {
+        HttpClient httpClient = HttpClient.newHttpClient();
+        AtomicReference<HttpRequest> request = new AtomicReference<>(buildHttpPostRequest());
+        service.addLowRequest(() -> {
+            CompletableFuture<HttpResponse<String>> responseFuture = httpClient.sendAsync(request.get(), HttpResponse.BodyHandlers.ofString());
+            responseFuture.thenAccept(response -> {
+                try {
+                    Root[] roots = new ObjectMapper().readValue(response.body(), Root[].class);
+                    if (roots[0].getError() != null && roots[0].getError().rspCode == -6) {
+                        // fire update url with new token
+                        this.tokenExpiration = 0;
+                        request.set(buildHttpPostRequest());
+                    } else {
+                        JsonNode performance = roots[0].value.path("Performance");
+                        if (performance.has("cpuUsed")) {
+                            service.getEndpoints().get(ENDPOINT_CPU_LOADING).setValue(new DecimalType(performance.get("cpuUsed").asInt()), true);
+                        }
+                        if (performance.has("codecRate")) {
+                            service.getEndpoints().get(ENDPOINT_BANDWIDTH).setValue(new DecimalType(performance.get("codecRate").asInt()), true);
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.warn("Unable to read response from Reolink camera: {}", CommonUtils.getErrorMessage(ex));
+                }
+            });
+        });
+    }
+
+    private HttpRequest buildHttpPostRequest() {
+        return HttpRequest.newBuilder()
+                .uri(URI.create(getAuthUrl("cmd=GetPerformance", true)))
+                .header("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                .POST(HttpRequest.BodyPublishers.ofString("jsonData", StandardCharsets.UTF_8))
+                .build();
     }
 
     @Override
@@ -597,6 +593,8 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
         JsonNode request = OBJECT_MAPPER.valueToTree(new ChannelParam());
         Root[] roots = firePost("", true,
+                new ReolinkCmd(1, "GetPerformance", request),
+                new ReolinkCmd(1, "GetLocalLink", request),
                 new ReolinkCmd(1, "GetIrLights", request),
                 new ReolinkCmd(1, "GetOsd", request),
                 new ReolinkCmd(1, "GetEnc", request),
@@ -611,16 +609,38 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
                 if (objectNode.range.has(group)) {
                     setAttribute(group + "Range", new JsonType(objectNode.range.path(group)));
                 }
-                if (cmd.equals("GetIrLights")) {
-                    handleGetIrLightCommand(objectNode);
+                if (!customHandle(objectNode, cmd)) {
+                    JsonNode configNode = objectNode.range.path(group);
+                    configurations.values().stream().filter(c -> c.group.equals(group)).forEach(config -> {
+                        if (JsonUtils.hasJsonPath(targetNode, config.key)) {
+                            config.type.handler.handle(configNode, config, this);
+                        }
+                    });
                 }
-                JsonNode configNode = objectNode.range.path(group);
-                configurations.values().stream().filter(c -> c.group.equals(group)).forEach(config -> {
-                    if (JsonUtils.hasJsonPath(targetNode, config.key)) {
-                        config.type.handler.handle(configNode, config, this);
-                    }
-                });
             }
+        }
+    }
+
+    private boolean customHandle(Root objectNode, String cmd) {
+        return switch (cmd) {
+            case "GetIrLights" -> {
+                handleGetIrLightCommand(objectNode);
+                yield true;
+            }
+            case "GetLocalLink" -> {
+                handleGetLocalLinkCommand(objectNode);
+                yield true;
+            }
+            default -> false;
+        };
+    }
+
+    private void handleGetLocalLinkCommand(Root objectNode) {
+        JsonNode link = objectNode.value.get("LocalLink");
+        getEntity().setActiveLink(link.path("activeLink").asText(""));
+        String mac = link.path("mac").asText("").toUpperCase();
+        if (isEmpty(getEntity().getMacAddress()) && isNotEmpty(mac)) {
+            getEntityContext().updateDelayed(getEntity(), entity -> entity.setMacAddress(mac));
         }
     }
 
@@ -628,19 +648,6 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         setAttribute(ENDPOINT_AUTO_LED, OnOffType.of("auto".equals(objectNode.value.get("IrLights").get("state").asText())));
         service.addEndpointSwitch(ENDPOINT_AUTO_LED, state -> setAutoLed(state.boolValue()))
                 .setValue(isAutoLed(), true);
-    }
-
-    @Override
-    public void pollCameraRunnable() {
-       /* OnvifCameraService service = getService();
-        if (getEntity().getNvrChannel() > 0) {
-            service.sendHttpGET("/api.cgi?cmd=GetAiState&channel=" + getEntity().getNvrChannel() + "&user="
-                + getEntity().getUser() + "&password=" + getEntity().getPassword().asString());
-            service.sendHttpGET("/api.cgi?cmd=GetMdState&channel=" + getEntity().getNvrChannel() + "&user="
-                + getEntity().getUser() + "&password=" + getEntity().getPassword().asString());
-            return false;
-        }
-        return true;*/
     }
 
     @Override

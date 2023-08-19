@@ -1,12 +1,5 @@
 package org.homio.app.manager.common.impl;
 
-import static org.homio.hquery.hardware.other.MachineHardwareRepository.osBean;
-
-import java.time.Duration;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -31,6 +24,13 @@ import org.homio.app.service.mem.InMemoryDB;
 import org.homio.app.setting.system.SystemCPUFetchValueIntervalSetting;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.time.Duration;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+
+import static org.homio.hquery.hardware.other.MachineHardwareRepository.osBean;
 
 @Log4j2
 @RequiredArgsConstructor

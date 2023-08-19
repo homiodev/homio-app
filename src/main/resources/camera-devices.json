@@ -144,6 +144,22 @@
       "iconColor": "#42B52D"
     },
     {
+      "name": "cpu_load",
+      "quota": 100,
+      "order": 1940,
+      "unit": "%",
+      "icon": "fa-microchip",
+      "iconColor": "#A65535"
+    },
+    {
+      "name": "bandwidth",
+      "quota": 100,
+      "order": 1950,
+      "unit": "kbps",
+      "icon": "fa-wifi",
+      "iconColor": "#A65535"
+    },
+    {
       "name": "image_mirror",
       "quota": 10,
       "order": 2000,

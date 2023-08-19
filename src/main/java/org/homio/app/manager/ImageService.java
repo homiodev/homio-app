@@ -1,13 +1,5 @@
 package org.homio.app.manager;
 
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-
-import java.io.InputStream;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -18,6 +10,14 @@ import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 @Log4j2
 @Component

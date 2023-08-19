@@ -1,16 +1,16 @@
 package org.homio.app.rest.widget;
 
+import org.homio.api.entity.widget.AggregationType;
+import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
+import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
+import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
-import org.homio.api.entity.widget.AggregationType;
-import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
-import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
-import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
 
 public final class EvaluateDatesAndValues {
 

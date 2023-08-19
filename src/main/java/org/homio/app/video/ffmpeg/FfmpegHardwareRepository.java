@@ -1,22 +1,13 @@
 package org.homio.app.video.ffmpeg;
 
-import java.io.File;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.function.Supplier;
-
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.homio.hquery.api.ErrorsHandler;
-import org.homio.hquery.api.HQueryMaxWaitTimeout;
-import org.homio.hquery.api.HQueryParam;
-import org.homio.hquery.api.HardwareQuery;
-import org.homio.hquery.api.HardwareRepository;
-import org.homio.hquery.api.RawParse;
+import org.homio.hquery.api.*;
+
+import java.io.File;
+import java.lang.reflect.Field;
+import java.util.*;
+import java.util.function.Supplier;
 
 @HardwareRepository
 public interface FfmpegHardwareRepository {

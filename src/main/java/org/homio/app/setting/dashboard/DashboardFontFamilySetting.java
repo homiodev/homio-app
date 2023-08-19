@@ -1,15 +1,15 @@
 package org.homio.app.setting.dashboard;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-
 import org.homio.api.EntityContext;
 import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPluginOptions;
 import org.homio.app.setting.CoreSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 
 public class DashboardFontFamilySetting
         implements CoreSettingPlugin<String>, SettingPluginOptions<String> {

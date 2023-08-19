@@ -1,13 +1,13 @@
 package org.homio.app.rest.widget;
 
-import java.util.List;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.homio.api.entity.widget.ability.HasTimeValueSeries;
 import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
+
+import java.util.List;
 
 @Getter
 @RequiredArgsConstructor

@@ -1,9 +1,9 @@
 package org.homio.addon.camera.setting.rtsp;
 
-import java.util.Set;
-
 import org.homio.api.setting.SettingPlugin;
 import org.homio.api.setting.SettingPluginTextSet;
+
+import java.util.Set;
 
 public class ScanRtspUrlsSetting implements SettingPluginTextSet, SettingPlugin<Set<String>> {
 

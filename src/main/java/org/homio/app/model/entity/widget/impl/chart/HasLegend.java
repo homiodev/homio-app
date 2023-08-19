@@ -9,7 +9,7 @@ import org.homio.api.ui.field.UIFieldGroup;
 public interface HasLegend extends HasJsonData {
 
     @UIField(order = 70)
-    @UIFieldGroup(value = "LEGEND", order = 20, borderColor = "#77AD2F")
+    @UIFieldGroup(order = 20, value = "LEGEND", borderColor = "#77AD2F")
     default Boolean isShowLegend() {
         return getJsonData("ls", Boolean.FALSE);
     }

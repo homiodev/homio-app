@@ -1,17 +1,6 @@
 package org.homio.app.console;
 
-import java.nio.file.Files;
-import java.time.Duration;
-import java.util.Collection;
-import java.util.Date;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContextBGP;
 import org.homio.api.console.ConsolePluginTable;
@@ -23,6 +12,13 @@ import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.impl.EntityContextBGPImpl;
 import org.jetbrains.annotations.NotNull;
+
+import java.nio.file.Files;
+import java.time.Duration;
+import java.util.Collection;
+import java.util.Date;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<BaseProcessesConsolePlugin.BackgroundProcessJSON> {

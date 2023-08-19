@@ -1,11 +1,11 @@
 package org.homio.app.repository.generator;
 
-import java.util.UUID;
-
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.id.IdentifierGenerator;
 import org.homio.api.entity.BaseEntity;
 import org.homio.app.model.var.VariableBackup;
+
+import java.util.UUID;
 
 public class HomioIdGenerator implements IdentifierGenerator {
 

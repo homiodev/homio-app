@@ -1,17 +1,5 @@
 package org.homio.app.utils;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -21,6 +9,11 @@ import org.homio.api.EntityContext;
 import org.homio.api.widget.JavaScriptBuilder;
 import org.json.JSONArray;
 import org.json.JSONObject;
+
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class JavaScriptBuilderImpl implements JavaScriptBuilder {
 

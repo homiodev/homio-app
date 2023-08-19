@@ -2,13 +2,12 @@ package org.homio.addon.camera;
 
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.Getter;
+import lombok.extern.log4j.Log4j2;
 
 import java.io.IOException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-
-import lombok.Getter;
-import lombok.extern.log4j.Log4j2;
 
 /**
  * The {@link StreamOutput} Streams mjpeg out to a client

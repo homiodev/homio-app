@@ -1,7 +1,5 @@
 package org.homio.app.manager.common.impl;
 
-import java.util.ArrayList;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -11,6 +9,8 @@ import org.homio.hquery.ProgressBar;
 import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
 
 @Log4j2
 @RequiredArgsConstructor

@@ -1,13 +1,5 @@
 package org.homio.app.manager;
 
-import static org.homio.app.manager.common.ClassFinder.CLASSES_WITH_PARENT_CLASS;
-import static org.homio.app.manager.common.ClassFinder.REPOSITORY_BY_CLAZZ;
-
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -24,6 +16,14 @@ import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+import static org.homio.app.manager.common.ClassFinder.CLASSES_WITH_PARENT_CLASS;
+import static org.homio.app.manager.common.ClassFinder.REPOSITORY_BY_CLAZZ;
 
 @Log4j2
 @Component

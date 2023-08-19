@@ -1,8 +1,5 @@
 package org.homio.app.builder.ui;
 
-import java.util.ArrayList;
-import java.util.Collection;
-
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -14,6 +11,9 @@ import org.homio.api.ui.field.action.v1.item.UIButtonItemBuilder;
 import org.homio.api.ui.field.action.v1.item.UISelectBoxItemBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.Collection;
 
 @Getter
 @Accessors(chain = true)

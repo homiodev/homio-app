@@ -1,8 +1,5 @@
 package org.homio.app.manager.common.impl;
 
-import java.util.Map;
-import java.util.Set;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -15,6 +12,9 @@ import org.homio.app.video.ffmpeg.FFMPEGImpl;
 import org.homio.app.video.ffmpeg.FfmpegHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Map;
+import java.util.Set;
 
 @Log4j2
 @RequiredArgsConstructor

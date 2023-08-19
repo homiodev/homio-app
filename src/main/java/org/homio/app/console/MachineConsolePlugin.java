@@ -1,21 +1,8 @@
 package org.homio.app.console;
 
-import static java.lang.String.format;
-
 import com.fazecast.jSerialComm.SerialPort;
 import com.pivovarit.function.ThrowingSupplier;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
+import lombok.*;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePluginTable;
@@ -26,6 +13,10 @@ import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.homio.hquery.hardware.other.MachineInfo;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
+
+import java.util.*;
+
+import static java.lang.String.format;
 
 @Component
 @RequiredArgsConstructor

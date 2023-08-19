@@ -1,21 +1,7 @@
 package org.homio.addon.camera.entity;
 
-import static java.lang.String.join;
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
-import static org.homio.api.EntityContextSetting.SERVER_PORT;
-import static org.homio.api.ui.field.UIFieldType.HTML;
-import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
-
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FilenameUtils;
@@ -34,45 +20,38 @@ import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.service.EntityService;
 import org.homio.api.state.State;
 import org.homio.api.ui.UI.Color;
-import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.action.UIActionHandler;
-import org.homio.api.ui.field.MonacoLanguage;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldCodeEditor;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldIgnore;
-import org.homio.api.ui.field.UIFieldSlider;
-import org.homio.api.ui.field.UIFieldType;
+import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.action.UIActionButton;
 import org.homio.api.ui.field.action.UIActionInput;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.api.ui.field.color.UIFieldColorBgRef;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.api.ui.field.image.UIFieldImage;
-import org.homio.api.ui.field.model.HrefModel;
 import org.homio.api.util.SecureString;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+
+import static java.lang.String.join;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
+import static org.homio.api.EntityContextSetting.SERVER_PORT;
+import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
+
 @SuppressWarnings("unused")
 @Log4j2
 public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseVideoService<?, S>>
         extends MediaEntity implements DeviceEndpointsBehaviourContract, EntityService<S, T> {
 
-    @UIField(order = 300, hideInView = true)
-    public boolean isHasAudioStream() {
-        return getJsonData("hasAudioStream", false);
-    }
-
-    public T setHasAudioStream(boolean value) {
-        setJsonData("hasAudioStream", value);
-        return (T) this;
-    }
-
-    @UIField(order = 1, hideOnEmpty = true)
+    @UIField(order = 1, hideOnEmpty = true, hideInEdit = true)
     @UIFieldGroup(value = "HARDWARE", order = 10, borderColor = Color.RED)
     @UIFieldShowOnCondition("return !context.get('compactMode')")
     public String getFirmwareVersion() {
@@ -83,7 +62,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         setJsonData("fv", value);
     }
 
-    @UIField(order = 2)
+    @UIField(order = 2, hideOnEmpty = true, hideInEdit = true)
     @UIFieldGroup("HARDWARE")
     @UIFieldShowOnCondition("return !context.get('compactMode')")
     public String getManufacturer() {
@@ -92,6 +71,28 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
     public void setManufacturer(String value) {
         setJsonData("mf", value);
+    }
+
+    @UIField(order = 3, hideOnEmpty = true, hideInEdit = true)
+    @UIFieldGroup("HARDWARE")
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    public String getSerialNumber() {
+        return getJsonData("sn");
+    }
+
+    public void setSerialNumber(String value) {
+        setJsonData("sn", value);
+    }
+
+    @UIField(order = 4, hideOnEmpty = true, hideInEdit = true)
+    @UIFieldGroup("HARDWARE")
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    public String getHardwareId() {
+        return getJsonData("hid");
+    }
+
+    public void setHardwareId(String value) {
+        setJsonData("hid", value);
     }
 
     @Override
@@ -171,9 +172,8 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         return getJsonData("autoStart", true);
     }
 
-    public BaseVideoEntity setAutoStart(boolean start) {
+    public void setAutoStart(boolean start) {
         setJsonData("autoStart", start);
-        return this;
     }
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
@@ -219,8 +219,18 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         return super.getIeeeAddress();
     }
 
-    @UIField(order = 125, hideInView = true, type = UIFieldType.Chips)
+    @UIField(order = 120, hideInView = true, type = UIFieldType.Chips)
     @UIFieldGroup(value = "FFMPEG", order = 70, borderColor = "#3BAD4A")
+    public List<String> getMp4OutOptions() {
+        return getJsonDataList("mp4OutOptions");
+    }
+
+    public void setMp4OutOptions(String value) {
+        setJsonData("mp4OutOptions", value);
+    }
+
+    @UIField(order = 125, hideInView = true, type = UIFieldType.Chips)
+    @UIFieldGroup("FFMPEG")
     public List<String> getGifOutOptions() {
         return getJsonDataList("gifOutOptions");
     }
@@ -264,8 +274,9 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         setJsonData("motionOptions", value);
     }
 
-    @UIField(order = 110)
+    @UIField(order = 1)
     @UIFieldSlider(min = 0, max = 100)
+    @UIFieldGroup(value = "STREAMING", order = 20, borderColor = "#773FD1")
     public int getMotionThreshold() {
         return getJsonData(ENDPOINT_MOTION_THRESHOLD, 40);
     }
@@ -274,8 +285,9 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         setJsonData(ENDPOINT_MOTION_THRESHOLD, value);
     }
 
-    @UIField(order = 112)
+    @UIField(order = 2)
     @UIFieldSlider(min = 0, max = 100)
+    @UIFieldGroup("STREAMING")
     public int getAudioThreshold() {
         return getJsonData(ENDPOINT_AUDIO_THRESHOLD, 40);
     }
@@ -284,26 +296,26 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         setJsonData(ENDPOINT_AUDIO_THRESHOLD, value);
     }
 
+    @UIField(order = 300, hideInView = true)
+    @UIFieldGroup("STREAMING")
+    public boolean isHasAudioStream() {
+        return getJsonData("hasAudioStream", false);
+    }
+
+    public void setHasAudioStream(boolean value) {
+        setJsonData("hasAudioStream", value);
+    }
+
     // this is parameter handles when motion/audio detects or when fires snapshot.mjpeg
-    @UIField(order = 30)
+    @UIField(order = 3, hideInView = true)
     @UIFieldSlider(min = 1, max = 10)
-    @UIFieldGroup(value = "STREAMING", order = 20, borderColor = "#773FD1")
+    @UIFieldGroup("STREAMING")
     public int getSnapshotPollInterval() {
         return getJsonData("spi", 1);
     }
 
     public void setSnapshotPollInterval(int value) {
         setJsonData("spi", value);
-    }
-
-    @UIField(order = 50, hideInView = true, type = UIFieldType.Chips)
-    @UIFieldGroup("STREAMING")
-    public List<String> getMp4OutOptions() {
-        return getJsonDataList("mp4OutOptions");
-    }
-
-    public void setMp4OutOptions(String value) {
-        setJsonData("mp4OutOptions", value);
     }
 
     public Set<String> getVideoSources() {
@@ -360,6 +372,12 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         return null;
     }
 
+    @Override
+    @JsonIgnore
+    public @Nullable String getStatusMessage() {
+        return super.getStatusMessage();
+    }
+
     @JsonIgnore
     public @NotNull String getGroupID() {
         return Objects.requireNonNull(getIeeeAddress());
@@ -369,7 +387,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
         @Override
         public ActionResponseModel handleAction(EntityContext entityContext, JSONObject params) {
-            BaseVideoEntity entity = entityContext.getEntityRequire(params.getString("entityID"));
+            BaseVideoEntity<?, ?> entity = entityContext.getEntityRequire(params.getString("entityID"));
             entity.fireUpdateSnapshot(entityContext, params);
             return null;
         }
@@ -379,7 +397,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
         @Override
         public ActionResponseModel handleAction(EntityContext entityContext, JSONObject params) {
-            BaseVideoEntity entity = entityContext.getEntityRequire(params.getString("entityID"));
+            BaseVideoEntity<?, ?> entity = entityContext.getEntityRequire(params.getString("entityID"));
             String encodedValue =
                     "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(entity.getSnapshot());
             FileModel snapshot = new FileModel("Snapshot", encodedValue, FileContentType.image, true);
@@ -407,11 +425,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
     @Override
     public @Nullable String getDescriptionImpl() {
-        /*String message = getStatusMessage();
-        if (message != null && message.contains("Failed to connect")) {
-            return "CONNECT_ISSUE";
-        }*/
-        return null;
+        return getError();
     }
 
     @Override

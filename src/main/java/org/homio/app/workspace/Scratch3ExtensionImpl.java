@@ -1,12 +1,11 @@
 package org.homio.app.workspace;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-
-import java.util.Objects;
-
 import lombok.Getter;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Objects;
 
 @Getter
 public final class Scratch3ExtensionImpl implements Comparable<Scratch3ExtensionImpl> {

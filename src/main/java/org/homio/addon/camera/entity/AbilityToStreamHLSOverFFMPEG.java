@@ -1,12 +1,12 @@
 package org.homio.addon.camera.entity;
 
-import java.util.List;
-
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldType;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 public interface AbilityToStreamHLSOverFFMPEG<T> extends HasJsonData {
 

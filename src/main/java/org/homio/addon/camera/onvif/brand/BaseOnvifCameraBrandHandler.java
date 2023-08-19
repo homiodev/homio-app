@@ -5,15 +5,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpVersion;
-
-import java.nio.charset.StandardCharsets;
-
+import io.netty.handler.codec.http.*;
 import lombok.Getter;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoActionsContext;
@@ -25,6 +17,8 @@ import org.homio.api.state.State;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.http.MediaType;
+
+import java.nio.charset.StandardCharsets;
 
 public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler implements VideoActionsContext, BaseBrandCameraHandler {
 
@@ -38,7 +32,7 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler i
     public BaseOnvifCameraBrandHandler(OnvifCameraService service) {
         this.service = service;
 
-        OnvifCameraEntity entity = service.getEntity();
+        OnvifCameraEntity entity = getEntity();
         this.entityID = entity.getEntityID();
         this.nvrChannel = entity.getNvrChannel();
         this.username = entity.getUser();

@@ -5,14 +5,7 @@ import jakarta.persistence.Entity;
 import org.homio.api.exception.ProhibitedExecution;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
-import org.homio.app.model.entity.widget.attributes.HasActionOnClick;
-import org.homio.app.model.entity.widget.attributes.HasAlign;
-import org.homio.app.model.entity.widget.attributes.HasIcon;
-import org.homio.app.model.entity.widget.attributes.HasPadding;
-import org.homio.app.model.entity.widget.attributes.HasSingleValueAggregatedDataSource;
-import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
-import org.homio.app.model.entity.widget.attributes.HasValueConverter;
-import org.homio.app.model.entity.widget.attributes.HasValueTemplate;
+import org.homio.app.model.entity.widget.attributes.*;
 import org.jetbrains.annotations.NotNull;
 
 @Entity

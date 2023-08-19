@@ -1,7 +1,5 @@
 package org.homio.addon.camera.service.util;
 
-import static org.homio.addon.camera.CameraController.camerasOpenStreams;
-
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpContent;
@@ -12,15 +10,16 @@ import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-
-import java.util.Objects;
-
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.OnvifCameraService;
+
+import java.util.Objects;
+
+import static org.homio.addon.camera.CameraController.camerasOpenStreams;
 
 // These methods handle the response from all camera brands, nothing specific to 1 brand.
 @Log4j2

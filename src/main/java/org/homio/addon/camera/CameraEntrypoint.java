@@ -1,9 +1,5 @@
 package org.homio.addon.camera;
 
-import java.time.Duration;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -20,6 +16,10 @@ import org.homio.api.ui.field.action.v1.layout.UILayoutBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
+
+import java.time.Duration;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 @Log4j2
 @Component

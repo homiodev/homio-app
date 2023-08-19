@@ -6,12 +6,7 @@ import org.homio.api.ui.field.UIFieldColorPicker;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
-import org.homio.app.model.entity.widget.attributes.HasIcon;
-import org.homio.app.model.entity.widget.attributes.HasName;
-import org.homio.app.model.entity.widget.attributes.HasSingleValueAggregatedDataSource;
-import org.homio.app.model.entity.widget.attributes.HasStyle;
-import org.homio.app.model.entity.widget.attributes.HasValueConverter;
-import org.homio.app.model.entity.widget.attributes.HasValueTemplate;
+import org.homio.app.model.entity.widget.attributes.*;
 
 @Entity
 public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayEntity>

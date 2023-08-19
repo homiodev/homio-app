@@ -1,18 +1,14 @@
 package org.homio.app.utils;
 
-import java.io.InputStream;
-import java.net.URL;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.util.Collections;
-
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.util.CommonUtils;
+
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.file.*;
+import java.util.Collections;
 
 @Log4j2
 public final class HardwareUtils {

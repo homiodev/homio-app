@@ -1,12 +1,6 @@
 package org.homio.addon.hardware;
 
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-
 import com.fasterxml.jackson.databind.JsonNode;
-
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
@@ -22,6 +16,11 @@ import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 @Log4j2
 @Getter

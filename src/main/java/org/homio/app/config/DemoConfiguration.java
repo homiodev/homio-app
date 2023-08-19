@@ -1,9 +1,5 @@
 package org.homio.app.config;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-
-import java.util.Iterator;
-
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
@@ -18,6 +14,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
+
+import java.util.Iterator;
+
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 @Log4j2
 @Profile("demo")

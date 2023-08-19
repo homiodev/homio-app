@@ -1,8 +1,8 @@
 package org.homio.app.js.assistant.impl;
 
-import java.util.function.Consumer;
-
 import org.homio.api.model.UpdatableValue;
+
+import java.util.function.Consumer;
 
 public class ParserContext {
 

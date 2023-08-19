@@ -2,25 +2,18 @@ package org.homio.app.model.entity.widget.impl.color;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import org.homio.api.exception.ProhibitedExecution;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldIgnore;
-import org.homio.api.ui.field.UIFieldKeyValue;
+import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.UIFieldKeyValue.KeyValueType;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.api.ui.field.UIFieldSlider;
-import org.homio.api.ui.field.UIFieldType;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.attributes.HasAlign;
 import org.homio.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Entity
 public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorEntity>
@@ -49,7 +42,7 @@ public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorE
     @UIField(order = 1)
     @UIFieldKeyValue(maxSize = 20, keyType = UIFieldType.String, valueType = UIFieldType.ColorPicker,
             defaultKey = "0", showKey = false, defaultValue = "#FFFFFF", keyValueType = KeyValueType.array)
-    @UIFieldGroup(value = "COLORS", order = 10)
+    @UIFieldGroup(order = 10, value = "COLORS")
     public String getColors() {
         return getJsonData("colors");
     }

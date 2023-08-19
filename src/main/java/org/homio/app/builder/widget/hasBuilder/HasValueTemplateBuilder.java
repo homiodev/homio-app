@@ -1,10 +1,10 @@
 package org.homio.app.builder.widget.hasBuilder;
 
-import static org.apache.commons.lang3.StringUtils.trimToEmpty;
-
 import org.homio.api.EntityContextWidget.HasValueTemplate;
 import org.homio.api.EntityContextWidget.VerticalAlign;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 
 public interface HasValueTemplateBuilder<T extends org.homio.app.model.entity.widget.attributes.HasValueTemplate, R>
         extends HasValueTemplate<R> {

@@ -5,10 +5,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Transient;
-
-import java.util.Collection;
-import java.util.Set;
-
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -25,6 +21,9 @@ import org.homio.app.manager.common.impl.EntityContextSettingImpl;
 import org.homio.app.repository.SettingRepository;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
+
+import java.util.Collection;
+import java.util.Set;
 
 @Getter
 @Setter

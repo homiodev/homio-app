@@ -1,25 +1,20 @@
 package org.homio.app.builder.widget;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.EntityContextWidget.BarChartType;
 import org.homio.api.EntityContextWidget.BarTimeChartBuilder;
 import org.homio.api.EntityContextWidget.BarTimeChartSeriesBuilder;
-import org.homio.app.builder.widget.hasBuilder.HasAxisBuilder;
-import org.homio.app.builder.widget.hasBuilder.HasChartDataSourceBuilder;
-import org.homio.app.builder.widget.hasBuilder.HasChartTimePeriodBuilder;
-import org.homio.app.builder.widget.hasBuilder.HasHorizontalLineBuilder;
-import org.homio.app.builder.widget.hasBuilder.HasLegendBuilder;
-import org.homio.app.builder.widget.hasBuilder.HasMinMaxChartValueBuilder;
+import org.homio.app.builder.widget.hasBuilder.*;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.impl.chart.bar.WidgetBarTimeChartEntity;
 import org.homio.app.model.entity.widget.impl.chart.bar.WidgetBarTimeChartSeriesEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 
 public class BarTimeChartBuilderImpl extends WidgetBaseBuilderImpl<BarTimeChartBuilder, WidgetBarTimeChartEntity>
         implements BarTimeChartBuilder,

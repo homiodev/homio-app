@@ -1,9 +1,5 @@
 package org.homio.app.builder.ui.layout;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.ui.action.UIActionHandler;
@@ -14,6 +10,10 @@ import org.homio.app.builder.ui.UIBaseEntityItemBuilderImpl;
 import org.homio.app.builder.ui.UIBaseLayoutBuilderImpl;
 import org.homio.app.builder.ui.UIItemType;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Getter
 @RequiredArgsConstructor

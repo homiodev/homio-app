@@ -1,9 +1,5 @@
 package org.homio.app.builder.ui.layout;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.ui.field.action.v1.UIEntityBuilder;
@@ -12,6 +8,10 @@ import org.homio.api.ui.field.action.v1.layout.dialog.UIStickyDialogItemBuilder;
 import org.homio.app.builder.ui.UIBaseLayoutBuilderImpl;
 import org.homio.app.builder.ui.UIDialogInputEntity;
 import org.homio.app.builder.ui.UIItemType;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Getter
 @RequiredArgsConstructor

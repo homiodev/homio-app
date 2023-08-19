@@ -1,17 +1,8 @@
 package org.homio.addon.camera.onvif.impl;
 
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LED;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
-
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
@@ -25,6 +16,12 @@ import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
+import static org.homio.addon.camera.VideoConstants.*;
 
 /**
  * responsible for handling commands, which are sent to one of the channels.
@@ -110,12 +107,12 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
                         newApi = true;
                         log.debug("Alarm server successfully setup for a 2k+ Instar camera");
                         if (getEntity().getFfmpegInput().isEmpty()) {
-                            service.urls.setRtspUri("rtsp://%s/livestream/12".formatted(service.getEntity().getIp()));
+                            service.urls.setRtspUri("rtsp://%s/livestream/12".formatted(ip));
                         }
-                        if (service.getEntity().getMjpegUrl().equals("ffmpeg")) {
+                        if (getEntity().getMjpegUrl().equals("ffmpeg")) {
                             service.urls.setMjpegUri("/livestream/12?action=play&media=mjpeg");
                         }
-                        if (service.getEntity().getSnapshotUrl().equals("ffmpeg")) {
+                        if (getEntity().getSnapshotUrl().equals("ffmpeg")) {
                             service.urls.setSnapshotUri("/snap.cgi?chn=12");
                         }
                     } else if (requestUrl.startsWith("/param.cgi?cmd=setmdalarm&-aname=server2&-switch=on&-interval=1")
@@ -228,13 +225,13 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
     @Override
     public void postInitializeCamera(EntityContext entityContext) {
         if (service.lowPriorityRequests.isEmpty()) {
-            service.lowPriorityRequests.add("/param.cgi?cmd=getaudioalarmattr");
-            service.lowPriorityRequests.add("/cgi-bin/hi3510/param.cgi?cmd=getmdattr");
-            service.lowPriorityRequests.add("/param.cgi?cmd=getalarmattr");
-            service.lowPriorityRequests.add("/param.cgi?cmd=getinfrared");
-            service.lowPriorityRequests.add("/param.cgi?cmd=getoverlayattr&-region=1");
-            service.lowPriorityRequests.add("/param.cgi?cmd=getpirattr");
-            service.lowPriorityRequests.add("/param.cgi?cmd=getioattr"); // ext alarm input on/off
+            service.addLowRequestGet("/param.cgi?cmd=getaudioalarmattr");
+            service.addLowRequestGet("/cgi-bin/hi3510/param.cgi?cmd=getmdattr");
+            service.addLowRequestGet("/param.cgi?cmd=getalarmattr");
+            service.addLowRequestGet("/param.cgi?cmd=getinfrared");
+            service.addLowRequestGet("/param.cgi?cmd=getoverlayattr&-region=1");
+            service.addLowRequestGet("/param.cgi?cmd=getpirattr");
+            service.addLowRequestGet("/param.cgi?cmd=getioattr"); // ext alarm input on/off
         }
     }
 

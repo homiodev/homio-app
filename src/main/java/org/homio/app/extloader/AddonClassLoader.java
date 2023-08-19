@@ -1,5 +1,11 @@
 package org.homio.app.extloader;
 
+import lombok.SneakyThrows;
+import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.commons.lang3.reflect.MethodUtils;
+import org.xeustechnologies.jcl.JarClassLoader;
+import org.xeustechnologies.jcl.ProxyClassLoader;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,19 +14,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.jar.JarFile;
-
-import lombok.SneakyThrows;
-import org.apache.commons.lang3.reflect.FieldUtils;
-import org.apache.commons.lang3.reflect.MethodUtils;
-import org.xeustechnologies.jcl.JarClassLoader;
-import org.xeustechnologies.jcl.ProxyClassLoader;
 
 public class AddonClassLoader extends JarClassLoader {
 

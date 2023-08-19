@@ -1,11 +1,5 @@
 package org.homio.app.builder.widget;
 
-import static org.homio.app.model.entity.widget.WidgetTabEntity.MAIN_TAB_ID;
-
-import java.util.List;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -42,6 +36,12 @@ import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntity;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
+
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+import static org.homio.app.model.entity.widget.WidgetTabEntity.MAIN_TAB_ID;
 
 @Log4j2
 @RequiredArgsConstructor

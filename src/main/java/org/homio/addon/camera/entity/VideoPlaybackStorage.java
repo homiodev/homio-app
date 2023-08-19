@@ -1,16 +1,16 @@
 package org.homio.addon.camera.entity;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.List;
-
 import lombok.AllArgsConstructor;
 import org.homio.api.EntityContext;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.core.io.Resource;
+
+import java.net.URI;
+import java.nio.file.Path;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
 
 public interface VideoPlaybackStorage {
 

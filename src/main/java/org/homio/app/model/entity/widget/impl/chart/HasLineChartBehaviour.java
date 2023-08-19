@@ -6,11 +6,7 @@ import org.homio.api.EntityContextWidget.PointStyle;
 import org.homio.api.EntityContextWidget.Stepped;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
 
@@ -22,7 +18,7 @@ public interface HasLineChartBehaviour extends
     ChartType getChartType();
 
     @UIField(order = 20, isRevert = true)
-    @UIFieldGroup(value = "CHART_UI", order = 54, borderColor = "#673AB7")
+    @UIFieldGroup(order = 54, value = "CHART_UI", borderColor = "#673AB7")
     @UIFieldSlider(min = 0, max = 10)
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default int getLineBorderWidth() {
@@ -79,7 +75,7 @@ public interface HasLineChartBehaviour extends
     }
 
     @UIField(order = 1, isRevert = true)
-    @UIFieldGroup(value = "CHART_POINT", order = 58)
+    @UIFieldGroup(order = 58, value = "CHART_POINT")
     @UIFieldSlider(min = 0, max = 4, step = 0.2)
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default double getPointRadius() {

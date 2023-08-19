@@ -18,7 +18,7 @@ public class WidgetSliderEntity
         implements HasLayout, HasSourceServerUpdates, HasName, HasPadding {
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "NAME", order = 3)
+    @UIFieldGroup(order = 3, value = "NAME")
     @UIFieldOptionFontSize
     public String getName() {
         return super.getName();

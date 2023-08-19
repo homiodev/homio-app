@@ -1,15 +1,15 @@
 package org.homio.app.console;
 
-import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
-
-import java.util.List;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.console.ConsolePluginLines;
 import org.homio.app.LogService;
+
+import java.util.List;
+
+import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
 
 @RequiredArgsConstructor
 public class LogsConsolePlugin implements ConsolePluginLines {

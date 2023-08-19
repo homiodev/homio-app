@@ -1,12 +1,5 @@
 package org.homio.addon.camera.service.util;
 
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.BaseVideoEntity;
@@ -15,6 +8,13 @@ import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
 import org.homio.api.state.StringType;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 
 @Log4j2
 @RequiredArgsConstructor

@@ -1,11 +1,5 @@
 package org.homio.app.manager.common;
 
-import static org.homio.app.manager.CacheService.JS_COMPLETIONS;
-
-import java.lang.annotation.Annotation;
-import java.util.ArrayList;
-import java.util.List;
-
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
@@ -20,6 +14,12 @@ import org.springframework.context.annotation.ClassPathScanningCandidateComponen
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.stereotype.Component;
+
+import java.lang.annotation.Annotation;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.homio.app.manager.CacheService.JS_COMPLETIONS;
 
 @Component
 @RequiredArgsConstructor

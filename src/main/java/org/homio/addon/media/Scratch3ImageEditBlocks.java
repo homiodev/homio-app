@@ -1,11 +1,5 @@
 package org.homio.addon.media;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.function.BiFunction;
-
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -21,6 +15,12 @@ import org.homio.api.workspace.scratch.MenuBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.setting.workspace.ImageDefaultProcessingSetting;
 import org.springframework.stereotype.Component;
+
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.function.BiFunction;
 
 @Log4j2
 @Getter

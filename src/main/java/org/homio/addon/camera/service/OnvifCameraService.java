@@ -1,46 +1,23 @@
 package org.homio.addon.camera.service;
 
-import static org.homio.api.util.CommonUtils.getErrorMessage;
-
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import de.onvif.soap.OnvifDeviceState;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.base64.Base64;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpClientCodec;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.*;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
-
-import java.lang.reflect.Method;
-import java.net.InetSocketAddress;
-import java.nio.file.Path;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.function.BiPredicate;
-
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
@@ -57,12 +34,7 @@ import org.homio.addon.camera.onvif.util.IpCameraBindingConstants;
 import org.homio.addon.camera.onvif.util.MyNettyAuthHandler;
 import org.homio.addon.camera.service.util.CommonCameraHandler;
 import org.homio.addon.camera.service.util.VideoUtils;
-import org.homio.addon.camera.ui.UICameraActionConditional;
-import org.homio.addon.camera.ui.UICameraDimmerButton;
-import org.homio.addon.camera.ui.UIVideoAction;
-import org.homio.addon.camera.ui.UIVideoActionGetter;
-import org.homio.addon.camera.ui.UIVideoActionMetadata;
-import org.homio.addon.camera.ui.VideoActionType;
+import org.homio.addon.camera.ui.*;
 import org.homio.api.EntityContext;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
@@ -70,11 +42,26 @@ import org.homio.api.model.Status;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.ObjectType;
 import org.homio.api.state.OnOffType;
+import org.homio.api.ui.field.action.ActionInputParameter;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.onvif.ver10.schema.Profile;
+
+import java.lang.reflect.Method;
+import java.net.InetSocketAddress;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiPredicate;
+
+import static org.homio.api.util.CommonUtils.getErrorMessage;
 
 @Log4j2
 public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, OnvifCameraService> {
@@ -93,9 +80,10 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     private Bootstrap mainBootstrap;
     private @NotNull FullHttpRequest putRequestWithBody = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod("PUT"), "");
+    private @NotNull FullHttpRequest postRequestWithBody = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod("POST"), "");
     private String basicAuth = "";
 
-    public List<String> lowPriorityRequests = new ArrayList<>(0);
+    public List<LowRequest> lowPriorityRequests = new ArrayList<>(0);
     private byte lowPriorityCounter = 0;
 
     public OnvifCameraService(EntityContext entityContext, OnvifCameraEntity entity) {
@@ -231,6 +219,11 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     public void sendHttpPUT(String httpRequestURL, FullHttpRequest request) {
         putRequestWithBody = request; // use Global so the authhandler can use it when resent with DIGEST.
         sendHttpRequest("PUT", httpRequestURL, null);
+    }
+
+    public void sendHttpPOST(String httpRequestURL, FullHttpRequest request) {
+        postRequestWithBody = request; // use Global so the authhandler can use it when resent with DIGEST.
+        sendHttpRequest("POST", httpRequestURL, null);
     }
 
     public void sendHttpGET(String httpRequestURL) {
@@ -528,6 +521,16 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         brandHandler.assembleActions(uiInputBuilder);
     }
 
+    public void addLowRequestGet(String url) {
+        this.lowPriorityRequests.add(new LowRequest(() -> {
+            sendHttpGET(url);
+        }));
+    }
+
+    public void addLowRequest(Runnable handler) {
+        this.lowPriorityRequests.add(new LowRequest(handler));
+    }
+
     @Override
     protected void pollCameraRunnable() {
         onvifDeviceState.getEventDevices().pollCameraRunnable();
@@ -535,7 +538,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
             if (lowPriorityCounter >= lowPriorityRequests.size()) {
                 lowPriorityCounter = 0;
             }
-            sendHttpGET(lowPriorityRequests.get(lowPriorityCounter++));
+            lowPriorityRequests.get(lowPriorityCounter++).handler.run();
         }
 
         super.pollCameraRunnable();
@@ -631,11 +634,56 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return entity.getRestPort();
     }
 
+    public ActionResponseModel authenticate() {
+        entityContext.ui().sendDialogRequest("cam_auth", "CONTEXT.ACTION.AUTHENTICATE",
+                (responseType, pressedButton, parameters) ->
+                        fireAuth(parameters),
+                dialogModel -> {
+                    dialogModel.disableKeepOnUi();
+                    dialogModel.appearance(new Icon("fas fa-camera"), null);
+                    List<ActionInputParameter> inputs = new ArrayList<>();
+                    inputs.add(ActionInputParameter.text("field.user", entity.getUser()));
+                    inputs.add(ActionInputParameter.text("field.password", entity.getPassword().asString()));
+
+                    dialogModel.submitButton("CONTEXT.ACTION.AUTHENTICATE", button ->
+                            button.setIcon("fas fa-sign-in-alt")
+                    ).group("General", inputs);
+                });
+        return null;
+    }
+
+    private void fireAuth(ObjectNode params) {
+        entityContext.bgp().runWithProgress("camera-auth").execute(progressBar -> {
+            progressBar.progress(10, "Authenticate...");
+            try {
+                String user = params.get("field.user").asText();
+                String password = params.get("field.password").asText();
+                OnvifCameraEntity entity = entityContext.getEntityRequire(getEntityID());
+                OnvifDeviceState onvifDeviceState = new OnvifDeviceState(getEntityID());
+                onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(), user, password);
+                CommonUtils.ping(entity.getIp(), entity.getRestPort());
+                progressBar.progress(20, "Ping done");
+                entity.setInfo(onvifDeviceState, false);
+                entityContext.save(entity);
+                entityContext.ui().sendSuccessMessage("Onvif camera: " + this + " authenticated successfully");
+            } catch (Exception ex) {
+                entityContext.ui().sendErrorMessage("Camera fault: %s".formatted(ex.getMessage()));
+            } finally {
+                progressBar.done();
+            }
+        });
+    }
+
     public static class SupportPTZCondition implements BiPredicate<OnvifCameraService, Method> {
 
         @Override
         public boolean test(OnvifCameraService o, Method method) {
             return o.onvifDeviceState.getPtzDevices().supportPTZ();
         }
+    }
+
+    @RequiredArgsConstructor
+    public static class LowRequest {
+        private final Runnable handler;
     }
 }

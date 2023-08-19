@@ -1,7 +1,5 @@
 package org.homio.app.service.cloud;
 
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
@@ -17,6 +15,8 @@ import org.homio.app.ssh.SshCloudEntity;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
+
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 @Log4j2
 @Component

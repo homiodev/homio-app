@@ -1,12 +1,5 @@
 package org.homio.app;
 
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.homio.api.util.CommonUtils.getErrorMessage;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.Properties;
-
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
@@ -21,6 +14,13 @@ import org.springframework.boot.autoconfigure.web.servlet.error.ErrorMvcAutoConf
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.core.NestedExceptionUtils;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Properties;
+
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.homio.api.util.CommonUtils.getErrorMessage;
 
 @Log4j2
 @EnableHQuery(scanBaseClassesPackage = "org.homio")
