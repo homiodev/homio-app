@@ -23,7 +23,7 @@ public class VideoDeviceEndpoint extends BaseDeviceEndpoint<BaseVideoEntity> {
     public VideoDeviceEndpoint(
             @NotNull BaseVideoEntity device,
             @NotNull String endpointEntityID,
-            float min, float max) {
+            float min, float max, boolean writable) {
         this(true, device, endpointEntityID, EndpointType.number, min, max, null);
     }
 

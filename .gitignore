@@ -13,3 +13,9 @@ tmp/
 conf/
 installs/
 homio.properties
+/media
+/logs
+/external_jars
+/asm_files
+/addons
+playlist.m3u8

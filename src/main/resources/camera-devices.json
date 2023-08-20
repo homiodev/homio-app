@@ -160,6 +160,14 @@
       "iconColor": "#A65535"
     },
     {
+      "name": "hdd",
+      "order": 1970,
+      "stateless": true,
+      "unit": "Mb",
+      "icon": "fa-floppy-disk",
+      "iconColor": "#359BA6"
+    },
+    {
       "name": "image_mirror",
       "quota": 10,
       "order": 2000,
@@ -219,6 +227,7 @@
       "name": "stream_main_bit_rate",
       "quota": 10,
       "order": 2510,
+      "unit": "kbps",
       "icon": "fa-gauge-simple-high",
       "iconColor": "#AB38A1"
     },
@@ -226,6 +235,7 @@
       "name": "stream_main_frame_rate",
       "quota": 10,
       "order": 2520,
+      "unit": "fps",
       "icon": "fa-film",
       "iconColor": "#AB38A1"
     },
@@ -247,6 +257,7 @@
       "name": "stream_secondary_bit_rate",
       "quota": 10,
       "order": 2560,
+      "unit": "kbps",
       "icon": "fa-gauge-simple-high",
       "iconColor": "#8035A6"
     },
@@ -254,6 +265,7 @@
       "name": "stream_secondary_frame_rate",
       "quota": 10,
       "order": 2570,
+      "unit": "fps",
       "icon": "fa-film",
       "iconColor": "#8035A6"
     },

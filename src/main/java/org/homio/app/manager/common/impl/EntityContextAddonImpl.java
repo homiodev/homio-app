@@ -206,10 +206,12 @@ public class EntityContextAddonImpl {
         entityContext.ui().addNotificationBlock("addons", "Addons", new Icon("fas fa-file-zipper", "#FF4400"),
                 block -> block.setBorderColor("#FF4400"));
         Path addonPath = CommonUtils.getAddonPath();
+        int appVersion = entityContext.setting().getApplicationMajorVersion();
         for (Path contextFile : findAddonContextFilesFromPath(addonPath)) {
             try {
                 AddonContext addonContext = new AddonContext(contextFile);
-                if (!AddonContext.validVersion(addonContext.getVersion(), entityContext.setting().getApplicationMajorVersion())) {
+                // 0 mean develop mode
+                if (appVersion != 0 && !AddonContext.validVersion(addonContext.getVersion(), appVersion)) {
                     log.error("Unable to launch addon {}. Incompatible version", addonContext.getVersion());
                 } else {
                     addonContextMap.put(addonContext.getPomFile().getArtifactId(), addonContext);

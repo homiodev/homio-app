@@ -3,12 +3,12 @@ package org.homio.app.utils;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
-import net.sf.cglib.proxy.Enhancer;
-import net.sf.cglib.proxy.MethodInterceptor;
 import org.homio.api.EntityContext;
 import org.homio.api.widget.JavaScriptBuilder;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.cglib.proxy.Enhancer;
+import org.springframework.cglib.proxy.MethodInterceptor;
 
 import java.util.*;
 import java.util.function.Consumer;

@@ -778,11 +778,11 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         });
 
         endpoints.computeIfAbsent(ENDPOINT_MOTION_THRESHOLD, key ->
-                new VideoDeviceEndpoint(entity, key, 0F, 100F));
+                new VideoDeviceEndpoint(entity, key, 0F, 100F, true));
 
         if (entity.isHasAudioStream()) {
             endpoints.computeIfAbsent(ENDPOINT_AUDIO_THRESHOLD, key ->
-                    new VideoDeviceEndpoint(entity, key, 0F, 100F));
+                    new VideoDeviceEndpoint(entity, key, 0F, 100F, true));
         }
     }
 
@@ -794,15 +794,15 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         });
     }
 
-    public VideoDeviceEndpoint addEndpointSwitch(String endpointId, Consumer<State> updateHandler) {
-        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, EndpointType.bool, true), updateHandler);
+    public VideoDeviceEndpoint addEndpointSwitch(String endpointId, Consumer<State> updateHandler, boolean writable) {
+        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, EndpointType.bool, writable), updateHandler);
     }
 
     public VideoDeviceEndpoint addEndpointEnum(String endpointId, Set<String> range, Consumer<State> updateHandler) {
         return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, range), updateHandler);
     }
 
-    public VideoDeviceEndpoint addEndpointSlider(String endpointId, int min, int max, Consumer<State> updateHandler) {
-        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, (float) min, (float) max), updateHandler);
+    public VideoDeviceEndpoint addEndpointSlider(String endpointId, int min, int max, Consumer<State> updateHandler, boolean writable) {
+        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, (float) min, (float) max, writable), updateHandler);
     }
 }

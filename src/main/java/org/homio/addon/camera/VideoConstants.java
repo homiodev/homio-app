@@ -52,4 +52,5 @@ public class VideoConstants {
 
     public static final String ENDPOINT_BANDWIDTH = "bandwidth";
 
+    public static final String ENDPOINT_HDD = "hdd";
 }

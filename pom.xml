@@ -30,6 +30,7 @@
                         <includeLayerTools>false</includeLayerTools>
                     </layers>
                     <arguments>
+                        <argument>--illegal-access=permit</argument>
                         <argument>--add-opens java.base/java.net=ALL-UNNAMED</argument>
                         <argument>--add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED</argument>
                     </arguments>
@@ -334,14 +335,14 @@
         </dependency>
 
         <dependency>
-            <artifactId>jcl-core</artifactId>
-            <groupId>org.xeustechnologies</groupId>
-            <version>2.8</version>
+            <artifactId>maven-model</artifactId>
+            <groupId>org.apache.maven</groupId>
         </dependency>
 
         <dependency>
-            <artifactId>maven-model</artifactId>
-            <groupId>org.apache.maven</groupId>
+            <groupId>org.objenesis</groupId>
+            <artifactId>objenesis</artifactId>
+            <version>2.1</version>
         </dependency>
 
         <dependency>
@@ -360,12 +361,6 @@
             <artifactId>vlcj</artifactId>
             <groupId>uk.co.caprica</groupId>
             <version>4.8.2</version>
-        </dependency>
-
-        <dependency>
-            <artifactId>cglib</artifactId>
-            <groupId>cglib</groupId>
-            <version>3.2.1</version>
         </dependency>
 
         <dependency>
