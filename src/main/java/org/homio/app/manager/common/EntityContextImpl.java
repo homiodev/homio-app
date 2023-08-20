@@ -203,6 +203,9 @@ public class EntityContextImpl implements EntityContext {
         this.entityContextWorkspace = new EntityContextWorkspaceImpl(this);
         this.entityContextStorage = new EntityContextStorageImpl(this);
         this.addon = new EntityContextAddonImpl(this, cacheService);
+
+        this.entityContextBGP.builder("flush-delayed-updates").intervalWithDelay(Duration.ofSeconds(30))
+                .execute(cacheService::flushDelayedUpdates);
     }
 
     @SneakyThrows

@@ -32,6 +32,7 @@ public class HomioApplication implements WebMvcConfigurer {
 
     @SneakyThrows
     public static void main(String[] args) throws IOException {
+        // Thread.currentThread().setContextClassLoader(new HomioClassLoader(HomioApplication.class.getClassLoader()));
         String version = StringUtils.defaultIfEmpty(HomioApplication.class.getPackage().getImplementationVersion(), "0.0");
         System.setProperty("server.version", version);
         setProperty("server.port", "port", "9111");

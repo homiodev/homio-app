@@ -62,7 +62,7 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
     @UIVideoAction(name = ENDPOINT_AUTO_LED, order = 60, icon = "fas fa-lightbulb")
     public void autoLed(boolean on) {
         if (on) {
-            setAttribute(ENDPOINT_ENABLE_LED, null);
+            setAttribute(ENDPOINT_ENABLE_LED, OnOffType.ON);
             service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&Lighting[0][0].Mode=Auto");
         }
     }

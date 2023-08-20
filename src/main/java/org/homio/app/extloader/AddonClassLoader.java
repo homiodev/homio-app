@@ -3,8 +3,8 @@ package org.homio.app.extloader;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
-import org.homio.app.extloader.jcl.JarClassLoader;
-import org.homio.app.extloader.jcl.ProxyClassLoader;
+import org.xeustechnologies.jcl.JarClassLoader;
+import org.xeustechnologies.jcl.ProxyClassLoader;
 
 import java.io.File;
 import java.io.IOException;

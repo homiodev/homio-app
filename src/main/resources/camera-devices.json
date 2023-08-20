@@ -4,149 +4,51 @@
   ],
   "endpoints": [
     {
-      "name": "bgcolor",
-      "quota": 10,
-      "icon": "fa-star-half-stroke",
-      "iconColor": "#56AB26"
-    },
-    {
-      "name": "anti_flicker",
-      "quota": 10,
-      "icon": "fab fa-flickr",
-      "iconColor": "#56AB26"
-    },
-    {
-      "name": "black_light",
-      "quota": 10,
-      "icon": "fa-traffic-light",
-      "iconColor": "#56AB26"
-    },
-    {
-      "name": "blc",
-      "quota": 10,
-      "icon": "fa-star-half-stroke",
-      "iconColor": "#56AB26"
-    },
-    {
-      "name": "blue_gain",
-      "quota": 10,
-      "icon": "fa-dice-six",
-      "iconColor": "#27608C"
-    },
-    {
-      "name": "drc",
-      "quota": 10,
-      "icon": "fa-plug-circle-bolt",
-      "iconColor": "#A69A2D"
-    },
-    {
-      "name": "exposure",
-      "quota": 10,
-      "icon": "fa-explosion",
-      "iconColor": "#9357EF"
-    },
-    {
-      "name": "3dnr",
-      "quota": 10,
-      "icon": "fab fa-unity",
-      "iconColor": "#299974"
-    },
-    {
-      "name": "red_gain",
-      "quota": 10,
-      "icon": "fa-vials",
-      "iconColor": "#A095F7"
-    },
-    {
-      "name": "white_balance",
-      "quota": 10,
-      "icon": "fa-scale-balanced",
-      "iconColor": "#B06C51"
-    },
-    {
-      "name": "position_datetime",
-      "quota": 10,
-      "icon": "fa-arrows-up-down-left-right",
-      "iconColor": "#5172B0"
-    },
-    {
-      "name": "name_position",
-      "quota": 10,
-      "icon": "fa-up-down-left-right",
-      "iconColor": "#563AB0"
-    },
-    {
-      "name": "show_name",
-      "quota": 10,
-      "icon": "fa-tags",
-      "iconColor": "#A82F9E"
-    },
-    {
-      "name": "day_night",
-      "quota": 10,
-      "icon": "fa-cloud-sun",
-      "iconColor": "#DD5F24"
-    },
-    {
-      "name": "record_audio",
-      "quota": 10,
-      "icon": "fa-dice-six",
-      "iconColor": "#AB2200"
-    },
-    {
-      "name": "show_datetime",
-      "quota": 10,
-      "icon": "fa-calendar-days",
-      "iconColor": "#618750"
-    },
-    {
-      "name": "show_watermark",
-      "quota": 10,
-      "icon": "fab fa-markdown",
-      "iconColor": "#AB2631"
-    },
-    {
       "name": "enable_led",
       "quota": 10,
+      "order": 10,
       "icon": "fas fa-lightbulb",
       "iconColor": "#7C2D9C"
     },
     {
       "name": "auto_led",
       "quota": 10,
+      "order": 20,
       "icon": "fas fa-lightbulb",
       "iconColor": "#7C2D9C"
     },
     {
       "name": "audio_threshold",
       "quota": 10,
+      "order": 30,
       "icon": "fa-music",
       "iconColor": "#95A346"
     },
     {
       "name": "motion_threshold",
       "quota": 10,
+      "order": 40,
       "icon": "fa-person-running",
       "iconColor": "#299974"
     },
     {
       "name": "last_seen",
       "quota": 100,
-      "order": 1900,
+      "order": 50,
       "icon": "fa-eye",
       "iconColor": "#2D9C2C"
     },
     {
       "name": "device_status",
       "quota": 100,
-      "order": 1910,
+      "order": 60,
       "icon": "fa-globe",
       "iconColor": "#42B52D"
     },
     {
       "name": "cpu_load",
       "quota": 100,
-      "order": 1940,
+      "order": 100,
       "unit": "%",
       "icon": "fa-microchip",
       "iconColor": "#A65535"
@@ -154,14 +56,116 @@
     {
       "name": "bandwidth",
       "quota": 100,
-      "order": 1950,
+      "order": 110,
       "unit": "kbps",
       "icon": "fa-wifi",
       "iconColor": "#A65535"
     },
     {
+      "name": "bgcolor",
+      "quota": 200,
+      "icon": "fa-star-half-stroke",
+      "iconColor": "#56AB26"
+    },
+    {
+      "name": "anti_flicker",
+      "quota": 210,
+      "icon": "fab fa-flickr",
+      "iconColor": "#56AB26"
+    },
+    {
+      "name": "black_light",
+      "quota": 220,
+      "icon": "fa-traffic-light",
+      "iconColor": "#56AB26"
+    },
+    {
+      "name": "blc",
+      "quota": 230,
+      "icon": "fa-star-half-stroke",
+      "iconColor": "#56AB26"
+    },
+    {
+      "name": "blue_gain",
+      "quota": 240,
+      "icon": "fa-dice-six",
+      "iconColor": "#27608C"
+    },
+    {
+      "name": "drc",
+      "quota": 250,
+      "icon": "fa-plug-circle-bolt",
+      "iconColor": "#A69A2D"
+    },
+    {
+      "name": "exposure",
+      "quota": 260,
+      "icon": "fa-explosion",
+      "iconColor": "#9357EF"
+    },
+    {
+      "name": "3dnr",
+      "quota": 270,
+      "icon": "fab fa-unity",
+      "iconColor": "#299974"
+    },
+    {
+      "name": "red_gain",
+      "quota": 280,
+      "icon": "fa-vials",
+      "iconColor": "#A095F7"
+    },
+    {
+      "name": "white_balance",
+      "quota": 290,
+      "icon": "fa-scale-balanced",
+      "iconColor": "#B06C51"
+    },
+    {
+      "name": "position_datetime",
+      "quota": 300,
+      "icon": "fa-arrows-up-down-left-right",
+      "iconColor": "#5172B0"
+    },
+    {
+      "name": "name_position",
+      "quota": 310,
+      "icon": "fa-up-down-left-right",
+      "iconColor": "#563AB0"
+    },
+    {
+      "name": "show_name",
+      "quota": 320,
+      "icon": "fa-tags",
+      "iconColor": "#A82F9E"
+    },
+    {
+      "name": "day_night",
+      "quota": 330,
+      "icon": "fa-cloud-sun",
+      "iconColor": "#DD5F24"
+    },
+    {
+      "name": "record_audio",
+      "quota": 340,
+      "icon": "fa-dice-six",
+      "iconColor": "#AB2200"
+    },
+    {
+      "name": "show_datetime",
+      "quota": 350,
+      "icon": "fa-calendar-days",
+      "iconColor": "#618750"
+    },
+    {
+      "name": "show_watermark",
+      "quota": 360,
+      "icon": "fab fa-markdown",
+      "iconColor": "#AB2631"
+    },
+    {
       "name": "hdd",
-      "order": 1970,
+      "order": 370,
       "stateless": true,
       "unit": "Mb",
       "icon": "fa-floppy-disk",

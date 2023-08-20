@@ -577,7 +577,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     private HttpRequest createHttpPostRequest() {
-        return Curl.createHttpRequest(getAuthUrl("", true), new ReolinkCmd(1, "GetPerformance", channelParam));
+        return Curl.createPostRequest(getAuthUrl("", true), new ReolinkCmd(1, "GetPerformance", channelParam));
     }
 
     @Override
@@ -651,11 +651,11 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         JsonNode localLink = objectNode.value.get("LocalLink");
         String link = localLink.path("activeLink").asText("");
         String mac = localLink.path("mac").asText("").toUpperCase();
-        if ((isEmpty(getEntity().getMacAddress()) && isNotEmpty(mac))
+        if ((isEmpty(getEntity().getMac()) && isNotEmpty(mac))
                 || (isEmpty(getEntity().getActiveLink()) && isNotEmpty(link))) {
             getEntityContext().updateDelayed(getEntity(), entity -> {
                 entity.setActiveLink(link);
-                entity.setMacAddress(mac);
+                entity.setMac(mac);
             });
         }
     }

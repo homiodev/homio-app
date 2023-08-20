@@ -305,7 +305,7 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
                 filterChain.doFilter(request, response);
             }
         });
-        registrationBean.addUrlPatterns("/map", "/dashboard", "/items/*", "/hardware*/", "/one_wire/*", "/admin/*");
+        registrationBean.addUrlPatterns("/map", "/dashboard", "/items/*", "/media/*", "/hardware*/", "/devices/*");
 
         return registrationBean;
     }

@@ -14,7 +14,6 @@ import org.homio.app.utils.CollectionUtils;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.ApplicationContext;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -101,7 +100,6 @@ public class CacheService {
         entityCache.remove(entityId);
     }
 
-    @Scheduled(fixedDelay = 30000)
     public void flushDelayedUpdates() {
         if (!entityCache.isEmpty()) {
             synchronized (entityCache) {
@@ -116,7 +114,7 @@ public class CacheService {
                             updateStatement.repository.flushCashedEntity(baseEntity);
 
                             if (baseEntity instanceof BaseEntity) {
-                                entityUpdated((BaseEntity) baseEntity);
+                                entityUpdated(baseEntity);
                             }
                         }
                     } catch (Exception ex) {

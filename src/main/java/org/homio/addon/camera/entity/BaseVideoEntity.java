@@ -274,9 +274,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         setJsonData("motionOptions", value);
     }
 
-    @UIField(order = 1)
-    @UIFieldSlider(min = 0, max = 100)
-    @UIFieldGroup(value = "STREAMING", order = 20, borderColor = "#773FD1")
     public int getMotionThreshold() {
         return getJsonData(ENDPOINT_MOTION_THRESHOLD, 40);
     }
@@ -285,9 +282,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         setJsonData(ENDPOINT_MOTION_THRESHOLD, value);
     }
 
-    @UIField(order = 2)
-    @UIFieldSlider(min = 0, max = 100)
-    @UIFieldGroup("STREAMING")
     public int getAudioThreshold() {
         return getJsonData(ENDPOINT_AUDIO_THRESHOLD, 40);
     }

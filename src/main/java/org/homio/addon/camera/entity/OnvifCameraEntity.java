@@ -389,19 +389,19 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         setJsonData("al", value);
     }
 
-    @UIField(order = 4, hideInEdit = true)
+    @UIField(order = 4, hideInEdit = true, hideOnEmpty = true)
     @UIFieldGroup("CONNECTION")
     public String getActiveLink() {
         return getJsonData("al");
     }
 
-    public void setMacAddress(String value) {
+    public void setMac(String value) {
         setJsonData("mac", value);
     }
 
-    @UIField(order = 5, hideInEdit = true)
+    @UIField(order = 5, hideInEdit = true, hideOnEmpty = true)
     @UIFieldGroup("CONNECTION")
-    public String getMacAddress() {
+    public String getMac() {
         return getJsonData("mac");
     }
 

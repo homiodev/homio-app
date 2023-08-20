@@ -22,6 +22,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 @Log4j2
 @Profile("demo")
 @Configuration
+@Deprecated
 public class DemoConfiguration {
 
     @Autowired

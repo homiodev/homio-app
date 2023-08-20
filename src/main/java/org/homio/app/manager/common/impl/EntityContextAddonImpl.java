@@ -45,6 +45,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
@@ -55,7 +56,7 @@ public class EntityContextAddonImpl {
 
     // count how much add/remove addon invokes
     public static int ADDON_UPDATE_COUNT = 0;
-    private final Map<String, AddonContext> addonContextMap = new HashMap<>();
+    private final Map<String, AddonContext> addonContextMap = new ConcurrentHashMap<>();
     private final EntityContextImpl entityContext;
     private final CacheService cacheService;
     @Setter
@@ -262,7 +263,6 @@ public class EntityContextAddonImpl {
                         builder -> addAddonNotificationRow(context, builder, true));
                 addonContextMap.remove(context.getAddonID());
                 log.error("Unable to load addon context <{}>.", context.getPomFile().getArtifactId(), ex);
-                throw ex;
             }
         }
     }

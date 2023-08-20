@@ -1,5 +1,6 @@
 package org.homio.app.setting.system;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
@@ -59,6 +60,7 @@ public class SystemAddonLibraryManagerSetting
             filterMatchPackages(entityContext, allPackageModels);
             packageContext.setPackages(allPackageModels);
         } catch (Exception ex) {
+            packageContext.setPackages(List.of());
             packageContext.setError(CommonUtils.getErrorMessage(ex));
         }
         return packageContext;
@@ -141,7 +143,7 @@ public class SystemAddonLibraryManagerSetting
                 ArchiveUtil.unzip(iconsArchivePath, addonPath, UnzipFileIssueHandler.replace);
             }
 
-            Map<String, Map<String, Object>> addons = Objects.requireNonNull(addonsRepo.getFile("addons.yml", Map.class));
+            Map<String, Map<String, Object>> addons = addonsRepo.getFile("addons.yml", Map.class);
             return addons.entrySet().stream()
                     .map(entry -> readAddon(entry.getKey(), entry.getValue(), iconsPath))
                     .filter(Objects::nonNull)

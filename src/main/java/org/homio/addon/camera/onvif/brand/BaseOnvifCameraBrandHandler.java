@@ -15,10 +15,14 @@ import org.homio.addon.camera.ui.CameraActionBuilder;
 import org.homio.api.EntityContext;
 import org.homio.api.state.State;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.http.MediaType;
 
 import java.nio.charset.StandardCharsets;
+
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
 
 public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler implements VideoActionsContext, BaseBrandCameraHandler {
 
@@ -81,8 +85,16 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler i
     public void fetchDataFromCamera() {
     }
 
-    protected void setAttribute(String key, State state) {
+    protected void setAttribute(@NotNull String key, @NotNull State state) {
         service.setAttribute(key, state);
+        switch (key) {
+            case ENDPOINT_MOTION_THRESHOLD -> getEntityContext().updateDelayed(getEntity(), entity -> {
+                entity.setMotionThreshold(state.intValue());
+            });
+            case ENDPOINT_AUDIO_THRESHOLD -> getEntityContext().updateDelayed(getEntity(), entity -> {
+                entity.setAudioThreshold(state.intValue());
+            });
+        }
     }
 
     protected void setAttributeRequest(String key, State state) {
