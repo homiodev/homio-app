@@ -167,9 +167,10 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
                     messages.add(Lang.getServerMessage("VIDEO_STREAM.ADDRESS", onvifDeviceState.getHOST_IP()));
                     if (requireAuth) {
                         messages.add(Lang.getServerMessage("VIDEO_STREAM.REQUIRE_AUTH"));
+                    } else {
+                        messages.add(Lang.getServerMessage("VIDEO_STREAM.NAME", fetchCameraName(onvifDeviceState)));
+                        messages.add(Lang.getServerMessage("VIDEO_STREAM.MODEL", fetchCameraModel(onvifDeviceState)));
                     }
-                    messages.add(Lang.getServerMessage("VIDEO_STREAM.NAME", fetchCameraName(onvifDeviceState)));
-                    messages.add(Lang.getServerMessage("VIDEO_STREAM.MODEL", fetchCameraModel(onvifDeviceState)));
                     messages.add(Lang.getServerMessage("VIDEO_STREAM.BRAND", brand.getName()));
                 },
                 () -> {

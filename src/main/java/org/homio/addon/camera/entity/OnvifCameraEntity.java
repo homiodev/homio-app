@@ -72,11 +72,13 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     @UIFieldGroup("STATUS")
     public String getEventSubscription() {
         if (getStatus().isOnline()) {
-            String subscriptionError = getService().getOnvifDeviceState().getSubscriptionError();
-            if (subscriptionError != null) {
-                return Status.ERROR.name() + " " + subscriptionError;
-            }
-            return Status.ONLINE.name();
+            return optService().map(service -> {
+                String subscriptionError = service.getOnvifDeviceState().getSubscriptionError();
+                if (subscriptionError != null) {
+                    return Status.ERROR.name() + " " + subscriptionError;
+                }
+                return Status.ONLINE.name();
+            }).orElse(Status.UNKNOWN.name());
         }
         return Status.UNKNOWN.name();
     }

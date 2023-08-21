@@ -70,7 +70,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     public void setManufacturer(String value) {
-        setJsonData("mf", value);
+        setJsonData("mf", "manufacturer".equalsIgnoreCase(value) ? null : value);
     }
 
     @UIField(order = 3, hideOnEmpty = true, hideInEdit = true)

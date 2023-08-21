@@ -577,7 +577,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     private HttpRequest createHttpPostRequest() {
-        return Curl.createPostRequest(getAuthUrl("", true), new ReolinkCmd(1, "GetPerformance", channelParam));
+        return Curl.createPostRequest(getAuthUrl("cmd=GetPerformance", true), "[{cmd: \"GetPerformance\", action: 0, param: {}}]");
     }
 
     @Override
@@ -585,6 +585,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         loginIfRequire();
 
         Root[] roots = firePost("", true,
+                new ReolinkCmd(1, "GetDevInfo", channelParam),
                 new ReolinkCmd(1, "GetHddInfo", channelParam),
                 new ReolinkCmd(1, "GetPerformance", channelParam),
                 new ReolinkCmd(1, "GetLocalLink", channelParam),
@@ -631,8 +632,25 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
                 handleGetHddInfoCommand(objectNode);
                 yield true;
             }
+            case "GetDevInfo" -> {
+                handleGetDevInfoCommand(objectNode);
+                yield true;
+            }
             default -> false;
         };
+    }
+
+    private void handleGetDevInfoCommand(Root objectNode) {
+        JsonNode devInfo = objectNode.value.get("DevInfo");
+        String model = devInfo.path("model").asText("");
+        String hardVer = devInfo.path("hardVer").asText("");
+        if ((isNotEmpty(model) && !model.equals(getEntity().getModel()))
+                || (isNotEmpty(hardVer) && !hardVer.equals(getEntity().getHardwareId()))) {
+            getEntityContext().updateDelayed(getEntity(), entity -> {
+                entity.setModel(model);
+                entity.setHardwareId(hardVer);
+            });
+        }
     }
 
     private void handleGetHddInfoCommand(Root objectNode) {
