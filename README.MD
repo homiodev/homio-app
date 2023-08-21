@@ -31,3 +31,9 @@ To avoid errors with installing linux packages when starts application you need 
 [releases-shield]: https://img.shields.io/github/v/release/homiodev/homio-app.svg
 
 [releases]: https://github.com/homiodev/homio-app/releases
+
+--add-opens=java.base/java.net=ALL-UNNAMED
+--add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED
+--add-opens=java.base/jdk.internal.loader=ALL-UNNAMED
+-Djava.system.class.loader=org.homio.app.HomioClassLoader
+-Ddevelopment=true
