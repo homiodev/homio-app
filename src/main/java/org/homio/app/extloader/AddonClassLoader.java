@@ -3,6 +3,7 @@ package org.homio.app.extloader;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
+import org.homio.app.HomioClassLoader;
 import org.xeustechnologies.jcl.JarClassLoader;
 import org.xeustechnologies.jcl.ProxyClassLoader;
 
@@ -204,11 +205,7 @@ public class AddonClassLoader extends JarClassLoader {
 
     private static class JvmLoader extends ProxyClassLoader {
 
-        private final ClassLoader classLoader;
-
-        public JvmLoader() {
-            classLoader = ClassLoader.getSystemClassLoader().getParent();
-        }
+        private final ClassLoader classLoader = HomioClassLoader.class.getClassLoader();
 
         @Override
         public Class<?> loadClass(String className, boolean resolveIt) {

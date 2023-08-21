@@ -549,9 +549,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @Override
     public @Nullable String getSnapshotUri() {
-        loginIfRequire();
-        return "/cgi-bin/api.cgi?cmd=Snap&channel=%s&rs=homio&token=%s".formatted(
-                nvrChannel, token);
+        return "/cgi-bin/api.cgi?cmd=Snap&channel=%s&rs=homio".formatted(nvrChannel);
     }
 
     @Override

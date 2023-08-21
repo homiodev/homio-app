@@ -148,7 +148,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     private void createConnectionJob() {
         cameraConnectionJob = entityContext
                 .bgp().builder("video-connect-" + entityID)
-                .intervalWithDelay(Duration.ofSeconds(8))
+                .intervalWithDelay(Duration.ofSeconds(30))
                 .execute(() -> {
                     try {
                         pollCameraConnection();
@@ -243,9 +243,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             if (status == Status.ERROR || status == REQUIRE_AUTH) {
                 entityContext.ui().sendErrorMessage("DISPOSE_VIDEO",
                         FlowMap.of("TITLE", entity.getTitle(), "REASON", reason));
-            }
-            if (entity.isStart()) {
-                entityContext.save(entity.setStart(false), false);
             }
         }
     }
@@ -487,10 +484,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     @Override
     @SneakyThrows
     protected final void initialize() {
-        String error = entity.getError();
-        if (error != null) {
-            disposeAndSetStatus(Status.OFFLINE, error);
-        } else if (isRequireReinitialize()) {
+        if (isRequireReinitialize()) {
             dispose();
             initializeCamera();
         }

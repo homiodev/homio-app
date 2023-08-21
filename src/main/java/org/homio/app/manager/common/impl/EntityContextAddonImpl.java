@@ -44,7 +44,10 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -116,15 +119,8 @@ public class EntityContextAddonImpl {
 
         for (AddonContext addonContext : loadedAddons) {
             addonContext.setInitialized(true);
-            ApplicationContext context = addonContext.getApplicationContext();
-
             entityContext.setting().addSettingsFromClassLoader(addonContext);
             applicationContext.getBean(ExtRequestMappingHandlerMapping.class).registerAddonRestControllers(addonContext);
-
-            for (AddonEntrypoint addonEntrypoint : context.getBeansOfType(AddonEntrypoint.class).values()) {
-                fireAddonEntrypoint(addonEntrypoint);
-                //this.addons.put("addon-" + addonEntrypoint.getAddonID(), new InternalAddonContext(addonEntrypoint, addonContext));
-            }
         }
         entityContext.rebuildRepositoryByPrefixMap();
         applicationContext.getBean(TransactionManagerContext.class).invalidate();
@@ -132,6 +128,13 @@ public class EntityContextAddonImpl {
         // we need rebuild Hibernate entityManagerFactory to fetch new models
         cacheService.clearCache();
         Lang.clear();
+
+        for (AddonContext addonContext : loadedAddons) {
+            ApplicationContext context = addonContext.getApplicationContext();
+            for (AddonEntrypoint addonEntrypoint : context.getBeansOfType(AddonEntrypoint.class).values()) {
+                fireAddonEntrypoint(addonEntrypoint);
+            }
+        }
 
         ADDON_UPDATE_COUNT++;
     }

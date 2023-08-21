@@ -71,12 +71,17 @@ public class CommonVideoStreamEntity extends BaseVideoEntity<CommonVideoStreamEn
     }
 
     @Override
+    protected boolean isCamera() {
+        return false;
+    }
+
+    @Override
     public @NotNull String getGroupID() {
         return getEntityID();
     }
 
     @Override
-    public Icon getEntityIcon() {
+    public @NotNull Icon getEntityIcon() {
         return new Icon("fas fa-film", "#4E783D");
     }
 

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.service.BaseVideoService;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
@@ -40,6 +41,7 @@ import java.nio.file.Paths;
 import java.util.*;
 
 import static java.lang.String.join;
+import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
@@ -164,16 +166,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
     public UIInputBuilder assembleActions() {
         return optService().map(BaseVideoService::assembleActions).orElse(null);
-    }
-
-    @UIField(order = 16, inlineEdit = true)
-    @UIFieldGroup("GENERAL")
-    public boolean isAutoStart() {
-        return getJsonData("autoStart", true);
-    }
-
-    public void setAutoStart(boolean start) {
-        setJsonData("autoStart", start);
     }
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
@@ -363,7 +355,16 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         if (!isStart()) {
             return "W.ERROR.NOT_STARTED";
         }
-        return null;
+        String error = StringUtils.defaultString(getStatusMessage(), "");
+        if (containsIgnoreCase(error, "connection timed out")) {
+            return "W.ERROR.NOT_REACHED_" + (this.isCamera() ? "CAMERA" : "VIDEO");
+        }
+        return error;
+    }
+
+    @JsonIgnore
+    protected boolean isCamera() {
+        return true;
     }
 
     @Override

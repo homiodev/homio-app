@@ -5,7 +5,6 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.addon.camera.scanner.OnvifCameraHttpScanner;
-import org.homio.addon.camera.setting.CameraAutorunIntervalSetting;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextUI.NotificationInfoLineBuilder;
@@ -17,7 +16,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
 
-import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -34,20 +32,11 @@ public class CameraEntrypoint implements AddonEntrypoint {
             // fire rescan whole possible items to see if ip address has been changed
             entityContext.getBean(OnvifCameraHttpScanner.class).executeScan(entityContext, null, null, true);
         });
-
-       /* TODO: for (BaseVideoEntity cameraEntity : entityContext.findAll(BaseVideoEntity.class)) {
-            cameraEntity.getService().startOrStopService(cameraEntity);
-        }*/
-
-        entityContext.setting().listenValueAndGet(CameraAutorunIntervalSetting.class, "cam-autorun", interval -> {
-            entityContext.bgp().builder("camera-autorun").cancelOnError(false)
-                    .interval(Duration.ofMinutes(interval))
-                    .execute(this::fireStartCamera);
-        });
     }
 
     public static void updateCamera(
-            @NotNull EntityContext entityContext, BaseVideoEntity entity,
+            @NotNull EntityContext entityContext,
+            @NotNull BaseVideoEntity<?, ?> entity,
             @Nullable Supplier<String> titleSupplier,
             @NotNull Icon icon,
             @Nullable Consumer<UILayoutBuilder> settingsBuilder) {
@@ -72,13 +61,5 @@ public class CameraEntrypoint implements AddonEntrypoint {
                         info.setRightSettingsButton(settingsBuilder);
                     }
                 });
-    }
-
-    private void fireStartCamera() {
-        for (BaseVideoEntity cameraEntity : entityContext.findAll(BaseVideoEntity.class)) {
-            if (!cameraEntity.isStart() && cameraEntity.isAutoStart()) {
-                entityContext.save(cameraEntity.setStart(true)); // start=true is a trigger to start camera
-            }
-        }
     }
 }

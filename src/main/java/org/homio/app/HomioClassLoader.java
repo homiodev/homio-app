@@ -14,7 +14,9 @@ public class HomioClassLoader extends ClassLoader {
 
     private static final Map<String, AddonClassLoader> addonJarClassLoaders = new HashMap<>();
 
-    public HomioClassLoader(ClassLoader parent) {
+    public static final HomioClassLoader INSTANCE = new HomioClassLoader(HomioClassLoader.class.getClassLoader());
+
+    private HomioClassLoader(ClassLoader parent) {
         super(parent);
     }
 

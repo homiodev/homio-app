@@ -32,7 +32,7 @@ public class HomioApplication implements WebMvcConfigurer {
 
     @SneakyThrows
     public static void main(String[] args) throws IOException {
-        // Thread.currentThread().setContextClassLoader(new HomioClassLoader(HomioApplication.class.getClassLoader()));
+        Thread.currentThread().setContextClassLoader(HomioClassLoader.INSTANCE);
         String version = StringUtils.defaultIfEmpty(HomioApplication.class.getPackage().getImplementationVersion(), "0.0");
         System.setProperty("server.version", version);
         setProperty("server.port", "port", "9111");
@@ -40,7 +40,9 @@ public class HomioApplication implements WebMvcConfigurer {
         setDatabaseProperties();
 
         try {
-            new SpringApplicationBuilder(AppConfig.class).listeners(new LogService()).run(args);
+            new SpringApplicationBuilder(AppConfig.class)
+                    .listeners(new LogService())
+                    .run(args);
         } catch (Exception ex) {
             Throwable cause = NestedExceptionUtils.getRootCause(ex);
             cause = cause == null ? ex : cause;
