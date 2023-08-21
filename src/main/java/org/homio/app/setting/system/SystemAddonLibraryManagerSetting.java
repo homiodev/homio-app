@@ -1,8 +1,24 @@
 package org.homio.app.setting.system;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import static java.lang.String.format;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.cache.CachedValue;
@@ -19,16 +35,6 @@ import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
-import java.io.IOException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.Duration;
-import java.util.*;
-import java.util.stream.Collectors;
-
-import static java.lang.String.format;
-
 @Log4j2
 public class SystemAddonLibraryManagerSetting
         implements SettingPluginPackageInstall, CoreSettingPlugin<JSONObject> {
@@ -36,6 +42,8 @@ public class SystemAddonLibraryManagerSetting
     private static final CachedValue<Collection<PackageModel>, EntityContext> addons =
             new CachedValue<>(Duration.ofHours(24),
                     SystemAddonLibraryManagerSetting::readAddons);
+
+    private static final Path addonsCopy = CommonUtils.getTmpPath().resolve("addons-copy.json");
 
     @Override
     public int order() {
@@ -62,6 +70,14 @@ public class SystemAddonLibraryManagerSetting
         } catch (Exception ex) {
             packageContext.setPackages(List.of());
             packageContext.setError(CommonUtils.getErrorMessage(ex));
+            // try fetch packages from local copy
+            if (Files.exists(addonsCopy)) {
+                try {
+                    packageContext.setPackages(OBJECT_MAPPER.readValue(addonsCopy.toFile(), new TypeReference<List<PackageModel>>() {}));
+                } catch (IOException ignore) {
+                    FileUtils.deleteQuietly(addonsCopy.toFile());
+                }
+            }
         }
         return packageContext;
     }
@@ -112,19 +128,21 @@ public class SystemAddonLibraryManagerSetting
     }
 
     private PackageModel build(AddonContext addonContext) {
-        return new PackageModel(
-                addonContext.getAddonID(),
-                addonContext.getPomFile().getName(),
-                addonContext.getPomFile().getDescription())
-                .setVersion(addonContext.getVersion())
-                .setReadme(addonContext.getPomFile().getDescription());
+        return new PackageModel()
+            .setName(addonContext.getAddonID())
+            .setTitle(addonContext.getPomFile().getName())
+            .setDescription(addonContext.getPomFile().getDescription())
+            .setVersion(addonContext.getVersion())
+            .setReadme(addonContext.getPomFile().getDescription());
     }
 
+    @SneakyThrows
     private static Collection<PackageModel> readAddons(EntityContext entityContext) {
         Collection<PackageModel> addons = new ArrayList<>();
         for (String repoURL : entityContext.setting().getValue(SystemAddonRepositoriesSetting.class)) {
             addons.addAll(getAddons(repoURL));
         }
+        OBJECT_MAPPER.writeValue(addonsCopy.toFile(), addons);
         return addons;
     }
 
@@ -179,7 +197,10 @@ public class SystemAddonLibraryManagerSetting
                 // String jarFile = addonRepo.getRepo() + ".jar";
                 // Model pomModel = addonRepo.getPomModel();
                 String key = name.startsWith("addon-") ? name : "addon-" + name;
-                PackageModel entity = new PackageModel(key, (String) addonConfig.get("name"), (String) addonConfig.get("description"));
+                PackageModel entity = new PackageModel()
+                    .setName(key)
+                    .setTitle((String) addonConfig.get("name"))
+                    .setDescription((String) addonConfig.get("description"));
                 entity.setJarUrl(format("https://github.com/%s/releases/download/%s/%s.jar", repository, "%s", addonRepo.getRepo()));
                 /*entity.setAuthor(pomModel.getDevelopers().stream()
                                          .map(Contributor::getName)

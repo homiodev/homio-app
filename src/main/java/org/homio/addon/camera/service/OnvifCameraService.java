@@ -61,6 +61,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiPredicate;
 
+import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 
 @Log4j2
@@ -460,7 +461,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     @Override
     protected void requestSnapshotByUri() {
         lastSnapshotRequest = Instant.now();
-        mainEventLoopGroup.schedule(() -> sendHttpGET(urls.getSnapshotUri()), 0, TimeUnit.MILLISECONDS);
+        mainEventLoopGroup.schedule(() -> sendHttpGET(brandHandler.getSnapshotUri(true)), 0, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -470,7 +471,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
             super.takeSnapshotSync(profile, output);
         }
         if (snapshotUri.startsWith("/")) {
-            snapshotUri = "http://%s:%s%s".formatted(getEntity().getIp(), getEntity().getRestPort(), brandHandler.getSnapshotUri());
+            snapshotUri = "http://%s:%s%s".formatted(getEntity().getIp(), getEntity().getRestPort(), brandHandler.getSnapshotUri(true));
         }
         VideoUtils.downloadImage(snapshotUri, entity.getUser(), entity.getPassword().asString(), output);
     }
@@ -555,9 +556,8 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     protected void postInitializeCamera() {
         onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(),
                 entity.getUser(), entity.getPassword().asString());
-        String snapshotUri = urls.getSnapshotUri();
-        if (snapshotUri.equals("ffmpeg")) {
-            urls.setSnapshotUri(brandHandler.getSnapshotUri());
+        if (urls.getSnapshotUri().equals("ffmpeg")) {
+            urls.setSnapshotUri(brandHandler.getSnapshotUri(false));
         }
         String mjpegUri = urls.getMjpegUri();
         if (mjpegUri.equals("ffmpeg")) {

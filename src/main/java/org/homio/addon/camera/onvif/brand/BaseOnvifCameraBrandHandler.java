@@ -70,7 +70,7 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler i
         CameraActionBuilder.assembleActions(this, uiInputBuilder);
     }
 
-    public @Nullable String getSnapshotUri() {
+    public @Nullable String getSnapshotUri(boolean live) {
         return null;
     }
 

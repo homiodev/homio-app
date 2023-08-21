@@ -371,7 +371,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
     }
 
     @Override
-    public @Nullable String getSnapshotUri() {
+    public @Nullable String getSnapshotUri(boolean live) {
         return "/ISAPI/Streaming/channels/" + nvrChannel + "01" + "/picture";
     }
 

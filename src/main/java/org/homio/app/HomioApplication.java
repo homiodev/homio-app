@@ -1,8 +1,18 @@
 package org.homio.app;
 
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.homio.api.util.CommonUtils.getErrorMessage;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Properties;
 import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.SystemUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.config.AppConfig;
 import org.homio.app.manager.common.impl.EntityContextSettingImpl;
@@ -12,17 +22,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.servlet.error.ErrorMvcAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.system.ApplicationHome;
 import org.springframework.core.NestedExceptionUtils;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.Properties;
-
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.homio.api.util.CommonUtils.getErrorMessage;
-
-@Log4j2
 @EnableHQuery(scanBaseClassesPackage = "org.homio")
 @SpringBootApplication(exclude = {
         ErrorMvcAutoConfiguration.class,
@@ -32,12 +35,14 @@ public class HomioApplication implements WebMvcConfigurer {
 
     @SneakyThrows
     public static void main(String[] args) throws IOException {
+        // set primary class loader
         Thread.currentThread().setContextClassLoader(HomioClassLoader.INSTANCE);
-        String version = StringUtils.defaultIfEmpty(HomioApplication.class.getPackage().getImplementationVersion(), "0.0");
-        System.setProperty("server.version", version);
+        // set root path before init log4j2
+        setRootPath();
+        System.setProperty("server.version", defaultIfEmpty(HomioApplication.class.getPackage().getImplementationVersion(), "0.0"));
         setProperty("server.port", "port", "9111");
-        log.info("Run homio-app v.{}", version);
-        setDatabaseProperties();
+        Logger log = LogManager.getLogger(HomioApplication.class);
+        setDatabaseProperties(log);
 
         try {
             new SpringApplicationBuilder(AppConfig.class)
@@ -51,7 +56,25 @@ public class HomioApplication implements WebMvcConfigurer {
         }
     }
 
-    private static void setDatabaseProperties() {
+    @SneakyThrows
+    private static void setRootPath() {
+        String sysRootPath = System.getProperty("rootPath");
+        Path rootPath;
+        if (StringUtils.isEmpty(sysRootPath)) {
+            rootPath = (SystemUtils.IS_OS_WINDOWS ? SystemUtils.getUserHome().toPath().resolve("homio") :
+                Paths.get("/opt/homio"));
+            if (!Files.exists(rootPath)) {
+                ApplicationHome applicationHome = new ApplicationHome();
+                rootPath = applicationHome.getDir().toPath();
+            }
+        } else {
+            rootPath = Paths.get(sysRootPath);
+        }
+        Files.createDirectories(rootPath);
+        System.setProperty("rootPath", rootPath.toString());
+    }
+
+    private static void setDatabaseProperties(Logger log) {
         Properties properties = EntityContextSettingImpl.getHomioProperties();
 
         @NotNull String type = properties.getProperty("dbType", "sqlite");

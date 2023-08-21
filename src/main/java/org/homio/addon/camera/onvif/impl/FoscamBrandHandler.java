@@ -215,7 +215,7 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
     }
 
     @Override
-    public @Nullable String getSnapshotUri() {
+    public @Nullable String getSnapshotUri(boolean live) {
         return "/cgi-bin/CGIProxy.fcgi?usr=" + getEntity().getUser() + "&pwd="
                 + getEntity().getPassword().asString() + "&cmd=snapPicture2";
     }

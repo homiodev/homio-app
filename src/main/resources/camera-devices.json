@@ -40,7 +40,7 @@
     },
     {
       "name": "device_status",
-      "quota": 100,
+      "quota": 10,
       "order": 60,
       "icon": "fa-globe",
       "iconColor": "#42B52D"
@@ -63,103 +63,120 @@
     },
     {
       "name": "bgcolor",
-      "quota": 200,
+      "stateless": true,
+      "order": 200,
       "icon": "fa-star-half-stroke",
       "iconColor": "#56AB26"
     },
     {
       "name": "anti_flicker",
-      "quota": 210,
+      "stateless": true,
+      "order": 210,
       "icon": "fab fa-flickr",
       "iconColor": "#56AB26"
     },
     {
       "name": "black_light",
-      "quota": 220,
+      "stateless": true,
+      "order": 220,
       "icon": "fa-traffic-light",
       "iconColor": "#56AB26"
     },
     {
       "name": "blc",
-      "quota": 230,
+      "stateless": true,
+      "order": 230,
       "icon": "fa-star-half-stroke",
       "iconColor": "#56AB26"
     },
     {
       "name": "blue_gain",
-      "quota": 240,
+      "stateless": true,
+      "order": 240,
       "icon": "fa-dice-six",
       "iconColor": "#27608C"
     },
     {
       "name": "drc",
-      "quota": 250,
+      "stateless": true,
+      "order": 250,
       "icon": "fa-plug-circle-bolt",
       "iconColor": "#A69A2D"
     },
     {
       "name": "exposure",
-      "quota": 260,
+      "stateless": true,
+      "order": 260,
       "icon": "fa-explosion",
       "iconColor": "#9357EF"
     },
     {
       "name": "3dnr",
-      "quota": 270,
+      "stateless": true,
+      "order": 270,
       "icon": "fab fa-unity",
       "iconColor": "#299974"
     },
     {
       "name": "red_gain",
-      "quota": 280,
+      "stateless": true,
+      "order": 280,
       "icon": "fa-vials",
       "iconColor": "#A095F7"
     },
     {
       "name": "white_balance",
-      "quota": 290,
+      "stateless": true,
+      "order": 290,
       "icon": "fa-scale-balanced",
       "iconColor": "#B06C51"
     },
     {
       "name": "position_datetime",
-      "quota": 300,
+      "stateless": true,
+      "order": 300,
       "icon": "fa-arrows-up-down-left-right",
       "iconColor": "#5172B0"
     },
     {
       "name": "name_position",
-      "quota": 310,
+      "stateless": true,
+      "order": 310,
       "icon": "fa-up-down-left-right",
       "iconColor": "#563AB0"
     },
     {
       "name": "show_name",
-      "quota": 320,
+      "stateless": true,
+      "order": 320,
       "icon": "fa-tags",
       "iconColor": "#A82F9E"
     },
     {
       "name": "day_night",
-      "quota": 330,
+      "stateless": true,
+      "order": 330,
       "icon": "fa-cloud-sun",
       "iconColor": "#DD5F24"
     },
     {
       "name": "record_audio",
-      "quota": 340,
+      "quota": 10,
+      "order": 340,
       "icon": "fa-dice-six",
       "iconColor": "#AB2200"
     },
     {
       "name": "show_datetime",
-      "quota": 350,
+      "stateless": true,
+      "order": 350,
       "icon": "fa-calendar-days",
       "iconColor": "#618750"
     },
     {
       "name": "show_watermark",
-      "quota": 360,
+      "stateless": true,
+      "order": 360,
       "icon": "fab fa-markdown",
       "iconColor": "#AB2631"
     },
@@ -173,63 +190,63 @@
     },
     {
       "name": "image_mirror",
-      "quota": 10,
+      "stateless": true,
       "order": 2000,
       "icon": "fa-arrow-right-arrow-left",
       "iconColor": "#9357EF"
     },
     {
       "name": "image_rotate",
-      "quota": 10,
+      "stateless": true,
       "order": 2005,
       "icon": "fa-superscript",
       "iconColor": "#415DBA"
     },
     {
       "name": "image_bright",
-      "quota": 10,
+      "stateless": true,
       "order": 2010,
       "icon": "fa-sun",
       "iconColor": "#415DBA"
     },
     {
       "name": "image_contrast",
-      "quota": 10,
+      "stateless": true,
       "order": 2020,
       "icon": "fa-circle-half-stroke",
       "iconColor": "#415DBA"
     },
     {
       "name": "image_hue",
-      "quota": 10,
+      "stateless": true,
       "order": 2030,
       "icon": "fa-swatchbook",
       "iconColor": "#415DBA"
     },
     {
       "name": "image_saturation",
-      "quota": 10,
+      "stateless": true,
       "order": 2040,
       "icon": "fa-pen-fancy",
       "iconColor": "#415DBA"
     },
     {
       "name": "image_sharpen",
-      "quota": 10,
+      "stateless": true,
       "order": 2050,
       "icon": "fa-cubes-stacked",
       "iconColor": "#415DBA"
     },
     {
       "name": "stream_main_resolution",
-      "quota": 10,
+      "stateless": true,
       "order": 2500,
       "icon": "fa-dna",
       "iconColor": "#AB38A1"
     },
     {
       "name": "stream_main_bit_rate",
-      "quota": 10,
+      "stateless": true,
       "order": 2510,
       "unit": "kbps",
       "icon": "fa-gauge-simple-high",
@@ -237,7 +254,7 @@
     },
     {
       "name": "stream_main_frame_rate",
-      "quota": 10,
+      "stateless": true,
       "order": 2520,
       "unit": "fps",
       "icon": "fa-film",
@@ -245,21 +262,21 @@
     },
     {
       "name": "stream_main_H264_profile",
-      "quota": 10,
+      "stateless": true,
       "order": 2530,
       "icon": "fa-address-card",
       "iconColor": "#AB38A1"
     },
     {
       "name": "stream_secondary_resolution",
-      "quota": 10,
+      "stateless": true,
       "order": 2550,
       "icon": "fa-dna",
       "iconColor": "#8035A6"
     },
     {
       "name": "stream_secondary_bit_rate",
-      "quota": 10,
+      "stateless": true,
       "order": 2560,
       "unit": "kbps",
       "icon": "fa-gauge-simple-high",
@@ -267,7 +284,7 @@
     },
     {
       "name": "stream_secondary_frame_rate",
-      "quota": 10,
+      "stateless": true,
       "order": 2570,
       "unit": "fps",
       "icon": "fa-film",
@@ -275,7 +292,7 @@
     },
     {
       "name": "stream_secondary_H264_profile",
-      "quota": 10,
+      "stateless": true,
       "order": 2580,
       "icon": "fa-address-card",
       "iconColor": "#8035A6"

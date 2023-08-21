@@ -1,6 +1,24 @@
 package org.homio.app.manager.common.impl;
 
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.homio.app.manager.common.impl.EntityContextUIImpl.GlobalSendType.setting;
+import static org.homio.app.model.entity.SettingEntity.getKey;
+import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;
+
 import com.pivovarit.function.ThrowingConsumer;
+import java.lang.reflect.Modifier;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Properties;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -22,19 +40,6 @@ import org.homio.app.setting.system.SystemPlaceSetting;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.core.env.ConfigurableEnvironment;
-
-import java.lang.reflect.Modifier;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.homio.app.manager.common.impl.EntityContextUIImpl.GlobalSendType.setting;
-import static org.homio.app.model.entity.SettingEntity.getKey;
-import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;
 
 @SuppressWarnings("unused")
 @Log4j2
@@ -197,17 +202,20 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     public static Properties getHomioProperties() {
         if (homioProperties == null) {
             homioProperties = new Properties();
-            propertiesLocation = CommonUtils.getHomioPropertiesLocation();
+            propertiesLocation = CommonUtils.getRootPath().resolve("homio.properties");
             log.info("Uses configuration file: {}", propertiesLocation);
-            // must exist because CommonUtils.logsPath, etc.. init it first
-            homioProperties.load(Files.newInputStream(propertiesLocation));
+            try {
+                homioProperties.load(Files.newInputStream(propertiesLocation));
+            } catch (Exception ignore) {
+                homioProperties.store(Files.newOutputStream(propertiesLocation), null);
+            }
         }
         return homioProperties;
     }
 
     @Override
     public @NotNull String getApplicationVersion() {
-        return StringUtils.defaultIfEmpty(getClass().getPackage().getImplementationVersion(), "0.0");
+        return System.getProperty("server.version");
     }
 
     @SneakyThrows
