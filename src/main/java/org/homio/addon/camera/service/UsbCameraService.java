@@ -33,7 +33,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     protected void pollCameraConnection() throws Exception {
         Set<String> aliveVideoDevices = entityContext.media().getVideoDevices();
         if (!aliveVideoDevices.contains(entity.getIeeeAddress())) {
-            throw new ConfigurationException("Wrong camera configuration");
+            throw new ConfigurationException("W.ERROR.NOT_REACHED_CAMERA");
         }
         super.pollCameraConnection();
     }
@@ -79,7 +79,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
         outputs.add(CommonUtils.MACHINE_IP_ADDRESS + ":" + entity.getStreamStartPort());
         outputs.add(CommonUtils.MACHINE_IP_ADDRESS + ":" + (entity.getStreamStartPort() + 1));
 
-        ffmpegUsbStream = entityContext.media().buildFFMPEG(getEntityID(), "FFmpeg usb udp re streamer", this, log,
+        ffmpegUsbStream = entityContext.media().buildFFMPEG(getEntityID(), "FFmpeg usb udp re-streamer", this, log,
                 GENERAL, "-loglevel warning " + (SystemUtils.IS_OS_LINUX ? "-f v4l2" : "-f dshow"), url,
                 String.join(" ", outputParams),
                 outputs.stream().map(o -> "[f=mpegts]udp://" + o + "?pkt_size=1316").collect(Collectors.joining("|")),

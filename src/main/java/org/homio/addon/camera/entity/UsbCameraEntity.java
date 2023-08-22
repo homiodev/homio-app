@@ -30,7 +30,9 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
         implements AbilityToStreamHLSOverFFMPEG<UsbCameraEntity>, HasEntityLog {
 
     @Override
-    @UIField(order = 5, label = "usb")
+    @UIField(order = 5, label = "usbSource", type = UIFieldType.TextSelectBoxDynamic)
+    @UIFieldSelection(SelectVideoSource.class)
+    @UIFieldSelectValueOnEmpty(label = "SELECTION.VIDEO_SOURCE")
     public String getIeeeAddress() {
         return super.getIeeeAddress();
     }
@@ -43,7 +45,7 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
 
     @UIField(order = 25, type = UIFieldType.TextSelectBoxDynamic)
     @UIFieldSelection(SelectAudioSource.class)
-    @UIFieldSelectValueOnEmpty(label = "selection.audioSource")
+    @UIFieldSelectValueOnEmpty(label = "SELECTION.AUDIO_SOURCE")
     public String getAudioSource() {
         return getJsonData("asource");
     }
@@ -118,7 +120,7 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
     @Override
     public @Nullable String getError() {
         if (StringUtils.isEmpty(getIeeeAddress())) {
-            return "W.ERROR.INVALID_CONFIG";
+            return "W.ERROR.NO_VIDEO_SOURCE_SELECTED";
         }
         return super.getError();
     }
@@ -148,8 +150,15 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
 
         @Override
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
-            Set<String> audioDevices = parameters.getEntityContext().media().getAudioDevices();
-            return OptionModel.list(audioDevices);
+            return OptionModel.list(parameters.getEntityContext().media().getAudioDevices());
+        }
+    }
+
+    public static class SelectVideoSource implements DynamicOptionLoader {
+
+        @Override
+        public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
+            return OptionModel.list(parameters.getEntityContext().media().getVideoDevices());
         }
     }
 

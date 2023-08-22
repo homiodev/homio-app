@@ -49,7 +49,7 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
     }
 
     @Override
-    public void from(@NotNull UIInputBuilder source) {
+    public void from(@Nullable UIInputBuilder source) {
         super.from(source);
     }
 

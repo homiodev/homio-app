@@ -183,12 +183,8 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     public void cameraCommunicationError(String reason) {
-        // will try to reconnect again as camera may be rebooting.
-        boolean wasOnline = entity.getStatus().isOnline();
         updateEntityStatus(ERROR, reason);
-        if (wasOnline) {
-            resetAndRetryConnecting();
-        }
+        resetAndRetryConnecting();
     }
 
     protected void resetAndRetryConnecting() {
@@ -238,7 +234,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     public final void disposeAndSetStatus(@NotNull Status status, @Nullable String reason) {
         if (updateEntityStatus(status, reason)) {
             log.warn("[{}]: Set video <{}> to status <{}>. Msg: <{}>", entityID, entity, status, reason);
-            dispose();
+            resetAndRetryConnecting();
 
             if (status == Status.ERROR || status == REQUIRE_AUTH) {
                 entityContext.ui().sendErrorMessage("DISPOSE_VIDEO",
@@ -495,7 +491,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     public byte[] getSnapshot() {
-        if (!entity.getStatus().isOnline()) {
+        if (!entity.isStart() || !entity.getStatus().isOnline()) {
             // Single gray pixel JPG to keep streams open when the camera goes offline, so they don't stop.
             return new byte[]{(byte) 0xff, (byte) 0xd8, (byte) 0xff, (byte) 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
                     0x00, 0x01, 0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, (byte) 0xff, (byte) 0xdb, 0x00, 0x43,
@@ -509,8 +505,8 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         }
         // Most cameras will return a 503 busy error if snapshot is faster than 1 second
         long lastUpdatedMs = Duration.between(lastSnapshotRequest, Instant.now()).toMillis();
-        if (snapshotJob == null && !ffmpegSnapshot.isRunning() && lastUpdatedMs >= entity.getSnapshotPollInterval()) {
-            requestSnapshotByUri();
+        if (snapshotJob == null && !ffmpegSnapshot.isRunning() && lastUpdatedMs >= Duration.ofSeconds(60).toMillis()) {
+            scheduleRequestSnapshot();
         }
         lockCurrentSnapshot.lock();
         try {

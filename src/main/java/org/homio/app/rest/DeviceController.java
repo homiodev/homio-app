@@ -171,7 +171,7 @@ public class DeviceController {
                     Icon icon = deviceEntity.getEntityIcon();
                     list.add(OptionModel.of(Objects.requireNonNull(deviceEntity.getIeeeAddress()), deviceContract.getDeviceFullName())
                             .setDescription(deviceContract.getDescription())
-                            .setIcon(icon.getIcon())
+                             .setIcon(icon.getIcon())
                             .setColor(icon.getColor()));
                 }
             }

@@ -1,21 +1,44 @@
 package org.homio.addon.camera.service;
 
+import static org.homio.api.util.CommonUtils.getErrorMessage;
+
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import de.onvif.soap.OnvifDeviceState;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.base64.Base64;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import java.lang.reflect.Method;
+import java.net.InetSocketAddress;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiPredicate;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -34,7 +57,12 @@ import org.homio.addon.camera.onvif.util.IpCameraBindingConstants;
 import org.homio.addon.camera.onvif.util.MyNettyAuthHandler;
 import org.homio.addon.camera.service.util.CommonCameraHandler;
 import org.homio.addon.camera.service.util.VideoUtils;
-import org.homio.addon.camera.ui.*;
+import org.homio.addon.camera.ui.UICameraActionConditional;
+import org.homio.addon.camera.ui.UICameraDimmerButton;
+import org.homio.addon.camera.ui.UIVideoAction;
+import org.homio.addon.camera.ui.UIVideoActionGetter;
+import org.homio.addon.camera.ui.UIVideoActionMetadata;
+import org.homio.addon.camera.ui.VideoActionType;
 import org.homio.api.EntityContext;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
@@ -48,21 +76,6 @@ import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.onvif.ver10.schema.Profile;
-
-import java.lang.reflect.Method;
-import java.net.InetSocketAddress;
-import java.nio.file.Path;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.function.BiPredicate;
-
-import static org.apache.commons.lang3.StringUtils.defaultString;
-import static org.homio.api.util.CommonUtils.getErrorMessage;
 
 @Log4j2
 public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, OnvifCameraService> {
@@ -523,9 +536,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     public void addLowRequestGet(String url) {
-        this.lowPriorityRequests.add(new LowRequest(() -> {
-            sendHttpGET(url);
-        }));
+        this.lowPriorityRequests.add(new LowRequest(() -> sendHttpGET(url)));
     }
 
     public void addLowRequest(Runnable handler) {

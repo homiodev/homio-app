@@ -217,7 +217,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
         return text == null ? "btn_" + System.currentTimeMillis() : text;
     }
 
-    protected void from(UIInputBuilder source) {
+    protected void from(@Nullable UIInputBuilder source) {
         UIBaseLayoutBuilderImpl sourceBuilder = (UIInputBuilderImpl) source;
         if (sourceBuilder != null) {
             this.inputBuilders.putAll(sourceBuilder.inputBuilders);
