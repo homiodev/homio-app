@@ -78,9 +78,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
         // Menu
         this.menuCameraRecord = menuServerItems(RECORD_STORAGE_MENU, VideoBaseStorageService.class, "Record storage");
         this.menuFfmpegCamera = menuServerItems("ffmpegCameraMenu", BaseVideoEntity.class, "Camera");
-        this.menuFfmpegCameraWithProfiles = menuServer("ffmpegCameraMenuWithProfiles", "rest/camera/ffmpegWithProfiles", "Camera");
-        /* this.profileMenu = menuServer("profileMenu", "/rest/camera/profiles")
-                .setDependency(this.ffmpegCameraMenu); */
+        this.menuFfmpegCameraWithProfiles = menuServer("ffmpegCameraMenuWithProfiles", "rest/media/video/ffmpegWithProfiles", "Camera");
         this.menuOnOff = menuStatic("onOff", OnOffType.OnOffTypeEnum.class, OnOffType.OnOffTypeEnum.On);
         this.menuRecordType = menuStatic("recordType", RecordType.class, RecordType.Mp4);
 

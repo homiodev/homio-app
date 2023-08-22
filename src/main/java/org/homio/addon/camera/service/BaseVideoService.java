@@ -222,7 +222,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         updateEntityStatus(INITIALIZE, null);
         log.info("[{}]: Initialize camera: <{}>", entityID, getEntity());
         camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer());
-        videoStreamParametersHashCode = entity.getVideoParametersHashCode();
 
         try {
             this.urls.setRtspUri(entity.getRtspUri());
@@ -472,7 +471,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     @SneakyThrows
     public byte[] recordGifSync(String profile, int secondsToRecord) {
         Path output = getFfmpegGifOutputPath().resolve("tmp_" + System.currentTimeMillis() + ".gif");
-        fireFfmpegSync(profile, output, "-y -t " + secondsToRecord + " -hide_banner -loglevel warning",
+        fireFfmpegSync(profile, output, "-y -t " + secondsToRecord + " -hide_banner -loglevel panic",
             gifOutOptions, secondsToRecord + 20);
         return Files.readAllBytes(output);
     }
@@ -480,7 +479,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     @SneakyThrows
     public byte[] recordMp4Sync(String profile, int secondsToRecord) {
         Path output = getFfmpegMP4OutputPath().resolve("tmp_" + System.currentTimeMillis() + ".mp4");
-        fireFfmpegSync(profile, output, "-y -t " + secondsToRecord + " -hide_banner -loglevel warning",
+        fireFfmpegSync(profile, output, "-y -t " + secondsToRecord + " -hide_banner -loglevel panic",
             mp4OutOptions, secondsToRecord + 20);
         return Files.readAllBytes(output);
     }
@@ -516,7 +515,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         // Most cameras will return a 503 busy error if snapshot is faster than 1 second
         long lastUpdatedMs = Duration.between(lastSnapshotRequest, Instant.now()).toMillis();
         if (snapshotJob == null && !ffmpegSnapshot.isRunning() && lastUpdatedMs >= Duration.ofSeconds(60).toMillis()) {
-            scheduleRequestSnapshot();
+            //scheduleRequestSnapshot();
         }
         lockCurrentSnapshot.lock();
         try {
@@ -577,6 +576,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     private synchronized void dispose() {
+        videoStreamParametersHashCode = entity.getVideoParametersHashCode();
         log.info("[{}]: Dispose video: <{}>", entityID, getEntity());
         offline();
 
@@ -683,7 +683,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     public final void recordMp4(@NotNull Path filePath, @Nullable String profile, int secondsToRecord) {
         String inputOptions = getFFMPEGInputOptions(profile);
-        inputOptions = "-y -t " + secondsToRecord + " -hide_banner -loglevel warning " + inputOptions;
+        inputOptions = "-y -t " + secondsToRecord + " -hide_banner -loglevel panic " + inputOptions;
         FFMPEG ffmpegMP4 = entityContext
             .media()
             .buildFFMPEG(entityID, "FFMPEG record MP4", this, log, FFMPEGFormat.RECORD, inputOptions,
@@ -694,7 +694,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     public final void recordGif(Path filePath, @Nullable String profile, int secondsToRecord) {
-        String gifInputOptions = "-y -t " + secondsToRecord + " -hide_banner -loglevel warning " + getFFMPEGInputOptions();
+        String gifInputOptions = "-y -t " + secondsToRecord + " -hide_banner -loglevel panic " + getFFMPEGInputOptions();
         FFMPEG ffmpegGIF = entityContext.media().buildFFMPEG(entityID, "FFMPEG GIF", this, log, FFMPEGFormat.GIF,
             gifInputOptions, urls.getRtspUri(profile),
             gifOutOptions, filePath.toString(), entity.getUser(),
@@ -711,13 +711,13 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         FFMPEG.run(ffmpegSnapshot, FFMPEG::stopConverting);
         FFMPEG.run(ffmpegHLS, FFMPEG::stopConverting);
 
-        this.snapshotInputOptions = getFFMPEGInputOptions() + " -threads 1 -skip_frame nokey -hide_banner -loglevel warning -an";
+        this.snapshotInputOptions = getFFMPEGInputOptions() + " -threads 1 -skip_frame nokey -hide_banner -loglevel panic -an";
         this.mp4OutOptions = String.join(" ", entity.getMp4OutOptions());
         this.gifOutOptions = String.join(" ", entity.getGifOutOptions());
 
         String rtspUri = urls.getRtspUri();
         ffmpegMjpeg = entityContext.media().buildFFMPEG(entityID, "FFMPEG mjpeg", this, log,
-            FFMPEGFormat.MJPEG, getFFMPEGInputOptions() + " -hide_banner -loglevel warning", rtspUri,
+            FFMPEGFormat.MJPEG, getFFMPEGInputOptions() + " -hide_banner -loglevel panic", rtspUri,
             String.join(" ", entity.getMjpegOutOptions()), entity.getUrl("ipcamera.jpg"),
             entity.getUser(), entity.getPassword().asString(), null);
         setAttribute("FFMPEG_MJPEG", new StringType(String.join(" ", ffmpegMjpeg.getCommandArrayList())));
@@ -731,7 +731,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
         if (entity instanceof AbilityToStreamHLSOverFFMPEG hlsOverFFMPEG) {
             ffmpegHLS = entityContext.media().buildFFMPEG(entityID, "FFMPEG HLS", this, log, FFMPEGFormat.HLS,
-                "-hide_banner -loglevel warning " + getFFMPEGInputOptions(),
+                "-hide_banner -loglevel panic " + getFFMPEGInputOptions(),
                 StringUtils.defaultString(hlsOverFFMPEG.getHlsRtspUri(), rtspUri),
                 buildHlsOptions(), getFfmpegHLSOutputPath().resolve("ipcamera.m3u8").toString(),
                 entity.getUser(), entity.getPassword().asString(),

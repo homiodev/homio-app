@@ -182,7 +182,7 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
         String source = service.urls.getSnapshotUri(profile);
         log.info("[{}]: Start ffmpeg video recording from source: <{}> to: <{}>", getEntityID(), source, path);
         FFMPEG ffmpeg = entityContext.media().buildFFMPEG(getEntityID(), "FFMPEG loop record", ffmpegHandler, log,
-                RECORD, getVerbose() ? "" : "-hide_banner -loglevel warning", source,
+                RECORD, getVerbose() ? "" : "-hide_banner -loglevel panic", source,
                 buildFFMPEGRecordCommand(folder), path.toString(),
                 videoStreamEntity.getUser(), videoStreamEntity.getPassword().asString(), null);
         ffmpegServices.put(id, ffmpeg);

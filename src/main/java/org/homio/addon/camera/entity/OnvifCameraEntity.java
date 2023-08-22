@@ -381,12 +381,6 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         return new OnvifCameraService(entityContext, this);
     }
 
-    @Override
-    public void logBuilder(EntityLogBuilder entityLogBuilder) {
-        entityLogBuilder.addTopicFilterByEntityID("org.homio.addon.camera");
-        entityLogBuilder.addTopicFilterByEntityID("org.homio.api.video");
-    }
-
     public void setActiveLink(String value) {
         setJsonData("al", value);
     }

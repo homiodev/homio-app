@@ -1,5 +1,13 @@
 package org.homio.addon.camera.service;
 
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.homio.api.EntityContextMedia.FFMPEGFormat.GENERAL;
+import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
+
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.addon.camera.CameraEntrypoint;
@@ -8,21 +16,11 @@ import org.homio.addon.camera.entity.UsbCameraEntity;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.model.Icon;
-import org.homio.api.util.CommonUtils;
-
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.homio.api.EntityContextMedia.FFMPEGFormat.GENERAL;
+import org.homio.api.state.StringType;
 
 @Log4j2
 public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCameraService> {
 
-    public final List<String> outputs = new ArrayList<>();
     private FFMPEG ffmpegUsbStream;
 
     public UsbCameraService(UsbCameraEntity entity, EntityContext entityContext) {
@@ -50,7 +48,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
 
     @Override
     protected boolean pingCamera() {
-        return true;
+        return ffmpegUsbStream.getIsAlive();
     }
 
     @Override
@@ -75,15 +73,17 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
             url += ":audio=\"" + entity.getAudioSource() + "\"";
             outputParams.add("-map 0:a");
         }
+        Map<String, Integer> outputs = Map.of("rtsp", entity.getStreamStartPort(), "hls", entity.getStreamStartPort() + 1);
 
-        outputs.add(CommonUtils.MACHINE_IP_ADDRESS + ":" + entity.getStreamStartPort());
-        outputs.add(CommonUtils.MACHINE_IP_ADDRESS + ":" + (entity.getStreamStartPort() + 1));
+        String output = outputs.values().stream().map(integer -> "[f=mpegts]udp://%s:%s?pkt_size=1316".formatted(MACHINE_IP_ADDRESS, integer))
+                               .collect(Collectors.joining("|"));
+        setAttribute("MainStream", new StringType(output));
 
         if(ffmpegUsbStream == null || !ffmpegUsbStream.getIsAlive()) {
             ffmpegUsbStream = entityContext.media().buildFFMPEG(getEntityID(), "FFmpeg usb udp re-streamer", this, log,
-                GENERAL, "-loglevel warning " + (SystemUtils.IS_OS_LINUX ? "-f v4l2" : "-f dshow"), url,
+                GENERAL, SystemUtils.IS_OS_LINUX ? "-f v4l2" : "-f dshow", url,
                 String.join(" ", outputParams),
-                outputs.stream().map(o -> "[f=mpegts]udp://" + o + "?pkt_size=1316").collect(Collectors.joining("|")),
+                output,
                 "", "", null);
             ffmpegUsbStream.startConverting();
         }

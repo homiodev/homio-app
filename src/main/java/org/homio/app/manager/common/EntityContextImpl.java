@@ -446,6 +446,7 @@ public class EntityContextImpl implements EntityContext {
         AbstractRepository repository = getRepository(entityID);
         BaseEntity deletedEntity = repository.deleteByEntityID(entityID);
         cacheService.clearCache();
+        getBean(LogService.class).deleteEntityLogsFile(deletedEntity);
         runUpdateNotifyListeners(null, deletedEntity, this.event().getEntityRemoveListeners());
         return deletedEntity;
     }

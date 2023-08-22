@@ -1,8 +1,30 @@
 package org.homio.app;
 
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+
 import com.pivovarit.function.ThrowingConsumer;
 import com.sshtools.common.logger.DefaultLoggerContext;
 import com.sshtools.common.logger.Log;
+import java.io.File;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -37,25 +59,8 @@ import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEven
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
-
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-
 @Component
-public class LogService
-        implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, ContextCreated {
+public class LogService implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, ContextCreated {
 
     private static final org.apache.logging.log4j.Logger maverickLogger = LogManager.getLogger("com.ssh.maverick");
 
@@ -119,9 +124,15 @@ public class LogService
     }
 
     public @Nullable Path getEntityLogsFile(BaseEntity baseEntity) {
-        return Optional.ofNullable(globalAppender.logConsumers.get(baseEntity.getEntityID()))
-                .map(c -> c.path)
-                .orElse(null);
+        LogConsumer logConsumer = globalAppender.logConsumers.get(baseEntity.getEntityID());
+        return logConsumer == null ? null : logConsumer.logToSeparateFile;
+    }
+
+    public void deleteEntityLogsFile(BaseEntity baseEntity) {
+        LogConsumer logConsumer = globalAppender.logConsumers.get(baseEntity.getEntityID());
+        if (logConsumer != null && logConsumer.logToSeparateFile != null) {
+            FileUtils.deleteQuietly(logConsumer.logToSeparateFile.toFile());
+        }
     }
 
     @SneakyThrows
@@ -298,8 +309,7 @@ public class LogService
 
         // Scan LogConsumers and send to ui if match
         private void sendLogs(EntityContextImpl entityContext, LogEvent event) {
-            if (allowDebugLevel && event.getLevel().intLevel() <= Level.DEBUG.intLevel()
-                    || !allowDebugLevel && event.getLevel().intLevel() <= Level.INFO.intLevel()) {
+            if (event.getLevel().intLevel() <= Level.DEBUG.intLevel()) {
                 for (Entry<String, DefinedAppenderConsumer> entry : definedAppender.entrySet()) {
                     if (entry.getValue().accept(event.getLoggerName())) {
                         sendLogEvent(event, message ->
@@ -313,7 +323,9 @@ public class LogService
                 }
                 if (logConsumer.logTopics.stream().anyMatch(l -> l.test(event))) {
                     sendLogEvent(event, message -> {
-                        Files.writeString(logConsumer.path, message + System.lineSeparator(), StandardOpenOption.APPEND);
+                        if (logConsumer.logToSeparateFile != null) {
+                            Files.writeString(logConsumer.logToSeparateFile, message + System.lineSeparator(), StandardOpenOption.APPEND);
+                        }
                         entityContext.ui().sendDynamicUpdate("entity-log-" + logConsumer.entityID, message);
                     });
                 }
@@ -341,11 +353,11 @@ public class LogService
     @Getter
     private static class LogConsumer {
 
-        public final Path path;
         private final List<Predicate<LogEvent>> logTopics = new ArrayList<>();
         private final String entityID;
         private final Class<?> targetClass;
         private final String className;
+        private @Nullable Path logToSeparateFile;
         private boolean debug;
 
         @SneakyThrows
@@ -353,9 +365,7 @@ public class LogService
             this.entityID = entityID;
             this.targetClass = targetClass;
             this.className = targetClass.getSimpleName();
-            this.path = CommonUtils.getOrCreatePath("logs/entities/" + className).resolve(entityID + ".log");
             this.debug = debug;
-            Files.write(path, new byte[0], StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
         }
     }
 
@@ -384,6 +394,19 @@ public class LogService
             logConsumer.logTopics.add(filterValue == null
                     ? logEvent -> logEvent.getLoggerName().startsWith(topic)
                     : logEvent -> logEvent.getLoggerName().startsWith(topic) && logEvent.getMessage().getFormattedMessage().contains(filterValue));
+        }
+
+        @Override
+        @SneakyThrows
+        public void logToSeparateFile(boolean value) {
+            if (value) {
+                Path path = CommonUtils.getLogsPath().resolve("entities").resolve(entity.getClass().getSimpleName());
+                CommonUtils.createDirectoriesIfNotExists(path);
+                logConsumer.logToSeparateFile = path.resolve(entity.getEntityID() + ".log");
+                try {
+                    CommonUtils.writeToFile(path, new byte[0], false);
+                } catch (Exception ignore) {} // AccessDeniedException
+            }
         }
     }
 }

@@ -30,7 +30,7 @@ public class FFMPEGImpl implements FFMPEG {
     private final Runnable destroyListener;
     private final @Getter String description;
     private final @Getter Date creationDate = new Date();
-    private final FFMPEGFormat format;
+    private final @NotNull FFMPEGFormat format;
     private final @Getter List<String> commandArrayList = new ArrayList<>();
     private Process process = null;
     private IpVideoFfmpegThread ipVideoFfmpegThread;
@@ -125,8 +125,8 @@ public class FFMPEGImpl implements FFMPEG {
             if (destroyListener != null) {
                 destroyListener.run();
             }
-            running = false;
         }
+        running = false;
     }
 
     private class IpVideoFfmpegThread extends Thread {
@@ -149,50 +149,48 @@ public class FFMPEGImpl implements FFMPEG {
                     BufferedReader bufferedReader = new BufferedReader(errorStreamReader);
                     String line;
                     while ((line = bufferedReader.readLine()) != null) {
-                        switch (format) {
-                            case RTSP_ALARMS -> {
-                                log.info("[{}]: {}", entityID, line);
-                                int motionThreshold = handler.getMotionThreshold().intValue();
-                                if (line.contains("lavfi.")) {
-                                    // When the number of pixels that change are below the noise floor we need to look
-                                    // across frames to confirm it is motion and not noise.
-                                    if (countOfMotions < 10) {// Stop increasing otherwise it takes too long to go OFF
-                                        countOfMotions++;
-                                    }
-                                    if (countOfMotions > 9
-                                            || countOfMotions > 4 && motionThreshold > 10
-                                            || countOfMotions > 3 && motionThreshold > 15
-                                            || countOfMotions > 2 && motionThreshold > 30
-                                            || countOfMotions > 0 && motionThreshold > 89) {
-                                        handler.motionDetected(true, CHANNEL_FFMPEG_MOTION_ALARM);
-                                        if (countOfMotions < 2) {
-                                            countOfMotions = 4;// Used to debounce the Alarm.
-                                        }
-                                    }
-                                } else if (line.contains("speed=")) {
-                                    if (countOfMotions > 0) {
-                                        if (motionThreshold > 89) {
-                                            countOfMotions--;
-                                        }
-                                        if (motionThreshold > 10) {
-                                            countOfMotions -= 2;
-                                        } else {
-                                            countOfMotions -= 4;
-                                        }
-                                        if (countOfMotions <= 0) {
-                                            handler.motionDetected(false, CHANNEL_FFMPEG_MOTION_ALARM);
-                                            countOfMotions = 0;
-                                        }
-                                    }
-                                } else if (line.contains("silence_start")) {
-                                    handler.audioDetected(false);
-                                } else if (line.contains("silence_end")) {
-                                    handler.audioDetected(true);
+                        notFrozen = true;
+                        if (format == FFMPEGFormat.RTSP_ALARMS) {
+                            log.info("[{}]: {}", entityID, line);
+                            int motionThreshold = handler.getMotionThreshold().intValue();
+                            if (line.contains("lavfi.")) {
+                                // When the number of pixels that change are below the noise floor we need to look
+                                // across frames to confirm it is motion and not noise.
+                                if (countOfMotions < 10) {// Stop increasing otherwise it takes too long to go OFF
+                                    countOfMotions++;
                                 }
+                                if (countOfMotions > 9
+                                    || countOfMotions > 4 && motionThreshold > 10
+                                    || countOfMotions > 3 && motionThreshold > 15
+                                    || countOfMotions > 2 && motionThreshold > 30
+                                    || countOfMotions > 0 && motionThreshold > 89) {
+                                    handler.motionDetected(true, CHANNEL_FFMPEG_MOTION_ALARM);
+                                    if (countOfMotions < 2) {
+                                        countOfMotions = 4;// Used to debounce the Alarm.
+                                    }
+                                }
+                            } else if (line.contains("speed=")) {
+                                if (countOfMotions > 0) {
+                                    if (motionThreshold > 89) {
+                                        countOfMotions--;
+                                    }
+                                    if (motionThreshold > 10) {
+                                        countOfMotions -= 2;
+                                    } else {
+                                        countOfMotions -= 4;
+                                    }
+                                    if (countOfMotions <= 0) {
+                                        handler.motionDetected(false, CHANNEL_FFMPEG_MOTION_ALARM);
+                                        countOfMotions = 0;
+                                    }
+                                }
+                            } else if (line.contains("silence_start")) {
+                                handler.audioDetected(false);
+                            } else if (line.contains("silence_end")) {
+                                handler.audioDetected(true);
                             }
-                            case SNAPSHOT, MJPEG ->
-                                    notFrozen = true;// RTSP_ALARMS, MJPEG and SNAPSHOT all set this to true, no break.
-                            default -> log.info("[{}]: {}", entityID, line);
+                        } else {
+                            log.debug("[{}]: {}", entityID, line);
                         }
                         if (line.contains("No such file or directory")) {
                             handler.ffmpegError(line);

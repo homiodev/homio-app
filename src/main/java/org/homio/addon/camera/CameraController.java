@@ -33,7 +33,7 @@ import static org.springframework.http.HttpHeaders.*;
 
 @Log4j2
 @RestController
-@RequestMapping("/rest/camera")
+@RequestMapping("/rest/media/video")
 @RequiredArgsConstructor
 public class CameraController {
 

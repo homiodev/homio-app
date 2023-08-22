@@ -1,7 +1,23 @@
 package org.homio.addon.camera.entity;
 
+import static java.lang.String.join;
+import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
+import static org.homio.api.EntityContextSetting.SERVER_PORT;
+import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Base64;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FilenameUtils;
@@ -9,6 +25,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.service.BaseVideoService;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
+import org.homio.api.entity.log.HasEntityLog;
+import org.homio.api.entity.log.HasEntityLog.EntityLogBuilder;
 import org.homio.api.entity.types.MediaEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
@@ -22,7 +40,13 @@ import org.homio.api.service.EntityService;
 import org.homio.api.state.State;
 import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.action.UIActionHandler;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.MonacoLanguage;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldCodeEditor;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIActionButton;
 import org.homio.api.ui.field.action.UIActionInput;
 import org.homio.api.ui.field.action.UIContextMenuAction;
@@ -35,23 +59,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
-
-import static java.lang.String.join;
-import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
-import static org.homio.api.EntityContextSetting.SERVER_PORT;
-import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
-
 @SuppressWarnings("unused")
 @Log4j2
 public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseVideoService<?, S>>
-        extends MediaEntity implements DeviceEndpointsBehaviourContract, EntityService<S, T> {
+        extends MediaEntity implements HasEntityLog, DeviceEndpointsBehaviourContract, EntityService<S, T> {
 
     @UIField(order = 1, hideOnEmpty = true, hideInEdit = true)
     @UIFieldGroup(value = "HARDWARE", order = 10, borderColor = Color.RED)
@@ -316,7 +327,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     public String getUrl(String path) {
-        return "http://%s:%s/rest/camera/%s/%s".formatted(MACHINE_IP_ADDRESS, SERVER_PORT, getEntityID(), path);
+        return "http://%s:%s/rest/media/video/%s/%s".formatted(MACHINE_IP_ADDRESS, SERVER_PORT, getEntityID(), path);
     }
 
     public @NotNull String getSnapshotUrl() {
@@ -344,7 +355,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         setMotionThreshold(40);
         setMp4OutOptions(join("~~~", "-c:v copy", "-c:a copy"));
         setMjpegOutOptions(join("~~~", "-q:v 5", "-r 2", "-vf scale=640:-2", "-update 1"));
-        setSnapshotOutOptions(join("~~~", "-vsync vfr", "-q:v 2", "-update 1", "-frames:v 1"));
+        setSnapshotOutOptions(join("~~~", "-vsync vfr", "-q:v 2", "-frames:v 1"));
         setGifOutOptions(
                 join("~~~", "-r 2", "-filter_complex scale=-2:360:flags=lanczos,setpts=0.5*PTS,split[o1][o2];[o1]palettegen[p];[o2]fifo[o3];" +
                         "[o3][p]paletteuse"));
@@ -401,7 +412,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     public long getVideoParametersHashCode() {
-        return getJsonDataHashCode("gifOutOptions", "mjpegOutOptions", "imgOutOptions",
+        return getJsonDataHashCode("start", "gifOutOptions", "mjpegOutOptions", "imgOutOptions",
                 "motionOptions", "mp4OutOptions");
     }
 
@@ -431,5 +442,12 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     @Override
     public @NotNull List<ConfigDeviceDefinition> findMatchDeviceConfigurations() {
         return getService().findDevices();
+    }
+
+    @Override
+    public void logBuilder(EntityLogBuilder entityLogBuilder) {
+        entityLogBuilder.addTopicFilterByEntityID("org.homio.addon.camera");
+        entityLogBuilder.addTopicFilterByEntityID("org.homio.api.video");
+        entityLogBuilder.logToSeparateFile(true);
     }
 }

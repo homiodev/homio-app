@@ -27,7 +27,7 @@ import static java.lang.String.join;
 @SuppressWarnings("unused")
 @Entity
 public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraService>
-        implements AbilityToStreamHLSOverFFMPEG<UsbCameraEntity>, HasEntityLog {
+        implements AbilityToStreamHLSOverFFMPEG<UsbCameraEntity> {
 
     @Override
     @UIField(order = 5, label = "usbSource", type = UIFieldType.TextSelectBoxDynamic)
@@ -111,7 +111,6 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
     protected void beforePersist() {
         super.beforePersist();
         setVideoCodec("libx264");
-        setSnapshotOutOptions(join("~~~", "-vsync vfr", "-q:v 2", "-update 1", "-frames:v 10"));
         setStreamOptions(join("~~~",
                 "-vcodec libx264", "-s 800x600", "-bufsize:v 5M", "-preset ultrafast", "-vcodec libx264", "-tune zerolatency", "-b:v " +
                         "2.5M"));
@@ -138,12 +137,6 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
     @Override
     public UsbCameraService createService(@NotNull EntityContext entityContext) {
         return new UsbCameraService(this, entityContext);
-    }
-
-    @Override
-    public void logBuilder(EntityLogBuilder entityLogBuilder) {
-        entityLogBuilder.addTopicFilterByEntityID("org.homio.addon.camera");
-        entityLogBuilder.addTopicFilterByEntityID("org.homio.api.video");
     }
 
     public static class SelectAudioSource implements DynamicOptionLoader {
