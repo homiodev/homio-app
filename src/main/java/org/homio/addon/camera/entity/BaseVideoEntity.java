@@ -10,6 +10,7 @@ import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -20,13 +21,13 @@ import java.util.Objects;
 import java.util.Set;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.service.BaseVideoService;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
 import org.homio.api.entity.log.HasEntityLog;
-import org.homio.api.entity.log.HasEntityLog.EntityLogBuilder;
 import org.homio.api.entity.types.MediaEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
@@ -53,6 +54,7 @@ import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.api.ui.field.image.UIFieldImage;
+import org.homio.api.util.CommonUtils;
 import org.homio.api.util.SecureString;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.jetbrains.annotations.NotNull;
@@ -361,6 +363,18 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
                         "[o3][p]paletteuse"));
     }
 
+    @Override
+    public void afterDelete(@NotNull EntityContext entityContext) {
+        Path path = CommonUtils.getMediaPath().resolve(getFolderName()).resolve(getEntityID());
+        if (Files.exists(path)) {
+            try {
+                FileUtils.deleteDirectory(path.toFile());
+            } catch (IOException ex) {
+                log.error("Error during delete video directory: {}", path, ex);
+            }
+        }
+    }
+
     @JsonIgnore
     public @Nullable String getError() {
         if (!isStart()) {
@@ -404,8 +418,8 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         @Override
         public ActionResponseModel handleAction(EntityContext entityContext, JSONObject params) {
             BaseVideoEntity<?, ?> entity = entityContext.getEntityRequire(params.getString("entityID"));
-            String encodedValue =
-                    "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(entity.getSnapshot());
+            byte[] image = entity.getService().recordImageSync(null).byteArrayValue();
+            String encodedValue = "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(image);
             FileModel snapshot = new FileModel("Snapshot", encodedValue, FileContentType.image, true);
             return ActionResponseModel.showFile(snapshot);
         }

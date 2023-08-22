@@ -103,6 +103,11 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
     }
 
     @Override
+    public @NotNull String getSnapshotUrl() {
+        return getRtspUri();
+    }
+
+    @Override
     protected @NotNull String getDevicePrefix() {
         return "usbcam";
     }
