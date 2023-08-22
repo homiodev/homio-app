@@ -1,6 +1,41 @@
 package org.homio.addon.camera.service;
 
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.homio.addon.camera.CameraController.camerasOpenStreams;
+import static org.homio.addon.camera.VideoConstants.CHANNEL_AUDIO_ALARM;
+import static org.homio.addon.camera.VideoConstants.CHANNEL_LAST_MOTION_TYPE;
+import static org.homio.addon.camera.VideoConstants.CHANNEL_START_STREAM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
+import static org.homio.addon.camera.VideoConstants.MOTION_ALARM;
+import static org.homio.addon.camera.service.util.VideoUrls.getCorrectUrlFormat;
+import static org.homio.api.EntityContextMedia.CHANNEL_FFMPEG_MOTION_ALARM;
+import static org.homio.api.model.Status.ERROR;
+import static org.homio.api.model.Status.INITIALIZE;
+import static org.homio.api.model.Status.OFFLINE;
+import static org.homio.api.model.Status.ONLINE;
+import static org.homio.api.model.Status.REQUIRE_AUTH;
+import static org.homio.api.model.Status.UNKNOWN;
+import static org.homio.api.model.endpoint.DeviceEndpoint.ENDPOINT_DEVICE_STATUS;
+import static org.homio.api.model.endpoint.DeviceEndpoint.ENDPOINT_LAST_SEEN;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -31,7 +66,12 @@ import org.homio.api.model.device.ConfigDeviceDefinition;
 import org.homio.api.model.device.ConfigDeviceDefinitionService;
 import org.homio.api.model.endpoint.DeviceEndpoint.EndpointType;
 import org.homio.api.service.EntityService;
-import org.homio.api.state.*;
+import org.homio.api.state.DecimalType;
+import org.homio.api.state.JsonType;
+import org.homio.api.state.OnOffType;
+import org.homio.api.state.RawType;
+import org.homio.api.state.State;
+import org.homio.api.state.StringType;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.item.UIInfoItemBuilder.InfoType;
@@ -42,35 +82,14 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.util.MimeTypeUtils;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
-import java.util.function.Function;
-
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.homio.addon.camera.CameraController.camerasOpenStreams;
-import static org.homio.addon.camera.VideoConstants.*;
-import static org.homio.addon.camera.service.util.VideoUrls.getCorrectUrlFormat;
-import static org.homio.api.EntityContextMedia.CHANNEL_FFMPEG_MOTION_ALARM;
-import static org.homio.api.model.Status.*;
-import static org.homio.api.model.endpoint.DeviceEndpoint.ENDPOINT_DEVICE_STATUS;
-import static org.homio.api.model.endpoint.DeviceEndpoint.ENDPOINT_LAST_SEEN;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-
 @SuppressWarnings({"unused"})
 @Log4j2
 public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extends BaseVideoService<T, S>>
-        extends EntityService.ServiceInstance<T> implements VideoActionsContext<T>,
-        FFMPEGHandler {
+    extends EntityService.ServiceInstance<T> implements VideoActionsContext<T>,
+    FFMPEGHandler {
 
     public static final ConfigDeviceDefinitionService CONFIG_DEVICE_SERVICE =
-            new ConfigDeviceDefinitionService("camera-devices.json");
+        new ConfigDeviceDefinitionService("camera-devices.json");
 
     @Getter
     private final @NotNull Map<String, VideoDeviceEndpoint> endpoints = new ConcurrentHashMap<>();
@@ -97,10 +116,8 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     private @Getter Path ffmpegHLSOutputPath;
     private @Getter Path ffmpegImageOutputPath;
 
-    private @Getter
-    final Map<String, State> attributes = new ConcurrentHashMap<>();
-    private @Getter
-    final Map<String, State> requestAttributes = new ConcurrentHashMap<>();
+    private @Getter final Map<String, State> attributes = new ConcurrentHashMap<>();
+    private @Getter final Map<String, State> requestAttributes = new ConcurrentHashMap<>();
 
     private final FFMpegRtspAlarm ffMpegRtspAlarm;
 
@@ -147,22 +164,22 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     private void createConnectionJob() {
         cameraConnectionJob = entityContext
-                .bgp().builder("video-connect-" + entityID)
-                .intervalWithDelay(Duration.ofSeconds(30))
-                .execute(() -> {
-                    try {
-                        pollCameraConnection();
-                    } catch (Exception ex) {
-                        String message = CommonUtils.getErrorMessage(ex);
-                        if (ex instanceof ConfigurationException
-                                || ex instanceof BadCredentialsException) {
-                            val status = ex instanceof BadCredentialsException ? REQUIRE_AUTH : ERROR;
-                            disposeAndSetStatus(status, message);
-                        } else {
-                            updateEntityStatus(OFFLINE, message);
-                        }
+            .bgp().builder("video-connect-" + entityID)
+            .intervalWithDelay(Duration.ofSeconds(30))
+            .execute(() -> {
+                try {
+                    pollCameraConnection();
+                } catch (Exception ex) {
+                    String message = CommonUtils.getErrorMessage(ex);
+                    if (ex instanceof ConfigurationException
+                        || ex instanceof BadCredentialsException) {
+                        val status = ex instanceof BadCredentialsException ? REQUIRE_AUTH : ERROR;
+                        disposeAndSetStatus(status, message);
+                    } else {
+                        updateEntityStatus(OFFLINE, message);
                     }
-                });
+                }
+            });
     }
 
     protected void pollCameraConnection() throws Exception {
@@ -212,23 +229,14 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             this.urls.setMjpegUri(getCorrectUrlFormat(entity.getMjpegUrl()));
             this.urls.setSnapshotUri(getCorrectUrlFormat(entity.getSnapshotUrl()));
 
-            this.snapshotInputOptions = getFFMPEGInputOptions() + " -threads 1 -skip_frame nokey -hide_banner -loglevel warning -an";
-            this.mp4OutOptions = String.join(" ", entity.getMp4OutOptions());
-            this.gifOutOptions = String.join(" ", entity.getGifOutOptions());
-            String mgpegOutOptions = String.join(" ", entity.getMjpegOutOptions());
-
-            createFFmpeg(mgpegOutOptions);
-
             postInitializeCamera();
+
+            recreateFFmpeg();
 
             createConnectionJob();
         } catch (Exception ex) {
             disposeAndSetStatus(Status.ERROR, CommonUtils.getErrorMessage(ex));
         }
-    }
-
-    private boolean isRequireReinitialize() {
-        return !entity.getStatus().isOnline() || videoStreamParametersHashCode != entity.getVideoParametersHashCode();
     }
 
     public final void disposeAndSetStatus(@NotNull Status status, @Nullable String reason) {
@@ -238,7 +246,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
             if (status == Status.ERROR || status == REQUIRE_AUTH) {
                 entityContext.ui().sendErrorMessage("DISPOSE_VIDEO",
-                        FlowMap.of("TITLE", entity.getTitle(), "REASON", reason));
+                    FlowMap.of("TITLE", entity.getTitle(), "REASON", reason));
             }
         }
     }
@@ -269,9 +277,9 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             }
 
             pollCameraJob = entityContext.bgp().builder("video-poll-" + entityID)
-                    .delay(Duration.ofSeconds(1))
-                    .interval(Duration.ofSeconds(8))
-                    .execute(this::pollCameraRunnable);
+                                         .delay(Duration.ofSeconds(1))
+                                         .interval(Duration.ofSeconds(8))
+                                         .execute(this::pollCameraRunnable);
 
             // auto restart mjpeg stream now camera is back online.
             OpenStreams openStreams = camerasOpenStreams.get(entityID).openStreams;
@@ -465,7 +473,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     public byte[] recordGifSync(String profile, int secondsToRecord) {
         Path output = getFfmpegGifOutputPath().resolve("tmp_" + System.currentTimeMillis() + ".gif");
         fireFfmpegSync(profile, output, "-y -t " + secondsToRecord + " -hide_banner -loglevel warning",
-                gifOutOptions, secondsToRecord + 20);
+            gifOutOptions, secondsToRecord + 20);
         return Files.readAllBytes(output);
     }
 
@@ -473,14 +481,16 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     public byte[] recordMp4Sync(String profile, int secondsToRecord) {
         Path output = getFfmpegMP4OutputPath().resolve("tmp_" + System.currentTimeMillis() + ".mp4");
         fireFfmpegSync(profile, output, "-y -t " + secondsToRecord + " -hide_banner -loglevel warning",
-                mp4OutOptions, secondsToRecord + 20);
+            mp4OutOptions, secondsToRecord + 20);
         return Files.readAllBytes(output);
     }
 
     @Override
     @SneakyThrows
     protected final void initialize() {
-        if (isRequireReinitialize()) {
+        if (!entity.isStart()) {
+            dispose();
+        } else if (videoStreamParametersHashCode != entity.getVideoParametersHashCode()) {
             dispose();
             initializeCamera();
         }
@@ -494,14 +504,14 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         if (!entity.isStart() || !entity.getStatus().isOnline()) {
             // Single gray pixel JPG to keep streams open when the camera goes offline, so they don't stop.
             return new byte[]{(byte) 0xff, (byte) 0xd8, (byte) 0xff, (byte) 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
-                    0x00, 0x01, 0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, (byte) 0xff, (byte) 0xdb, 0x00, 0x43,
-                    0x00, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x03, 0x02, 0x02, 0x02, 0x03, 0x03, 0x03, 0x03, 0x04,
-                    0x06, 0x04, 0x04, 0x04, 0x04, 0x04, 0x08, 0x06, 0x06, 0x05, 0x06, 0x09, 0x08, 0x0a, 0x0a, 0x09,
-                    0x08, 0x09, 0x09, 0x0a, 0x0c, 0x0f, 0x0c, 0x0a, 0x0b, 0x0e, 0x0b, 0x09, 0x09, 0x0d, 0x11, 0x0d,
-                    0x0e, 0x0f, 0x10, 0x10, 0x11, 0x10, 0x0a, 0x0c, 0x12, 0x13, 0x12, 0x10, 0x13, 0x0f, 0x10, 0x10,
-                    0x10, (byte) 0xff, (byte) 0xc9, 0x00, 0x0b, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x11, 0x00,
-                    (byte) 0xff, (byte) 0xcc, 0x00, 0x06, 0x00, 0x10, 0x10, 0x05, (byte) 0xff, (byte) 0xda, 0x00, 0x08,
-                    0x01, 0x01, 0x00, 0x00, 0x3f, 0x00, (byte) 0xd2, (byte) 0xcf, 0x20, (byte) 0xff, (byte) 0xd9};
+                0x00, 0x01, 0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, (byte) 0xff, (byte) 0xdb, 0x00, 0x43,
+                0x00, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x03, 0x02, 0x02, 0x02, 0x03, 0x03, 0x03, 0x03, 0x04,
+                0x06, 0x04, 0x04, 0x04, 0x04, 0x04, 0x08, 0x06, 0x06, 0x05, 0x06, 0x09, 0x08, 0x0a, 0x0a, 0x09,
+                0x08, 0x09, 0x09, 0x0a, 0x0c, 0x0f, 0x0c, 0x0a, 0x0b, 0x0e, 0x0b, 0x09, 0x09, 0x0d, 0x11, 0x0d,
+                0x0e, 0x0f, 0x10, 0x10, 0x11, 0x10, 0x0a, 0x0c, 0x12, 0x13, 0x12, 0x10, 0x13, 0x0f, 0x10, 0x10,
+                0x10, (byte) 0xff, (byte) 0xc9, 0x00, 0x0b, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x11, 0x00,
+                (byte) 0xff, (byte) 0xcc, 0x00, 0x06, 0x00, 0x10, 0x10, 0x05, (byte) 0xff, (byte) 0xda, 0x00, 0x08,
+                0x01, 0x01, 0x00, 0x00, 0x3f, 0x00, (byte) 0xd2, (byte) 0xcf, 0x20, (byte) 0xff, (byte) 0xd9};
         }
         // Most cameras will return a 503 busy error if snapshot is faster than 1 second
         long lastUpdatedMs = Duration.between(lastSnapshotRequest, Instant.now()).toMillis();
@@ -522,10 +532,10 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         }
         if (streamingSnapshotMjpeg || streamingAutoFps) {
             snapshotJob = entityContext.bgp()
-                    .builder(entity.getTitle() + " SnapshotJob")
-                    .delay(Duration.ofMillis(200))
-                    .interval(Duration.ofSeconds(entity.getSnapshotPollInterval()))
-                    .execute(this::requestSnapshotByUri);
+                                       .builder(entity.getTitle() + " SnapshotJob")
+                                       .delay(Duration.ofMillis(200))
+                                       .interval(Duration.ofSeconds(entity.getSnapshotPollInterval()))
+                                       .execute(this::requestSnapshotByUri);
         }
     }
 
@@ -586,10 +596,10 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     @SneakyThrows
     private void fireFfmpegSync(String profile, Path output, String inputArguments, String outOptions, int maxTimeout) {
         entityContext.media().fireFfmpeg(
-                inputArguments + " " + getFFMPEGInputOptions(profile),
-                urls.getSnapshotUri(profile),
-                outOptions + " " + output,
-                maxTimeout);
+            inputArguments + " " + getFFMPEGInputOptions(profile),
+            urls.getSnapshotUri(profile),
+            outOptions + " " + output,
+            maxTimeout);
     }
 
     private String buildHlsOptions() {
@@ -634,7 +644,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         }
         if (!pingCamera()) {
             cameraCommunicationError(
-                    "Connection Timeout: Check your IP and PORT are correct and the camera can be reached.");
+                "Connection Timeout: Check your IP and PORT are correct and the camera can be reached.");
         }
     }
 
@@ -675,20 +685,20 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         String inputOptions = getFFMPEGInputOptions(profile);
         inputOptions = "-y -t " + secondsToRecord + " -hide_banner -loglevel warning " + inputOptions;
         FFMPEG ffmpegMP4 = entityContext
-                .media()
-                .buildFFMPEG(entityID, "FFMPEG record MP4", this, log, FFMPEGFormat.RECORD, inputOptions,
-                        urls.getRtspUri(profile),
-                        mp4OutOptions, filePath.toString(),
-                        entity.getUser(), entity.getPassword().asString(), null);
+            .media()
+            .buildFFMPEG(entityID, "FFMPEG record MP4", this, log, FFMPEGFormat.RECORD, inputOptions,
+                urls.getRtspUri(profile),
+                mp4OutOptions, filePath.toString(),
+                entity.getUser(), entity.getPassword().asString(), null);
         FFMPEG.run(ffmpegMP4, FFMPEG::startConverting);
     }
 
     public final void recordGif(Path filePath, @Nullable String profile, int secondsToRecord) {
         String gifInputOptions = "-y -t " + secondsToRecord + " -hide_banner -loglevel warning " + getFFMPEGInputOptions();
         FFMPEG ffmpegGIF = entityContext.media().buildFFMPEG(entityID, "FFMPEG GIF", this, log, FFMPEGFormat.GIF,
-                gifInputOptions, urls.getRtspUri(profile),
-                gifOutOptions, filePath.toString(), entity.getUser(),
-                entity.getPassword().asString(), null);
+            gifInputOptions, urls.getRtspUri(profile),
+            gifOutOptions, filePath.toString(), entity.getUser(),
+            entity.getPassword().asString(), null);
         FFMPEG.run(ffmpegGIF, FFMPEG::startConverting);
     }
 
@@ -696,28 +706,36 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         endpoints.get(ENDPOINT_LAST_SEEN).setValue(new DecimalType(System.currentTimeMillis()), true);
     }
 
-    private void createFFmpeg(String mgpegOutOptions) {
+    void recreateFFmpeg() {
+        FFMPEG.run(ffmpegMjpeg, FFMPEG::stopConverting);
+        FFMPEG.run(ffmpegSnapshot, FFMPEG::stopConverting);
+        FFMPEG.run(ffmpegHLS, FFMPEG::stopConverting);
+
+        this.snapshotInputOptions = getFFMPEGInputOptions() + " -threads 1 -skip_frame nokey -hide_banner -loglevel warning -an";
+        this.mp4OutOptions = String.join(" ", entity.getMp4OutOptions());
+        this.gifOutOptions = String.join(" ", entity.getGifOutOptions());
+
         String rtspUri = urls.getRtspUri();
         ffmpegMjpeg = entityContext.media().buildFFMPEG(entityID, "FFMPEG mjpeg", this, log,
-                FFMPEGFormat.MJPEG, getFFMPEGInputOptions() + " -hide_banner -loglevel warning", rtspUri,
-                mgpegOutOptions, entity.getUrl("ipcamera.jpg"),
-                entity.getUser(), entity.getPassword().asString(), null);
+            FFMPEGFormat.MJPEG, getFFMPEGInputOptions() + " -hide_banner -loglevel warning", rtspUri,
+            String.join(" ", entity.getMjpegOutOptions()), entity.getUrl("ipcamera.jpg"),
+            entity.getUser(), entity.getPassword().asString(), null);
         setAttribute("FFMPEG_MJPEG", new StringType(String.join(" ", ffmpegMjpeg.getCommandArrayList())));
 
         ffmpegSnapshot = entityContext.media().buildFFMPEG(entityID, "FFMPEG snapshot", this, log,
-                FFMPEGFormat.SNAPSHOT, snapshotInputOptions, rtspUri,
-                entity.getSnapshotOutOptionsAsString(),
-                entity.getUrl("snapshot.jpg"),
-                entity.getUser(), entity.getPassword().asString(), null);
+            FFMPEGFormat.SNAPSHOT, snapshotInputOptions, rtspUri,
+            entity.getSnapshotOutOptionsAsString(),
+            entity.getUrl("snapshot.jpg"),
+            entity.getUser(), entity.getPassword().asString(), null);
         setAttribute("FFMPEG_SNAPSHOT", new StringType(String.join(" ", ffmpegSnapshot.getCommandArrayList())));
 
         if (entity instanceof AbilityToStreamHLSOverFFMPEG hlsOverFFMPEG) {
             ffmpegHLS = entityContext.media().buildFFMPEG(entityID, "FFMPEG HLS", this, log, FFMPEGFormat.HLS,
-                    "-hide_banner -loglevel warning " + getFFMPEGInputOptions(),
-                    StringUtils.defaultString(hlsOverFFMPEG.getHlsRtspUri(), rtspUri),
-                    buildHlsOptions(), getFfmpegHLSOutputPath().resolve("ipcamera.m3u8").toString(),
-                    entity.getUser(), entity.getPassword().asString(),
-                    () -> setAttribute(CHANNEL_START_STREAM, OnOffType.OFF));
+                "-hide_banner -loglevel warning " + getFFMPEGInputOptions(),
+                StringUtils.defaultString(hlsOverFFMPEG.getHlsRtspUri(), rtspUri),
+                buildHlsOptions(), getFfmpegHLSOutputPath().resolve("ipcamera.m3u8").toString(),
+                entity.getUser(), entity.getPassword().asString(),
+                () -> setAttribute(CHANNEL_START_STREAM, OnOffType.OFF));
             setAttribute("FFMPEG_HLS", new StringType(String.join(" ", ffmpegHLS.getCommandArrayList())));
         }
     }
@@ -725,12 +743,12 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     private void createOrUpdateDeviceGroup() {
         List<ConfigDeviceDefinition> devices = findDevices();
         Icon icon = new Icon(
-                CONFIG_DEVICE_SERVICE.getDeviceIcon(devices, "fas fa-video"),
-                CONFIG_DEVICE_SERVICE.getDeviceIconColor(devices, UI.Color.random())
+            CONFIG_DEVICE_SERVICE.getDeviceIcon(devices, "fas fa-video"),
+            CONFIG_DEVICE_SERVICE.getDeviceIconColor(devices, UI.Color.random())
         );
         entityContext.var().createGroup("video", "Video", true, new Icon("fas fa-video", "#0E578F"));
         entityContext.var().createGroup("video", entity.getGroupID(), entity.getDeviceFullName(), true,
-                icon, getGroupDescription());
+            icon, getGroupDescription());
     }
 
     private String getGroupDescription() {
@@ -768,11 +786,11 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         });
 
         endpoints.computeIfAbsent(ENDPOINT_MOTION_THRESHOLD, key ->
-                new VideoDeviceEndpoint(entity, key, 0F, 100F, true));
+            new VideoDeviceEndpoint(entity, key, 0F, 100F, true));
 
         if (entity.isHasAudioStream()) {
             endpoints.computeIfAbsent(ENDPOINT_AUDIO_THRESHOLD, key ->
-                    new VideoDeviceEndpoint(entity, key, 0F, 100F, true));
+                new VideoDeviceEndpoint(entity, key, 0F, 100F, true));
         }
     }
 

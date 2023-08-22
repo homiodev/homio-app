@@ -79,12 +79,14 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
         outputs.add(CommonUtils.MACHINE_IP_ADDRESS + ":" + entity.getStreamStartPort());
         outputs.add(CommonUtils.MACHINE_IP_ADDRESS + ":" + (entity.getStreamStartPort() + 1));
 
-        ffmpegUsbStream = entityContext.media().buildFFMPEG(getEntityID(), "FFmpeg usb udp re-streamer", this, log,
+        if(ffmpegUsbStream == null || !ffmpegUsbStream.getIsAlive()) {
+            ffmpegUsbStream = entityContext.media().buildFFMPEG(getEntityID(), "FFmpeg usb udp re-streamer", this, log,
                 GENERAL, "-loglevel warning " + (SystemUtils.IS_OS_LINUX ? "-f v4l2" : "-f dshow"), url,
                 String.join(" ", outputParams),
                 outputs.stream().map(o -> "[f=mpegts]udp://" + o + "?pkt_size=1316").collect(Collectors.joining("|")),
                 "", "", null);
-        ffmpegUsbStream.startConverting();
+            ffmpegUsbStream.startConverting();
+        }
     }
 
     @Override

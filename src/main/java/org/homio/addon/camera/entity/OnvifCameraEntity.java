@@ -225,7 +225,7 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     @UIField(order = 50, hideInView = true)
     @UIFieldGroup("ADVANCED")
     public String getFfmpegInput() {
-        return getJsonData("ffmpegInput");
+        return getJsonData("ffmpegInput", "ffmpeg");
     }
 
     public void setFfmpegInput(String value) {

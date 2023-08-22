@@ -94,7 +94,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     private Bootstrap mainBootstrap;
     private @NotNull FullHttpRequest putRequestWithBody = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod("PUT"), "");
-    private @NotNull FullHttpRequest postRequestWithBody = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod("POST"), "");
     private String basicAuth = "";
 
     public List<LowRequest> lowPriorityRequests = new ArrayList<>(0);
@@ -233,11 +232,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     public void sendHttpPUT(String httpRequestURL, FullHttpRequest request) {
         putRequestWithBody = request; // use Global so the authhandler can use it when resent with DIGEST.
         sendHttpRequest("PUT", httpRequestURL, null);
-    }
-
-    public void sendHttpPOST(String httpRequestURL, FullHttpRequest request) {
-        postRequestWithBody = request; // use Global so the authhandler can use it when resent with DIGEST.
-        sendHttpRequest("POST", httpRequestURL, null);
     }
 
     public void sendHttpGET(String httpRequestURL) {
@@ -603,6 +597,9 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
             urls.setRtspUri(onvifDeviceState.getMediaDevices().getRTSPStreamUri(profile.getName()), profile.getName());
             urls.setSnapshotUri(onvifDeviceState.getMediaDevices().getSnapshotUri(profile.getName()), profile.getName());
         }
+        // we need reinitialize ffmpeg because rtsp urls has been changed
+        recreateFFmpeg();
+
         super.pollCameraConnection();
     }
 
