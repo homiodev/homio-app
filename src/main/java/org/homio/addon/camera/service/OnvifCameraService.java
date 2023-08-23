@@ -252,7 +252,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
             mainBootstrap.option(ChannelOption.SO_KEEPALIVE, true);
             mainBootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4500);
             mainBootstrap.option(ChannelOption.SO_SNDBUF, 1024 * 8);
-            mainBootstrap.option(ChannelOption.SO_RCVBUF, 1024 * 1024);
+            mainBootstrap.option(ChannelOption.SO_RCVBUF, 10*1024 * 1024);
             mainBootstrap.option(ChannelOption.TCP_NODELAY, true);
             mainBootstrap.handler(new ChannelInitializer<SocketChannel>() {
 

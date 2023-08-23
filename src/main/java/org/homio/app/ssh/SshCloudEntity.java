@@ -1,5 +1,6 @@
 package org.homio.app.ssh;
 
+import com.sshtools.client.SshClient;
 import com.sshtools.common.publickey.SshPrivateKeyFile;
 import com.sshtools.common.publickey.SshPrivateKeyFileFactory;
 import jakarta.persistence.Entity;
@@ -274,7 +275,7 @@ public class SshCloudEntity extends IdentityEntity implements
 
     @Override
     public void logBuilder(EntityLogBuilder builder) {
-        builder.addTopic("com.ssh.maverick");
+        builder.addTopic(SshClient.class);
     }
 
     @Override

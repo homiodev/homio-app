@@ -1,6 +1,7 @@
 package org.homio.addon.camera.entity;
 
 import static java.lang.String.join;
+import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
 import jakarta.persistence.Entity;
 import java.util.List;
@@ -19,7 +20,6 @@ import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.selection.UIFieldSelectValueOnEmpty;
 import org.homio.api.ui.field.selection.UIFieldSelection;
-import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -94,12 +94,12 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
 
     @Override
     public String getHlsRtspUri() {
-        return "udp://@%s:%s".formatted(CommonUtils.MACHINE_IP_ADDRESS, getStreamStartPort() + 1);
+        return "udp://@%s:%s".formatted(MACHINE_IP_ADDRESS, getStreamStartPort() + 1);
     }
 
     @Override
     public @NotNull String getRtspUri() {
-        return "udp://@%s:%s".formatted(CommonUtils.MACHINE_IP_ADDRESS, getStreamStartPort());
+        return "udp://@%s:%s".formatted(MACHINE_IP_ADDRESS, getStreamStartPort());
     }
 
     @Override

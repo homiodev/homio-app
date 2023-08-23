@@ -1,12 +1,12 @@
 package org.homio.addon.camera.setting;
 
+import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
+
 import org.homio.api.setting.SettingPlugin;
 import org.homio.api.setting.SettingPluginTextSet;
 import org.homio.hquery.hardware.network.NetworkDescription;
 
 import java.util.Set;
-
-import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 
 public class CameraScanPortRangeSetting implements SettingPluginTextSet, SettingPlugin<Set<String>> {
 

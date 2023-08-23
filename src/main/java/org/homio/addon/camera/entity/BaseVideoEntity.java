@@ -6,7 +6,7 @@ import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
 import static org.homio.api.EntityContextSetting.SERVER_PORT;
-import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
+import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -24,6 +24,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.service.BaseVideoService;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
@@ -458,8 +459,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
     @Override
     public void logBuilder(EntityLogBuilder entityLogBuilder) {
-        entityLogBuilder.addTopicFilterByEntityID("org.homio.addon.camera");
-        entityLogBuilder.addTopicFilterByEntityID("org.homio.api.video");
+        entityLogBuilder.addTopicFilterByEntityID(CameraEntrypoint.class);
         entityLogBuilder.logToSeparateFile(true);
     }
 }

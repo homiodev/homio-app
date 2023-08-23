@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 import static org.homio.api.EntityContextSetting.SERVER_PORT;
-import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
+import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
 
 @Log4j2

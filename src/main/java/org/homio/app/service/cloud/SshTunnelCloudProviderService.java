@@ -37,7 +37,7 @@ import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.homio.api.EntityContextSetting.SERVER_PORT;
-import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
+import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.ssh.SshGenericEntity.buildSshKeyPair;
 

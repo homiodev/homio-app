@@ -25,6 +25,7 @@ import org.homio.api.service.scan.ItemDiscoverySupport;
 import org.homio.api.service.scan.VideoStreamScanner;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
+import org.homio.api.util.HardwareUtils;
 import org.homio.api.util.Lang;
 import org.homio.app.LogService;
 import org.homio.app.audio.AudioService;
@@ -89,8 +90,6 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
-import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 
 @SuppressWarnings("rawtypes")
 @Log4j2
@@ -213,7 +212,7 @@ public class EntityContextImpl implements EntityContext {
         this.addon.setApplicationContext(applicationContext);
         this.allApplicationContexts.add(applicationContext);
         this.applicationContext = applicationContext;
-        MACHINE_IP_ADDRESS = applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress();
+        HardwareUtils.MACHINE_IP_ADDRESS = applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress();
 
         this.workspaceService = applicationContext.getBean(WorkspaceService.class);
 

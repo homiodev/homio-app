@@ -94,7 +94,7 @@ public abstract class UserBaseEntity extends IdentityEntity
 
     @Override
     public void logBuilder(EntityLogBuilder logBuilder) {
-        logBuilder.addTopicFilterByEntityID("org.homio.app.model.entity.user");
+        logBuilder.addTopicFilterByEntityID(UserBaseEntity.class);
     }
 
     @JsonIgnore

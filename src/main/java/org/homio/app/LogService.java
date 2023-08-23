@@ -363,17 +363,6 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
 
     private record EntityLogBuilderImpl(BaseEntity entity, LogConsumer logConsumer) implements EntityLogBuilder {
 
-        @SneakyThrows
-        @Override
-        public void addTopic(Class<?> topicClass, String filterByField) {
-            String filterValue = isEmpty(filterByField) ? null : String.valueOf(MethodUtils.invokeMethod(entity,
-                    "get" + StringUtils.capitalize(filterByField)));
-            String topic = topicClass.getName();
-            logConsumer.logTopics.add(filterValue == null
-                    ? logEvent -> logEvent.getLoggerName().startsWith(topic)
-                    : logEvent -> logEvent.getLoggerName().startsWith(topic) && logEvent.getMessage().getFormattedMessage().contains(filterValue));
-        }
-
         @Override
         @SneakyThrows
         public void addTopic(@NotNull String topic, String filterByField) {

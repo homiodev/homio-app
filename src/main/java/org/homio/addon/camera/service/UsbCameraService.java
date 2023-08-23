@@ -2,7 +2,7 @@ package org.homio.addon.camera.service;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.api.EntityContextMedia.FFMPEGFormat.MUXER;
-import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
+import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
 import java.util.LinkedHashSet;
 import java.util.Map;
