@@ -71,7 +71,7 @@ import org.homio.api.state.ObjectType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.ui.field.action.ActionInputParameter;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.api.util.CommonUtils;
+import org.homio.api.util.HardwareUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.onvif.ver10.schema.Profile;
@@ -187,7 +187,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     @Override
     protected boolean pingCamera() {
         try {
-            CommonUtils.ping(entity.getIp(), entity.getRestPort());
+            HardwareUtils.ping(entity.getIp(), entity.getRestPort());
             return true;
         } catch (Exception ignore) {
         }
@@ -669,7 +669,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                 OnvifCameraEntity entity = entityContext.getEntityRequire(getEntityID());
                 OnvifDeviceState onvifDeviceState = new OnvifDeviceState(getEntityID());
                 onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(), user, password);
-                CommonUtils.ping(entity.getIp(), entity.getRestPort());
+                HardwareUtils.ping(entity.getIp(), entity.getRestPort());
                 progressBar.progress(20, "Ping done");
                 entity.setInfo(onvifDeviceState, false);
                 entityContext.save(entity);

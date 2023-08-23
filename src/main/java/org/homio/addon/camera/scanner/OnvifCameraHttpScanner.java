@@ -2,6 +2,16 @@ package org.homio.addon.camera.scanner;
 
 import de.onvif.soap.BadCredentialException;
 import de.onvif.soap.OnvifDeviceState;
+import java.net.ConnectException;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -17,17 +27,11 @@ import org.homio.api.EntityContext;
 import org.homio.api.service.scan.BaseItemsDiscovery;
 import org.homio.api.service.scan.VideoStreamScanner;
 import org.homio.api.util.CommonUtils;
+import org.homio.api.util.HardwareUtils;
 import org.homio.api.util.Lang;
 import org.homio.hquery.ProgressBar;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.springframework.stereotype.Component;
-
-import java.net.ConnectException;
-import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Log4j2
 @Component
@@ -119,7 +123,7 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
     }
 
     private static void testCamera(String ipAddress, Integer port, OnvifDeviceState onvifDeviceState) throws ConnectException {
-        CommonUtils.ping(ipAddress, port);
+        HardwareUtils.ping(ipAddress, port);
         // check for Authentication validation
         onvifDeviceState.getInitialDevices().getDeviceInformation();
     }
