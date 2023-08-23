@@ -320,6 +320,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     public void scheduleRequestSnapshot() {
+        lastSnapshotRequest = Instant.now();
         if ("ffmpeg".equals(urls.getSnapshotUri())) {
             FFMPEG.run(ffmpegSnapshot, FFMPEG::startConverting);
         } else {
@@ -409,16 +410,14 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     @SneakyThrows
     public final RawType recordImageSync(String profile) {
-        Path output = getFfmpegImageOutputPath().resolve("tmp_" + getEntityID() + ".jpg");
-        try {
-            Files.createFile(output);
-        } catch (Exception ignore) {}
+        Path output = getFfmpegImageOutputPath().resolve("tmp.jpg");
         takeSnapshotSync(profile, output);
         latestSnapshot = Files.readAllBytes(output);
         updateLastSeen();
-        return new RawType(latestSnapshot, MimeTypeUtils.IMAGE_JPEG_VALUE, output.toString());
+        return new RawType(latestSnapshot, MimeTypeUtils.IMAGE_JPEG_VALUE, "snapshot.jpg");
     }
 
+    @SneakyThrows
     protected void takeSnapshotSync(@Nullable String profile, Path output) {
         fireFfmpegSync(profile, output, snapshotInputOptions, entity.getSnapshotOutOptionsAsString(), 20);
     }
@@ -515,8 +514,9 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         }
         // Most cameras will return a 503 busy error if snapshot is faster than 1 second
         long lastUpdatedMs = Duration.between(lastSnapshotRequest, Instant.now()).toMillis();
-        if (snapshotJob == null && !ffmpegSnapshot.isRunning() && lastUpdatedMs >= Duration.ofSeconds(60).toMillis()) {
-            //scheduleRequestSnapshot();
+        if (snapshotJob == null && ffmpegSnapshot != null
+            && !ffmpegSnapshot.isRunning() && lastUpdatedMs >= Duration.ofSeconds(60).toMillis()) {
+            scheduleRequestSnapshot();
         }
         lockCurrentSnapshot.lock();
         try {
@@ -596,11 +596,15 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     @SneakyThrows
     private void fireFfmpegSync(String profile, Path output, String inputArguments, String outOptions, int maxTimeout) {
-        entityContext.media().fireFfmpeg(
-            inputArguments + " " + getFFMPEGInputOptions(profile),
-            urls.getSnapshotUri(profile),
-            outOptions + " " + output,
-            maxTimeout);
+        String input = urls.getSnapshotUri(profile);
+        if (input.equals("ffmpeg")) {
+            input = urls.getRtspUri(profile);
+            if (input.equals("ffmpeg")) {
+                throw new IllegalStateException("Unable to take snapshot without snapshot/rtsp urls");
+            }
+        }
+        entityContext.media().fireFfmpeg(inputArguments + " " + getFFMPEGInputOptions(profile),
+            input, outOptions + " " + output, maxTimeout);
     }
 
     private String buildHlsOptions() {
@@ -712,7 +716,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         FFMPEG.run(ffmpegSnapshot, FFMPEG::stopConverting);
         FFMPEG.run(ffmpegHLS, FFMPEG::stopConverting);
 
-        this.snapshotInputOptions = getFFMPEGInputOptions() + " -threads 1 -skip_frame nokey -hide_banner -loglevel warning -an";
+        this.snapshotInputOptions = getFFMPEGInputOptions() + " -threads 1 -y -skip_frame nokey -hide_banner -loglevel warning -an";
         this.mp4OutOptions = String.join(" ", entity.getMp4OutOptions());
         this.gifOutOptions = String.join(" ", entity.getGifOutOptions());
 

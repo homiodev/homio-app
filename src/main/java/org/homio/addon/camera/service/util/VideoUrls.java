@@ -1,17 +1,16 @@
 package org.homio.addon.camera.service.util;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.SneakyThrows;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import static org.apache.commons.lang3.StringUtils.defaultString;
 
 import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-
-import static org.apache.commons.lang3.StringUtils.defaultString;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.SneakyThrows;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @Getter
 @Setter
@@ -21,15 +20,15 @@ public class VideoUrls {
 
     private final Map<String, ProfileUrls> urls = new ConcurrentHashMap<>();
 
-    public String getMjpegUri() {
+    public @NotNull String getMjpegUri() {
         return getOrDefaultUri(profile -> profile.mjpegUri);
     }
 
-    public String getRtspUri() {
+    public @NotNull String getRtspUri() {
         return getOrDefaultUri(profile -> profile.rtspUri);
     }
 
-    public String getSnapshotUri() {
+    public @NotNull String getSnapshotUri() {
         return getOrDefaultUri(profile -> profile.snapshotUri);
     }
 
@@ -45,15 +44,15 @@ public class VideoUrls {
         defaultProfile.snapshotUri = defaultString(url, "ffmpeg");
     }
 
-    public String getMjpegUri(@Nullable String profile) {
+    public @NotNull String getMjpegUri(@Nullable String profile) {
         return getOrDefaultUri(profile, p -> p.mjpegUri);
     }
 
-    public String getSnapshotUri(@Nullable String profile) {
+    public @NotNull String getSnapshotUri(@Nullable String profile) {
         return getOrDefaultUri(profile, p -> p.snapshotUri);
     }
 
-    public String getRtspUri(@Nullable String profile) {
+    public @NotNull String getRtspUri(@Nullable String profile) {
         return getOrDefaultUri(profile, p -> p.rtspUri);
     }
 
@@ -88,7 +87,7 @@ public class VideoUrls {
         return url;
     }
 
-    private String getOrDefaultUri(Function<ProfileUrls, String> uriGetter) {
+    private @NotNull String getOrDefaultUri(Function<ProfileUrls, String> uriGetter) {
         String defaultUri = uriGetter.apply(defaultProfile);
         if (defaultUri.equals("ffmpeg") && !urls.isEmpty()) {
             return uriGetter.apply(urls.values().iterator().next());
@@ -106,27 +105,30 @@ public class VideoUrls {
 
     @SneakyThrows
     public static String getCorrectUrlFormat(String longUrl) {
-        String temp;
-
-        if (longUrl.isEmpty() || longUrl.equals("ffmpeg")) {
+        if (longUrl.equals("ffmpeg") || !longUrl.startsWith("http")) {
             return longUrl;
         }
 
-        URL url = new URL(longUrl);
-        int port = url.getPort();
-        if (port == -1) {
-            if (url.getQuery() == null) {
-                temp = url.getPath();
+        try {
+            URL url = new URL(longUrl);
+            int port = url.getPort();
+            String temp;
+            if (port == -1) {
+                if (url.getQuery() == null) {
+                    temp = url.getPath();
+                } else {
+                    temp = url.getPath() + "?" + url.getQuery();
+                }
             } else {
-                temp = url.getPath() + "?" + url.getQuery();
+                if (url.getQuery() == null) {
+                    temp = ":" + url.getPort() + url.getPath();
+                } else {
+                    temp = ":" + url.getPort() + url.getPath() + "?" + url.getQuery();
+                }
             }
-        } else {
-            if (url.getQuery() == null) {
-                temp = ":" + url.getPort() + url.getPath();
-            } else {
-                temp = ":" + url.getPort() + url.getPath() + "?" + url.getQuery();
-            }
+            return temp;
+        } catch (Exception ignore) {
         }
-        return temp;
+        return longUrl;
     }
 }

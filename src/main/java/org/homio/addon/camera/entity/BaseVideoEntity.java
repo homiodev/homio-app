@@ -340,9 +340,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         return "ffmpeg";
     }
 
-    public @NotNull String getRtspUri() {
-        return "ffmpeg";
-    }
+    public @NotNull abstract String getRtspUri();
 
     protected void fireUpdateSnapshot(EntityContext entityContext, JSONObject params) {
         if (!isStart()) {

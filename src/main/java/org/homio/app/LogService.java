@@ -26,7 +26,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -276,8 +275,6 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
 
         private final Map<String, LogConsumer> logConsumers = new ConcurrentHashMap<>();
         private final Map<String, DefinedAppenderConsumer> definedAppender = new HashMap<>();
-        // allow debug level for appender
-        private final boolean allowDebugLevel = false;
 
         // keep all logs in memory until we switch strategy via setEntityContext(...) method
         private List<LogEvent> bufferedLogEvents = new CopyOnWriteArrayList<>();
@@ -333,12 +330,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
         }
     }
 
-    @Getter
-    @RequiredArgsConstructor
-    private static class DefinedAppenderConsumer {
-
-        private final Set<String> prefixSet;
-        private final String fileName;
+    private record DefinedAppenderConsumer(Set<String> prefixSet, String fileName) {
 
         public boolean accept(String loggerName) {
             for (String prefix : prefixSet) {
@@ -369,11 +361,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
         }
     }
 
-    @RequiredArgsConstructor
-    private static class EntityLogBuilderImpl implements EntityLogBuilder {
-
-        private final BaseEntity entity;
-        private final LogConsumer logConsumer;
+    private record EntityLogBuilderImpl(BaseEntity entity, LogConsumer logConsumer) implements EntityLogBuilder {
 
         @SneakyThrows
         @Override
@@ -402,10 +390,13 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
             if (value) {
                 Path path = CommonUtils.getLogsPath().resolve("entities").resolve(entity.getClass().getSimpleName());
                 CommonUtils.createDirectoriesIfNotExists(path);
-                logConsumer.logToSeparateFile = path.resolve(entity.getEntityID() + ".log");
+                Path file = path.resolve(entity.getEntityID() + ".log");
                 try {
                     CommonUtils.writeToFile(path, new byte[0], false);
-                } catch (Exception ignore) {} // AccessDeniedException
+                    logConsumer.logToSeparateFile = file;
+                } catch (Exception ex) {
+                    System.out.printf("Error during truncate file: %s. Error: %s%n", path, CommonUtils.getErrorMessage(ex));
+                }
             }
         }
     }

@@ -31,7 +31,6 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -467,7 +466,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     @Override
     protected void requestSnapshotByUri() {
-        lastSnapshotRequest = Instant.now();
+        // use brandHandler.getSnapshotUri because Reolink uses &token=XXX as auth
         mainEventLoopGroup.schedule(() -> sendHttpGET(brandHandler.getSnapshotUri(true)), 0, TimeUnit.MILLISECONDS);
     }
 
@@ -476,11 +475,12 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         String snapshotUri = urls.getSnapshotUri(profile);
         if (snapshotUri.equals("ffmpeg")) {
             super.takeSnapshotSync(profile, output);
+        } else {
+            if (snapshotUri.startsWith("/")) {
+                snapshotUri = "http://%s:%s%s".formatted(getEntity().getIp(), getEntity().getRestPort(), brandHandler.getSnapshotUri(true));
+            }
+            VideoUtils.downloadImage(snapshotUri, entity.getUser(), entity.getPassword().asString(), output);
         }
-        if (snapshotUri.startsWith("/")) {
-            snapshotUri = "http://%s:%s%s".formatted(getEntity().getIp(), getEntity().getRestPort(), brandHandler.getSnapshotUri(true));
-        }
-        VideoUtils.downloadImage(snapshotUri, entity.getUser(), entity.getPassword().asString(), output);
     }
 
     @Override

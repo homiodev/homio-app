@@ -1,28 +1,27 @@
 package org.homio.addon.camera.entity;
 
+import static java.lang.String.join;
+
 import jakarta.persistence.Entity;
+import java.util.List;
+import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.service.UsbCameraService;
 import org.homio.api.EntityContext;
-import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.ui.action.DynamicOptionLoader;
 import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldPort;
+import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.selection.UIFieldSelectValueOnEmpty;
 import org.homio.api.ui.field.selection.UIFieldSelection;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-
-import static java.lang.String.join;
 
 @SuppressWarnings("unused")
 @Entity
@@ -55,6 +54,7 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
     }
 
     @UIField(order = 100, hideInView = true, type = UIFieldType.Chips)
+    @UIFieldGroup("STREAMING")
     public List<String> getStreamOptions() {
         return getJsonDataList("stream");
     }
@@ -103,22 +103,37 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
     }
 
     @Override
-    public @NotNull String getSnapshotUrl() {
-        return getRtspUri();
-    }
-
-    @Override
     protected @NotNull String getDevicePrefix() {
         return "usbcam";
+    }
+
+    @UIField(order = 100, hideInView = true)
+    @UIFieldGroup("STREAMING")
+    @UIFieldSlider(min = 1, max = 60)
+    public int getStreamFramesPerSecond() {
+        return getJsonData("sfps", 15);
+    }
+
+    public void setStreamFramesPerSecond(int value) {
+        setJsonData("sfps", value);
+    }
+
+    @UIField(order = 100, hideInView = true)
+    @UIFieldGroup("STREAMING")
+    @UIFieldSlider(min = 100, max = 2500)
+    public int getStreamBitRate() {
+        return getJsonData("sbr", 500);
+    }
+
+    public void getStreamBitRate(int value) {
+        setJsonData("sbr", value);
     }
 
     @Override
     protected void beforePersist() {
         super.beforePersist();
         setVideoCodec("libx264");
-        setStreamOptions(join("~~~",
-                "-vcodec libx264", "-s 800x600", "-bufsize:v 5M", "-preset ultrafast", "-vcodec libx264", "-tune zerolatency", "-b:v " +
-                        "2.5M"));
+        setStreamOptions(join("~~~", "-s 800x600"));
     }
 
     @Override
@@ -165,6 +180,6 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
         return super.getVideoParametersHashCode() +
                 (getIeeeAddress() == null ? 0 : getIeeeAddress().hashCode()) +
                 getJsonDataHashCode("asource", "stream", "streamPort",
-                        "extraOpts", "hlsListSize", "vcodec", "acodec", "hls_scale");
+                    "extraOpts", "hlsListSize", "vcodec", "acodec", "hls_scale", "sfps", "sbr");
     }
 }

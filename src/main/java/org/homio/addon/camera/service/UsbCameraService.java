@@ -1,7 +1,7 @@
 package org.homio.addon.camera.service;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.homio.api.EntityContextMedia.FFMPEGFormat.GENERAL;
+import static org.homio.api.EntityContextMedia.FFMPEGFormat.MUXER;
 import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 
 import java.util.LinkedHashSet;
@@ -33,6 +33,8 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
         if (!aliveVideoDevices.contains(entity.getIeeeAddress())) {
             throw new ConfigurationException("W.ERROR.NOT_REACHED_CAMERA");
         }
+        // restart if not alive
+        ffmpegUsbStream.startConverting();
         super.pollCameraConnection();
     }
 
@@ -68,20 +70,31 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
         }
         Set<String> outputParams = new LinkedHashSet<>(entity.getStreamOptions());
         outputParams.add("-f tee");
-        outputParams.add("-map 0:v");
+        outputParams.add("-preset ultrafast");
+        outputParams.add("-tune zerolatency");
+        outputParams.add("-framerate %s".formatted(entity.getStreamFramesPerSecond()));
+        outputParams.add("-c:v libx264");
+        outputParams.add("-b:v %sk".formatted(entity.getStreamBitRate()));
+        outputParams.add("-g %s".formatted(entity.getStreamFramesPerSecond() * 2)); // https://trac.ffmpeg.org/wiki/EncodingForStreamingSites#a-g
+
         if (isNotEmpty(entity.getAudioSource())) {
             url += ":audio=\"" + entity.getAudioSource() + "\"";
-            outputParams.add("-map 0:a");
+            outputParams.add("-c:a mp2");
+            outputParams.add("-b:a 128k");
+            outputParams.add("-ar 44100");
+            outputParams.add("-ac 2");
         }
+        outputParams.add("-map 0");
         Map<String, Integer> outputs = Map.of("rtsp", entity.getStreamStartPort(), "hls", entity.getStreamStartPort() + 1);
 
         String output = outputs.values().stream().map(integer -> "[f=mpegts]udp://%s:%s?pkt_size=1316".formatted(MACHINE_IP_ADDRESS, integer))
                                .collect(Collectors.joining("|"));
+        output += "[f=flv]rtmp://%s/live2/key".formatted(MACHINE_IP_ADDRESS);
         setAttribute("MainStream", new StringType(output));
 
         if(ffmpegUsbStream == null || !ffmpegUsbStream.getIsAlive()) {
             ffmpegUsbStream = entityContext.media().buildFFMPEG(getEntityID(), "FFmpeg usb udp re-streamer", this, log,
-                GENERAL, SystemUtils.IS_OS_LINUX ? "-f v4l2" : "-f dshow", url,
+                MUXER, SystemUtils.IS_OS_LINUX ? "-f v4l2" : "-f dshow", url,
                 String.join(" ", outputParams),
                 output,
                 "", "", null);
