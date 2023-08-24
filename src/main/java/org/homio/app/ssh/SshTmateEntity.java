@@ -50,6 +50,11 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
     }
 
     @Override
+    public long getEntityServiceHashCode() {
+        return 0;
+    }
+
+    @Override
     public @NotNull Class<SshTmateService> getEntityServiceItemClass() {
         return SshTmateService.class;
     }

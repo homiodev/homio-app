@@ -39,11 +39,6 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     }
 
     @Override
-    protected long getEntityHashCode(UsbCameraEntity entity) {
-        return entity.getDeepHashCode();
-    }
-
-    @Override
     public String getFFMPEGInputOptions(String profile) {
         return "";
     }

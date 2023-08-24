@@ -1,12 +1,5 @@
 package org.homio.app.manager.bgp;
 
-import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
-import org.homio.api.service.EntityService;
-import org.homio.api.service.EntityService.ServiceInstance;
-import org.homio.api.service.EntityService.WatchdogService;
-import org.homio.app.manager.common.impl.EntityContextBGPImpl;
-
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,6 +7,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
+import org.homio.api.service.EntityService;
+import org.homio.api.service.EntityService.ServiceInstance;
+import org.homio.api.service.EntityService.WatchdogService;
+import org.homio.app.manager.common.impl.EntityContextBGPImpl;
 
 @Log4j2
 public class WatchdogBgpService {
@@ -35,7 +34,7 @@ public class WatchdogBgpService {
         assembleWatchdogServices();
         List<CompletableFuture<Void>> restartingServices = new ArrayList<>();
         for (Entry<String, WatchdogService> entry : watchdogServiceMap.entrySet()) {
-            if (entry.getValue() != null && entry.getValue().isRequireRestartService()) {
+            if (entry.getValue() != null && isRequireRestartService(entry)) {
                 log.info("Restarting service: {}", entry.getKey());
                 restartingServices.add(CompletableFuture.runAsync(entry.getValue()::restartService));
             }
@@ -44,6 +43,14 @@ public class WatchdogBgpService {
             // wait all watchdog services to finish value
             CompletableFuture.allOf(restartingServices.toArray(new CompletableFuture[0])).get();
             log.info("Finished restart services");
+        }
+    }
+
+    private static boolean isRequireRestartService(Entry<String, WatchdogService> entry) {
+        try {
+            return entry.getValue().isRequireRestartService();
+        } catch (Exception ex) {
+            return true;
         }
     }
 

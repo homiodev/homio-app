@@ -1,7 +1,24 @@
 package org.homio.app.model.var;
 
+import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.defaultString;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ManyToOne;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -40,12 +57,6 @@ import org.homio.app.repository.VariableBackupRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
-
-import java.util.*;
-import java.util.function.Consumer;
-
-import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.*;
 
 @Entity
 @Setter
@@ -322,7 +333,7 @@ public class WorkspaceVariable extends BaseEntity
             String variableName,
             Consumer<VariableMetaBuilder> builder,
             VariableType variableType) {
-        int entityHashCode = getEntityHashCode();
+        long entityHashCode = getEntityHashCode();
         String varId = Objects.toString(variableId, String.valueOf(System.currentTimeMillis()));
         this.setName(variableName);
         this.restriction = variableType;
@@ -342,7 +353,7 @@ public class WorkspaceVariable extends BaseEntity
     }
 
     @Override
-    public int getChildEntityHashCode() {
+    public long getChildEntityHashCode() {
         int result = description != null ? description.hashCode() : 0;
         result = 31 * result + (restriction != null ? restriction.hashCode() : 0);
         result = 31 * result + quota;

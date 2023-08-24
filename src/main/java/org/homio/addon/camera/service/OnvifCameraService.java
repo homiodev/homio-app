@@ -629,11 +629,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return brandHandler instanceof BrandCameraHasMotionAlarm;
     }
 
-    @Override
-    protected long getEntityHashCode(OnvifCameraEntity entity) {
-        return entity.getDeepHashCode();
-    }
-
     private int getPortFromShortenedUrl(String httpRequestURL, OnvifCameraEntity entity) {
         if (httpRequestURL.startsWith(":")) {
             int end = httpRequestURL.indexOf("/");

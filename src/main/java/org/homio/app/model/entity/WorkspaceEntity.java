@@ -50,7 +50,7 @@ public final class WorkspaceEntity extends BaseEntity implements HasJsonData {
     }
 
     @Override
-    protected int getChildEntityHashCode() {
+    protected long getChildEntityHashCode() {
         int result = content != null ? content.hashCode() : 0;
         result = 31 * result + jsonData.hashCode();
         return result;

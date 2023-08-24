@@ -1,7 +1,21 @@
 package org.homio.app.model.var;
 
+import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
+import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -15,8 +29,14 @@ import org.homio.api.entity.HasJsonData;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.JSON;
 import org.homio.api.ui.UISidebarMenu;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldIconPicker;
+import org.homio.api.ui.field.UIFieldProgress;
 import org.homio.api.ui.field.UIFieldProgress.Progress;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.UIFieldTitleRef;
+import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIActionInput;
 import org.homio.api.ui.field.action.UIActionInput.Type;
 import org.homio.api.ui.field.action.UIContextMenuAction;
@@ -35,14 +55,6 @@ import org.homio.app.model.UIHideEntityIfFieldNotNull;
 import org.homio.app.repository.VariableBackupRepository;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
-
-import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 
 @Entity
 @Setter
@@ -181,7 +193,7 @@ public class WorkspaceGroup extends BaseEntity
     }
 
     @Override
-    protected int getChildEntityHashCode() {
+    protected long getChildEntityHashCode() {
         int result = description != null ? description.hashCode() : 0;
         result = 31 * result + (groupId != null ? groupId.hashCode() : 0);
         result = 31 * result + (icon != null ? icon.hashCode() : 0);

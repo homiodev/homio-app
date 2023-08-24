@@ -1,6 +1,13 @@
 package org.homio.app.ssh;
 
 import jakarta.persistence.Entity;
+import java.net.URI;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
@@ -13,14 +20,6 @@ import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.net.URI;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 @Entity
 @UISidebarChildren(icon = "fas fa-draw-polygon", color = "#CC0092")
@@ -49,6 +48,11 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
     @Override
     protected @NotNull String getDevicePrefix() {
         return "ssh-raw";
+    }
+
+    @Override
+    public long getEntityServiceHashCode() {
+        return getRawWebSocketAddress().hashCode();
     }
 
     @Override

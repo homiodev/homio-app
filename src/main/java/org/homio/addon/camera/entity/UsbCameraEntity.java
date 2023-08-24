@@ -88,7 +88,8 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
         return "Usb camera";
     }
 
-    public long getDeepHashCode() {
+    @Override
+    public long getEntityServiceHashCode() {
         return Objects.hashCode(getIeeeAddress()) + getJsonDataHashCode("start", "asource", "stream", "streamPort");
     }
 

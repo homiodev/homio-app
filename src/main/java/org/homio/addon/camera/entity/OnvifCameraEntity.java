@@ -4,6 +4,12 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.onvif.soap.OnvifDeviceState;
 import de.onvif.soap.devices.InitialDevices;
 import jakarta.persistence.Entity;
+import java.net.URI;
+import java.nio.file.Path;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Objects;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
@@ -17,7 +23,11 @@ import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.action.DynamicOptionLoader;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.ui.field.UIFieldPort;
+import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIEntityItemBuilder;
@@ -29,13 +39,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.onvif.ver10.device.wsdl.GetDeviceInformationResponse;
-
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Objects;
 
 @SuppressWarnings("unused")
 @Log4j2
@@ -272,7 +275,8 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         return new Icon("fas fa-video", "#4E783D");
     }
 
-    public long getDeepHashCode() {
+    @Override
+    public long getEntityServiceHashCode() {
         return Objects.hash(getIeeeAddress(), getName()) + getJsonDataHashCode("start", "ip", "cameraType", "onvifPort", "restPort",
                 "onvifMediaProfile", "user", "pwd");
     }

@@ -1,5 +1,10 @@
 package org.homio.addon.camera.service;
 
+import static org.apache.commons.lang3.StringUtils.defaultString;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.ConfigurationException;
@@ -10,12 +15,6 @@ import org.homio.api.EntityContext;
 import org.homio.api.model.Icon;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import static org.apache.commons.lang3.StringUtils.defaultString;
 
 public class CommonVideoService extends BaseVideoService<CommonVideoStreamEntity, CommonVideoService> {
 
@@ -76,11 +75,6 @@ public class CommonVideoService extends BaseVideoService<CommonVideoStreamEntity
                 null,
                 new Icon("fas fa-users-viewfinder", "#669618"),
                 null);
-    }
-
-    @Override
-    protected long getEntityHashCode(CommonVideoStreamEntity entity) {
-        return entity.getDeepHashCode();
     }
 
     @RequiredArgsConstructor

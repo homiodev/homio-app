@@ -1,7 +1,14 @@
 package org.homio.app.model.entity.widget;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
+import jakarta.persistence.ManyToOne;
+import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -11,8 +18,6 @@ import org.homio.api.entity.HasJsonData;
 import org.homio.api.model.JSON;
 import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.Set;
 
 @Setter
 @Getter
@@ -55,7 +60,7 @@ public abstract class WidgetSeriesEntity<T extends WidgetBaseEntityAndSeries>
     }
 
     @Override
-    protected int getChildEntityHashCode() {
+    protected long getChildEntityHashCode() {
         return 0;
     }
 }
