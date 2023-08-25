@@ -1,11 +1,14 @@
 package org.homio.addon.camera.entity;
 
+import static org.homio.api.util.Constants.DANGER_COLOR;
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import lombok.extern.log4j.Log4j2;
+import java.nio.file.Paths;
+import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.service.MediaMTXService;
 import org.homio.api.EntityContext;
@@ -13,6 +16,8 @@ import org.homio.api.entity.HasFirmwareVersion;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.MediaEntity;
 import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.FileContentType;
+import org.homio.api.model.FileModel;
 import org.homio.api.model.Icon;
 import org.homio.api.repository.GitHubProject;
 import org.homio.api.service.EntityService;
@@ -23,12 +28,11 @@ import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.api.util.ApplicationContextHolder;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONObject;
 
-@Log4j2
 @Entity
 @UISidebarChildren(icon = "fas fa-square-rss", color = "#308BB3", allowCreateItem = false)
 public final class MediaMTXEntity extends MediaEntity implements HasEntityLog,
@@ -36,11 +40,9 @@ public final class MediaMTXEntity extends MediaEntity implements HasEntityLog,
 
     public static final GitHubProject mediamtxGitHub =
         GitHubProject.of("bluenviron", "mediamtx")
-                     .setInstalledVersionResolver(() -> {
+                     .setInstalledVersionResolver((entityContext, gitHubProject) -> {
                          Path executable = CommonUtils.getInstallPath().resolve("mediamtx").resolve("mediamtx");
-                         return ApplicationContextHolder.getBean(EntityContext.class)
-                                                        .hardware()
-                                                        .execute(executable + " --version");
+                         return entityContext.hardware().execute(executable + " --version");
                      });
 
     public static void ensureEntityExists(EntityContext entityContext) {
@@ -52,6 +54,7 @@ public final class MediaMTXEntity extends MediaEntity implements HasEntityLog,
             entityContext.save(entity);
         }
         mediamtxGitHub.installLatestRelease(entityContext);
+        mediamtxGitHub.backup(Paths.get("mediamtx.yml"), Paths.get("mediamtx_initial.yml"));
     }
 
     @Override
@@ -80,8 +83,7 @@ public final class MediaMTXEntity extends MediaEntity implements HasEntityLog,
 
     @Override
     public void logBuilder(@NotNull EntityLogBuilder builder) {
-        builder.logToSeparateFile(true);
-        builder.addTopicFilterByEntityID(MediaMTXEntity.class);
+        builder.addTopic(MediaMTXService.class);
     }
 
     @UIField(order = 1, inlineEdit = true)
@@ -96,7 +98,7 @@ public final class MediaMTXEntity extends MediaEntity implements HasEntityLog,
 
     @Override
     public String getFirmwareVersion() {
-        return mediamtxGitHub.getInstalledVersion();
+        return mediamtxGitHub.getInstalledVersion(getEntityContext());
     }
 
     @Override
@@ -166,7 +168,6 @@ public final class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     }
 
     @UIField(order = 5)
-    @UIFieldSlider(min = 1, max = 60)
     @UIFieldGroup("CONNECTION")
     public LogLevel getLogLevel() {
         return getJsonDataEnum("ll", LogLevel.info);
@@ -219,8 +220,40 @@ public final class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     @UIContextMenuAction(value = "MEDIAMTX_GET_LIST",
                          icon = "fab fa-quinscape",
                          iconColor = "#899343")
-    public ActionResponseModel scan() {
+    public ActionResponseModel apiGetList() {
         return ActionResponseModel.showJson("MEDIAMTX_GET_LIST", getService().getApiList());
+    }
+
+    @SneakyThrows
+    @UIContextMenuAction(value = "MEDIAMTX_EDIT_CONFIG",
+                         icon = "fas fa-keyboard",
+                         iconColor = "#899343")
+    public ActionResponseModel editConfig() {
+        String content = Files.readString(mediamtxGitHub.getLocalProjectPath().resolve("mediamtx.yml"));
+        return ActionResponseModel.showFile(new FileModel("mediamtx.yml", content, FileContentType.yaml)
+            .setSaveHandler(mc -> getService().updateConfiguration(mc)));
+    }
+
+    @SneakyThrows
+    @UIContextMenuAction(value = "MEDIAMTX_RESET_CONFIG",
+                         confirmMessage = "",
+                         confirmMessageDialogColor = DANGER_COLOR,
+                         icon = "fas fa-clock-rotate-left",
+                         iconColor = "#91293E")
+    public ActionResponseModel resetConfig() {
+        getService().restoreConfiguration();
+        return ActionResponseModel.success();
+    }
+
+    @Override
+    @SneakyThrows
+    public @NotNull ActionResponseModel handleTextFieldAction(
+        @NotNull String field,
+        @NotNull JSONObject metadata) {
+        if (metadata.optString("key", "").equals("config")) {
+            return editConfig();
+        }
+        return ActionResponseModel.showError("W.ERROR.NO_HANDLER");
     }
 
     public enum LogLevel {

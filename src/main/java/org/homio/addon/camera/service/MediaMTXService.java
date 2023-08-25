@@ -20,7 +20,9 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
 import org.homio.addon.camera.entity.MediaMTXEntity;
+import org.homio.addon.camera.entity.MediaMTXEntity.LogLevel;
 import org.homio.api.EntityContext;
+import org.homio.api.EntityContextBGP;
 import org.homio.api.EntityContextBGP.ProcessContext;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.HasEntityIdentifier;
@@ -57,7 +59,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
 
             @Override
             public boolean isRequireRestartService() {
-                return entity.isStart() && entity.getStatus().isOnline() && !isServiceRunning();
+                return entity.isStart() && (!entity.getStatus().isOnline() || !isServiceRunning());
             }
         };
     }
@@ -65,7 +67,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     public JsonNode getApiList() {
         if (apiURL != null) {
             try {
-                return Curl.get(apiURL, JsonNode.class);
+                return Curl.get(apiURL + "/v2/paths/list", JsonNode.class);
             } catch (Exception ex) {
                 log.warn("[{}]: Unable to fetch api list: {}", entityID, getErrorMessage(ex));
             }
@@ -79,11 +81,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         } else {
             this.entity.setStatus(Status.OFFLINE, null);
         }
-        if (processContext != null) {
-            processContext.cancel(true);
-            processContext = null;
-        }
-
+        EntityContextBGP.cancel(processContext);
         log.warn("[{}]: Dispose mediamtx", entityID, ex);
 
         entityContext.ui().sendWarningMessage("Dispose mediamtx");
@@ -92,6 +90,33 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     @Override
     public void destroy() {
         this.dispose(null);
+    }
+
+    @SneakyThrows
+    public void updateConfiguration(String mc) {
+        configuration = YAML_OBJECT_MAPPER.readValue(mc, ObjectNode.class);
+        saveConfiguration();
+        initialize();
+    }
+
+    @SneakyThrows
+    public void restoreConfiguration() {
+        Path backupFile = mediamtxGitHub.getLocalProjectPath().resolve("mediamtx_initial.yml");
+        if (!Files.exists(backupFile)) {
+            throw new ServerException("W.ERROR.BACKUP_NOT_FOUND");
+        }
+        configuration = YAML_OBJECT_MAPPER.readValue(configurationPath.toFile(), ObjectNode.class);
+        configuration.put("api", true);
+        long hashCode = entity.getEntityServiceHashCode();
+        entity.setLogLevel(LogLevel.valueOf(configuration.get("logLevel").asText()));
+        entity.setUdpMaxPayloadSize(configuration.get("udpMaxPayloadSize").asInt());
+        entity.setReadBufferCount(configuration.get("readBufferCount").asInt());
+        entity.setReadTimeout(configuration.get("readTimeout").asInt());
+        entity.setWriteTimeout(configuration.get("writeTimeout").asInt());
+        if (hashCode != entity.getEntityServiceHashCode()) {
+            entityContext.save(entity);
+        }
+        saveConfiguration();
     }
 
     @Override
@@ -141,7 +166,6 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
                 } else {
                     log.warn("[{}]: mediamtx finished with status: {}", entityID, responseCode);
                 }
-                processContext = null;
                 dispose(ex);
             })
             .setErrorLoggerOutput(message -> logService(message, Level.ERROR))
@@ -167,7 +191,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     @SneakyThrows
     private void syncConfiguration() {
         configuration = YAML_OBJECT_MAPPER.readValue(configurationPath.toFile(), ObjectNode.class);
-        apiURL = configuration.get("apiAddress").asText();
+        apiURL = "http://" + configuration.get("apiAddress").asText();
 
         boolean updated = false;
 
@@ -206,5 +230,11 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         try (OutputStream outputStream = Files.newOutputStream(configurationPath, StandardOpenOption.TRUNCATE_EXISTING)) {
             YAML_OBJECT_MAPPER.writeValue(outputStream, configuration);
         }
+    }
+
+    @Override
+    @SneakyThrows
+    public void backupData(BackupContext backupContext) {
+        Files.copy(configurationPath, backupContext.getBackupPath().resolve(configurationPath.getFileName()));
     }
 }

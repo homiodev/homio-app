@@ -1,6 +1,44 @@
 package org.homio.app.manager.common.impl;
 
-import com.pivovarit.function.*;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
+
+import com.pivovarit.function.ThrowingBiConsumer;
+import com.pivovarit.function.ThrowingBiFunction;
+import com.pivovarit.function.ThrowingConsumer;
+import com.pivovarit.function.ThrowingFunction;
+import com.pivovarit.function.ThrowingRunnable;
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchEvent.Kind;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -27,20 +65,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-
-import java.io.IOException;
-import java.nio.file.*;
-import java.nio.file.WatchEvent.Kind;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
-import java.util.function.Function;
-
-import static java.nio.file.StandardWatchEventKinds.*;
 
 @Log4j2
 public class EntityContextBGPImpl implements EntityContextBGP {
@@ -845,9 +869,9 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             }
 
             log.info("[{}]: wait process to finish.", name);
-            Thread.sleep(1000);
+            sleep(1000);
             int responseCode = process.waitFor();
-            Thread.sleep(1000);
+            sleep(1000);
             executeFinishHandler(null, responseCode);
         }
 
@@ -872,5 +896,11 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                 this.streamGobbler.stopStream(100, 1000);
             }
         }
+    }
+
+    private static void sleep(int timeout) {
+        try {
+            Thread.sleep(timeout);
+        } catch (Exception ignore) {}
     }
 }

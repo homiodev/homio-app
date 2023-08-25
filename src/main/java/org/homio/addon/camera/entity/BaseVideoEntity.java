@@ -419,7 +419,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
             BaseVideoEntity<?, ?> entity = entityContext.getEntityRequire(params.getString("entityID"));
             byte[] image = entity.getService().recordImageSync(null).byteArrayValue();
             String encodedValue = "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(image);
-            FileModel snapshot = new FileModel("Snapshot", encodedValue, FileContentType.image, true);
+            FileModel snapshot = new FileModel("Snapshot", encodedValue, FileContentType.image);
             return ActionResponseModel.showFile(snapshot);
         }
     }
@@ -460,6 +460,5 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     @Override
     public void logBuilder(EntityLogBuilder entityLogBuilder) {
         entityLogBuilder.addTopicFilterByEntityID(CameraEntrypoint.class);
-        entityLogBuilder.logToSeparateFile(true);
     }
 }

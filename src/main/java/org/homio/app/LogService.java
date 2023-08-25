@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
@@ -124,13 +125,13 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
 
     public @Nullable Path getEntityLogsFile(BaseEntity baseEntity) {
         LogConsumer logConsumer = globalAppender.logConsumers.get(baseEntity.getEntityID());
-        return logConsumer == null ? null : logConsumer.logToSeparateFile;
+        return logConsumer == null ? null : logConsumer.logFile;
     }
 
     public void deleteEntityLogsFile(BaseEntity baseEntity) {
         LogConsumer logConsumer = globalAppender.logConsumers.get(baseEntity.getEntityID());
-        if (logConsumer != null && logConsumer.logToSeparateFile != null) {
-            FileUtils.deleteQuietly(logConsumer.logToSeparateFile.toFile());
+        if (logConsumer != null) {
+            FileUtils.deleteQuietly(logConsumer.logFile.toFile());
         }
     }
 
@@ -220,7 +221,12 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
 
     private static void addLogEntity(BaseEntity entity) {
         if (!globalAppender.logConsumers.containsKey(entity.getEntityID())) {
-            LogConsumer logConsumer = new LogConsumer(entity.getEntityID(), entity.getClass(), ((HasEntityLog) entity).isDebug());
+            LogConsumer logConsumer = new LogConsumer(
+                entity.getEntityID(),
+                entity.getClass(),
+                entity.getClass().getSimpleName(),
+                createLogFile(entity),
+                ((HasEntityLog) entity).isDebug());
             EntityLogBuilderImpl entityLogBuilder = new EntityLogBuilderImpl(entity, logConsumer);
             ((HasEntityLog) entity).logBuilder(entityLogBuilder);
 
@@ -228,6 +234,18 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
                 globalAppender.logConsumers.put(entity.getEntityID(), logConsumer);
             }
         }
+    }
+
+    private static Path createLogFile(BaseEntity entity) {
+        Path path = CommonUtils.getLogsPath().resolve("entities").resolve(entity.getClass().getSimpleName());
+        CommonUtils.createDirectoriesIfNotExists(path);
+        Path file = path.resolve(entity.getEntityID() + ".log");
+        try {
+            CommonUtils.writeToFile(file, new byte[0], false);
+        } catch (Exception ex) {
+            System.out.printf("Error during truncate file: %s. Error: %s%n", path, CommonUtils.getErrorMessage(ex));
+        }
+        return file;
     }
 
     @SneakyThrows
@@ -320,9 +338,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
                 }
                 if (logConsumer.logTopics.stream().anyMatch(l -> l.test(event))) {
                     sendLogEvent(event, message -> {
-                        if (logConsumer.logToSeparateFile != null) {
-                            Files.writeString(logConsumer.logToSeparateFile, message + System.lineSeparator(), StandardOpenOption.APPEND);
-                        }
+                        Files.writeString(logConsumer.logFile, message + System.lineSeparator(), StandardOpenOption.APPEND);
                         entityContext.ui().sendDynamicUpdate("entity-log-" + logConsumer.entityID, message);
                     });
                 }
@@ -343,22 +359,15 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
     }
 
     @Getter
+    @AllArgsConstructor
     private static class LogConsumer {
 
         private final List<Predicate<LogEvent>> logTopics = new ArrayList<>();
-        private final String entityID;
-        private final Class<?> targetClass;
-        private final String className;
-        private @Nullable Path logToSeparateFile;
+        private final @NotNull String entityID;
+        private final @NotNull Class<?> targetClass;
+        private final @NotNull String className;
+        private final @NotNull Path logFile;
         private boolean debug;
-
-        @SneakyThrows
-        public LogConsumer(String entityID, Class<?> targetClass, boolean debug) {
-            this.entityID = entityID;
-            this.targetClass = targetClass;
-            this.className = targetClass.getSimpleName();
-            this.debug = debug;
-        }
     }
 
     private record EntityLogBuilderImpl(BaseEntity entity, LogConsumer logConsumer) implements EntityLogBuilder {
@@ -371,22 +380,6 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
             logConsumer.logTopics.add(filterValue == null
                     ? logEvent -> logEvent.getLoggerName().startsWith(topic)
                     : logEvent -> logEvent.getLoggerName().startsWith(topic) && logEvent.getMessage().getFormattedMessage().contains(filterValue));
-        }
-
-        @Override
-        @SneakyThrows
-        public void logToSeparateFile(boolean value) {
-            if (value) {
-                Path path = CommonUtils.getLogsPath().resolve("entities").resolve(entity.getClass().getSimpleName());
-                CommonUtils.createDirectoriesIfNotExists(path);
-                Path file = path.resolve(entity.getEntityID() + ".log");
-                try {
-                    CommonUtils.writeToFile(path, new byte[0], false);
-                    logConsumer.logToSeparateFile = file;
-                } catch (Exception ex) {
-                    System.out.printf("Error during truncate file: %s. Error: %s%n", path, CommonUtils.getErrorMessage(ex));
-                }
-            }
         }
     }
 }

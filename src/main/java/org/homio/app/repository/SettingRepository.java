@@ -65,7 +65,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
                 entity.setToggleIcon(((SettingPluginToggle) plugin).getToggleIcon().getIcon());
             }
             if (plugin instanceof SettingPluginButton) {
-                entity.setValue(((SettingPluginButton) plugin).getText());
+                entity.setValue(((SettingPluginButton) plugin).getText(entityContext));
                 entity.setPrimary(((SettingPluginButton) plugin).isPrimary());
             }
             entity.setSettingType(plugin.getSettingType());

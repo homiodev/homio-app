@@ -285,7 +285,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
             return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_NOT_FOUND");
         }
         String publicKey = getJsonData("pub_key");
-        FileModel publicKeyModel = new FileModel("Public key", publicKey, FileContentType.plaintext, true);
+        FileModel publicKeyModel = new FileModel("Public key", publicKey, FileContentType.plaintext);
         return ActionResponseModel.showFile(publicKeyModel);
     }
 

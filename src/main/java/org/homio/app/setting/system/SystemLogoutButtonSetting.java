@@ -1,17 +1,16 @@
 package org.homio.app.setting.system;
 
+import static org.homio.api.util.Constants.DANGER_COLOR;
+
 import org.homio.api.EntityContext;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPluginButton;
 import org.homio.api.ui.UI.Color;
-import org.homio.api.util.ApplicationContextHolder;
 import org.homio.app.setting.CoreSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
-
-import static org.homio.api.util.Constants.DANGER_COLOR;
 
 public class SystemLogoutButtonSetting
         implements CoreSettingPlugin<JSONObject>, SettingPluginButton {
@@ -32,8 +31,8 @@ public class SystemLogoutButtonSetting
     }
 
     @Override
-    public String getText() {
-        UserEntity user = ApplicationContextHolder.getBean(EntityContext.class).getUser();
+    public String getText(EntityContext entityContext) {
+        UserEntity user = entityContext.getUser();
         if (user != null) {
             return user.getEmail();
         }

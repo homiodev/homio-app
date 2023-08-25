@@ -4,8 +4,9 @@ import org.homio.addon.z2m.model.Z2MDeviceEntity;
 import org.homio.addon.z2m.model.Z2MLocalCoordinatorEntity;
 import org.homio.addon.z2m.service.Z2MDeviceService;
 import org.homio.api.EntityContext;
-import org.homio.api.util.ApplicationContextHolder;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
@@ -14,6 +15,10 @@ import java.util.List;
 @Repository
 public class Z2MDeviceRepository extends AbstractRepository<Z2MDeviceEntity> {
 
+    @Lazy
+    @Autowired
+    private EntityContext entityContext;
+
     public Z2MDeviceRepository() {
         super(Z2MDeviceEntity.class);
     }
@@ -21,7 +26,6 @@ public class Z2MDeviceRepository extends AbstractRepository<Z2MDeviceEntity> {
     @Override
     public @NotNull List<Z2MDeviceEntity> listAll() {
         List<Z2MDeviceEntity> list = new ArrayList<>();
-        EntityContext entityContext = ApplicationContextHolder.getBean(EntityContext.class);
         for (Z2MLocalCoordinatorEntity coordinator : entityContext.findAll(Z2MLocalCoordinatorEntity.class)) {
             list.addAll(coordinator.getService().getDeviceHandlers().values().stream()
                     .map(Z2MDeviceService::getDeviceEntity).toList());
@@ -31,7 +35,6 @@ public class Z2MDeviceRepository extends AbstractRepository<Z2MDeviceEntity> {
 
     @Override
     public Z2MDeviceEntity getByEntityID(String entityID) {
-        EntityContext entityContext = ApplicationContextHolder.getBean(EntityContext.class);
         for (Z2MLocalCoordinatorEntity coordinator : entityContext.findAll(Z2MLocalCoordinatorEntity.class)) {
             for (Z2MDeviceService deviceService : coordinator.getService().getDeviceHandlers().values()) {
                 if (deviceService.getDeviceEntity().getEntityID().equals(entityID)) {

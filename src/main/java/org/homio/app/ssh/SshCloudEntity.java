@@ -1,5 +1,13 @@
 package org.homio.app.ssh;
 
+import static org.homio.api.ui.field.action.UIActionInput.Type.text;
+import static org.homio.api.ui.field.action.UIActionInput.Type.textarea;
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+import static org.homio.app.ssh.SshGenericEntity.PublicKeyAuthSign;
+import static org.homio.app.ssh.SshGenericEntity.execDeletePrivateKey;
+import static org.homio.app.ssh.SshGenericEntity.execUploadPrivateKey;
+import static org.homio.app.ssh.SshGenericEntity.updateSSHData;
+
 import com.sshtools.client.SshClient;
 import com.sshtools.common.publickey.SshPrivateKeyFile;
 import com.sshtools.common.publickey.SshPrivateKeyFileFactory;
@@ -30,11 +38,6 @@ import org.homio.app.service.cloud.CloudService;
 import org.homio.app.service.cloud.SshTunnelCloudProviderService;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
-
-import static org.homio.api.ui.field.action.UIActionInput.Type.text;
-import static org.homio.api.ui.field.action.UIActionInput.Type.textarea;
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-import static org.homio.app.ssh.SshGenericEntity.*;
 
 @Log4j2
 @Entity
@@ -200,7 +203,7 @@ public class SshCloudEntity extends IdentityEntity implements
     }
 
     @Override
-    public void beforeDelete(@NotNull EntityContext entityContext) {
+    public void beforeDelete() {
         if (isPrimary()) {
             throw new IllegalStateException("W.ERROR.DELETE_CLOUD_PRIMARY_SSH");
         }

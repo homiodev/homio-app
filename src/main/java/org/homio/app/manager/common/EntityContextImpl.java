@@ -128,7 +128,7 @@ public class EntityContextImpl implements EntityContext {
     }
 
     private final GitHubProject appGitHub = GitHubProject.of("homiodev", "homio-app", CommonUtils.getInstallPath().resolve("homio"))
-            .setInstalledVersionResolver(() -> setting().getApplicationVersion());
+            .setInstalledVersionResolver((entityContext, gitHubProject) -> setting().getApplicationVersion());
     private final EntityContextUIImpl entityContextUI;
     private final EntityContextInstallImpl entityContextInstall;
     private final EntityContextEventImpl entityContextEvent;
@@ -646,7 +646,7 @@ public class EntityContextImpl implements EntityContext {
     private void updateAppNotificationBlock() {
         ui().addNotificationBlock("app", "App", new Icon("fas fa-house", "#E65100"), builder -> {
             builder.setBorderColor("#FF4400");
-            String installedVersion = appGitHub.getInstalledVersion();
+            String installedVersion = appGitHub.getInstalledVersion(this);
             builder.setUpdating(appGitHub.isUpdating());
             builder.setVersion(installedVersion);
             String latestVersion = appGitHub.getLastReleaseVersion();

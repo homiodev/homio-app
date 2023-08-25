@@ -319,7 +319,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
                 if (baseEntity.isDisableDelete()) {
                     throw new IllegalStateException("Unable to remove entity");
                 }
-                baseEntity.beforeDelete(entityContext);
+                baseEntity.beforeDelete();
             }
             return false;
         });

@@ -9,7 +9,6 @@ import jakarta.persistence.OneToMany;
 import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
-import org.homio.api.EntityContext;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasOrder;
@@ -85,7 +84,7 @@ public final class WidgetTabEntity extends BaseEntity implements HasOrder {
     }
 
     @Override
-    public void beforeDelete(@NotNull EntityContext entityContext) {
+    public void beforeDelete() {
         if (!widgetBaseEntities.isEmpty()) {
             throw new IllegalArgumentException("W.ERROR.REMOVE_NON_EMPTY_TAB");
         }

@@ -424,7 +424,6 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
 
     @Override
     public @Nullable ActionResponseModel handleTextFieldAction(
-            @NotNull EntityContext entityContext,
             @NotNull String field,
             @NotNull JSONObject metadata) {
         if (metadata.optString("key", "").equals("auth")) {
