@@ -9,6 +9,7 @@ import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.service.UsbCameraService;
 import org.homio.api.EntityContext;
+import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.ui.action.DynamicOptionLoader;
@@ -18,6 +19,7 @@ import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldPort;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.UIFieldType;
+import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.selection.UIFieldSelectValueOnEmpty;
 import org.homio.api.ui.field.selection.UIFieldSelection;
 import org.jetbrains.annotations.NotNull;
@@ -29,9 +31,10 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
         implements AbilityToStreamHLSOverFFMPEG<UsbCameraEntity> {
 
     @Override
-    @UIField(order = 5, label = "usbSource", type = UIFieldType.TextSelectBoxDynamic)
+    @UIField(order = 1, label = "usbSource", type = UIFieldType.TextSelectBoxDynamic)
     @UIFieldSelection(SelectVideoSource.class)
     @UIFieldSelectValueOnEmpty(label = "SELECTION.VIDEO_SOURCE")
+    @UIFieldGroup("GENERAL")
     public String getIeeeAddress() {
         return super.getIeeeAddress();
     }
@@ -42,9 +45,10 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
         return super.isHasAudioStream();
     }
 
-    @UIField(order = 25, type = UIFieldType.TextSelectBoxDynamic)
+    @UIField(order = 2, type = UIFieldType.TextSelectBoxDynamic)
     @UIFieldSelection(SelectAudioSource.class)
     @UIFieldSelectValueOnEmpty(label = "SELECTION.AUDIO_SOURCE")
+    @UIFieldGroup("GENERAL")
     public String getAudioSource() {
         return getJsonData("asource");
     }
@@ -95,12 +99,12 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
 
     @Override
     public String getHlsRtspUri() {
-        return "udp://@%s:%s".formatted(MACHINE_IP_ADDRESS, getStreamStartPort() + 1);
+        return "udp://@%s:%s".formatted(MACHINE_IP_ADDRESS, getStreamStartPort());
     }
 
     @Override
     public @NotNull String getRtspUri() {
-        return "udp://@%s:%s".formatted(MACHINE_IP_ADDRESS, getStreamStartPort());
+        return "rtsp://%s:%s/%s".formatted(MACHINE_IP_ADDRESS, MediaMTXEntity.RTSP_PORT, getEntityID());
     }
 
     @Override
@@ -182,5 +186,10 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
                 (getIeeeAddress() == null ? 0 : getIeeeAddress().hashCode()) +
                 getJsonDataHashCode("asource", "stream", "streamPort",
                     "extraOpts", "hlsListSize", "vcodec", "acodec", "hls_scale", "sfps", "sbr");
+    }
+
+    @UIContextMenuAction(value = "GET_INFO", icon = "fab fa-quinscape", iconColor = "#899343")
+    public ActionResponseModel apiGetList() {
+        return ActionResponseModel.showJson("GET_INFO", getService().getInput());
     }
 }

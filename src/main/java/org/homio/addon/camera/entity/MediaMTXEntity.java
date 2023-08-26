@@ -38,6 +38,7 @@ import org.json.JSONObject;
 public final class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     HasFirmwareVersion, EntityService<MediaMTXService, MediaMTXEntity> {
 
+    public static final int RTSP_PORT = 8554;
     public static final GitHubProject mediamtxGitHub =
         GitHubProject.of("bluenviron", "mediamtx")
                      .setInstalledVersionResolver((entityContext, gitHubProject) -> {
@@ -183,7 +184,7 @@ public final class MediaMTXEntity extends MediaEntity implements HasEntityLog,
         return getService().getApiURL();
     }
 
-    @UIField(order = 25, hideInEdit = true)
+    @UIField(order = 1, hideInEdit = true, color = "#C4CC23")
     @UIFieldGroup("STATUS")
     public int getConnectedStreamsCount() {
         return getService().getApiList().path("itemCount").asInt();

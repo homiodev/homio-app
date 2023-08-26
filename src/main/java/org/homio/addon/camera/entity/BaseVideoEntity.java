@@ -67,6 +67,13 @@ import org.json.JSONObject;
 public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseVideoService<?, S>>
         extends MediaEntity implements HasEntityLog, DeviceEndpointsBehaviourContract, EntityService<S, T> {
 
+    @UIField(order = 6, hideOnEmpty = true, hideInEdit = true, color = Color.RED)
+    @UIFieldGroup("GENERAL")
+    public String getPingErrorCount() {
+        int count = getService().getCommunicationError();
+        return count == 0 ? null : String.valueOf(count);
+    }
+
     @UIField(order = 1, hideOnEmpty = true, hideInEdit = true)
     @UIFieldGroup(value = "HARDWARE", order = 10, borderColor = Color.RED)
     @UIFieldShowOnCondition("return !context.get('compactMode')")
@@ -459,6 +466,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
     @Override
     public void logBuilder(EntityLogBuilder entityLogBuilder) {
-        entityLogBuilder.addTopicFilterByEntityID(CameraEntrypoint.class);
+        entityLogBuilder.addTopicFilterByEntityID(CameraEntrypoint.class.getPackage());
     }
 }

@@ -5,26 +5,35 @@ import static org.homio.api.EntityContextMedia.FFMPEGFormat.MUXER;
 import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
 import java.util.LinkedHashSet;
-import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
+import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
+import org.apache.logging.log4j.Level;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.ConfigurationException;
 import org.homio.addon.camera.entity.UsbCameraEntity;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
+import org.homio.api.EntityContextMedia.VideoInputDevice;
 import org.homio.api.model.Icon;
 import org.homio.api.state.StringType;
+import org.jetbrains.annotations.Nullable;
 
 @Log4j2
 public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCameraService> {
 
     private FFMPEG ffmpegUsbStream;
+    private @Nullable @Getter VideoInputDevice input;
 
     public UsbCameraService(UsbCameraEntity entity, EntityContext entityContext) {
         super(entity, entityContext);
+    }
+
+    @Override
+    public void ffmpegLog(Level level, String message) {
+        log.log(level, "[{}]: {}", getEntityID(), message);
     }
 
     @Override
@@ -35,7 +44,9 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
         }
         // restart if not alive
         ffmpegUsbStream.startConverting();
-        super.pollCameraConnection();
+        keepMjpegRunning();
+        // skip taking snapshot
+        bringCameraOnline();
     }
 
     @Override
@@ -58,8 +69,14 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
 
     @Override
     protected void postInitializeCamera() {
-        UsbCameraEntity entity = getEntity();
-        String url = "video=\"" + entity.getIeeeAddress() + "\"";
+        String ieeeAddress = Objects.requireNonNull(entity.getIeeeAddress());
+        this.input = entityContext.media().createVideoInputDevice(ieeeAddress);
+
+        if (urls.getSnapshotUri().equals("ffmpeg")) {
+            urls.setSnapshotUri(entity.getRtspUri());
+        }
+
+        String url = "video=\"" + ieeeAddress + "\"";
         if (isNotEmpty(entity.getAudioSource())) {
             url += ":audio=\"" + entity.getAudioSource() + "\"";
         }
@@ -80,15 +97,14 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
             outputParams.add("-ac 2");
         }
         outputParams.add("-map 0");
-        Map<String, Integer> outputs = Map.of("rtsp", entity.getStreamStartPort(), "hls", entity.getStreamStartPort() + 1);
 
-        String output = outputs.values().stream().map(integer -> "[f=mpegts]udp://%s:%s?pkt_size=1316".formatted(MACHINE_IP_ADDRESS, integer))
-                               .collect(Collectors.joining("|"));
-        output += "[f=flv]rtmp://%s/live2/key".formatted(MACHINE_IP_ADDRESS);
+        String output = "";
+        output += "[f=mpegts]udp://%s:%s?pkt_size=1316".formatted(MACHINE_IP_ADDRESS, entity.getStreamStartPort());
+        output += "|[f=rtsp]%s".formatted(entity.getRtspUri());
         setAttribute("MainStream", new StringType(output));
 
         if(ffmpegUsbStream == null || !ffmpegUsbStream.getIsAlive()) {
-            ffmpegUsbStream = entityContext.media().buildFFMPEG(getEntityID(), "FFmpeg usb udp re-streamer", this, log,
+            ffmpegUsbStream = entityContext.media().buildFFMPEG(getEntityID(), "FFmpeg usb udp re-streamer", this,
                 MUXER, SystemUtils.IS_OS_LINUX ? "-f v4l2" : "-f dshow", url,
                 String.join(" ", outputParams),
                 output,

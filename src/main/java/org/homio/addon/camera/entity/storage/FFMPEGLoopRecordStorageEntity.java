@@ -1,8 +1,17 @@
 package org.homio.addon.camera.entity.storage;
 
+import static org.homio.api.EntityContextMedia.FFMPEGFormat.RECORD;
+
 import jakarta.persistence.Entity;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.Level;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.addon.camera.service.BaseVideoService;
 import org.homio.api.EntityContext;
@@ -17,15 +26,6 @@ import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import static org.homio.api.EntityContextMedia.FFMPEGFormat.RECORD;
 
 @Log4j2
 @Entity
@@ -146,11 +146,6 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
 
         FFMPEGHandler ffmpegHandler = new FFMPEGHandler() {
             @Override
-            public String getEntityID() {
-                return deviceEntity.getEntityID();
-            }
-
-            @Override
             public void motionDetected(boolean on, String key) {
 
             }
@@ -162,12 +157,17 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
 
             @Override
             public void ffmpegError(String error) {
-                log.error("[{}]: Record error: <{}>", getEntityID(), error);
+                log.error("[{}]: Record error: <{}>", deviceEntity.getEntityID(), error);
             }
 
             @Override
             public DecimalType getMotionThreshold() {
                 return new DecimalType(30);
+            }
+
+            @Override
+            public void ffmpegLog(Level level, String message) {
+                log.log(level, "[{}]: {}", deviceEntity.getEntityID(), message);
             }
         };
         String target = buildOutput(output);
@@ -181,7 +181,7 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
 
         String source = service.urls.getSnapshotUri(profile);
         log.info("[{}]: Start ffmpeg video recording from source: <{}> to: <{}>", getEntityID(), source, path);
-        FFMPEG ffmpeg = entityContext.media().buildFFMPEG(getEntityID(), "FFMPEG loop record", ffmpegHandler, log,
+        FFMPEG ffmpeg = entityContext.media().buildFFMPEG(getEntityID(), "FFMPEG loop record", ffmpegHandler,
                 RECORD, getVerbose() ? "" : "-hide_banner -loglevel warning", source,
                 buildFFMPEGRecordCommand(folder), path.toString(),
                 videoStreamEntity.getUser(), videoStreamEntity.getPassword().asString(), null);

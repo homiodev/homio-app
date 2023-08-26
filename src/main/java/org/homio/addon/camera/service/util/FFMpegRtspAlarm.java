@@ -73,7 +73,7 @@ public class FFMpegRtspAlarm {
             filterOptionsList.add("-vn");
         }
         ffmpegRtspHelper = entityContext.media().buildFFMPEG(videoStreamEntity.getEntityID(), "FFMPEG rtsp alarm",
-                service, log, FFMPEGFormat.RTSP_ALARMS, inputOptions, input,
+                service, FFMPEGFormat.RTSP_ALARMS, inputOptions, input,
                 String.join(" ", filterOptionsList), "-f null -",
                 videoStreamEntity.getUser(),
                 videoStreamEntity.getPassword().asString(), null);

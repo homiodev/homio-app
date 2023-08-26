@@ -1,21 +1,25 @@
 package org.homio.app.video.ffmpeg;
 
+import static org.homio.api.EntityContextMedia.FFMPEG_MOTION_ALARM;
+import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import lombok.Getter;
-import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.Level;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
 import org.homio.api.EntityContextMedia.FFMPEGHandler;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.*;
-
-import static org.homio.api.EntityContextMedia.FFMPEG_MOTION_ALARM;
-import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
 
 /**
  * Responsible for handling multiple ffmpeg conversions which are used for many tasks
@@ -26,7 +30,6 @@ public class FFMPEGImpl implements FFMPEG {
     public static Map<String, FFMPEGImpl> ffmpegMap = new HashMap<>();
 
     private final FFMPEGHandler handler;
-    private final Logger log;
     private final Runnable destroyListener;
     private final @Getter String description;
     private final @Getter Date creationDate = new Date();
@@ -39,15 +42,20 @@ public class FFMPEGImpl implements FFMPEG {
     private boolean notFrozen = true;
     private @Getter boolean running;
 
-    public FFMPEGImpl(@NotNull String entityID, @NotNull String description,
-                      @NotNull FFMPEGHandler handler, @NotNull Logger log, @NotNull FFMPEGFormat format,
-                      @NotNull String inputArguments, @NotNull String input, @NotNull String outArguments,
-                      @NotNull String output, @NotNull String username, @NotNull String password,
-                      @Nullable Runnable destroyListener) {
+    public FFMPEGImpl(@NotNull String entityID,
+        @NotNull String description,
+        @NotNull FFMPEGHandler handler,
+        @NotNull FFMPEGFormat format,
+        @NotNull String inputArguments,
+        @NotNull String input,
+        @NotNull String outArguments,
+        @NotNull String output,
+        @NotNull String username,
+        @NotNull String password,
+        @Nullable Runnable destroyListener) {
         FFMPEGImpl.ffmpegMap.put(entityID + "_" + description, this);
 
         this.entityID = entityID;
-        this.log = log;
         this.description = description;
         this.format = format;
         this.destroyListener = destroyListener;
@@ -73,7 +81,8 @@ public class FFMPEGImpl implements FFMPEG {
         Collections.addAll(commandArrayList, String.join(" ", builder).split("\\s+"));
         // ffmpegLocation may have a space in its folder
         commandArrayList.add(0, FFMPEG_LOCATION);
-        log.warn("\n\n[{}]: Generated ffmpeg command for: {}.\n{}\n\n", entityID, format, String.join(" ", commandArrayList));
+        handler.ffmpegLog(Level.WARN, "Generated ffmpeg command '%s' for: %s.\n%s\n\n"
+            .formatted(description, format, String.join(" ", commandArrayList)));
     }
 
     public void setKeepAlive(int seconds) {
@@ -118,7 +127,7 @@ public class FFMPEGImpl implements FFMPEG {
 
     public synchronized void stopConverting() {
         if (ipVideoFfmpegThread.isAlive()) {
-            log.debug("[{}]: Stopping ffmpeg {} now when keepalive is:{}", entityID, format, keepAlive);
+            handler.ffmpegLog(Level.DEBUG, "Stopping '%s' ffmpeg %s now when keepalive is: %s".formatted(description, format, keepAlive));
             if (process != null) {
                 process.destroyForcibly();
             }
@@ -135,7 +144,7 @@ public class FFMPEGImpl implements FFMPEG {
 
         IpVideoFfmpegThread() {
             setDaemon(true);
-            setName("VideoThread_" + format + "_" + handler.getEntityID());
+            setName("VideoThread_" + format + "_" + entityID);
         }
 
         @Override
@@ -151,7 +160,7 @@ public class FFMPEGImpl implements FFMPEG {
                     while ((line = bufferedReader.readLine()) != null) {
                         notFrozen = true;
                         if (format == FFMPEGFormat.RTSP_ALARMS) {
-                            log.info("[{}]: {}", entityID, line);
+                            handler.ffmpegLog(Level.INFO, line);
                             int motionThreshold = handler.getMotionThreshold().intValue();
                             if (line.contains("lavfi.")) {
                                 // When the number of pixels that change are below the noise floor we need to look
@@ -190,7 +199,7 @@ public class FFMPEGImpl implements FFMPEG {
                                 handler.audioDetected(true);
                             }
                         } else {
-                            log.debug("[{}]: {}", entityID, line);
+                            handler.ffmpegLog(Level.DEBUG, line);
                         }
                         if (line.contains("No such file or directory")) {
                             handler.ffmpegError(line);
