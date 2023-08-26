@@ -333,7 +333,6 @@ public class EntityContextImpl implements EntityContext {
 
         if (baseEntity != null) {
             cacheService.merge(baseEntity);
-            baseEntity.afterFetch(this);
         }
         return baseEntity;
     }
@@ -407,7 +406,7 @@ public class EntityContextImpl implements EntityContext {
 
         T updatedEntity = transactionManagerContext.executeInTransaction(entityManager -> {
             T t = (T) repository.save(entity);
-            t.afterFetch(this);
+            //TODO: CHECK PLEASE: t.entityFetched(this);
             return t;
         });
 
@@ -728,13 +727,8 @@ public class EntityContextImpl implements EntityContext {
         if (!repository.isUseCache()) {
             return repository.listAll();
         }
-        return entityManager.getEntityIDsByEntityClassFullName(clazz, repository).stream().map(entityID -> {
-            T entity = entityManager.getEntityWithFetchLazy(entityID);
-            if (entity != null) {
-                entity.afterFetch(this);
-            }
-            return entity;
-        }).filter(Objects::nonNull).collect(Collectors.toList());
+        return entityManager.getEntityIDsByEntityClassFullName(clazz, repository).stream().map(entityID ->
+            entityManager.<T>getEntityWithFetchLazy(entityID)).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
     @AllArgsConstructor

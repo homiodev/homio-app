@@ -9,7 +9,7 @@ import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.MOTION_ALARM;
 import static org.homio.addon.camera.service.util.VideoUrls.getCorrectUrlFormat;
-import static org.homio.api.EntityContextMedia.CHANNEL_FFMPEG_MOTION_ALARM;
+import static org.homio.api.EntityContextMedia.FFMPEG_MOTION_ALARM;
 import static org.homio.api.model.Status.ERROR;
 import static org.homio.api.model.Status.INITIALIZE;
 import static org.homio.api.model.Status.OFFLINE;
@@ -542,7 +542,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     protected void setMotionAlarmThreshold(int threshold) {
         setAttribute(ENDPOINT_MOTION_THRESHOLD, new StringType(threshold));
         if (threshold == 0) {
-            motionDetected(false, CHANNEL_FFMPEG_MOTION_ALARM);
+            motionDetected(false, FFMPEG_MOTION_ALARM);
         }
     }
 

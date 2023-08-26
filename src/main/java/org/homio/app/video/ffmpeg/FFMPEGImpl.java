@@ -14,7 +14,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.*;
 
-import static org.homio.api.EntityContextMedia.CHANNEL_FFMPEG_MOTION_ALARM;
+import static org.homio.api.EntityContextMedia.FFMPEG_MOTION_ALARM;
 import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
 
 /**
@@ -164,7 +164,7 @@ public class FFMPEGImpl implements FFMPEG {
                                     || countOfMotions > 3 && motionThreshold > 15
                                     || countOfMotions > 2 && motionThreshold > 30
                                     || countOfMotions > 0 && motionThreshold > 89) {
-                                    handler.motionDetected(true, CHANNEL_FFMPEG_MOTION_ALARM);
+                                    handler.motionDetected(true, FFMPEG_MOTION_ALARM);
                                     if (countOfMotions < 2) {
                                         countOfMotions = 4;// Used to debounce the Alarm.
                                     }
@@ -180,7 +180,7 @@ public class FFMPEGImpl implements FFMPEG {
                                         countOfMotions -= 4;
                                     }
                                     if (countOfMotions <= 0) {
-                                        handler.motionDetected(false, CHANNEL_FFMPEG_MOTION_ALARM);
+                                        handler.motionDetected(false, FFMPEG_MOTION_ALARM);
                                         countOfMotions = 0;
                                     }
                                 }

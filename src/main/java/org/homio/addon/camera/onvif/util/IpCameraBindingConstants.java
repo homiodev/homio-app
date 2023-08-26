@@ -26,7 +26,6 @@ public class IpCameraBindingConstants {
     public static final String CHANNEL_AUDIO_ALARM = "audioAlarm";
 
     public static final String CHANNEL_ENABLE_MOTION_ALARM = "enableMotionAlarm";
-    public static final String CHANNEL_FFMPEG_MOTION_ALARM = "ffmpegMotionAlarm";
     public static final String CHANNEL_ENABLE_LINE_CROSSING_ALARM = "enableLineCrossingAlarm";
     public static final String CHANNEL_ENABLE_AUDIO_ALARM = "enableAudioAlarm";
     public static final String CHANNEL_ACTIVATE_ALARM_OUTPUT = "activateAlarmOutput";

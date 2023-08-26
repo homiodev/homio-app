@@ -7,17 +7,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.service.EntityService;
-import org.homio.api.service.EntityService.ServiceInstance;
+import org.apache.logging.log4j.LogManager;
 import org.homio.api.service.EntityService.WatchdogService;
 import org.homio.app.manager.common.impl.EntityContextBGPImpl;
 
 @Log4j2
 public class WatchdogBgpService {
 
-    private final Map<String, WatchdogService> watchdogServiceMap = new HashMap<>();
+    private final Map<String, WatchdogService> watchdogServiceMap = new ConcurrentHashMap<>();
 
     public WatchdogBgpService(EntityContextBGPImpl entityContextBGP) {
         entityContextBGP.builder("watchdog")
@@ -29,14 +29,21 @@ public class WatchdogBgpService {
         watchdogServiceMap.put(key, watchdogService);
     }
 
+    public void removeWatchDogService(String entityID) {
+        watchdogServiceMap.remove(entityID);
+    }
+
     @SneakyThrows
     private void runWatchDogService() {
-        assembleWatchdogServices();
         List<CompletableFuture<Void>> restartingServices = new ArrayList<>();
         for (Entry<String, WatchdogService> entry : watchdogServiceMap.entrySet()) {
-            if (entry.getValue() != null && isRequireRestartService(entry)) {
-                log.info("Restarting service: {}", entry.getKey());
-                restartingServices.add(CompletableFuture.runAsync(entry.getValue()::restartService));
+            if (entry.getValue() != null) {
+                String reason = isRequireRestartService(entry);
+                if (reason != null) {
+                    LogManager.getLogger(entry.getValue())
+                              .warn("Restarting service: {}. Reason: {}", entry.getKey(), reason);
+                    restartingServices.add(CompletableFuture.runAsync(entry.getValue()::restartService));
+                }
             }
         }
         if (!restartingServices.isEmpty()) {
@@ -46,20 +53,20 @@ public class WatchdogBgpService {
         }
     }
 
-    private static boolean isRequireRestartService(Entry<String, WatchdogService> entry) {
+    private static String isRequireRestartService(Entry<String, WatchdogService> entry) {
         try {
             return entry.getValue().isRequireRestartService();
         } catch (Exception ex) {
-            return true;
+            return null;
         }
     }
 
-    private void assembleWatchdogServices() {
+    /*private void assembleWatchdogServices() {
         for (Entry<String, Object> servicePair : EntityService.entityToService.entrySet()) {
             if (!watchdogServiceMap.containsKey(servicePair.getKey())) {
                 ServiceInstance service = (ServiceInstance) servicePair.getValue();
                 watchdogServiceMap.put(servicePair.getKey(), service.getWatchdog());
             }
         }
-    }
+    }*/
 }

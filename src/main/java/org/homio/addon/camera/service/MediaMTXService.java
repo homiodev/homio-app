@@ -28,7 +28,6 @@ import org.homio.api.exception.ServerException;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Status;
 import org.homio.api.service.EntityService.ServiceInstance;
-import org.homio.api.service.EntityService.WatchdogService;
 import org.homio.hquery.Curl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -49,27 +48,12 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         super(entityContext, entity, true);
     }
 
-    @Override
-    public WatchdogService getWatchdog() {
-        return new WatchdogService() {
-            @Override
-            public void restartService() {
-                initialize();
-            }
-
-            @Override
-            public boolean isRequireRestartService() {
-                return entity.isStart() && (!entity.getStatus().isOnline() || !isServiceRunning());
-            }
-        };
-    }
-
     public JsonNode getApiList() {
         if (apiURL != null) {
             try {
                 return Curl.get(apiURL + "/v2/paths/list", JsonNode.class);
             } catch (Exception ex) {
-                log.warn("[{}]: Unable to fetch api list: {}", entityID, getErrorMessage(ex));
+                log.warn("Unable to fetch api list: {}", getErrorMessage(ex));
             }
         }
         return OBJECT_MAPPER.createObjectNode();
@@ -79,10 +63,12 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         if (ex != null) {
             this.entity.setStatusError(ex);
         } else {
-            this.entity.setStatus(Status.OFFLINE, null);
+            if (entity.getStatus() != Status.ERROR) {
+                this.entity.setStatus(Status.OFFLINE, entity.getStatusMessage());
+            }
         }
         EntityContextBGP.cancel(processContext);
-        log.warn("[{}]: Dispose mediamtx", entityID, ex);
+        log.warn("Dispose mediamtx", ex);
 
         entityContext.ui().sendWarningMessage("Dispose mediamtx");
     }
@@ -100,7 +86,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     }
 
     @SneakyThrows
-    public void restoreConfiguration() {
+    public void resetConfiguration() {
         Path backupFile = mediamtxGitHub.getLocalProjectPath().resolve("mediamtx_initial.yml");
         if (!Files.exists(backupFile)) {
             throw new ServerException("W.ERROR.BACKUP_NOT_FOUND");
@@ -117,6 +103,16 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
             entityContext.save(entity);
         }
         saveConfiguration();
+        restartService();
+    }
+
+    @Override
+    public String isRequireRestartService() {
+        if (!entity.isStart()) {return null;}
+        if (!entity.getStatus().isOnline()) {return "Status: " + entity.getStatus();}
+        int status = getApiStatus();
+        if (status != 200) {return "API status[%s]".formatted(status);}
+        return null;
     }
 
     @Override
@@ -124,7 +120,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         destroy();
         if (entity.isStart()) {
             syncConfiguration();
-            isRunningLocally = !isServiceRunning();
+            isRunningLocally = getApiStatus() != 200;
             if (isRunningLocally) {
                 startLocalProcess();
             } else {
@@ -133,17 +129,15 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         }
     }
 
-    private boolean isServiceRunning() {
+    private int getApiStatus() {
         try {
-            URL url = new URL(apiURL);
+            URL url = new URL(apiURL + "/v2/paths/list");
             HttpURLConnection huc = (HttpURLConnection) url.openConnection();
-            huc.setRequestMethod("HEAD");
-            if (HttpURLConnection.HTTP_OK == huc.getResponseCode()) {
-                return true;
-            }
+            huc.setRequestMethod("GET");
+            return huc.getResponseCode();
         } catch (Exception ignore) {
         }
-        return false;
+        return 500;
     }
 
     private void startLocalProcess() {
@@ -162,9 +156,9 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
                     }
                 }
                 if (ex != null) {
-                    log.error("[{}]: Error while start mediamtx {}", entityID, getErrorMessage(ex));
+                    log.error("Error while start mediamtx {}", getErrorMessage(ex));
                 } else {
-                    log.warn("[{}]: mediamtx finished with status: {}", entityID, responseCode);
+                    log.warn("mediamtx finished with status: {}", responseCode);
                 }
                 dispose(ex);
             })
@@ -185,7 +179,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     }
 
     private void logService(String msg, Level level) {
-        log.log(level, "[{}]: mediamtx: {}", entityID, msg);
+        log.log(level, "MediaMTX: {}", msg);
     }
 
     @SneakyThrows
@@ -202,22 +196,27 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
 
         if (!configuration.get("logLevel").asText().equals(entity.getLogLevel().name())) {
             configuration.put("logLevel", entity.getLogLevel().name());
+            log.debug("Update logLevel config");
             updated = true;
         }
         if (configuration.get("udpMaxPayloadSize").asInt() != entity.getUdpMaxPayloadSize()) {
             configuration.put("udpMaxPayloadSize", entity.getUdpMaxPayloadSize());
+            log.debug("Update udpMaxPayloadSize config");
             updated = true;
         }
         if (configuration.get("readBufferCount").asInt() != entity.getReadBufferCount()) {
             configuration.put("readBufferCount", entity.getReadBufferCount());
+            log.debug("Update readBufferCount config");
             updated = true;
         }
         if (!configuration.get("readTimeout").asText().equals(entity.getReadTimeout() + "s")) {
             configuration.put("readTimeout", entity.getReadTimeout() + "s");
+            log.debug("Update readTimeout config");
             updated = true;
         }
         if (!configuration.get("writeTimeout").asText().equals(entity.getReadTimeout() + "s")) {
             configuration.put("writeTimeout", entity.getReadTimeout() + "s");
+            log.debug("Update writeTimeout config");
             updated = true;
         }
         if (updated) {

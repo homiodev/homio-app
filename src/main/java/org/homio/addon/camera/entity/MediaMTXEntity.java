@@ -125,7 +125,7 @@ public final class MediaMTXEntity extends MediaEntity implements HasEntityLog,
 
     @UIField(order = 1)
     @UIFieldSlider(min = 1, max = 60, header = "s")
-    @UIFieldGroup(order = 5, value = "CONNECTION", borderColor = "#479923")
+    @UIFieldGroup(order = 50, value = "CONNECTION", borderColor = "#479923")
     public int getReadTimeout() {
         return getJsonData("rt", 10);
     }
@@ -240,8 +240,8 @@ public final class MediaMTXEntity extends MediaEntity implements HasEntityLog,
                          confirmMessageDialogColor = DANGER_COLOR,
                          icon = "fas fa-clock-rotate-left",
                          iconColor = "#91293E")
-    public ActionResponseModel resetConfig() {
-        getService().restoreConfiguration();
+    public ActionResponseModel resetConfiguration() {
+        getService().resetConfiguration();
         return ActionResponseModel.success();
     }
 

@@ -309,7 +309,8 @@ public class EntityContextEventImpl implements EntityContextEvent {
         EventListenerRegistry registry = sessionFactory.getServiceRegistry().getService(EventListenerRegistry.class);
         registry.getEventListenerGroup(EventType.POST_LOAD).appendListener(event -> {
             Object entity = event.getEntity();
-            if (entity instanceof BaseEntity) {
+            if (entity instanceof BaseEntity be) {
+                be.entityFetched(entityContext);
                 loadEntityService(entityContext, entity);
             }
         });

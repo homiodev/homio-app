@@ -86,6 +86,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
     @Getter
     private final InternetAvailabilityBgpService internetAvailabilityService;
+    @Getter
     private final WatchdogBgpService watchdogBgpService;
 
     public EntityContextBGPImpl(EntityContextImpl entityContext, ThreadPoolTaskScheduler taskScheduler) {
@@ -826,7 +827,12 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                 if (sendSignal) {
                     if (SystemUtils.IS_OS_WINDOWS) {
                         WinProcess p = new WinProcess(process);
-                        log.info("Sending Ctrl-C to process: {}. Result: {}", name, p.sendCtrlC());
+                        try {
+                            boolean sent = p.sendCtrlC();
+                            log.info("Sending Ctrl-C to process: {}. Result: {}", name, sent);
+                        } catch (Exception ex) {
+                            log.error(CommonUtils.getErrorMessage(ex));
+                        }
                         Thread.sleep(1000);
                         log.info("Killing process tree: {}", name);
                         p.killRecursively();
