@@ -5,6 +5,8 @@ import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
+import static org.homio.api.EntityContextSetting.SERVER_PORT;
+import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -66,6 +68,8 @@ import org.json.JSONObject;
 public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseVideoService<?, S>>
         extends MediaEntity implements HasEntityLog, DeviceEndpointsBehaviourContract, EntityService<S, T> {
 
+    public static final String RUN_CMD = "<span class=\"chip\" style=\"color:%s;border-color: %s;\">%s</span>";
+
     @UIField(order = 6, hideOnEmpty = true, hideInEdit = true, color = Color.RED)
     @UIFieldGroup("GENERAL")
     public String getPingErrorCount() {
@@ -76,21 +80,25 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     @UIField(order = 6, hideInEdit = true, type = UIFieldType.HTML)
     @UIFieldGroup("GENERAL")
     public String getRunningCommands() {
-        String code = "<span class=\"chip\" style=\"color:%s;border-color: %s;\">%s</span>";
         List<String> commands = new ArrayList<>();
         if (getService().getFfmpegHLS().isRunning()) {
-            commands.add(code.formatted("#57A4D1", "#57A4D1", "HLS"));
+            commands.add(RUN_CMD.formatted("#57A4D1", "#57A4D1", "HLS"));
         }
         if (getService().getFfmpegSnapshot().isRunning()) {
-            commands.add(code.formatted("#A2D154", "#A2D154", "SNAPSHOT"));
+            commands.add(RUN_CMD.formatted("#A2D154", "#A2D154", "SNAPSHOT"));
         }
         if (getService().getFfmpegMjpeg().isRunning()) {
-            commands.add(code.formatted("#7FAEAA", "#7FAEAA", "MJPEG"));
+            commands.add(RUN_CMD.formatted("#7FAEAA", "#7FAEAA", "MJPEG"));
         }
+        assembleExtraRunningCommands(commands);
         if (commands.isEmpty()) {
             return null;
         }
         return String.join("", commands);
+    }
+
+    protected void assembleExtraRunningCommands(List<String> commands) {
+
     }
 
     @UIField(order = 1, hideOnEmpty = true, hideInEdit = true)
@@ -348,15 +356,8 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         return Set.of("autofps.mjpeg", "snapshots.mjpeg", "ipcamera.mjpeg", "HLS");
     }
 
-    public String getStreamUrl(String source) {
-        if (source.equals("HLS")) {
-            return getUrl("ipcamera.m3u8");
-        }
-        return getUrl(source);
-    }
-
     public String getUrl(String path) {
-        return "$DEVICE_URL/rest/media/video/%s/%s".formatted(getEntityID(), path);
+        return "http://%s:%s/rest/media/video/%s/%s".formatted(MACHINE_IP_ADDRESS, SERVER_PORT, getEntityID(), path);
     }
 
     public @NotNull String getSnapshotUrl() {

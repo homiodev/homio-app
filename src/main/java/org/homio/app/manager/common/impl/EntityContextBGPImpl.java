@@ -112,6 +112,26 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         return response;
     }
 
+    public static void stopProcess(Process process, String name) {
+        if (SystemUtils.IS_OS_WINDOWS) {
+            WinProcess p = new WinProcess(process);
+            try {
+                boolean sent = p.sendCtrlC();
+                log.info("Sending Ctrl-C to process: {}. Result: {}", name, sent);
+            } catch (Exception ex) {
+                log.error(CommonUtils.getErrorMessage(ex));
+            }
+            sleep(1000);
+            log.info("Killing process tree: {}", name);
+            p.killRecursively();
+        } else {
+            try {
+                StreamGobbler.streamAndStop(Runtime.getRuntime().exec("kill -SIGINT " + process.pid()), 200, 500);
+            } catch (IOException ignore) {
+            }
+        }
+    }
+
     @Override
     public void cancelThread(@NotNull String name) {
         ThreadContextImpl<?> context = this.schedulers.get(name);
@@ -825,20 +845,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         private void cancelProcess(boolean sendSignal, boolean shutdownHook) throws InterruptedException, IOException {
             if (process != null) {
                 if (sendSignal) {
-                    if (SystemUtils.IS_OS_WINDOWS) {
-                        WinProcess p = new WinProcess(process);
-                        try {
-                            boolean sent = p.sendCtrlC();
-                            log.info("Sending Ctrl-C to process: {}. Result: {}", name, sent);
-                        } catch (Exception ex) {
-                            log.error(CommonUtils.getErrorMessage(ex));
-                        }
-                        Thread.sleep(1000);
-                        log.info("Killing process tree: {}", name);
-                        p.killRecursively();
-                    } else {
-                        StreamGobbler.streamAndStop(Runtime.getRuntime().exec("kill -SIGINT " + process.pid()), 200, 500);
-                    }
+                    stopProcess(process, name);
                 }
 
                 if (streamGobbler != null && !shutdownHook) {

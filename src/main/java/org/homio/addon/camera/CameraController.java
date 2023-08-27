@@ -48,8 +48,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class CameraController {
 
-    private static final long HLS_STARTUP_DELAY_MS = 4500;
-
     private final EntityContext entityContext;
     public static final Map<String, OpenStreamsContainer> camerasOpenStreams = new ConcurrentHashMap<>();
 
@@ -78,26 +76,27 @@ public class CameraController {
         entity.getService().getOnvifDeviceState().getEventDevices().fireEvent(req.getReader().toString());
     }
 
+    @SneakyThrows
     @GetMapping("/{entityID}/ipcamera.m3u8")
     public void getIpCameraM3U8(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
         BaseVideoEntity<?, ?> entity = entityContext.getEntityRequire(entityID);
         BaseVideoService<?, ?> service = entity.getService();
         FFMPEG ffmpeg = service.getFfmpegHLS();
         resp.setContentType("application/x-mpegURL");
+        Path m3u8 = entity.getService().getFfmpegHLSOutputPath().resolve("ipcamera.m3u8");
         if (!ffmpeg.getIsAlive()) {
+            Files.deleteIfExists(m3u8);
             ffmpeg.startConverting();
+
+            int retry = 10;
+            while (retry-- > 0 && !Files.exists(m3u8)) {
+                sleep(1000);
+            }
+            sendFile(resp, m3u8);
         } else {
             ffmpeg.setKeepAlive(8);
-            sendFile(resp, entity.getService().getFfmpegHLSOutputPath().resolve("ipcamera.m3u8"));
-            return;
+            sendFile(resp, m3u8);
         }
-        // Allow files to be created, or you get old m3u8 from the last time this ran.
-        try {
-            Thread.sleep(HLS_STARTUP_DELAY_MS);
-        } catch (InterruptedException e) {
-            return;
-        }
-        sendFile(resp, entity.getService().getFfmpegHLSOutputPath().resolve("ipcamera.m3u8"));
     }
 
     /* @GetMapping("/{entityID}/ipcamera.mpd")

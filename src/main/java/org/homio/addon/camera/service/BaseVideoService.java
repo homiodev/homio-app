@@ -273,13 +273,14 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     public final void bringCameraOnline() {
         communicationError = 0;
         updateLastSeen();
+        if (EntityContextBGP.cancel(cameraConnectionJob)) {
+            cameraConnectionJob = null;
+        }
+
         if (!entity.getStatus().isOnline()) {
             setAttribute("URLS", new JsonType(OBJECT_MAPPER.convertValue(urls, ObjectNode.class)));
             updateEntityStatus(ONLINE, null);
             onCameraConnected();
-            if (EntityContextBGP.cancel(cameraConnectionJob)) {
-                cameraConnectionJob = null;
-            }
 
             pollCameraJob = entityContext.bgp().builder("video-poll-" + entityID)
                                          .delay(Duration.ofSeconds(1))

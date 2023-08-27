@@ -1,5 +1,10 @@
 package org.homio.app.manager.common.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextInstall;
@@ -11,11 +16,6 @@ import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 @Log4j2
 public class EntityContextInstallImpl implements EntityContextInstall {
 
@@ -25,8 +25,9 @@ public class EntityContextInstallImpl implements EntityContextInstall {
     public EntityContextInstallImpl(EntityContext entityContext) {
         this.entityContext = entityContext;
         entityContext.event().runOnceOnInternetUp("install-services", () ->
-                ffmpeg().requireAsync(null, () ->
-                        log.info("FFPMEG service successfully installed")));
+            ffmpeg().requireAsync(null, installed -> {
+                if (installed) {log.info("FFPMEG service successfully installed");}
+            }));
     }
 
     @Override
@@ -45,11 +46,11 @@ public class EntityContextInstallImpl implements EntityContextInstall {
     }
 
     private <T extends DependencyExecutableInstaller> InstallContext createContext(Class<T> installerClass) {
-        return cache.computeIfAbsent(installerClass, aClass -> {
-            return new InstallContext() {
+        return cache.computeIfAbsent(installerClass, aClass ->
+            new InstallContext() {
                 private final T installer;
                 private volatile boolean installing;
-                private final List<Runnable> waiters = new ArrayList<>();
+                private final List<Consumer<Boolean>> waiters = new ArrayList<>();
 
                 {
                     try {
@@ -60,9 +61,9 @@ public class EntityContextInstallImpl implements EntityContextInstall {
                 }
 
                 @Override
-                public synchronized void requireAsync(@Nullable String version, Runnable finishHandler) throws Exception {
+                public synchronized void requireAsync(@Nullable String version, Consumer<Boolean> finishHandler) {
                     if (getVersion() != null) {
-                        finishHandler.run();
+                        finishHandler.accept(false);
                         return;
                     }
                     waiters.add(finishHandler);
@@ -71,17 +72,17 @@ public class EntityContextInstallImpl implements EntityContextInstall {
                     }
                     installing = true;
                     entityContext.bgp().runWithProgress("install-" + installer.getName())
-                            .onFinally(exception -> {
-                                installing = false;
-                                for (Runnable waiter : waiters) {
-                                    waiter.run();
-                                }
-                                waiters.clear();
-                            })
-                            .execute(pb -> {
-                                pb.progress(0, "install-" + installer.getName());
-                                installer.installDependency(pb, version);
-                            });
+                                 .onFinally(exception -> {
+                                     installing = false;
+                                     for (Consumer<Boolean> waiter : waiters) {
+                                         waiter.accept(true);
+                                     }
+                                     waiters.clear();
+                                 })
+                                 .execute(pb -> {
+                                     pb.progress(0, "install-" + installer.getName());
+                                     installer.installDependency(pb, version);
+                                 });
                 }
 
                 @Override
@@ -102,7 +103,6 @@ public class EntityContextInstallImpl implements EntityContextInstall {
                 public synchronized @Nullable String getPath(@NotNull String execName) {
                     return installer.getExecutablePath(execName);
                 }
-            };
         });
     }
 }

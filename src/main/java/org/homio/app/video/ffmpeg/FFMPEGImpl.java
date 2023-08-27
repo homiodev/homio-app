@@ -18,6 +18,7 @@ import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
 import org.homio.api.EntityContextMedia.FFMPEGHandler;
 import org.homio.api.util.CommonUtils;
+import org.homio.app.manager.common.impl.EntityContextBGPImpl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -92,16 +93,15 @@ public class FFMPEGImpl implements FFMPEG {
         keepAlive = seconds;
     }
 
-    public boolean stopProcessIfNoKeepAlive() {
-        if (keepAlive == 1) {
-            stopConverting();
-        } else if (keepAlive <= -1 && !getIsAlive()) {
-            return startConverting();
+    public void stopProcessIfNoKeepAlive() {
+        if (isRunning()) {
+            if (keepAlive == 0) {
+                stopConverting();
+            }
+            if (keepAlive > 0) {
+                keepAlive--;
+            }
         }
-        if (keepAlive > 0) {
-            keepAlive--;
-        }
-        return false;
     }
 
     public synchronized boolean startConverting() {
@@ -127,8 +127,9 @@ public class FFMPEGImpl implements FFMPEG {
 
     public synchronized void stopConverting() {
         if (ipVideoFfmpegThread.isAlive()) {
-            handler.ffmpegLog(Level.DEBUG, "Stopping '%s' ffmpeg %s now when keepalive is: %s".formatted(description, format, keepAlive));
+            handler.ffmpegLog(Level.WARN, "Stopping '%s' ffmpeg %s now when keepalive is: %s".formatted(description, format, keepAlive));
             if (process != null) {
+                EntityContextBGPImpl.stopProcess(process, description);
                 process.destroyForcibly();
             }
             if (destroyListener != null) {
@@ -150,6 +151,7 @@ public class FFMPEGImpl implements FFMPEG {
         @Override
         public void run() {
             try {
+                handler.ffmpegLog(Level.INFO, "Starting ffmpeg command '%s'".formatted(description));
                 process = Runtime.getRuntime().exec(commandArrayList.toArray(new String[0]));
                 Process localProcess = process;
                 if (localProcess != null) {
@@ -209,6 +211,7 @@ public class FFMPEGImpl implements FFMPEG {
             } catch (Exception ex) {
                 handler.ffmpegError(CommonUtils.getErrorMessage(ex));
             } finally {
+                handler.ffmpegLog(Level.INFO, "Finish ffmpeg command '%s'".formatted(description));
                 running = false;
             }
         }

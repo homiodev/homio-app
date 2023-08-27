@@ -12,6 +12,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
+import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.action.DynamicOptionLoader;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
@@ -75,6 +76,13 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
 
     public void setStreamStartPort(int value) {
         setJsonData("streamPort", value);
+    }
+
+    @Override
+    protected void assembleExtraRunningCommands(List<String> commands) {
+        if (getService().getFfmpegUsbStream().isRunning()) {
+            commands.add(RUN_CMD.formatted("#D05362", "#D05362", "TEE"));
+        }
     }
 
     @Override
