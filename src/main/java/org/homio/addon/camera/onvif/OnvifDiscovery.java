@@ -16,16 +16,15 @@ import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
-import org.apache.commons.io.IOUtils;
-import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
-import org.homio.addon.camera.onvif.util.Helper;
-import org.homio.addon.camera.service.OnvifCameraService;
-import org.homio.api.EntityContext;
-
 import java.math.BigDecimal;
-import java.net.*;
+import java.net.HttpURLConnection;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.net.URL;
+import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -33,6 +32,13 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+import org.apache.commons.io.IOUtils;
+import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
+import org.homio.addon.camera.onvif.util.Helper;
+import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.api.EntityContext;
 
 /**
  * responsible for finding cameras that are ONVIF using UDP multicast.
@@ -69,15 +75,15 @@ public class OnvifDiscovery {
             } finally {
                 connection.disconnect();
             }
-            return CameraBrandHandlerDescription.DEFAULT_BRAND;
-        } catch (Exception ex) {
-            return CameraBrandHandlerDescription.DEFAULT_BRAND;
+        } catch (Exception ignore) {
         }
+        return CameraBrandHandlerDescription.DEFAULT_BRAND;
     }
 
     public void discoverCameras(CameraFoundHandler cameraFoundHandler) throws UnknownHostException, InterruptedException {
         List<NetworkInterface> nics = getLocalNICs();
         if (nics.isEmpty()) {
+            log.warn("No 'Primary Address' selected to use for camera discovery");
             return;
         }
         NetworkInterface networkInterface = nics.get(0);

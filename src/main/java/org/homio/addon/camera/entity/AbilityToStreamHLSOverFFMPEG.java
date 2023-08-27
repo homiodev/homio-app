@@ -1,12 +1,12 @@
 package org.homio.addon.camera.entity;
 
+import java.util.List;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.UIFieldType;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.List;
 
 public interface AbilityToStreamHLSOverFFMPEG<T> extends HasJsonData {
 
@@ -28,9 +28,19 @@ public interface AbilityToStreamHLSOverFFMPEG<T> extends HasJsonData {
         return getJsonData("hlsListSize", 5);
     }
 
-    default T setHlsListSize(int value) {
+    default void setHlsListSize(int value) {
         setJsonData("hlsListSize", value);
-        return (T) this;
+    }
+
+    @UIField(order = 340, hideInView = true)
+    @UIFieldGroup("HLS_GROUP")
+    @UIFieldSlider(min = 1, max = 60)
+    default int getHlsFileSec() {
+        return getJsonData("hlsFileSec", 2);
+    }
+
+    default void setHlsFileSec(int value) {
+        setJsonData("hlsFileSec", value);
     }
 
     @UIField(order = 400, hideInView = true)
@@ -39,9 +49,8 @@ public interface AbilityToStreamHLSOverFFMPEG<T> extends HasJsonData {
         return getJsonData("vcodec", "copy");
     }
 
-    default T setVideoCodec(String value) {
+    default void setVideoCodec(String value) {
         setJsonData("vcodec", value);
-        return (T) this;
     }
 
     @UIField(order = 410, hideInView = true)
@@ -50,9 +59,8 @@ public interface AbilityToStreamHLSOverFFMPEG<T> extends HasJsonData {
         return getJsonData("acodec", "aac");
     }
 
-    default T setAudioCodec(String value) {
+    default void setAudioCodec(String value) {
         setJsonData("acodec", value);
-        return (T) this;
     }
 
     @UIField(order = 320, hideInView = true)
@@ -61,8 +69,7 @@ public interface AbilityToStreamHLSOverFFMPEG<T> extends HasJsonData {
         return getJsonData("hls_scale");
     }
 
-    default T setHlsScale(String value) {
+    default void setHlsScale(String value) {
         setJsonData("hls_scale", value);
-        return (T) this;
     }
 }

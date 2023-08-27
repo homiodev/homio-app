@@ -5,8 +5,6 @@ import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
-import static org.homio.api.EntityContextSetting.SERVER_PORT;
-import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -14,6 +12,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +71,26 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     public String getPingErrorCount() {
         int count = getService().getCommunicationError();
         return count == 0 ? null : String.valueOf(count);
+    }
+
+    @UIField(order = 6, hideInEdit = true, type = UIFieldType.HTML)
+    @UIFieldGroup("GENERAL")
+    public String getRunningCommands() {
+        String code = "<span class=\"chip\" style=\"color:%s;border-color: %s;\">%s</span>";
+        List<String> commands = new ArrayList<>();
+        if (getService().getFfmpegHLS().isRunning()) {
+            commands.add(code.formatted("#57A4D1", "#57A4D1", "HLS"));
+        }
+        if (getService().getFfmpegSnapshot().isRunning()) {
+            commands.add(code.formatted("#A2D154", "#A2D154", "SNAPSHOT"));
+        }
+        if (getService().getFfmpegMjpeg().isRunning()) {
+            commands.add(code.formatted("#7FAEAA", "#7FAEAA", "MJPEG"));
+        }
+        if (commands.isEmpty()) {
+            return null;
+        }
+        return String.join("", commands);
     }
 
     @UIField(order = 1, hideOnEmpty = true, hideInEdit = true)
@@ -337,7 +356,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     public String getUrl(String path) {
-        return "http://%s:%s/rest/media/video/%s/%s".formatted(MACHINE_IP_ADDRESS, SERVER_PORT, getEntityID(), path);
+        return "$DEVICE_URL/rest/media/video/%s/%s".formatted(getEntityID(), path);
     }
 
     public @NotNull String getSnapshotUrl() {

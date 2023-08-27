@@ -138,7 +138,6 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
     public void beforePersist() {
         super.beforePersist();
         setVideoCodec("libx264");
-        setStreamOptions(join("~~~", "-s 800x600"));
     }
 
     @Override

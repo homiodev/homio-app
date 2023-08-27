@@ -6,6 +6,8 @@ import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 
 import java.util.Collection;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public interface WidgetVideoSourceResolver {
 
@@ -20,10 +22,38 @@ public interface WidgetVideoSourceResolver {
         @Setter
         private Collection<UIInputEntity> actions;
 
-        public VideoEntityResponse(String dataSource, String source, String type) {
+        public VideoEntityResponse(@NotNull String dataSource, @NotNull String source) {
             this.dataSource = dataSource;
             this.source = source;
-            this.type = type;
+            this.type = getVideoType(source);
+        }
+
+        public static String getVideoType(String url) {
+            if (url.startsWith("https://youtu")) {
+                return "video/youtube";
+            }
+            if (url.startsWith("https://vimeo")) {
+                return "video/vimeo";
+            }
+            if (url.endsWith(".mp4")) {
+                return "video/mp4";
+            }
+            if (url.endsWith(".jpg")) {
+                return "image/jpg";
+            }
+            if (url.endsWith(".ts")) {
+                return "video/MP2T";
+            }
+            if (url.endsWith(".gif")) {
+                return "image/gif";
+            }
+            if (url.endsWith(".m3u8")) {
+                return "application/x-mpegURL";
+            }
+            if (url.endsWith(".mpd")) {
+                return "application/dash+xml";
+            }
+            return "unknown_video";
         }
     }
 }

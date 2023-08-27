@@ -478,7 +478,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     @SneakyThrows
     public byte[] recordGifSync(String profile, int secondsToRecord) {
         Path output = getFfmpegGifOutputPath().resolve("tmp_" + System.currentTimeMillis() + ".gif");
-        fireFfmpegSync(profile, output, "-y -t " + secondsToRecord + " -hide_banner -loglevel warning",
+        fireFfmpegSync(profile, output, "-y -t " + secondsToRecord + " -hide_banner",
             gifOutOptions, secondsToRecord + 20);
         return Files.readAllBytes(output);
     }
@@ -486,7 +486,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     @SneakyThrows
     public byte[] recordMp4Sync(String profile, int secondsToRecord) {
         Path output = getFfmpegMP4OutputPath().resolve("tmp_" + System.currentTimeMillis() + ".mp4");
-        fireFfmpegSync(profile, output, "-y -t " + secondsToRecord + " -hide_banner -loglevel warning",
+        fireFfmpegSync(profile, output, "-y -t " + secondsToRecord + " -hide_banner",
             mp4OutOptions, secondsToRecord + 20);
         return Files.readAllBytes(output);
     }
@@ -617,11 +617,13 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     private String buildHlsOptions() {
         AbilityToStreamHLSOverFFMPEG hlsOptions = (AbilityToStreamHLSOverFFMPEG) getEntity();
         List<String> options = new ArrayList<>();
-        options.add("-strict -2");
+        // To force a keyframe every 2 seconds you can specify the GOP size using -g:
+        // Where 29.97 fps * 2s ~= 60 frames, meaning a keyframe each 60 frames.
+        options.add("-g %s".formatted(30 * hlsOptions.getHlsFileSec()));
         options.add("-c:v " + hlsOptions.getVideoCodec()); // video codec
         options.add("-hls_flags delete_segments"); // remove old segments
         options.add("-hls_init_time 1"); // build first ts ASAP
-        options.add("-hls_time 2"); // ~ 2sec per file ?
+        options.add("-hls_time " + hlsOptions.getHlsFileSec()); // ~ 2sec per file ?
         options.add("-hls_list_size " + hlsOptions.getHlsListSize()); // how many files
         if (isNotEmpty(hlsOptions.getHlsScale())) {
             options.add("-vf scale=" + hlsOptions.getHlsScale()); // scale result video
@@ -689,7 +691,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     public final void recordMp4(@NotNull Path filePath, @Nullable String profile, int secondsToRecord) {
         String inputOptions = getFFMPEGInputOptions(profile);
-        inputOptions = "-y -t " + secondsToRecord + " -hide_banner -loglevel warning " + inputOptions;
+        inputOptions = "-y -t " + secondsToRecord + " -hide_banner " + inputOptions;
         FFMPEG ffmpegMP4 = entityContext
             .media()
             .buildFFMPEG(entityID, "FFMPEG record MP4", this, FFMPEGFormat.RECORD, inputOptions,
@@ -700,7 +702,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     public final void recordGif(Path filePath, @Nullable String profile, int secondsToRecord) {
-        String gifInputOptions = "-y -t " + secondsToRecord + " -hide_banner -loglevel warning " + getFFMPEGInputOptions();
+        String gifInputOptions = "-y -t " + secondsToRecord + " -hide_banner " + getFFMPEGInputOptions();
         FFMPEG ffmpegGIF = entityContext.media().buildFFMPEG(entityID, "FFMPEG GIF", this, FFMPEGFormat.GIF,
             gifInputOptions, urls.getRtspUri(profile),
             gifOutOptions, filePath.toString(), entity.getUser(),
@@ -717,13 +719,13 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         FFMPEG.run(ffmpegSnapshot, FFMPEG::stopConverting);
         FFMPEG.run(ffmpegHLS, FFMPEG::stopConverting);
 
-        this.snapshotInputOptions = getFFMPEGInputOptions() + " -threads 1 -y -skip_frame nokey -hide_banner -loglevel warning -an";
+        this.snapshotInputOptions = getFFMPEGInputOptions() + " -threads 1 -y -skip_frame nokey -hide_banner -an";
         this.mp4OutOptions = String.join(" ", entity.getMp4OutOptions());
         this.gifOutOptions = String.join(" ", entity.getGifOutOptions());
 
         String rtspUri = urls.getRtspUri();
         ffmpegMjpeg = entityContext.media().buildFFMPEG(entityID, "FFMPEG mjpeg", this,
-            FFMPEGFormat.MJPEG, getFFMPEGInputOptions() + " -hide_banner -loglevel warning", rtspUri,
+            FFMPEGFormat.MJPEG, getFFMPEGInputOptions() + " -hide_banner", rtspUri,
             String.join(" ", entity.getMjpegOutOptions()), entity.getUrl("ipcamera.jpg"),
             entity.getUser(), entity.getPassword().asString(), null);
         setAttribute("FFMPEG_MJPEG", new StringType(String.join(" ", ffmpegMjpeg.getCommandArrayList())));
@@ -737,7 +739,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
         if (entity instanceof AbilityToStreamHLSOverFFMPEG hlsOverFFMPEG) {
             ffmpegHLS = entityContext.media().buildFFMPEG(entityID, "FFMPEG HLS", this, FFMPEGFormat.HLS,
-                "-hide_banner -loglevel warning " + getFFMPEGInputOptions(),
+                "-hide_banner " + getFFMPEGInputOptions(),
                 StringUtils.defaultString(hlsOverFFMPEG.getHlsRtspUri(), rtspUri),
                 buildHlsOptions(), getFfmpegHLSOutputPath().resolve("ipcamera.m3u8").toString(),
                 entity.getUser(), entity.getPassword().asString(),

@@ -19,10 +19,12 @@ public class VideoStreamWidgetVideoSourceResolver implements WidgetVideoSourceRe
         String[] keys = ds.split("~~~");
         BaseVideoEntity baseVideoStreamEntity = entityContext.getEntity(keys[0]);
         if (baseVideoStreamEntity != null) {
-            VideoEntityResponse response = new VideoEntityResponse(ds, baseVideoStreamEntity.getStreamUrl(keys[1]), null);
+            String url = baseVideoStreamEntity.getStreamUrl(keys[1]);
+            VideoEntityResponse response = new VideoEntityResponse(ds, url);
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             baseVideoStreamEntity.assembleActions(uiInputBuilder);
             response.setActions(uiInputBuilder.buildAll());
+            return response;
         }
         return null;
     }
