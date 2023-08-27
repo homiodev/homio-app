@@ -24,9 +24,4 @@ public class OnvifBrandHandler extends BaseOnvifCameraBrandHandler {
     public boolean isSupportOnvifEvents() {
         return true;
     }
-
-    @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        ReferenceCountUtil.release(msg);
-    }
 }

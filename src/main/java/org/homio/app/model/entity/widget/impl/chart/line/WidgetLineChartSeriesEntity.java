@@ -29,7 +29,7 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         HasChartDataSource.randomColor(this);
     }
 

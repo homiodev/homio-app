@@ -36,7 +36,7 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         HasIcon.randomColor(this);
     }
 }

@@ -38,7 +38,7 @@ public class WidgetVideoEntity
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         setBh(3);
         setBw(3);
         super.beforePersist();

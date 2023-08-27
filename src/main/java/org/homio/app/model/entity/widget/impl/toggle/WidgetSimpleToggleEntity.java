@@ -54,7 +54,7 @@ public class WidgetSimpleToggleEntity extends WidgetBaseEntity<WidgetSimpleToggl
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         if (!getJsonData().has("color")) {
             setColor(UI.Color.random());
         }

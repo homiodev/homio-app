@@ -77,6 +77,11 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
         }
 
         @Override
+        public void destroy() throws Exception {
+
+        }
+
+        @Override
         protected long getEntityHashCode(SshRawWebSocketEntity entity) {
             return Objects.hash(entity.getRawWebSocketAddress());
         }

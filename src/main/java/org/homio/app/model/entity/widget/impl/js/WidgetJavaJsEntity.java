@@ -72,7 +72,7 @@ public class WidgetJavaJsEntity /*TODO: fix:   extends WidgetBaseEntity<WidgetJs
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         super.beforePersist();
         setJavaScriptParameters("{\"text\":\"Hello world!\"}");
         setJavaScript("function run() {\n\treturn params.get('text');\n}");

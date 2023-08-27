@@ -1,8 +1,27 @@
 package org.homio.app.manager.common.impl;
 
+import static java.util.Collections.emptyMap;
+import static org.apache.xmlbeans.XmlBeans.getTitle;
+
 import com.pivovarit.function.ThrowingBiConsumer;
 import com.pivovarit.function.ThrowingRunnable;
 import jakarta.persistence.EntityManagerFactory;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +34,13 @@ import org.hibernate.event.internal.PostDeleteEventListenerStandardImpl;
 import org.hibernate.event.internal.PostInsertEventListenerStandardImpl;
 import org.hibernate.event.internal.PostUpdateEventListenerStandardImpl;
 import org.hibernate.event.service.spi.EventListenerRegistry;
-import org.hibernate.event.spi.*;
+import org.hibernate.event.spi.EventSource;
+import org.hibernate.event.spi.EventType;
+import org.hibernate.event.spi.PostDeleteEvent;
+import org.hibernate.event.spi.PostInsertEvent;
+import org.hibernate.event.spi.PostUpdateEvent;
 import org.hibernate.internal.SessionFactoryImpl;
+import org.hibernate.jpa.event.spi.CallbackRegistry;
 import org.homio.api.EntityContextBGP;
 import org.homio.api.EntityContextEvent;
 import org.homio.api.entity.BaseEntity;
@@ -34,19 +58,6 @@ import org.homio.app.manager.common.EntityContextImpl.ItemAction;
 import org.homio.app.service.mem.InMemoryDB;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
-import java.util.*;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-
-import static java.util.Collections.emptyMap;
-import static org.apache.xmlbeans.XmlBeans.getTitle;
 
 @Log4j2
 public class EntityContextEventImpl implements EntityContextEvent {
@@ -214,7 +225,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
     @Override
     @SneakyThrows
     public void listenUdp(
-            String key, String host, int port, BiConsumer<DatagramPacket, String> listener) {
+        String key, String host, int port, BiConsumer<DatagramPacket, String> listener) {
         String hostPortKey = (host == null ? "0.0.0.0" : host) + ":" + port;
         if (!this.listenUdpMap.containsKey(hostPortKey)) {
             EntityContextBGP.ThreadContext<Void> scheduleFuture;
@@ -307,16 +318,19 @@ public class EntityContextEventImpl implements EntityContextEvent {
     private void registerEntityListeners(EntityManagerFactory entityManagerFactory) {
         SessionFactoryImpl sessionFactory = entityManagerFactory.unwrap(SessionFactoryImpl.class);
         EventListenerRegistry registry = sessionFactory.getServiceRegistry().getService(EventListenerRegistry.class);
+
         registry.getEventListenerGroup(EventType.POST_LOAD).appendListener(event -> {
             Object entity = event.getEntity();
-            if (entity instanceof BaseEntity be) {
-                be.entityFetched(entityContext);
+            if (entity instanceof BaseEntity baseEntity) {
+                baseEntity.setEntityContext(entityContext);
+                baseEntity.afterFetch();
                 loadEntityService(entityContext, entity);
             }
         });
         registry.getEventListenerGroup(EventType.PRE_DELETE).appendListener(event -> {
             Object entity = event.getEntity();
             if (entity instanceof BaseEntity baseEntity) {
+                baseEntity.setEntityContext(entityContext);
                 if (baseEntity.isDisableDelete()) {
                     throw new IllegalStateException("Unable to remove entity");
                 }
@@ -352,16 +366,25 @@ public class EntityContextEventImpl implements EntityContextEvent {
             @Override
             public void onPostDelete(PostDeleteEvent event) {
                 super.onPostDelete(event);
-                updateCacheEntity(entityContext, event.getEntity(), ItemAction.Remove);
+                if (event.getEntity() instanceof BaseEntity baseEntity) {
+                    baseEntity.setEntityContext(entityContext);
+                    baseEntity.afterDelete();
+                    updateCacheEntity(entityContext, event.getEntity(), ItemAction.Remove);
+                }
                 entityUpdatesQueue.add(new EntityUpdate(event.getEntity(), EntityUpdateAction.Delete));
             }
         });
     }
 
     private static void postInsertUpdate(EntityContextImpl entityContext, Object entity, boolean persist) {
-        if (entity instanceof BaseEntity) {
+        if (entity instanceof BaseEntity baseEntity) {
+            baseEntity.setEntityContext(entityContext);
             loadEntityService(entityContext, entity);
-            ((BaseEntity) entity).afterUpdate(entityContext, persist);
+            if (persist) {
+                baseEntity.afterUpdate();
+            } else {
+                baseEntity.afterPersist();
+            }
             // Do not send updates to UI in case of Status.DELETED
             entityContext.sendEntityUpdateNotification(entity, persist ? ItemAction.Insert : ItemAction.Update);
         }
@@ -409,29 +432,29 @@ public class EntityContextEventImpl implements EntityContextEvent {
             if (entity instanceof BaseEntity) {
                 // execute in separate thread
                 context.bgp().builder("delete-delay-entity-" + ((BaseEntity) entity).getEntityID())
-                        .execute(() -> {
-                            // destroy any additional services
-                            if (entity instanceof EntityService) {
-                                try {
-                                    ((EntityService<?, ?>) entity).destroyService();
-                                } catch (Exception ex) {
-                                    log.warn("Unable to destroy service for entity: {}", getTitle());
-                                }
-                            }
-                            ((BaseEntity) entity).afterDelete(context);
+                       .execute(() -> {
+                           // destroy any additional services
+                           if (entity instanceof EntityService) {
+                               try {
+                                   ((EntityService<?, ?>) entity).destroyService();
+                               } catch (Exception ex) {
+                                   log.warn("Unable to destroy service for entity: {}", getTitle());
+                               }
+                           }
+                           ((BaseEntity) entity).afterDelete();
 
-                            String entityID = ((BaseEntity) entity).getEntityID();
-                            // remove all status for entity
-                            EntityContextStorageImpl.ENTITY_MEMORY_MAP.remove(entityID);
-                            // remove in-memory data if any exists
-                            InMemoryDB.removeService(entityID);
-                            // clear all registered console plugins if any exists
-                            context.ui().unRegisterConsolePlugin(entityID);
-                            // remove any registered notifications/notification block
-                            context.ui().removeNotificationBlock(entityID);
-                            // remove in-memory data
-                            context.getEntityContextStorageImpl().remove(entityID);
-                        });
+                           String entityID = ((BaseEntity) entity).getEntityID();
+                           // remove all status for entity
+                           EntityContextStorageImpl.ENTITY_MEMORY_MAP.remove(entityID);
+                           // remove in-memory data if any exists
+                           InMemoryDB.removeService(entityID);
+                           // clear all registered console plugins if any exists
+                           context.ui().unRegisterConsolePlugin(entityID);
+                           // remove any registered notifications/notification block
+                           context.ui().removeNotificationBlock(entityID);
+                           // remove in-memory data
+                           context.getEntityContextStorageImpl().remove(entityID);
+                       });
             }
             context.sendEntityUpdateNotification(entity, ItemAction.Remove);
         });

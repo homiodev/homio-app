@@ -1,8 +1,11 @@
 package org.homio.app.model.entity.widget.impl;
 
 import jakarta.persistence.Entity;
-import org.homio.api.EntityContext;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.ui.field.UIFieldTableLayout;
 import org.homio.api.ui.field.condition.UIFieldDisableEditOnCondition;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
@@ -48,16 +51,16 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
     }
 
     @Override
-    public void afterDelete(@NotNull EntityContext entityContext) {
+    public void afterDelete() {
         for (WidgetBaseEntity entity : getEntityContext().findAll(WidgetBaseEntity.class)) {
             if (getEntityID().equals(entity.getParent())) {
-                entityContext.delete(entity);
+                getEntityContext().delete(entity);
             }
         }
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         if (!getJsonData().has("bw")) {
             setBw(2);
         }

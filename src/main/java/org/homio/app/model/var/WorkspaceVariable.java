@@ -347,7 +347,7 @@ public class WorkspaceVariable extends BaseEntity
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         setVariableId(defaultIfEmpty(variableId, "" + System.currentTimeMillis()));
         setEntityID(this.getVariableId());
     }

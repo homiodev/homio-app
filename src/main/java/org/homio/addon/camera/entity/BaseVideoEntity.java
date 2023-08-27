@@ -358,7 +358,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         setAudioThreshold(40);
         setMotionThreshold(40);
         setMp4OutOptions(join("~~~", "-c:v copy", "-c:a copy"));
@@ -370,7 +370,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     @Override
-    public void afterDelete(@NotNull EntityContext entityContext) {
+    public void afterDelete() {
         Path path = CommonUtils.getMediaPath().resolve(getFolderName()).resolve(getEntityID());
         if (Files.exists(path)) {
             try {

@@ -4,8 +4,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.*;
+import io.netty.util.ReferenceCountUtil;
 import lombok.Getter;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoActionsContext;
@@ -42,6 +44,11 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler i
         this.username = entity.getUser();
         this.password = entity.getPassword().asString();
         this.ip = entity.getIp();
+    }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        ReferenceCountUtil.release(msg);
     }
 
     public EntityContext getEntityContext() {

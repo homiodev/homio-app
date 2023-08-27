@@ -471,7 +471,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     @Override
-    protected void takeSnapshotSync(@Nullable String profile, Path output) {
+    protected void takeSnapshotSync(@Nullable String profile, @NotNull Path output) {
         String snapshotUri = urls.getSnapshotUri(profile);
         if (snapshotUri.equals("ffmpeg")) {
             super.takeSnapshotSync(profile, output);

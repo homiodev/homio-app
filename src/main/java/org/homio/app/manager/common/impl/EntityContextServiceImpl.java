@@ -40,6 +40,14 @@ public class EntityContextServiceImpl implements EntityContextService {
 
     public EntityContextServiceImpl(EntityContextImpl entityContext) {
         this.entityContext = entityContext;
+        entityContext.bgp().executeOnExit(() -> {
+            entityToService.values().forEach(serviceInstance -> {
+                try {
+                    serviceInstance.destroy();
+                } catch (Exception ignore) {
+                }
+            });
+        });
     }
 
     @Override

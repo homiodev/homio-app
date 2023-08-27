@@ -232,7 +232,7 @@ public class WorkspaceGroup extends BaseEntity
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         setGroupId(defaultIfEmpty(groupId, CommonUtils.generateUUID()));
         setEntityID(PREFIX + groupId);
         setIcon(defaultIfEmpty(icon, "fas fa-layer-group"));

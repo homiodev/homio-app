@@ -99,7 +99,7 @@ public final class WidgetTabEntity extends BaseEntity implements HasOrder {
     }
 
     @Override
-    protected void validate() {
+    public void validate() {
         if (getName() == null || getName().length() < 2 || getName().length() > 16) {
             throw new ServerException("ERROR.WRONG_TAB_NAME");
         }

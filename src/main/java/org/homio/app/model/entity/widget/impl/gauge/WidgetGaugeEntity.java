@@ -217,7 +217,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         if (!getJsonData().has("gfg")) {
             setGaugeForeground(UI.Color.random());
         }

@@ -70,7 +70,7 @@ public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimel
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         setBh(4);
         setBw(3);
         super.beforePersist();

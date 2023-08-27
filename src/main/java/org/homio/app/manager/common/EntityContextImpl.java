@@ -424,13 +424,20 @@ public class EntityContextImpl implements EntityContext {
         EntityContextEventImpl.EntityListener entityUpdateListeners = this.event().getEntityUpdateListeners();
 
         String entityID = entity.getEntityID();
-        // for new entities entityID still null
-        //noinspection ConstantConditions
+        entity.setEntityContext(this);
+        if (entityID == null) {
+            if (StringUtils.isEmpty(entity.getName())) {
+                entity.setName(entity.refreshName());
+            }
+            entity.beforePersist();
+        } else {
+            entity.beforeUpdate();
+        }
+        entity.validate();
         T oldEntity = entityID == null ? null : getEntity(entityID, false);
 
         T updatedEntity = transactionManagerContext.executeInTransaction(entityManager -> {
             T t = (T) repository.save(entity);
-            t.entityFetched(this);
             return t;
         });
 

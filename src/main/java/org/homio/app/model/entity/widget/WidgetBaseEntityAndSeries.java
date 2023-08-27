@@ -23,7 +23,7 @@ public abstract class WidgetBaseEntityAndSeries<T extends WidgetBaseEntityAndSer
     private Set<S> series;
 
     @Override
-    protected void validate() {
+    public void validate() {
         if (getWidgetTabEntity() == null) {
             throw new ServerException("ERROR.WIDGET_NO_TAB");
         }

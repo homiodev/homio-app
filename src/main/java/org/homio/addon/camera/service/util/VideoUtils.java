@@ -14,11 +14,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class VideoUtils {
 
     @SneakyThrows
-    public static void downloadImage(String snapshotUri, String user, String password, Path output) {
+    public static void downloadImage(@NotNull String snapshotUri, @Nullable String user, @Nullable String password, @NotNull Path output) {
         HttpRequest request = HttpRequest.newBuilder().uri(new URI(snapshotUri)).GET().build();
         HttpResponse<InputStream> response;
         if (user == null || password == null || snapshotUri.contains("&token=")) {

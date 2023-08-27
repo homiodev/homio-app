@@ -4,6 +4,7 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.api.EntityContextMedia.FFMPEGFormat.MUXER;
 import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
+import java.nio.file.Path;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -14,11 +15,14 @@ import org.apache.logging.log4j.Level;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.ConfigurationException;
 import org.homio.addon.camera.entity.UsbCameraEntity;
+import org.homio.addon.camera.service.util.VideoUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.VideoInputDevice;
 import org.homio.api.model.Icon;
 import org.homio.api.state.StringType;
+import org.homio.hquery.Curl;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Log4j2
@@ -71,10 +75,6 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     protected void postInitializeCamera() {
         String ieeeAddress = Objects.requireNonNull(entity.getIeeeAddress());
         this.input = entityContext.media().createVideoInputDevice(ieeeAddress);
-
-        if (urls.getSnapshotUri().equals("ffmpeg")) {
-            urls.setSnapshotUri(entity.getRtspUri());
-        }
 
         String url = "video=\"" + ieeeAddress + "\"";
         if (isNotEmpty(entity.getAudioSource())) {

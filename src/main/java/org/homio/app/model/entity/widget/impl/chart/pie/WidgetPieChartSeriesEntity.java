@@ -46,7 +46,7 @@ public class WidgetPieChartSeriesEntity extends WidgetSeriesEntity<WidgetPieChar
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         if (!getJsonData().has("chartC")) {
             setChartColor(UI.Color.random());
         }

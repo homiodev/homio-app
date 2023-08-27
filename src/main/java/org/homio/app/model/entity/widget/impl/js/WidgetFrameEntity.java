@@ -101,7 +101,7 @@ public class WidgetFrameEntity extends WidgetBaseEntity<WidgetFrameEntity> imple
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         super.beforePersist();
         setHtml("<html>\n"
                 + "  <head></head>\n"

@@ -91,7 +91,7 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         super.beforePersist();
     }
 

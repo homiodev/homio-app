@@ -83,7 +83,7 @@ public class WidgetSliderSeriesEntity
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         HasIcon.randomColor(this);
         if (!getJsonData().has("sc")) {
             setSliderColor(UI.Color.random());

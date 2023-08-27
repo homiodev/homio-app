@@ -45,7 +45,7 @@ public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBar
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         HasChartDataSource.randomColor(this);
     }
 

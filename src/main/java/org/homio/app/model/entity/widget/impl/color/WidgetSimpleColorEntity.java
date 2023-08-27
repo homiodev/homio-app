@@ -83,7 +83,7 @@ public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorE
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         super.beforePersist();
         if (!getJsonData().has("colors")) {
             setColors(Stream.of("#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FFFFFF")

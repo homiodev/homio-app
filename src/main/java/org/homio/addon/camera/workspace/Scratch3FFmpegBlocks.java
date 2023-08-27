@@ -1,10 +1,16 @@
 package org.homio.addon.camera.workspace;
 
+import static org.homio.api.EntityContextMedia.FFMPEGFormat.RTSP_ALARMS;
+import static org.homio.api.util.CommonUtils.addToListSafe;
+
 import com.pivovarit.function.ThrowingBiConsumer;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.Level;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
@@ -13,12 +19,6 @@ import org.homio.api.state.DecimalType;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.springframework.stereotype.Component;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.homio.api.EntityContextMedia.FFMPEGFormat.RTSP_ALARMS;
-import static org.homio.api.util.CommonUtils.addToListSafe;
 
 @Log4j2
 @Getter
@@ -32,9 +32,9 @@ public class Scratch3FFmpegBlocks extends Scratch3ExtensionBlocks {
         setParent("media");
 
         blockCommand(10, FFmpegApplyHandler.argsInput.name(), "Input arg [VALUE]", this::skipHandler, block ->
-                block.addArgument(VALUE, ""));
+            block.addArgument(VALUE, ""));
         blockCommand(20, FFmpegApplyHandler.argsOutput.name(), "Output arg [VALUE]", this::skipHandler, block ->
-                block.addArgument(VALUE, ""));
+            block.addArgument(VALUE, ""));
 
         blockCommand(30, "fire_ffmpeg", "Run FFmpeg input [INPUT] output [OUTPUT]", this::fireFFmpegCommand, block -> {
             block.addArgument("INPUT", "");
@@ -53,35 +53,35 @@ public class Scratch3FFmpegBlocks extends Scratch3ExtensionBlocks {
         applyParentBlocks(ffmpegBuilder, workspaceBlock.getParent());
 
         FFMPEG ffmpeg = entityContext.media().buildFFMPEG(workspaceBlock.getId(),
-                "FFMPEG workspace", new FFMPEGHandler() {
-                    @Override
-                    public String getEntityID() {
-                        return null;
-                    }
+            "FFMPEG workspace", new FFMPEGHandler() {
 
-                    @Override
-                    public void motionDetected(boolean on, String key) {
+                @Override
+                public void motionDetected(boolean on, String key) {
 
-                    }
+                }
 
-                    @Override
-                    public void audioDetected(boolean on) {
+                @Override
+                public void audioDetected(boolean on) {
 
-                    }
+                }
 
-                    @Override
-                    public void ffmpegError(String error) {
-                        log.error("FFmpeg error: <{}>", error);
+                @Override
+                public void ffmpegError(String error) {
+                    log.error("FFmpeg error: <{}>", error);
+                }
 
-                    }
+                @Override
+                public void ffmpegLog(Level level, String message) {
+                    log.log(level, "{}", message);
+                }
 
-                    @Override
-                    public DecimalType getMotionThreshold() {
-                        return new DecimalType(30);
-                    }
-                }, log, RTSP_ALARMS, String.join(" ", ffmpegBuilder.inputArgs), input,
-                String.join(" ", ffmpegBuilder.outputArgs),
-                output, "", "", null);
+                @Override
+                public DecimalType getMotionThreshold() {
+                    return new DecimalType(30);
+                }
+            }, RTSP_ALARMS, String.join(" ", ffmpegBuilder.inputArgs), input,
+            String.join(" ", ffmpegBuilder.outputArgs),
+            output, "", "", null);
         try {
             ffmpeg.startConverting();
             // wait to able process start
@@ -116,12 +116,10 @@ public class Scratch3FFmpegBlocks extends Scratch3ExtensionBlocks {
 
     @AllArgsConstructor
     private enum FFmpegApplyHandler {
-        argsInput((workspaceBlock, builder) -> {
-            addToListSafe(builder.inputArgs, workspaceBlock.getInputString(VALUE).trim());
-        }),
-        argsOutput((workspaceBlock, builder) -> {
-            addToListSafe(builder.outputArgs, workspaceBlock.getInputString(VALUE).trim());
-        });
+        argsInput((workspaceBlock, builder) ->
+            addToListSafe(builder.inputArgs, workspaceBlock.getInputString(VALUE).trim())),
+        argsOutput((workspaceBlock, builder) ->
+            addToListSafe(builder.outputArgs, workspaceBlock.getInputString(VALUE).trim()));
 
         private final ThrowingBiConsumer<WorkspaceBlock, FfmpegBuilder, Exception> applyFn;
     }

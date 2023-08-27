@@ -59,7 +59,7 @@ public class CommonVideoStreamEntity extends BaseVideoEntity<CommonVideoStreamEn
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         setSnapshotOutOptions(join("~~~", "-update 1", "-frames:v 1"));
     }
 

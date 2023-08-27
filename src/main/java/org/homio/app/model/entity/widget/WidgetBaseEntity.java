@@ -126,7 +126,7 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         super.beforePersist();
         this.findSuitablePosition();
     }

@@ -43,7 +43,7 @@ public final class WorkspaceEntity extends BaseEntity implements HasJsonData {
     }
 
     @Override
-    protected void validate() {
+    public void validate() {
         if (getName() == null || getName().length() < 2 || getName().length() > 10) {
             throw new IllegalStateException("Workspace tab name must be between 2..10 characters");
         }

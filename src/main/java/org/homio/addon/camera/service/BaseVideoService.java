@@ -423,7 +423,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     @SneakyThrows
-    protected void takeSnapshotSync(@Nullable String profile, Path output) {
+    protected void takeSnapshotSync(@Nullable String profile, @NotNull Path output) {
         fireFfmpegSync(profile, output, snapshotInputOptions, entity.getSnapshotOutOptionsAsString(), 20);
     }
 
