@@ -38,6 +38,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     @Override
     public void ffmpegLog(Level level, String message) {
         log.log(level, "[{}]: {}", getEntityID(), message);
+        bringCameraOnline();
     }
 
     @Override

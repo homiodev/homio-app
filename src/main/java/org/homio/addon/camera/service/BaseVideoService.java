@@ -10,6 +10,7 @@ import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.MOTION_ALARM;
 import static org.homio.addon.camera.service.util.VideoUrls.getCorrectUrlFormat;
 import static org.homio.api.EntityContextMedia.FFMPEG_MOTION_ALARM;
+import static org.homio.api.model.Status.DONE;
 import static org.homio.api.model.Status.ERROR;
 import static org.homio.api.model.Status.INITIALIZE;
 import static org.homio.api.model.Status.OFFLINE;
@@ -270,6 +271,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     public final void bringCameraOnline() {
+        communicationError = 0;
         updateLastSeen();
         if (!entity.getStatus().isOnline()) {
             setAttribute("URLS", new JsonType(OBJECT_MAPPER.convertValue(urls, ObjectNode.class)));
@@ -505,7 +507,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     public byte[] getSnapshot() {
-        if (!entity.isStart() || !entity.getStatus().isOnline()) {
+        if (!entity.isStart() || !entity.getStatus().isOnline() || ffmpegSnapshot == null) {
             // Single gray pixel JPG to keep streams open when the camera goes offline, so they don't stop.
             return new byte[]{(byte) 0xff, (byte) 0xd8, (byte) 0xff, (byte) 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
                 0x00, 0x01, 0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, (byte) 0xff, (byte) 0xdb, 0x00, 0x43,
@@ -519,8 +521,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         }
         // Most cameras will return a 503 busy error if snapshot is faster than 1 second
         long lastUpdatedMs = Duration.between(lastSnapshotRequest, Instant.now()).toMillis();
-        if (snapshotJob == null && ffmpegSnapshot != null
-            && !ffmpegSnapshot.isRunning() && lastUpdatedMs >= Duration.ofSeconds(60).toMillis()) {
+        if (snapshotJob == null && !ffmpegSnapshot.isRunning() && lastUpdatedMs >= Duration.ofSeconds(60).toMillis()) {
             scheduleRequestSnapshot();
         }
         lockCurrentSnapshot.lock();
@@ -582,6 +583,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     private synchronized void dispose() {
+        entity.setStatus(DONE);
         videoStreamParametersHashCode = entity.getVideoParametersHashCode();
         log.info("[{}]: Dispose video: <{}>", entityID, getEntity());
         offline();
@@ -645,11 +647,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     private void checkCameraConnection() {
         if (snapshotJob != null) {// Currently polling a real URL for snapshots, so camera must be online.
             return;
-        } else if (ffmpegSnapshot.isRunning()) {// Use RTSP stream creating snapshots to know camera is online.
-            if (!ffmpegSnapshot.getIsAlive()) {
-                cameraCommunicationError("FFmpeg Snapshots Stopped: Check your camera can be reached.");
-            }
-            return;// ffmpeg snapshot stream is still alive
         }
         if (!pingCamera()) {
             cameraCommunicationError(

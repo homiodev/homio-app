@@ -208,6 +208,8 @@ public class FFMPEGImpl implements FFMPEG {
                 }
             } catch (Exception ex) {
                 handler.ffmpegError(CommonUtils.getErrorMessage(ex));
+            } finally {
+                running = false;
             }
         }
     }

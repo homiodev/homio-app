@@ -363,7 +363,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         setMotionThreshold(40);
         setMp4OutOptions(join("~~~", "-c:v copy", "-c:a copy"));
         setMjpegOutOptions(join("~~~", "-q:v 5", "-r 2", "-vf scale=640:-2", "-update 1"));
-        setSnapshotOutOptions(join("~~~", "-vsync vfr", "-q:v 2", "-frames:v 1"));
+        setSnapshotOutOptions(join("~~~", "-q:v 2", "-frames:v 1"));
         setGifOutOptions(
                 join("~~~", "-r 2", "-filter_complex scale=-2:360:flags=lanczos,setpts=0.5*PTS,split[o1][o2];[o1]palettegen[p];[o2]fifo[o3];" +
                         "[o3][p]paletteuse"));
