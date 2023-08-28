@@ -1,5 +1,7 @@
 package org.homio.app.model.entity.widget.impl.video.sourceResolver;
 
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
@@ -19,6 +21,7 @@ public interface WidgetVideoSourceResolver {
         private final String dataSource;
         private final String source;
         private final String type;
+        private final List<String> resolutions = new ArrayList<>();
         @Setter
         private Collection<UIInputEntity> actions;
 

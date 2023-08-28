@@ -2,7 +2,7 @@ package org.homio.app.model.entity.widget.impl.slider;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import org.homio.api.exception.ProhibitedExecution;
+import org.apache.commons.lang3.NotImplementedException;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.*;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
@@ -79,7 +79,7 @@ public class WidgetSliderSeriesEntity
     @JsonIgnore
     @UIFieldIgnore
     public String getNoValueText() {
-        throw new ProhibitedExecution();
+        throw new NotImplementedException();
     }
 
     @Override

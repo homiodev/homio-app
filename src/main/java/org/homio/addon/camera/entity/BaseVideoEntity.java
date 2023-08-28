@@ -28,6 +28,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.service.BaseVideoService;
 import org.homio.api.EntityContext;
+import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.MediaEntity;
@@ -59,6 +60,7 @@ import org.homio.api.ui.field.image.UIFieldImage;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.SecureString;
 import org.homio.api.workspace.WorkspaceBlock;
+import org.homio.app.video.ffmpeg.FFMPEGImpl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -81,13 +83,13 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     @UIFieldGroup("GENERAL")
     public String getRunningCommands() {
         List<String> commands = new ArrayList<>();
-        if (getService().getFfmpegHLS().isRunning()) {
+        if (FFMPEG.check(getService().getFfmpegHLS(), FFMPEG::isRunning, false)) {
             commands.add(RUN_CMD.formatted("#57A4D1", "#57A4D1", "HLS"));
         }
-        if (getService().getFfmpegSnapshot().isRunning()) {
+        if (FFMPEG.check(getService().getFfmpegSnapshot(), FFMPEG::isRunning, false)) {
             commands.add(RUN_CMD.formatted("#A2D154", "#A2D154", "SNAPSHOT"));
         }
-        if (getService().getFfmpegMjpeg().isRunning()) {
+        if (FFMPEG.check(getService().getFfmpegMjpeg(), FFMPEG::isRunning, false)) {
             commands.add(RUN_CMD.formatted("#7FAEAA", "#7FAEAA", "MJPEG"));
         }
         assembleExtraRunningCommands(commands);
@@ -350,6 +352,16 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
     public void setSnapshotPollInterval(int value) {
         setJsonData("spi", value);
+    }
+
+    @UIField(order = 4, hideOnEmpty = true, type = UIFieldType.Chips)
+    @UIFieldGroup("STREAMING")
+    public List<String> getStreamResolutions() {
+        return getJsonDataList("sr");
+    }
+
+    public void setStreamResolutions(String value) {
+        setJsonData("sr", value);
     }
 
     public Set<String> getVideoSources() {

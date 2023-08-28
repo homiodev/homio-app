@@ -197,7 +197,7 @@ public class EntityContextImpl implements EntityContext {
             ConfigurableEnvironment environment,
             VariableBackupRepository variableBackupRepository,
             EntityManagerFactory entityManagerFactory,
-            MachineHardwareRepository machineHardwareRepository,
+            MachineHardwareRepository mhr,
             FfmpegHardwareRepository ffmpegHardwareRepository) {
         this.classFinder = classFinder;
         this.cacheService = cacheService;
@@ -212,6 +212,7 @@ public class EntityContextImpl implements EntityContext {
                         .filter(r -> !r.getClass().equals(AllDeviceRepository.class))
                         .collect(Collectors.toMap(AbstractRepository::getPrefix, r -> r));
 
+        this.entityContextHardware = new EntityContextHardwareImpl(this, mhr);
         this.entityContextSetting = new EntityContextSettingImpl(this, environment, classFinder);
         this.entityContextUI = new EntityContextUIImpl(this, messagingTemplate);
         this.entityContextBGP = new EntityContextBGPImpl(this, taskScheduler);
@@ -221,7 +222,6 @@ public class EntityContextImpl implements EntityContext {
         this.entityContextStorageImpl = new EntityContextStorageImpl(this);
         this.entityContextVar = new EntityContextVarImpl(this, variableBackupRepository);
         this.entityContextMedia = new EntityContextMediaImpl(this, ffmpegHardwareRepository);
-        this.entityContextHardware = new EntityContextHardwareImpl(this, machineHardwareRepository);
         this.entityContextService = new EntityContextServiceImpl(this);
         this.entityContextWorkspace = new EntityContextWorkspaceImpl(this);
         this.entityContextStorage = new EntityContextStorageImpl(this);

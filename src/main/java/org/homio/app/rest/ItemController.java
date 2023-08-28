@@ -482,7 +482,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 BaseEntity entity = entityContext.getEntity(entityId);
 
                 if (entity == null) {
-                    throw new NotFoundException("Entity '" + entityId + "' not found");
+                    throw NotFoundException.entityNotFound(entityId);
                 }
 
                 JSONObject entityFields = jsonObject.getJSONObject(entityId);

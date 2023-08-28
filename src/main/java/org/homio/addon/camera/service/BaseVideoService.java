@@ -128,9 +128,9 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     protected byte[] latestSnapshot = new byte[0];
     protected @Getter boolean motionDetected;
 
-    protected @Getter FFMPEG ffmpegHLS;
-    protected @Getter FFMPEG ffmpegSnapshot;
-    protected @Getter FFMPEG ffmpegMjpeg;
+    protected @Getter @Nullable FFMPEG ffmpegHLS;
+    protected @Getter @Nullable FFMPEG ffmpegSnapshot;
+    protected @Getter @Nullable FFMPEG ffmpegMjpeg;
 
     // run every 8 seconds to send requests to camera, etc...
     protected @Nullable ThreadContext<Void> pollCameraJob;

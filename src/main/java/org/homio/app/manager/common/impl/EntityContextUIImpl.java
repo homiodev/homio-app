@@ -24,6 +24,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContextUI;
 import org.homio.api.console.ConsolePlugin;
@@ -33,7 +34,6 @@ import org.homio.api.entity.HasFirmwareVersion;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
-import org.homio.api.exception.ProhibitedExecution;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
@@ -542,7 +542,7 @@ public class EntityContextUIImpl implements EntityContextUI {
             case error -> this.sendErrorMessage(String.valueOf(response.getValue()));
             case warning -> this.sendWarningMessage(String.valueOf(response.getValue()));
             case success -> this.sendSuccessMessage(String.valueOf(response.getValue()));
-            case files -> throw new ProhibitedExecution(); // not implemented yet
+            case files -> throw new NotImplementedException(); // not implemented yet
         }
     }
 

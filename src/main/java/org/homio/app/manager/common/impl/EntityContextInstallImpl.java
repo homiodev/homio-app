@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextInstall;
@@ -22,12 +23,12 @@ public class EntityContextInstallImpl implements EntityContextInstall {
     private final EntityContext entityContext;
     private final Map<Class<?>, InstallContext> cache = new ConcurrentHashMap<>();
 
+    @SneakyThrows
     public EntityContextInstallImpl(EntityContext entityContext) {
         this.entityContext = entityContext;
-        entityContext.event().runOnceOnInternetUp("install-services", () ->
-            ffmpeg().requireAsync(null, installed -> {
-                if (installed) {log.info("FFPMEG service successfully installed");}
-            }));
+        ffmpeg().requireAsync(null, installed -> {
+            if (installed) {log.info("FFPMEG service successfully installed");}
+        });
     }
 
     @Override
@@ -71,6 +72,10 @@ public class EntityContextInstallImpl implements EntityContextInstall {
                         return;
                     }
                     installing = true;
+                    entityContext.event().runOnceOnInternetUp("wait-inet-for-install-" + installer.getName(), () -> installSoftware(version));
+                }
+
+                private void installSoftware(@Nullable String version) {
                     entityContext.bgp().runWithProgress("install-" + installer.getName())
                                  .onFinally(exception -> {
                                      installing = false;
@@ -103,6 +108,6 @@ public class EntityContextInstallImpl implements EntityContextInstall {
                 public synchronized @Nullable String getPath(@NotNull String execName) {
                     return installer.getExecutablePath(execName);
                 }
-        });
+            });
     }
 }

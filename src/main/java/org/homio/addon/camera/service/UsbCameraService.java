@@ -4,7 +4,6 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.api.EntityContextMedia.FFMPEGFormat.MUXER;
 import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
-import java.nio.file.Path;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -15,21 +14,19 @@ import org.apache.logging.log4j.Level;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.ConfigurationException;
 import org.homio.addon.camera.entity.UsbCameraEntity;
-import org.homio.addon.camera.service.util.VideoUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.VideoInputDevice;
 import org.homio.api.model.Icon;
 import org.homio.api.state.StringType;
-import org.homio.hquery.Curl;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Log4j2
+@Getter
 public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCameraService> {
 
-    private @Getter FFMPEG ffmpegUsbStream;
-    private @Nullable @Getter VideoInputDevice input;
+    private FFMPEG ffmpegUsbStream;
+    private @Nullable VideoInputDevice input;
 
     public UsbCameraService(UsbCameraEntity entity, EntityContext entityContext) {
         super(entity, entityContext);
@@ -45,8 +42,9 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     protected void pollCameraConnection() throws Exception {
         Set<String> aliveVideoDevices = entityContext.media().getVideoDevices();
         if (!aliveVideoDevices.contains(entity.getIeeeAddress())) {
-            throw new ConfigurationException("W.ERROR.NOT_REACHED_CAMERA");
+            throw new ConfigurationException("W.ERROR.USB_CAMERA_NOT_AVAILABLE");
         }
+
         // restart if not alive
         ffmpegUsbStream.startConverting();
         keepMjpegRunning();
@@ -75,7 +73,10 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     @Override
     protected void postInitializeCamera() {
         String ieeeAddress = Objects.requireNonNull(entity.getIeeeAddress());
-        this.input = entityContext.media().createVideoInputDevice(ieeeAddress);
+        input = entityContext.media().createVideoInputDevice(ieeeAddress);
+        if (input != null && entity.getStreamResolutions().isEmpty() && input.getResolutions().length > 0) {
+            entityContext.updateDelayed(entity, e -> e.setStreamResolutions(String.join("~~~", input.getResolutionSet())));
+        }
 
         String url = "video=\"" + ieeeAddress + "\"";
         if (isNotEmpty(entity.getAudioSource())) {

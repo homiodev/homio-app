@@ -40,7 +40,7 @@ public class FFMPEGImpl implements FFMPEG {
     private IpVideoFfmpegThread ipVideoFfmpegThread;
     private int keepAlive = 8;
     private final String entityID;
-    private boolean notFrozen = true;
+    private long lastAnswerFromFFMPEG = 0;
     private @Getter boolean running;
 
     public FFMPEGImpl(@NotNull String entityID,
@@ -105,24 +105,24 @@ public class FFMPEGImpl implements FFMPEG {
     }
 
     public synchronized boolean startConverting() {
-        if (!ipVideoFfmpegThread.isAlive()) {
+        if (keepAlive != -1) {
+            keepAlive = 8;
+        }
+        boolean processAlive = ipVideoFfmpegThread.isAlive();
+        if(processAlive && System.currentTimeMillis() - lastAnswerFromFFMPEG > 30000) {
+            stopConverting();
+        }
+        if (!processAlive) {
             ipVideoFfmpegThread = new IpVideoFfmpegThread();
             ipVideoFfmpegThread.start();
             running = true;
             return true;
         }
-        if (keepAlive != -1) {
-            keepAlive = 8;
-        }
         return false;
     }
 
     public boolean getIsAlive() {
-        if (process != null && process.isAlive() && notFrozen) {
-            notFrozen = false;
-            return true;
-        }
-        return false;
+        return process != null && process.isAlive() && System.currentTimeMillis() - lastAnswerFromFFMPEG < 30000;
     }
 
     public synchronized void stopConverting() {
@@ -145,6 +145,7 @@ public class FFMPEGImpl implements FFMPEG {
 
         IpVideoFfmpegThread() {
             setDaemon(true);
+            lastAnswerFromFFMPEG = System.currentTimeMillis();
             setName("VideoThread_" + format + "_" + entityID);
         }
 
@@ -160,7 +161,7 @@ public class FFMPEGImpl implements FFMPEG {
                     BufferedReader bufferedReader = new BufferedReader(errorStreamReader);
                     String line;
                     while ((line = bufferedReader.readLine()) != null) {
-                        notFrozen = true;
+                        lastAnswerFromFFMPEG = System.currentTimeMillis();
                         if (format == FFMPEGFormat.RTSP_ALARMS) {
                             handler.ffmpegLog(Level.INFO, line);
                             int motionThreshold = handler.getMotionThreshold().intValue();

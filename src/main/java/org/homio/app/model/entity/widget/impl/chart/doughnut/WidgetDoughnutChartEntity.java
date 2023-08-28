@@ -2,7 +2,7 @@ package org.homio.app.model.entity.widget.impl.chart.doughnut;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import org.homio.api.exception.ProhibitedExecution;
+import org.apache.commons.lang3.NotImplementedException;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.*;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
@@ -70,6 +70,6 @@ public class WidgetDoughnutChartEntity
     @JsonIgnore
     @UIFieldIgnore
     public boolean getShowChartFullScreenButton() {
-        throw new ProhibitedExecution();
+        throw new NotImplementedException();
     }
 }

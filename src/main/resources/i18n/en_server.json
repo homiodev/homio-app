@@ -6,7 +6,11 @@
   "PACKAGE_UPDATE_QUESTION": "Are you sure update {{NAME}}-{{VERSION}} package?",
   "SERVER_STARTED": "Started: {{VALUE}}. Uptime: {{TIME}}",
   "ERROR": {
-    "NO_DEVICE": "Unable to find device with id: {{VALUE}}",
+    "VIDEO_SERIES_NOT_FOUND": "Unable to find base video for series",
+    "VIDEO_ACTION_NOT_FOUND": "No video action found",
+    "TAB_NOT_FOUND": "Unable to find tab with tabId: {{VALUE}}",
+    "ENTITY_NOT_FOUND": "Entity not found: {{VALUE}}",
+    "FILE_NOT_FOUND": "File not found: {{VALUE}}",
     "NOT_STARTED": "Entity {{VALUE}} not started",
     "CLOUD": "Cloud error: {{VALUE}}",
     "CLOUD_UNKNOWN_HOST": "Unknown host: {{VALUE}}",
@@ -25,12 +29,6 @@
   "sys_cpu_load": "System cpu load",
   "java_cpu_load": "Java cpu load",
   "sys_mem_load": "System memory load",
-  "video": {
-    "error": {
-      "seriesNotFound": "Unable to find base video for series",
-      "actionNotFound": "No video action found"
-    }
-  },
   "ENTITY_CREATED": "Entity created: {{VALUE}}",
   "ENTITY_DELETED": "Entity deleted: {{VALUE}}",
   "DEFAULT_PLACES": "Kitchen;Bath;Сorridor;Bedroom;Hall;Boiler room;Playroom;Garage;Basement;Entrance;",

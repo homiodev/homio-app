@@ -223,10 +223,10 @@ public class UtilsController {
 
     @GetMapping(value = "/download/tmp/{fileName:.+}", produces = APPLICATION_OCTET_STREAM)
     public ResponseEntity<StreamingResponseBody> downloadFile(
-            @PathVariable("FILE_NAME") String fileName) {
+            @PathVariable("fileName") String fileName) {
         Path outputPath = CommonUtils.getTmpPath().resolve(fileName);
         if (!Files.exists(outputPath)) {
-            throw new NotFoundException("Unable to find file: " + fileName);
+            throw NotFoundException.fileNotFound(outputPath);
         }
         HttpHeaders headers = new HttpHeaders();
         headers.add(

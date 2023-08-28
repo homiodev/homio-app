@@ -23,7 +23,7 @@ import org.homio.addon.camera.ui.UIVideoActionGetter;
 import org.homio.addon.camera.ui.UIVideoActionMetadata;
 import org.homio.addon.camera.ui.UIVideoEndpointAction;
 import org.homio.api.EntityContext;
-import org.homio.api.exception.LoginFailedException;
+import org.homio.api.exception.ServerException;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.state.*;
@@ -35,6 +35,7 @@ import org.homio.hquery.Curl;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
@@ -744,7 +745,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
             LoginRequest request = new LoginRequest(new LoginRequest.User(entity.getUser(), entity.getPassword().asString()));
             Root root = firePost("cmd=Login", false, new ReolinkCmd(0, "Login", OBJECT_MAPPER.valueToTree(request)))[0];
             if (root.getError() != null) {
-                throw new LoginFailedException(root.getError().toString());
+                throw new ServerException(root.getError().toString()).setStatus(HttpStatus.CONFLICT);
             }
             this.tokenExpiration = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(root.value.get("Token").get("leaseTime").asLong());
             this.token = root.value.get("Token").get("name").asText();

@@ -2,7 +2,7 @@ package org.homio.app.model.entity.widget.impl.chart.pie;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import org.homio.api.exception.ProhibitedExecution;
+import org.apache.commons.lang3.NotImplementedException;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldSlider;
@@ -45,6 +45,6 @@ public class WidgetPieChartEntity
     @JsonIgnore
     @UIFieldIgnore
     public boolean getShowChartFullScreenButton() {
-        throw new ProhibitedExecution();
+        throw new NotImplementedException();
     }
 }

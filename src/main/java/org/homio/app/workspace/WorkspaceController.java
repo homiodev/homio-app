@@ -1,5 +1,13 @@
 package org.homio.app.workspace;
 
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -17,12 +25,14 @@ import org.homio.app.utils.UIFieldSelectionUtil;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.*;
-import java.util.stream.Collectors;
-
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @Log4j2
 @RestController
@@ -207,7 +217,7 @@ public class WorkspaceController {
     public void renameWorkspaceTab(@PathVariable("entityID") String entityID, @RequestBody OptionModel option) {
         WorkspaceEntity entity = entityContext.getEntity(entityID);
         if (entity == null) {
-            throw new NotFoundException("Unable to find workspace tab with id: " + entityID);
+            throw new NotFoundException("ERROR.TAB_NOT_FOUND", entityID);
         }
 
         if (!WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME.equals(entity.getName())
@@ -229,7 +239,7 @@ public class WorkspaceController {
     public void deleteWorkspaceTab(@PathVariable("entityID") String entityID) {
         WorkspaceEntity entity = entityContext.getEntity(entityID);
         if (entity == null) {
-            throw new NotFoundException("Unable to find workspace tab with id: " + entityID);
+            throw new NotFoundException("ERROR.TAB_NOT_FOUND", entityID);
         }
         if (WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME.equals(entity.getName())) {
             throw new IllegalArgumentException("W.ERROR.REMOVE_MAIN_TAB");

@@ -25,7 +25,7 @@ public interface AbilityToStreamHLSOverFFMPEG<T> extends HasJsonData {
     @UIField(order = 320, hideInView = true)
     @UIFieldGroup("HLS_GROUP")
     default int getHlsListSize() {
-        return getJsonData("hlsListSize", 5);
+        return getJsonData("hlsListSize", 10);
     }
 
     default void setHlsListSize(int value) {

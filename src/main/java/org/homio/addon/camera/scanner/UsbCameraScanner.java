@@ -52,6 +52,7 @@ public class UsbCameraScanner implements VideoStreamScanner {
                             log.info("Confirm save usb camera: <{}>", foundUsbVideoDevice.getName());
                             UsbCameraEntity entity = new UsbCameraEntity();
                             entity.setName(foundUsbVideoDevice.getName());
+                            entity.setStreamResolutions(String.join("~~~", foundUsbVideoDevice.getResolutionSet()));
                             entity.setIeeeAddress(defaultIfEmpty(foundUsbVideoDevice.getName(), String.valueOf(System.currentTimeMillis())));
                             entityContext.save(entity);
                         });

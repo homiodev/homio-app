@@ -2,7 +2,7 @@ package org.homio.app.model.entity.widget.impl;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import org.homio.api.exception.ProhibitedExecution;
+import org.apache.commons.lang3.NotImplementedException;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.attributes.*;
@@ -44,6 +44,6 @@ public class WidgetSimpleValueEntity extends WidgetBaseEntity<WidgetSimpleValueE
     @UIFieldIgnore
     @JsonIgnore
     public Boolean getShowLastUpdateTimer() {
-        throw new ProhibitedExecution();
+        throw new NotImplementedException();
     }
 }

@@ -1,6 +1,5 @@
 package org.homio.addon.camera.entity;
 
-import static java.lang.String.join;
 import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
 import jakarta.persistence.Entity;
@@ -9,10 +8,10 @@ import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.service.UsbCameraService;
 import org.homio.api.EntityContext;
+import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
-import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.action.DynamicOptionLoader;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
@@ -23,12 +22,13 @@ import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.selection.UIFieldSelectValueOnEmpty;
 import org.homio.api.ui.field.selection.UIFieldSelection;
+import org.homio.app.video.ffmpeg.FFMPEGImpl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("unused")
 @Entity
-public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraService>
+public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraService>
         implements AbilityToStreamHLSOverFFMPEG<UsbCameraEntity> {
 
     @Override
@@ -80,7 +80,7 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
 
     @Override
     protected void assembleExtraRunningCommands(List<String> commands) {
-        if (getService().getFfmpegUsbStream().isRunning()) {
+        if (FFMPEG.check(getService().getFfmpegUsbStream(), FFMPEG::isRunning, false)) {
             commands.add(RUN_CMD.formatted("#D05362", "#D05362", "TEE"));
         }
     }

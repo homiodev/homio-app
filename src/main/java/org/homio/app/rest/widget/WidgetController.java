@@ -1,9 +1,24 @@
 package org.homio.app.rest.widget;
 
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
-import lombok.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import lombok.val;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
@@ -55,12 +70,15 @@ import org.homio.app.rest.widget.WidgetChartsController.SingleValueData;
 import org.homio.app.utils.JavaScriptBuilderImpl;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.*;
-import java.util.stream.Collectors;
-
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @Log4j2
 @RestController
@@ -174,13 +192,13 @@ public class WidgetController {
         try {
             BaseVideoEntity entity = entityContext.getEntity(series.getValueDataSource());
             if (entity == null) {
-                throw new NotFoundException("video.error.seriesNotFound");
+                throw new NotFoundException("ERROR.VIDEO_SERIES_NOT_FOUND");
             }
 
             UIInputBuilder uiInputBuilder = entity.getService().assembleActions();
             UIActionHandler actionHandler = uiInputBuilder.findActionHandler(request.name);
             if (actionHandler == null) {
-                throw new NotFoundException("video.error.actionNotFound");
+                throw new NotFoundException("ERROR.VIDEO_ACTION_NOT_FOUND");
             }
             actionHandler.handleAction(entityContext, new JSONObject().put("value", request.value));
         } catch (Exception ex) {
@@ -323,7 +341,7 @@ public class WidgetController {
         log.debug("Request creating widget entity by type: <{}> in tabId <{}>", type, tabId);
         WidgetTabEntity widgetTabEntity = entityContext.getEntity(tabId);
         if (widgetTabEntity == null) {
-            throw new NotFoundException("Unable to find tab with tabId: " + tabId);
+            throw new NotFoundException("ERROR.TAB_NOT_FOUND", tabId);
         }
 
         Class<? extends EntityFieldMetadata> typeClass = EntityContextImpl.uiFieldClasses.get(type);
@@ -342,7 +360,7 @@ public class WidgetController {
         log.debug("Request creating extra widget entity by type: <{}> in tabId <{}>, addon: <{}>", type, tabId, addon);
         WidgetTabEntity widgetTabEntity = entityContext.getEntity(tabId);
         if (widgetTabEntity == null) {
-            throw new NotFoundException("Unable to find tab with tabId: " + tabId);
+            throw new NotFoundException("ERROR.TAB_NOT_FOUND", tabId);
         }
 
         Collection<WidgetBaseTemplate> widgets = entityContext.getBeansOfTypeByAddons(WidgetBaseTemplate.class).get(addon);
