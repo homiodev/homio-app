@@ -56,7 +56,7 @@ public interface WidgetVideoSourceResolver {
             if (url.endsWith(".mpd")) {
                 return "application/dash+xml";
             }
-            return "unknown_video";
+            return "video";
         }
     }
 }

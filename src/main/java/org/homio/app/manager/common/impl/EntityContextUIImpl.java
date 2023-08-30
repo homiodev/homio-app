@@ -39,7 +39,7 @@ import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.setting.SettingPluginButton;
 import org.homio.api.ui.UISidebarMenu;
-import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.dialog.DialogModel;
 import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;

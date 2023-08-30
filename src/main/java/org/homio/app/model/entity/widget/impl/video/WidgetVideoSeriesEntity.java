@@ -4,10 +4,10 @@ import jakarta.persistence.Entity;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.StylePosition;
-import org.homio.api.ui.action.DynamicOptionLoader;
+import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldIgnoreParent;
-import org.homio.api.ui.field.selection.UIFieldSelection;
+import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.api.ui.field.selection.UIFieldTreeNodeSelection;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
@@ -104,7 +104,7 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
 
     @Override
     @UIField(order = 14, required = true, label = "widget.video_dataSource")
-    @UIFieldSelection(
+    @UIFieldDynamicSelection(
             value = VideoSeriesDataSourceDynamicOptionLoader.class,
             allowInputRawText = true)
     @UIFieldTreeNodeSelection(pattern = ".*(\\.mp4|\\.m3u8)", iconColor = "#14A669")

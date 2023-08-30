@@ -43,7 +43,7 @@ import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.service.EntityService;
 import org.homio.api.state.State;
 import org.homio.api.ui.UI.Color;
-import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.MonacoLanguage;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldCodeEditor;

@@ -85,10 +85,20 @@ public class CameraController {
 
     @SneakyThrows
     @GetMapping("/{entityID}/ipcamera.m3u8")
-    public void getIpCameraM3U8(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
+    public String getIpCameraM3U8(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
         BaseVideoEntity<?, ?> entity = getEntity(entityID);
         BaseVideoService<?, ?> service = entity.getService();
-        FFMPEG ffmpeg = Objects.requireNonNull(service.getFfmpegHLS());
+        StringBuilder file = new StringBuilder("#EXTM3U\n#EXT-X-VERSION:3\n");
+        for (String resolution : entity.getStreamResolutions()) {
+            String[] wh = resolution.split("x");
+            double bitRate = Integer.parseInt(wh[0]) * Integer.parseInt(wh[1]) / 20D * 30;
+            int bandwidth = (int) (bitRate / 8);
+            file.append("#EXT-X-STREAM-INF:BANDWIDTH=%s,RESOLUTION=%s\nchunklist.%s.m3u8\n\n"
+                .formatted(bandwidth, resolution, resolution));
+        }
+        return file.toString();
+
+        /*FFMPEG ffmpeg = Objects.requireNonNull(service.getFfmpegHLS());
         resp.setContentType("application/x-mpegURL");
         Path m3u8 = entity.getService().getFfmpegHLSOutputPath().resolve("ipcamera.m3u8");
         if (!ffmpeg.getIsAlive()) {
@@ -104,7 +114,7 @@ public class CameraController {
         } else {
             ffmpeg.setKeepAlive(8);
             sendFile(resp, m3u8);
-        }
+        }*/
     }
 
     @SneakyThrows

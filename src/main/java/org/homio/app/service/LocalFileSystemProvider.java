@@ -1,5 +1,33 @@
 package org.homio.app.service;
 
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static org.apache.commons.lang3.StringUtils.trimToEmpty;
+import static org.homio.api.fs.BaseCachedFileSystemProvider.fixPath;
+import static org.homio.app.utils.InternalUtil.TIKA;
+
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.CopyOption;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -8,25 +36,11 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.homio.api.fs.FileSystemProvider;
 import org.homio.api.fs.TreeNode;
 import org.homio.api.fs.archive.ArchiveUtil;
+import org.homio.api.ui.UI.Color;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.*;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
-
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static org.apache.commons.lang3.StringUtils.trimToEmpty;
-import static org.homio.api.fs.BaseCachedFileSystemProvider.fixPath;
-import static org.homio.app.utils.InternalUtil.TIKA;
 
 @AllArgsConstructor
 public class LocalFileSystemProvider implements FileSystemProvider {
@@ -384,9 +398,19 @@ public class LocalFileSystemProvider implements FileSystemProvider {
         }
         boolean isDirectory = file.isDirectory();
         boolean exists = file.exists();
-        String contentType =
-                !isDirectory && exists ? StringUtils.defaultString(Files.probeContentType(path), TIKA.detect(path)) : null;
-        return buildTreeNode(exists, file, isDirectory, fullPath, contentType);
+        String contentType = "";
+        boolean ade = false;
+        try {
+            contentType = !isDirectory && exists ? StringUtils.defaultString(Files.probeContentType(path), TIKA.detect(path)) : null;
+        } catch (AccessDeniedException e) {
+            contentType = "";
+            ade = true;
+        }
+        TreeNode treeNode = buildTreeNode(exists, file, isDirectory, fullPath, contentType);
+        if (ade) {
+            treeNode.getAttributes().setIcon("fas fa-ban").setColor(Color.RED);
+        }
+        return treeNode;
     }
 
     private TreeNode buildTreeNode(boolean exists, File file, boolean isDirectory, String fullPath, String contentType) {

@@ -12,7 +12,7 @@ import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
-import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.ui.field.action.v1.layout.UILayoutBuilder;
 import org.homio.app.builder.ui.layout.UIStickyDialogItemBuilderImpl;

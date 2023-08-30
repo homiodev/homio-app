@@ -13,8 +13,8 @@ import org.homio.api.model.OptionModel;
 import org.homio.api.model.OptionModel.KeyValueEnum;
 import org.homio.api.state.JsonType;
 import org.homio.api.state.State;
-import org.homio.api.ui.action.DynamicOptionLoader;
-import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.UIActionHandler;
+import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.v1.UIEntityItemBuilder;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
@@ -24,7 +24,7 @@ import org.homio.api.ui.field.action.v1.item.UISliderItemBuilder;
 import org.homio.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
 import org.homio.api.ui.field.action.v1.layout.UILayoutBuilder;
 import org.homio.api.ui.field.action.v1.layout.dialog.UIStickyDialogItemBuilder;
-import org.homio.api.ui.field.selection.UIFieldSelection;
+import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -70,7 +70,7 @@ public class CameraActionBuilder {
 
                 UIFieldType type;
                 if (context.type == VideoActionType.auto) {
-                    if (method.isAnnotationPresent(UICameraSelectionAttributeValues.class) || method.isAnnotationPresent(UIFieldSelection.class)) {
+                    if (method.isAnnotationPresent(UICameraSelectionAttributeValues.class) || method.isAnnotationPresent(UIFieldDynamicSelection.class)) {
                         type = UIFieldType.SelectBox;
                     } else {
                         type = getFieldTypeFromMethod(actionParameter);
@@ -148,9 +148,9 @@ public class CameraActionBuilder {
                                 }
                             }
                         });
-                    } else if (method.isAnnotationPresent(UIFieldSelection.class)) {
+                    } else if (method.isAnnotationPresent(UIFieldDynamicSelection.class)) {
                         DynamicOptionLoader dynamicOptionLoader;
-                        UIFieldSelection attributeValues = method.getDeclaredAnnotation(UIFieldSelection.class);
+                        UIFieldDynamicSelection attributeValues = method.getDeclaredAnnotation(UIFieldDynamicSelection.class);
                         try {
                             Constructor<? extends DynamicOptionLoader> constructor = attributeValues.value().getDeclaredConstructor(brandHandler.getClass());
                             constructor.setAccessible(true);

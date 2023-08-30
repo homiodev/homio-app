@@ -288,9 +288,12 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
                                          .execute(this::pollCameraRunnable);
 
             // auto restart mjpeg stream now camera is back online.
-            OpenStreams openStreams = camerasOpenStreams.get(entityID).openStreams;
-            if (!openStreams.isEmpty()) {
-                openCamerasStream();
+            OpenStreamsContainer container = camerasOpenStreams.get(entityID);
+            if (container != null) {
+                OpenStreams openStreams = container.openStreams;
+                if (!openStreams.isEmpty()) {
+                    openCamerasStream();
+                }
             }
         }
     }
@@ -300,7 +303,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     public void openCamerasStream() {
         if (urls.getMjpegUri().equals("ffmpeg")) {
-            ffmpegMjpeg.startConverting();
+            FFMPEG.run(ffmpegMjpeg, FFMPEG::startConverting);
         }
     }
 

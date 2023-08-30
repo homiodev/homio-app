@@ -1,5 +1,28 @@
 package org.homio.app.rest;
 
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static org.apache.commons.lang3.StringUtils.defaultString;
+import static org.homio.api.ui.field.selection.UIFieldTreeNodeSelection.LOCAL_FS;
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+import static org.homio.app.model.entity.user.UserBaseEntity.FILE_MANAGER_RESOURCE_AUTHORIZE;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.CopyOption;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -22,25 +45,14 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.CopyOption;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static org.apache.commons.lang3.StringUtils.defaultString;
-import static org.homio.api.ui.field.selection.UIFieldTreeNodeSelection.LOCAL_FS;
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-import static org.homio.app.model.entity.user.UserBaseEntity.FILE_MANAGER_RESOURCE_AUTHORIZE;
 
 @RestController
 @RequestMapping("/rest/fs")
@@ -90,10 +102,12 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
             for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
                 if (selectedNode.fs.equals(fileSystem.getEntityID())) {
                     FileSystemProvider fileSystemProvider = fileSystem.getFileSystem(entityContext);
-                    Set<TreeNode> treeNodes = fileSystemProvider.loadTreeUpToChild(request.getRootPath(), selectedNode.id);
-                    if (treeNodes != null) {
-                        configuration.setChildren(treeNodes);
-                    }
+                    try {
+                        Set<TreeNode> treeNodes = fileSystemProvider.loadTreeUpToChild(request.getRootPath(), selectedNode.id);
+                        if (treeNodes != null) {
+                            configuration.setChildren(treeNodes);
+                        }
+                    } catch (Exception ignore) {} // case when input selectedNode.id is invalid
                 }
             }
             configurations.add(configuration);

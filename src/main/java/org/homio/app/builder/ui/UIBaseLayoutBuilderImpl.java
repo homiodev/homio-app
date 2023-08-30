@@ -3,7 +3,7 @@ package org.homio.app.builder.ui;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import org.homio.api.model.Icon;
-import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.UIEntityBuilder;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.item.*;

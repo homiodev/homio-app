@@ -2,7 +2,7 @@ package org.homio.app.builder.ui.layout;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.UIEntityBuilder;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;

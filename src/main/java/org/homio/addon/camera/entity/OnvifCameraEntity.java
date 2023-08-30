@@ -22,7 +22,6 @@ import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.ui.UI.Color;
-import org.homio.api.ui.action.DynamicOptionLoader;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;
@@ -33,7 +32,8 @@ import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIEntityItemBuilder;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.color.UIFieldColorStatusMatch;
-import org.homio.api.ui.field.selection.UIFieldSelection;
+import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
+import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.api.util.SecureString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -49,7 +49,7 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         implements HasDynamicContextMenuActions, VideoPlaybackStorage, HasEntityLog {
 
     @UIField(order = 20)
-    @UIFieldSelection(SelectCameraBrand.class)
+    @UIFieldDynamicSelection(SelectCameraBrand.class)
     @UIFieldGroup("GENERAL")
     public String getCameraType() {
         return getJsonData("cameraType", CameraBrandHandlerDescription.DEFAULT_BRAND.getID());

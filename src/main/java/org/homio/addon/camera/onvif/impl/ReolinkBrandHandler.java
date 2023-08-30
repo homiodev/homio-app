@@ -27,8 +27,8 @@ import org.homio.api.exception.ServerException;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.state.*;
-import org.homio.api.ui.action.DynamicOptionLoader;
-import org.homio.api.ui.field.selection.UIFieldSelection;
+import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
+import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.JsonUtils;
 import org.homio.hquery.Curl;
@@ -453,7 +453,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @UIVideoEndpointAction(ENDPOINT_STREAM_MAIN_RESOLUTION)
     @UIVideoActionMetadata(subGroup = "VIDEO.mainStream", subGroupIcon = "fas fa-dice-six")
-    @UIFieldSelection(value = SelectResolution.class, staticParameters = {"mainStream"})
+    @UIFieldDynamicSelection(value = SelectResolution.class, staticParameters = {"mainStream"})
     public void setStreamMainResolution(String value) {
         setSetting(ENDPOINT_STREAM_MAIN_RESOLUTION, enc -> enc.set(value, "mainStream/size"));
     }
@@ -466,7 +466,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @UIVideoEndpointAction(value = ENDPOINT_STREAM_MAIN_BITRATE)
     @UIVideoActionMetadata(subGroup = "VIDEO.mainStream", subGroupIcon = "fas fa-dice-six")
-    @UIFieldSelection(value = SelectStreamValue.class, staticParameters = {"mainStream", "bitRate"})
+    @UIFieldDynamicSelection(value = SelectStreamValue.class, staticParameters = {"mainStream", "bitRate"})
     public void setStreamMainBitRate(String value) {
         setSetting(ENDPOINT_STREAM_MAIN_BITRATE, enc -> enc.set(value, "mainStream/bitRate"));
     }
@@ -479,7 +479,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @UIVideoEndpointAction(ENDPOINT_STREAM_MAIN_FRAMERATE)
     @UIVideoActionMetadata(subGroup = "VIDEO.mainStream", subGroupIcon = "fas fa-dice-six")
-    @UIFieldSelection(value = SelectStreamValue.class, staticParameters = {"mainStream", "frameRate"})
+    @UIFieldDynamicSelection(value = SelectStreamValue.class, staticParameters = {"mainStream", "frameRate"})
     public void setStreamMainFrameRate(String value) {
         setSetting(ENDPOINT_STREAM_MAIN_FRAMERATE, enc -> enc.set(value, "mainStream/frameRate"));
     }
@@ -492,7 +492,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @UIVideoEndpointAction(ENDPOINT_STREAM_MAIN_H264_PROFILE)
     @UIVideoActionMetadata(subGroup = "VIDEO.mainStream", subGroupIcon = "fas fa-dice-six")
-    @UIFieldSelection(value = SelectStreamValue.class, staticParameters = {"mainStream", "profile"})
+    @UIFieldDynamicSelection(value = SelectStreamValue.class, staticParameters = {"mainStream", "profile"})
     public void setStreamMainH264Profile(String value) {
         setSetting(ENDPOINT_STREAM_MAIN_H264_PROFILE, enc -> enc.set(value, "mainStream/profile"));
     }
@@ -505,7 +505,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @UIVideoEndpointAction(ENDPOINT_STREAM_SECONDARY_RESOLUTION)
     @UIVideoActionMetadata(subGroup = "VIDEO.subStream", subGroupIcon = "fas fa-dice-six")
-    @UIFieldSelection(value = SelectResolution.class, staticParameters = {"subStream"})
+    @UIFieldDynamicSelection(value = SelectResolution.class, staticParameters = {"subStream"})
     public void setStreamSecondaryResolution(String value) {
         setSetting(ENDPOINT_STREAM_SECONDARY_RESOLUTION, enc -> enc.set(value, "subStream/size"));
     }
@@ -518,7 +518,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @UIVideoEndpointAction(ENDPOINT_STREAM_SECONDARY_BITRATE)
     @UIVideoActionMetadata(subGroup = "VIDEO.subStream", subGroupIcon = "fas fa-dice-six")
-    @UIFieldSelection(value = SelectStreamValue.class, staticParameters = {"subStream", "bitRate"})
+    @UIFieldDynamicSelection(value = SelectStreamValue.class, staticParameters = {"subStream", "bitRate"})
     public void setStreamSecondaryBitRate(String value) {
         setSetting(ENDPOINT_STREAM_SECONDARY_BITRATE, enc -> enc.set(value, "subStream/bitRate"));
     }
@@ -531,7 +531,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @UIVideoEndpointAction(ENDPOINT_STREAM_SECONDARY_FRAMERATE)
     @UIVideoActionMetadata(subGroup = "VIDEO.subStream", subGroupIcon = "fas fa-dice-six")
-    @UIFieldSelection(value = SelectStreamValue.class, staticParameters = {"subStream", "frameRate"})
+    @UIFieldDynamicSelection(value = SelectStreamValue.class, staticParameters = {"subStream", "frameRate"})
     public void setStreamSecondaryFrameRate(String value) {
         setSetting(ENDPOINT_STREAM_SECONDARY_FRAMERATE, enc -> enc.set(value, "subStream/frameRate"));
     }
@@ -544,7 +544,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @UIVideoEndpointAction(value = ENDPOINT_STREAM_SECONDARY_H264_PROFILE)
     @UIVideoActionMetadata(subGroup = "VIDEO.subStream", subGroupIcon = "fas fa-dice-six")
-    @UIFieldSelection(value = SelectStreamValue.class, staticParameters = {"subStream", "profile"})
+    @UIFieldDynamicSelection(value = SelectStreamValue.class, staticParameters = {"subStream", "profile"})
     public void setStreamSecondaryH264Profile(String value) {
         setSetting(ENDPOINT_STREAM_SECONDARY_H264_PROFILE, isp -> isp.set(value, "subStream/profile"));
     }

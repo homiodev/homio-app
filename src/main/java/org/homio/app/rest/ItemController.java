@@ -905,7 +905,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     public static class GetOptionsRequest {
 
         private String fieldFetchType;
-        private String[] selectType;
+        private String selectType;
         private String param0; // for lazy loading
         private Map<String, String> deps;
     }
