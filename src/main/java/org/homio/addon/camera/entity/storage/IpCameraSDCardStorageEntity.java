@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("unused")
-@UISidebarChildren(icon = "rest/addon/image/camera/memory-card.png", color = "#AACC00")
+@UISidebarChildren(icon = "app/client/assets/items/camera/memory-card.png", color = "#AACC00")
 public class IpCameraSDCardStorageEntity extends VideoBaseStorageService<IpCameraSDCardStorageEntity> {
 
     @Override

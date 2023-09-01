@@ -13,6 +13,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.Getter;
@@ -141,8 +142,22 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     }
 
     private void startLocalProcess() {
+        EntityContextBGP.cancel(processContext);
+
+        // not need internet because we should fail create service if no internet
+        if (!mediamtxGitHub.isLocalProjectInstalled()) {
+            mediamtxGitHub.installLatestRelease(entityContext);
+            mediamtxGitHub.backup(Paths.get("mediamtx.yml"), Paths.get("mediamtx_initial.yml"));
+        }
+
         String processStr = mediamtxGitHub.getLocalProjectPath().resolve("mediamtx")
             + " " + mediamtxGitHub.getLocalProjectPath().resolve("mediamtx.yml");
+
+        processContext = entityContext.bgp().processBuilder(getEntityID())
+                                      .attachLogger(log)
+                                      .attachEntityStatus(entity)
+                                      .execute(processStr);
+
         AtomicReference<String> errorRef = new AtomicReference<>();
         this.processContext = entityContext
             .bgp().processBuilder(getEntityID())
@@ -155,14 +170,8 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
                         ex = new ServerException("Exit with code: " + responseCode);
                     }
                 }
-                if (ex != null) {
-                    log.error("Error while start mediamtx {}", getErrorMessage(ex));
-                } else {
-                    log.warn("mediamtx finished with status: {}", responseCode);
-                }
                 dispose(ex);
             })
-            .setErrorLoggerOutput(message -> logService(message, Level.ERROR))
             .setInputLoggerOutput(msg -> {
                 Level level = Level.INFO;
                 if (msg.contains("WAR")) {

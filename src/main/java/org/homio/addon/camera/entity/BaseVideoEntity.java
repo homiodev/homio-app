@@ -6,6 +6,7 @@ import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
 import static org.homio.api.EntityContextSetting.SERVER_PORT;
+import static org.homio.api.model.OptionModel.of;
 import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -18,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import lombok.SneakyThrows;
@@ -37,6 +39,7 @@ import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.FileContentType;
 import org.homio.api.model.FileModel;
+import org.homio.api.model.OptionModel;
 import org.homio.api.model.device.ConfigDeviceDefinition;
 import org.homio.api.model.device.ConfigDeviceDefinitionService;
 import org.homio.api.model.endpoint.DeviceEndpoint;
@@ -60,7 +63,6 @@ import org.homio.api.ui.field.image.UIFieldImage;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.SecureString;
 import org.homio.api.workspace.WorkspaceBlock;
-import org.homio.app.video.ffmpeg.FFMPEGImpl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -83,8 +85,11 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     @UIFieldGroup("GENERAL")
     public String getRunningCommands() {
         List<String> commands = new ArrayList<>();
-        if (FFMPEG.check(getService().getFfmpegHLS(), FFMPEG::isRunning, false)) {
-            commands.add(RUN_CMD.formatted("#57A4D1", "#57A4D1", "HLS"));
+        for (Entry<String, FFMPEG> entry : getService().getFfmpegHLSStreams().entrySet()) {
+            if (entry.getValue().isRunning()) {
+                commands.add(RUN_CMD.formatted("#57A4D1",
+                    entry.getValue().getIsAlive() ? "#57A4D1" : "#9C9C9C", "HLS[%s]".formatted(entry.getKey())));
+            }
         }
         if (FFMPEG.check(getService().getFfmpegSnapshot(), FFMPEG::isRunning, false)) {
             commands.add(RUN_CMD.formatted("#A2D154", "#A2D154", "SNAPSHOT"));
@@ -364,8 +369,8 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         setJsonData("sr", value);
     }
 
-    public Set<String> getVideoSources() {
-        return Set.of("autofps.mjpeg", "snapshots.mjpeg", "ipcamera.mjpeg", "HLS");
+    public List<OptionModel> getVideoSources() {
+        return List.of(of("HLS"), of("MJPEG"), of("autofps.mjpeg"), of("autofps.mjpeg")));
     }
 
     public String getUrl(String path) {

@@ -48,7 +48,7 @@ import org.apache.logging.log4j.Level;
 import org.homio.addon.camera.CameraController.OpenStreamsContainer;
 import org.homio.addon.camera.ConfigurationException;
 import org.homio.addon.camera.OpenStreams;
-import org.homio.addon.camera.entity.AbilityToStreamHLSOverFFMPEG;
+import org.homio.addon.camera.entity.StreamHLSOverFFMPEG;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.addon.camera.entity.VideoActionsContext;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
@@ -128,7 +128,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     protected byte[] latestSnapshot = new byte[0];
     protected @Getter boolean motionDetected;
 
-    protected @Getter @Nullable FFMPEG ffmpegHLS;
+    private final @Getter Map<String, FFMPEG> ffmpegHLSStreams = new ConcurrentHashMap<>();
     protected @Getter @Nullable FFMPEG ffmpegSnapshot;
     protected @Getter @Nullable FFMPEG ffmpegMjpeg;
 
@@ -347,24 +347,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         return getFFMPEGInputOptions(null);
     }
 
-    //@UIVideoAction(name = CHANNEL_START_STREAM, icon = "fas fa-expand-arrows-alt")
-    public void startStream(boolean on) {
-        FFMPEG localHLS;
-        // this.ffmpegHLSStarted = on;
-        if (on) {
-            localHLS = ffmpegHLS;
-            FFMPEG.run(localHLS, ffmpeg -> {
-                ffmpeg.setKeepAlive(-1);// Now will run till manually stopped.
-                if (ffmpeg.startConverting()) {
-                    setAttribute(CHANNEL_START_STREAM, OnOffType.ON);
-                }
-            });
-        } else {
-            // Still runs but will be able to auto stop when the HLS stream is no longer used.
-            FFMPEG.run(ffmpegHLS, ffmpeg -> ffmpeg.setKeepAlive(1));
-        }
-    }
-
     @UIVideoActionGetter(ENDPOINT_AUDIO_THRESHOLD)
     public DecimalType getAudioAlarmThreshold() {
         return new DecimalType(entity.getAudioThreshold());
@@ -579,7 +561,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             snapshotJob = null;
         }
 
-        FFMPEG.run(ffmpegHLS, FFMPEG::stopConverting);
+        ffmpegHLSStreams.values().forEach(FFMPEG::stopConverting);
         FFMPEG.run(ffmpegMjpeg, FFMPEG::stopConverting);
         FFMPEG.run(ffmpegSnapshot, FFMPEG::stopConverting);
 
@@ -619,7 +601,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     private String buildHlsOptions() {
-        AbilityToStreamHLSOverFFMPEG hlsOptions = (AbilityToStreamHLSOverFFMPEG) getEntity();
+        StreamHLSOverFFMPEG hlsOptions = (StreamHLSOverFFMPEG) getEntity();
         List<String> options = new ArrayList<>();
         // To force a keyframe every 2 seconds you can specify the GOP size using -g:
         // Where 29.97 fps * 2s ~= 60 frames, meaning a keyframe each 60 frames.
@@ -643,8 +625,8 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     protected void pollCameraRunnable() {
-        FFMPEG.run(ffmpegHLS, FFMPEG::stopProcessIfNoKeepAlive);
-        FFMPEG.run(ffmpegMjpeg, FFMPEG::restartIfRequire);
+        ffmpegHLSStreams.values().forEach(FFMPEG::stopProcessIfNoKeepAlive);
+        FFMPEG.run(ffmpegMjpeg, FFMPEG::stopProcessIfNoKeepAlive);
         if (snapshotJob == null) {
             checkCameraConnection();
         }
@@ -721,7 +703,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     void recreateFFmpeg() {
         FFMPEG.run(ffmpegMjpeg, FFMPEG::stopConverting);
         FFMPEG.run(ffmpegSnapshot, FFMPEG::stopConverting);
-        FFMPEG.run(ffmpegHLS, FFMPEG::stopConverting);
+        ffmpegHLSStreams.values().forEach(FFMPEG::stopConverting);
 
         this.snapshotInputOptions = getFFMPEGInputOptions() + " -threads 1 -y -skip_frame nokey -hide_banner -an";
         this.mp4OutOptions = String.join(" ", entity.getMp4OutOptions());
@@ -741,14 +723,13 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             entity.getUser(), entity.getPassword().asString(), null);
         setAttribute("FFMPEG_SNAPSHOT", new StringType(String.join(" ", ffmpegSnapshot.getCommandArrayList())));
 
-        if (entity instanceof AbilityToStreamHLSOverFFMPEG hlsOverFFMPEG) {
+        if (entity instanceof StreamHLSOverFFMPEG hlsOverFFMPEG) {
             ffmpegHLS = entityContext.media().buildFFMPEG(entityID, "FFMPEG HLS", this, FFMPEGFormat.HLS,
                 "-hide_banner " + getFFMPEGInputOptions(),
                 StringUtils.defaultString(hlsOverFFMPEG.getHlsRtspUri(), rtspUri),
                 buildHlsOptions(), getFfmpegHLSOutputPath().resolve("ipcamera.m3u8").toString(),
                 entity.getUser(), entity.getPassword().asString(),
                 () -> setAttribute(CHANNEL_START_STREAM, OnOffType.OFF));
-            setAttribute("FFMPEG_HLS", new StringType(String.join(" ", ffmpegHLS.getCommandArrayList())));
         }
     }
 

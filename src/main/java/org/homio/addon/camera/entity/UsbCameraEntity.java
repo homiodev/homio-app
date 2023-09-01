@@ -19,7 +19,7 @@ import org.homio.api.ui.field.UIFieldPort;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIContextMenuAction;
-import org.homio.api.ui.field.selection.UIFieldSelectValueOnEmpty;
+import org.homio.api.ui.field.selection.UIFieldSelectConfig;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.jetbrains.annotations.NotNull;
@@ -28,12 +28,12 @@ import org.jetbrains.annotations.Nullable;
 @SuppressWarnings("unused")
 @Entity
 public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraService>
-        implements AbilityToStreamHLSOverFFMPEG<UsbCameraEntity> {
+        implements StreamHLSOverFFMPEG<UsbCameraEntity> {
 
     @Override
-    @UIField(order = 1, label = "usbSource", type = UIFieldType.TextSelectBoxDynamic)
-    @UIFieldDynamicSelection(SelectVideoSource.class)
-    @UIFieldSelectValueOnEmpty(label = "SELECTION.VIDEO_SOURCE")
+    @UIField(order = 1, label = "usbSource")
+    @UIFieldSelectConfig(selectOnEmptyLabel = "SELECTION.VIDEO_SOURCE")
+    @UIFieldDynamicSelection(value = SelectVideoSource.class, rawInput = true)
     @UIFieldGroup("GENERAL")
     public String getIeeeAddress() {
         return super.getIeeeAddress();
@@ -45,9 +45,9 @@ public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraS
         return super.isHasAudioStream();
     }
 
-    @UIField(order = 2, type = UIFieldType.TextSelectBoxDynamic)
-    @UIFieldDynamicSelection(SelectAudioSource.class)
-    @UIFieldSelectValueOnEmpty(label = "SELECTION.AUDIO_SOURCE")
+    @UIField(order = 2)
+    @UIFieldSelectConfig(selectOnEmptyLabel = "SELECTION.AUDIO_SOURCE")
+    @UIFieldDynamicSelection(value = SelectAudioSource.class, rawInput = true)
     @UIFieldGroup("GENERAL")
     public String getAudioSource() {
         return getJsonData("asource");

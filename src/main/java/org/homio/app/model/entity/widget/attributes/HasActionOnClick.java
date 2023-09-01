@@ -7,15 +7,11 @@ import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.selection.UIFieldBeanSelection;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
-import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
-import org.homio.app.model.entity.widget.SelectSetStatusValueDynamicOptionLoader;
 
 public interface HasActionOnClick extends HasJsonData {
 
     @UIField(order = 1, label = "widget.pushValueDataSource")
-    @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
-    @UIFieldDynamicSelection(SelectSetStatusValueDynamicOptionLoader.class)
     @UIFieldGroup(value = "ACTION_ON_CLICK", order = 25, borderColor = "#71B12B")
     default String getSetValueDataSource() {
         return getJsonData("svds");

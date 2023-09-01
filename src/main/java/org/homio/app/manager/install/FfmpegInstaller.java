@@ -1,5 +1,11 @@
 package org.homio.app.manager.install;
 
+import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
+import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
+import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextHardware;
@@ -9,18 +15,12 @@ import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
-import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
-import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
-
 @Log4j2
 public class FfmpegInstaller extends DependencyExecutableInstaller {
 
     public FfmpegInstaller(EntityContext entityContext) {
         super(entityContext);
+        executable = FFMPEG_LOCATION;
     }
 
     @Override
@@ -49,7 +49,7 @@ public class FfmpegInstaller extends DependencyExecutableInstaller {
     }
 
     @Override
-    protected @Nullable Path installDependencyInternal(@NotNull ProgressBar progressBar, String version) {
+    protected void installDependencyInternal(@NotNull ProgressBar progressBar, String version) {
         if (IS_OS_LINUX) {
             EntityContextHardware hardware = entityContext.hardware();
             if (!hardware.isSoftwareInstalled("ffmpeg")) {
@@ -64,6 +64,5 @@ public class FfmpegInstaller extends DependencyExecutableInstaller {
                         log.info("FFMPEG: {}", message);
                     });
         }
-        return Path.of(FFMPEG_LOCATION);
     }
 }

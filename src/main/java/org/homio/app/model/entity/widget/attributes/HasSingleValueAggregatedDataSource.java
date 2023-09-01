@@ -14,8 +14,6 @@ import org.homio.app.model.entity.widget.UIFieldTimeSlider;
 public interface HasSingleValueAggregatedDataSource extends HasSingleValueDataSource {
 
     @UIField(order = 10, required = true)
-    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
-    @UIFieldBeanSelection(value = HasAggregateValueFromSeries.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIFieldEntityByClassSelection(HasAggregateValueFromSeries.class)
     @UIFieldGroup(value = "VALUE", order = 10)

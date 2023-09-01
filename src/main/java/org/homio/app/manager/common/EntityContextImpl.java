@@ -534,11 +534,6 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
-    public void registerResource(String resource) {
-        UserBaseEntity.registerResource(resource);
-    }
-
-    @Override
     public <T> @NotNull List<Class<? extends T>> getClassesWithAnnotation(
             @NotNull Class<? extends Annotation> annotation) {
         return classFinder.getClassesWithAnnotation(annotation);

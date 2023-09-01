@@ -11,11 +11,12 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.reflect.MethodUtils;
-import org.homio.addon.mqtt.entity.MQTTBaseEntity;
+import org.homio.addon.mqtt.entity.MQTTClientEntity;
 import org.homio.api.EntityContextService;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.service.EntityService.ServiceInstance;
 import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.model.entity.user.UserBaseEntity;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -30,10 +31,6 @@ public class EntityContextServiceImpl implements EntityContextService {
 
     public static final Map<String, Class<? extends HasEntityIdentifier>> entitySelectMap = new ConcurrentHashMap<>();
     private static final Map<String, ServiceInstance> entityToService = new ConcurrentHashMap<>();
-
-    static {
-        entitySelectMap.put(EntityContextService.MQTT_SERVICE, MQTTBaseEntity.class);
-    }
 
     @Getter
     private final EntityContextImpl entityContext;
@@ -56,6 +53,11 @@ public class EntityContextServiceImpl implements EntityContextService {
             throw new IllegalArgumentException("Entity type: '" + type + "' already registered");
         }
         entitySelectMap.put(type, entityClass);
+    }
+
+    @Override
+    public void registerUserRoleResource(String resource) {
+        UserBaseEntity.registerResource(resource);
     }
 
     @Override

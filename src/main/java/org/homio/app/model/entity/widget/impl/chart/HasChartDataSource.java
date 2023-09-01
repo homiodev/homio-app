@@ -24,7 +24,6 @@ public interface HasChartDataSource extends HasJsonData {
 
     @UIField(order = 1)
     @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
-    @UIFieldBeanSelection(value = HasTimeValueSeries.class, lazyLoading = true)
     @UIFieldGroup(order = 50, value = "CHART", borderColor = "#9C27B0")
     @UIEditReloadWidget
     default String getChartDataSource() {

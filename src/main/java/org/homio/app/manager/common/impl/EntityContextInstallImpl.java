@@ -11,7 +11,6 @@ import org.homio.api.EntityContext;
 import org.homio.api.EntityContextInstall;
 import org.homio.api.service.DependencyExecutableInstaller;
 import org.homio.app.manager.install.FfmpegInstaller;
-import org.homio.app.manager.install.MosquittoInstaller;
 import org.homio.app.manager.install.NodeJsInstaller;
 import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
@@ -26,24 +25,15 @@ public class EntityContextInstallImpl implements EntityContextInstall {
     @SneakyThrows
     public EntityContextInstallImpl(EntityContext entityContext) {
         this.entityContext = entityContext;
-        ffmpeg().requireAsync(null, installed -> {
+        createContext(FfmpegInstaller.class).requireAsync(null, installed -> {
             if (installed) {log.info("FFPMEG service successfully installed");}
+            cache.remove(FfmpegInstaller.class);
         });
     }
 
     @Override
     public @NotNull InstallContext nodejs() {
         return createContext(NodeJsInstaller.class);
-    }
-
-    @Override
-    public @NotNull InstallContext mosquitto() {
-        return createContext(MosquittoInstaller.class);
-    }
-
-    @Override
-    public @NotNull InstallContext ffmpeg() {
-        return createContext(FfmpegInstaller.class);
     }
 
     private <T extends DependencyExecutableInstaller> InstallContext createContext(Class<T> installerClass) {

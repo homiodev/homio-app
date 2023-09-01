@@ -16,7 +16,6 @@ import java.util.List;
 public interface HasToggle extends HasSingleValueDataSource, HasSetSingleValueDataSource {
 
     @UIField(order = 12, required = true)
-    @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
     default String getSetValueDataSource() {
         return HasSetSingleValueDataSource.super.getSetValueDataSource();

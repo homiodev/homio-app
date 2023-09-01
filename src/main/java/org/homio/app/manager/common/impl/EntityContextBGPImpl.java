@@ -46,7 +46,9 @@ import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
+import org.apache.logging.log4j.Logger;
 import org.homio.api.EntityContextBGP;
+import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.service.EntityService.WatchdogService;
@@ -407,6 +409,18 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             @Override
             public @NotNull ProcessBuilder onFinished(@NotNull ThrowingBiConsumer<@Nullable Exception, @NotNull Integer, Exception> finishHandler) {
                 processContext.finishHandler = finishHandler;
+                return this;
+            }
+
+            @Override
+            public @NotNull ProcessBuilder attachLogger(@NotNull Logger log) {
+                processContext.logger = log;
+                return this;
+            }
+
+            @Override
+            public @NotNull ProcessBuilder attachEntityStatus(@NotNull HasStatusAndMsg entity) {
+                processContext.entity = entity;
                 return this;
             }
 
@@ -828,6 +842,8 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         public ThreadContext<Void> threadContext;
         public Consumer<String> inputConsumer;
         public Consumer<String> errorConsumer;
+        public @Nullable Logger logger;
+        public @Nullable HasStatusAndMsg entity;
         private String name;
         private StreamGobbler streamGobbler;
 
@@ -842,7 +858,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             cancelProcess(sendSignal, false);
         }
 
-        private void cancelProcess(boolean sendSignal, boolean shutdownHook) throws InterruptedException, IOException {
+        private void cancelProcess(boolean sendSignal, boolean shutdownHook) {
             if (process != null) {
                 if (sendSignal) {
                     stopProcess(process, name);
@@ -856,36 +872,55 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         }
 
         public void run(@NotNull String command) throws Exception {
-            log.info("[{}]: Starting process command: '{}'", name, command);
+            getLogger().info("[{}]: Starting process command: '{}'", name, command);
             process = Runtime.getRuntime().exec(command);
             executeOnExitImpl(() -> cancelProcess(true, true));
+            if (entity != null) {
+                entity.setStatusOnline();
+            }
             if (startedHandler != null) {
                 try {
                     startedHandler.accept(this);
                 } catch (Exception ex) {
-                    log.error("[{}]: Error during run process start handler. Err: {}", name, CommonUtils.getErrorMessage(ex));
+                    getLogger().error("[{}]: Error during run process start handler. Err: {}", name, CommonUtils.getErrorMessage(ex));
                     throw ex;
                 }
             }
 
-            if (errorConsumer != null || inputConsumer != null) {
+            if (errorConsumer != null || inputConsumer != null || logger != null) {
                 if (errorConsumer == null) {
-                    errorConsumer = s -> {
-                    };
+                    if (logger != null) {
+                        errorConsumer = msg -> {
+                            logger.error("[{}]: {}", name, msg);
+                        };
+                    } else {
+                        errorConsumer = msg -> {
+                        };
+                    }
                 }
                 if (inputConsumer == null) {
-                    inputConsumer = s -> {
-                    };
+                    if (logger != null) {
+                        inputConsumer = msg -> {
+                            logger.info("[{}]: {}", name, msg);
+                        };
+                    } else {
+                        inputConsumer = msg -> {
+                        };
+                    }
                 }
                 streamGobbler = new StreamGobbler(name, inputConsumer, errorConsumer);
                 streamGobbler.stream(process);
             }
 
-            log.info("[{}]: wait process to finish.", name);
+            getLogger().info("[{}]: wait process to finish.", name);
             sleep(1000);
             int responseCode = process.waitFor();
             sleep(1000);
             executeFinishHandler(null, responseCode);
+        }
+
+        private @NotNull Logger getLogger() {
+            return logger == null ? log : logger;
         }
 
         public void onError(Exception ex) {
@@ -894,15 +929,16 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
         private void executeFinishHandler(Exception ex, int exitCode) {
             if (ex != null) {
-                log.error("Process '{}' finished with error StatusCode: {}. Err: {}", name, exitCode, CommonUtils.getErrorMessage(ex));
+                getLogger().error("[{}]: Process finished with status: '{}' and error: '{}'", name, exitCode, CommonUtils.getErrorMessage(ex));
             } else {
-                log.info("Process '{}' finished with StatusCode: {}", name, exitCode);
+                getLogger().info("[{}]: Process finished with status: {}", name, exitCode);
             }
+
             if (finishHandler != null) {
                 try {
                     finishHandler.accept(ex, exitCode);
                 } catch (Exception fex) {
-                    log.error("Error occurred during finish process: {}", name, fex);
+                    getLogger().error("[{}]: Error occurred during finish process", name, fex);
                 }
             }
             if (streamGobbler != null) {

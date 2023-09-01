@@ -92,7 +92,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 2)
-    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIFieldGroup("COLORS")
     @UIEditReloadWidget
@@ -108,7 +107,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 3)
-    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIFieldGroup("COLORS")
     public String getColorSetValueDataSource() {
@@ -144,7 +142,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 1)
-    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIFieldGroup(value = "BRIGHTNESS", order = 20, borderColor = "#307FCF")
     @UIEditReloadWidget
@@ -160,7 +157,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 2)
-    @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
     @UIFieldGroup("BRIGHTNESS")
     public String getBrightnessSetValueDataSource() {
@@ -203,7 +199,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 1)
-    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIFieldGroup(value = "COLOR_TEMPERATURE", order = 25, borderColor = "#29B3B1")
     @UIEditReloadWidget
@@ -219,7 +214,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 2)
-    @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
     @UIFieldGroup("COLOR_TEMPERATURE")
     public String getColorTemperatureSetValueDataSource() {
@@ -252,7 +246,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
 
     @UIField(order = 1)
     @UIFieldGroup(value = "ON_OFF", order = 30, borderColor = "#009688")
-    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIEditReloadWidget
     public String getOnOffValueDataSource() {
@@ -268,7 +261,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
 
     @UIField(order = 1)
     @UIFieldGroup("ON_OFF")
-    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     public String getOnOffSetValueDataSource() {
         return getJsonData("onOffSet");

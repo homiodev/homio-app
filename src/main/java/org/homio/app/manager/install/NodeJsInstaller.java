@@ -33,14 +33,16 @@ public class NodeJsInstaller extends DependencyExecutableInstaller {
         if (IS_OS_WINDOWS) {
             Path targetPath = CommonUtils.getInstallPath().resolve("nodejs").resolve("node.exe");
             if (Files.isRegularFile(targetPath)) {
+                executable = targetPath.toString();
                 return hardware.executeNoErrorThrow(targetPath + " -v", 60, null);
             }
         }
+        executable = "node";
         return hardware.executeNoErrorThrow("node -v", 60, null);
     }
 
     @Override
-    protected @Nullable Path installDependencyInternal(@NotNull ProgressBar progressBar, String version) {
+    protected void installDependencyInternal(@NotNull ProgressBar progressBar, String version) {
         if (IS_OS_LINUX) {
             EntityContextHardware hardware = entityContext.hardware();
             hardware.execute("curl -fsSL https://deb.nodesource.com/setup_current.x | sudo -E bash -");
@@ -53,8 +55,6 @@ public class NodeJsInstaller extends DependencyExecutableInstaller {
                         progressBar.progress(progress, message);
                         log.info("NodeJS: {}", message);
                     });
-            return CommonUtils.getInstallPath().resolve("nodejs").resolve("node.exe");
         }
-        return null;
     }
 }

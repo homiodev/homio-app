@@ -86,7 +86,7 @@ public class SshCloudEntity extends IdentityEntity implements
     }
 
     @UIField(order = 2, required = true)
-    @UIFieldBeanSelection(value = CloudProviderService.class, lazyLoading = true)
+    @UIFieldBeanSelection(CloudProviderService.class)
     @UIFieldGroup("SSH")
     public String getProvider() {
         return getJsonData("prv");

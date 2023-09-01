@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -58,6 +59,9 @@ public class CameraController {
     private final EntityContext entityContext;
     public static final Map<String, OpenStreamsContainer> camerasOpenStreams = new ConcurrentHashMap<>();
 
+    /**
+     * Consume mjpeg from ffmpeg. See ffmpegMjpeg
+     */
     @SneakyThrows
     @PostMapping("/{entityID}/ipcamera.jpg")
     public void postIpCamera(@PathVariable("entityID") String entityID, HttpServletRequest req) {
@@ -67,6 +71,9 @@ public class CameraController {
         snapshotData.close();
     }
 
+    /**
+     * Consume camera image snapshot
+     */
     @SneakyThrows
     @PostMapping("/{entityID}/snapshot.jpg")
     public void postSnapshot(@PathVariable("entityID") String entityID, HttpServletRequest req) {
@@ -87,34 +94,39 @@ public class CameraController {
     @GetMapping("/{entityID}/ipcamera.m3u8")
     public String getIpCameraM3U8(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
         BaseVideoEntity<?, ?> entity = getEntity(entityID);
-        BaseVideoService<?, ?> service = entity.getService();
+        List<String> resolutions = entity.getStreamResolutions();
+        if (resolutions.isEmpty()) {
+            BaseVideoService<?, ?> service = entity.getService();
+            FFMPEG ffmpeg = service.getFfmpegHLS();
+            if (ffmpeg == null) {
+                throw NotFoundException.fileNotFound(Paths.get("hls.m3u8"));
+            }
+            resp.setContentType("application/x-mpegURL");
+            Path m3u8 = service.getFfmpegHLSOutputPath().resolve("hls.m3u8");
+            if (!ffmpeg.getIsAlive()) {
+                ffmpeg.stopConverting();
+                deleteFilesFromFolder(service.getFfmpegHLSOutputPath());
+                ffmpeg.startConverting();
+
+                int retry = 10;
+                while (retry-- > 0 && !Files.exists(m3u8)) {
+                    sleep(1000);
+                }
+                sendFile(resp, m3u8);
+            } else {
+                ffmpeg.setKeepAlive(8);
+                sendFile(resp, m3u8);
+            }
+        }
         StringBuilder file = new StringBuilder("#EXTM3U\n#EXT-X-VERSION:3\n");
-        for (String resolution : entity.getStreamResolutions()) {
+        for (String resolution : resolutions) {
             String[] wh = resolution.split("x");
             double bitRate = Integer.parseInt(wh[0]) * Integer.parseInt(wh[1]) / 20D * 30;
             int bandwidth = (int) (bitRate / 8);
-            file.append("#EXT-X-STREAM-INF:BANDWIDTH=%s,RESOLUTION=%s\nchunklist.%s.m3u8\n\n"
-                .formatted(bandwidth, resolution, resolution));
+            file.append("#EXT-X-STREAM-INF:BANDWIDTH=%s,RESOLUTION=%s\nrest/media/video/%s/hls.m3u8?bandwidth=%s\n\n"
+                .formatted(bandwidth, resolution, entityID, resolution));
         }
         return file.toString();
-
-        /*FFMPEG ffmpeg = Objects.requireNonNull(service.getFfmpegHLS());
-        resp.setContentType("application/x-mpegURL");
-        Path m3u8 = entity.getService().getFfmpegHLSOutputPath().resolve("ipcamera.m3u8");
-        if (!ffmpeg.getIsAlive()) {
-            ffmpeg.stopConverting();
-            deleteFilesFromFolder(entity.getService().getFfmpegHLSOutputPath());
-            ffmpeg.startConverting();
-
-            int retry = 10;
-            while (retry-- > 0 && !Files.exists(m3u8)) {
-                sleep(1000);
-            }
-            sendFile(resp, m3u8);
-        } else {
-            ffmpeg.setKeepAlive(8);
-            sendFile(resp, m3u8);
-        }*/
     }
 
     @SneakyThrows

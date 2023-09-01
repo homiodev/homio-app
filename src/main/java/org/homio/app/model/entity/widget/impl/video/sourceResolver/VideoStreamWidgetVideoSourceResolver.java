@@ -31,7 +31,7 @@ public class VideoStreamWidgetVideoSourceResolver implements WidgetVideoSourceRe
 
     private String getStreamUrl(String source, String entityID) {
         if (source.equals("HLS")) {
-            return getUrl("ipcamera.m3u8", entityID);
+            return getUrl("hls.m3u8", entityID);
         }
         return getUrl(source, entityID);
     }

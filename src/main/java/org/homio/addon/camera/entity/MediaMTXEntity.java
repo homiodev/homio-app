@@ -7,7 +7,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.service.MediaMTXService;
@@ -54,8 +53,6 @@ public final class MediaMTXEntity extends MediaEntity implements HasEntityLog,
             entity.setJsonData("dis_del", true);
             entityContext.save(entity);
         }
-        mediamtxGitHub.installLatestRelease(entityContext);
-        mediamtxGitHub.backup(Paths.get("mediamtx.yml"), Paths.get("mediamtx_initial.yml"));
     }
 
     @Override

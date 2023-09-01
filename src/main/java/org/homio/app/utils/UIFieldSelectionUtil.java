@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
@@ -34,6 +33,7 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.api.EntityContext;
@@ -44,14 +44,14 @@ import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.entity.widget.ability.SelectDataSourceDescription;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.HasEntityIdentifier;
+import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.ui.field.selection.UIFieldBeanSelection;
-import org.homio.api.ui.field.selection.UIFieldClassSelection;
+import org.homio.api.ui.field.selection.UIFieldBeanSelection.BeanSelectionCondition;
+import org.homio.api.ui.field.selection.UIFieldBeanSelection.UIFieldListBeanSelection;
 import org.homio.api.ui.field.selection.UIFieldDevicePortSelection;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.api.ui.field.selection.UIFieldEntityTypeSelection;
-import org.homio.api.ui.field.selection.UIFieldListBeanSelection;
-import org.homio.api.ui.field.selection.UIFieldSelectionCondition;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent;
 import org.homio.api.ui.field.selection.UIFieldStaticSelection;
 import org.homio.api.ui.field.selection.UIFieldTreeNodeSelection;
@@ -62,10 +62,8 @@ import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFie
 import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.Lang;
-import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.impl.EntityContextServiceImpl;
-import org.homio.app.model.rest.EntityUIMetaData;
 import org.jetbrains.annotations.NotNull;
 
 @Log4j2
@@ -146,20 +144,12 @@ public final class UIFieldSelectionUtil {
         List<OptionModel> selectOptions = new ArrayList<>();
 
         UIFieldListBeanSelection selectionList = uiFieldContext.getDeclaredAnnotation(UIFieldListBeanSelection.class);
-        var beanSelections = selectionList != null ? Arrays.asList(selectionList.value()) : uiFieldContext.getDeclaredAnnotationsByType(UIFieldBeanSelection.class);
+        var beanSelections =
+            selectionList != null ? Arrays.asList(selectionList.value()) : uiFieldContext.getDeclaredAnnotationsByType(UIFieldBeanSelection.class);
         if (!beanSelections.isEmpty()) {
-            boolean lazyLoading = beanSelections.stream().anyMatch(UIFieldBeanSelection::lazyLoading);
-            if (lazyLoading) {
-                ObjectNode meta = getSelectBoxList(jsonTypeMetadata);
-                meta.put("selectType", SelectHandler.bean.name());
-            } else {
-                buildSelectionsFromBean(beanSelections, entityContext, selectOptions);
-            }
+            ObjectNode meta = getSelectBoxList(jsonTypeMetadata);
+            meta.put("selectType", SelectHandler.bean.name());
         }
-
-        /*if (uiFieldContext.isAnnotationPresent(UIFieldEmptySelection.class)) {
-            meta.put("allowEmptySelection", true);
-        }*/
 
         if (uiFieldContext.isAnnotationPresent(UIFieldEntityByClassSelection.class)
             || uiFieldContext.isAnnotationPresent(UIFieldEntityByClassSelection.class)) {
@@ -170,16 +160,6 @@ public final class UIFieldSelectionUtil {
         if (uiFieldContext.isAnnotationPresent(UIFieldEntityTypeSelection.class)) {
             ObjectNode meta = getSelectBoxList(jsonTypeMetadata);
             meta.put("selectType", SelectHandler.entityByType.name());
-        }
-
-        UIFieldClassSelection classSelection = uiFieldContext.getDeclaredAnnotation(UIFieldClassSelection.class);
-        if (classSelection != null) {
-            if (classSelection.lazyLoading()) {
-                ObjectNode meta = getSelectBoxList(jsonTypeMetadata);
-                meta.put("selectType", SelectHandler.clazz.name());
-            } else {
-                selectOptions.addAll(getOptionsForClassSelection(entityContext, classSelection));
-            }
         }
 
         UIFieldStaticSelection staticSelection = uiFieldContext.getDeclaredAnnotation(UIFieldStaticSelection.class);
@@ -202,13 +182,11 @@ public final class UIFieldSelectionUtil {
         if (!selections.isEmpty()) {
             for (UIFieldDynamicSelection selection : selections) {
                 ObjectNode meta = getSelectBoxList(jsonTypeMetadata);
-                meta.put("lazyLoading", selection.lazyLoading());
                 meta.put("selectType", SelectHandler.simple.name());
-                meta.put("icon", selection.icon());
-                meta.put("iconColor", selection.iconColor());
+                meta.putPOJO("icon", evaluateIcon(selection.icon(), selection.iconColor(), jsonTypeMetadata));
                 if (selection.dependencyFields().length > 0) {
                     // TODO: not tested
-                    jsonTypeMetadata.set("depFields", OBJECT_MAPPER.valueToTree(selection.dependencyFields()));
+                    meta.set("depFields", OBJECT_MAPPER.valueToTree(selection.dependencyFields()));
                 }
             }
         }
@@ -217,16 +195,13 @@ public final class UIFieldSelectionUtil {
         if (devicePortSelection != null) {
             ObjectNode meta = getSelectBoxList(jsonTypeMetadata);
             meta.put("selectType", SelectHandler.port.name());
-            meta.put("icon", devicePortSelection.icon());
-            meta.put("iconColor", devicePortSelection.iconColor());
         }
 
         UIFieldTreeNodeSelection fileSelection = uiFieldContext.getDeclaredAnnotation(UIFieldTreeNodeSelection.class);
         if (fileSelection != null) {
             ObjectNode meta = getSelectBoxList(jsonTypeMetadata);
             meta.put("selectType", "file");
-            meta.put("icon", fileSelection.icon());
-            meta.put("iconColor", fileSelection.iconColor());
+            meta.putPOJO("icon", evaluateIcon(fileSelection.icon(), fileSelection.iconColor(), jsonTypeMetadata));
 
             ObjectNode parameters = OBJECT_MAPPER.createObjectNode();
             parameters.set("fileSystemIds", OBJECT_MAPPER.valueToTree(fileSelection.fileSystemIds()));
@@ -241,12 +216,17 @@ public final class UIFieldSelectionUtil {
         }
     }
 
-    @NotNull
-    private static List<OptionModel> getOptionsForClassSelection(EntityContext entityContext, UIFieldClassSelection uiFieldClassSelection) {
-        ClassFinder classFinder = entityContext.getBean(ClassFinder.class);
-        List<Class<?>> list = classFinder.getClassesWithParent((Class<Object>) uiFieldClassSelection.value());
-        Predicate<Class<?>> predicate = CommonUtils.newInstance(uiFieldClassSelection.filter());
-        return list.stream().filter(predicate).map(c -> OptionModel.of(c.getName(), c.getSimpleName())).collect(Collectors.toList());
+    private static Icon evaluateIcon(String icon, String color, ObjectNode jsonTypeMetadata) {
+        if(jsonTypeMetadata.has("selectConfig")) {
+            JsonNode iconNode = jsonTypeMetadata.get("selectConfig").get("icon");
+            if(StringUtils.isEmpty(icon)) {
+                icon = iconNode.asText();
+            }
+            if(StringUtils.isEmpty(color)) {
+                color = iconNode.asText();
+            }
+        }
+        return new Icon(icon, color);
     }
 
     private static List<OptionModel> loadOptions(AccessibleObject field, EntityContext entityContext, Class<?> targetClass, Object classEntity,
@@ -367,9 +347,9 @@ public final class UIFieldSelectionUtil {
             for (Map.Entry<String, ?> entry :
                 entityContext.getBeansOfTypeWithBeanName(selection.value()).entrySet()) {
                 Object bean = entry.getValue();
-                // filter if bean is UIFieldBeanAwareCondition and visible is false
-                if (bean instanceof UIFieldSelectionCondition) {
-                    if (!((UIFieldSelectionCondition) bean).isBeanVisibleForSelection()) {
+                // filter if bean is BeanSelectionCondition and visible is false
+                if (bean instanceof BeanSelectionCondition cond) {
+                    if (!cond.isBeanVisibleForSelection()) {
                         continue;
                     }
                 }
@@ -457,7 +437,9 @@ public final class UIFieldSelectionUtil {
         Map<String, List<OptionModel>> groupByKeyModels = options.stream().collect(groupingBy(OptionModel::getKey));
         for (Map.Entry<String, List<OptionModel>> entry : groupByKeyModels.entrySet()) {
             if (entry.getValue().size() > 1) {
-                Set<String> reqTarget = entry.getValue().stream().map(v -> v.getJson().get("REQ_TARGET").asText().split("~~~")[0]).collect(toSet());
+                Set<String> reqTarget = entry.getValue().stream()
+                                             .map(v -> v.getJson().get("REQ_TARGET").asText().split("~~~")[0])
+                                             .collect(toSet());
                 if (reqTarget.contains(HasAggregateValueFromSeries.class.getSimpleName())) {
                     entry.getValue().removeIf(e -> e.getJson().get("REQ_TARGET").asText().startsWith(HasGetStatusValue.class.getSimpleName()));
                 }
@@ -541,8 +523,6 @@ public final class UIFieldSelectionUtil {
         }),
         port(UIFieldDevicePortSelection.class, params ->
             OptionModel.listOfPorts(false)),
-        clazz(UIFieldClassSelection.class, params ->
-            getOptionsForClassSelection(params.entityContext, params.field.getDeclaredAnnotation(UIFieldClassSelection.class))),
         entityByClass(UIFieldEntityByClassSelection.class, params -> {
             List<OptionModel> list = new ArrayList<>();
             for (UIFieldEntityByClassSelection item : params.field.getDeclaredAnnotationsByType(UIFieldEntityByClassSelection.class)) {

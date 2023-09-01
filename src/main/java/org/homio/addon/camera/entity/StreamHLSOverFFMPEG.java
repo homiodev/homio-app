@@ -8,7 +8,7 @@ import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.UIFieldType;
 import org.jetbrains.annotations.Nullable;
 
-public interface AbilityToStreamHLSOverFFMPEG<T> extends HasJsonData {
+public interface StreamHLSOverFFMPEG<T> extends HasJsonData {
 
     @Nullable String getHlsRtspUri();
 

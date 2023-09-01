@@ -29,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
 
 @Log4j2
 @Entity
-@UISidebarChildren(icon = "rest/addon/image/camera/loop-record.png", color = "#0088CC")
+@UISidebarChildren(icon = "app/client/assets/items/camera/loop-record.png", color = "#0088CC")
 public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPEGLoopRecordStorageEntity> {
 
     private static Map<String, FFMPEG> ffmpegServices = new HashMap<>();

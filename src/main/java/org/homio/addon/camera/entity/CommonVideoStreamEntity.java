@@ -19,7 +19,7 @@ import org.jetbrains.annotations.Nullable;
 @Entity
 @Accessors(chain = true)
 public class CommonVideoStreamEntity extends BaseVideoEntity<CommonVideoStreamEntity, CommonVideoService>
-        implements AbilityToStreamHLSOverFFMPEG<CommonVideoStreamEntity> {
+        implements StreamHLSOverFFMPEG<CommonVideoStreamEntity> {
 
     @Override
     @UIField(order = 5, label = "url", inlineEdit = true, required = true)
