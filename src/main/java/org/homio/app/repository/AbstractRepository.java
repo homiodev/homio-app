@@ -1,6 +1,14 @@
 package org.homio.app.repository;
 
-import jakarta.persistence.*;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -9,14 +17,10 @@ import org.homio.api.entity.BaseEntity;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.config.TransactionManagerContext;
+import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 @Log4j2
 public class AbstractRepository<T extends BaseEntity> {
@@ -124,6 +128,10 @@ public class AbstractRepository<T extends BaseEntity> {
                 // TODO: issue: https://hibernate.atlassian.net/browse/HHH-17036
                 fetchLazy(entity, new HashSet<>(), false);
                 em.remove(entity);
+                // somehow cascade = CascadeType.ALL now works
+                if (entity instanceof WidgetSeriesEntity<?> wse) {
+                    wse.getWidgetEntity().getSeries().remove(entity);
+                }
                 log.warn("Entity <{}> was removed", entity);
             }
             return entity;

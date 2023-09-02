@@ -29,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -80,6 +81,8 @@ import org.springframework.web.context.request.WebRequest;
 @RequiredArgsConstructor
 public class MediaController {
 
+   // private final Pattern STATIC_CONTENT = Pattern.compile("jpg|m3u8|png");
+
     private static final Cache<String, MediaPlayContext> fileIdToMedia = CacheBuilder
         .newBuilder().expireAfterAccess(Duration.ofHours(24)).build();
 
@@ -102,10 +105,20 @@ public class MediaController {
                    .withMaxRetries(3)
                    .build();
 
-    public static @NotNull String createVideoPlayLink(@NotNull FileSystemProvider fileSystem, @NotNull String resource) {
+    public static @NotNull String createVideoPlayLink(@NotNull FileSystemProvider fileSystem, @NotNull String resource, String videoType, String extension) {
         String id = "file_" + resource.hashCode();
-        fileIdToMedia.put(id, new MediaPlayContext(fileSystem, resource, resource, fileSystem.size(resource)));
+        fileIdToMedia.put(id, new MediaPlayContext(fileSystem, resource, resource, fileSystem.size(resource), videoType));
         return "$DEVICE_URL/rest/media/video/" + id + "/play";
+    }
+
+    @GetMapping("/video/{fileId}/content")
+    public ResponseEntity<Resource> getVideoFileContent(@PathVariable("fileId") String fileId) {
+        MediaPlayContext context = fileIdToMedia.getIfPresent(fileId);
+        if (context == null) {
+            throw NotFoundException.fileNotFound(fileId);
+        }
+        Resource resource = context.fileSystem.getEntryResource(context.id);
+        return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.parseMediaType(context.type)).body(resource);
     }
 
     @GetMapping("/video/{fileId}/play")
@@ -115,10 +128,8 @@ public class MediaController {
             throw NotFoundException.fileNotFound(fileId);
         }
         Resource resource = context.fileSystem.getEntryResource(context.id);
-        DownloadFile downloadFile = new DownloadFile(resource, context.size, fileId, null);
-        ResourceRegion region = resourceRegion(downloadFile.stream(), downloadFile.size(), headers);
-        return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
-                             .contentType(MediaTypeFactory.getMediaType(downloadFile.stream()).orElse(MediaType.APPLICATION_OCTET_STREAM)).body(region);
+        ResourceRegion region = resourceRegion(resource, context.size, headers);
+        return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).contentType(MediaType.parseMediaType(context.type)).body(region);
     }
 
     @GetMapping("/video/playback/days/{entityID}/{from}/{to}")
@@ -329,10 +340,9 @@ public class MediaController {
         if (range != null) {
             long start = range.getRangeStart(contentLength);
             long end = range.getRangeEnd(contentLength);
-            long rangeLength = Math.min(1024 * 1024, end - start + 1);
+            long rangeLength = end - start + 1; // Math.min(1024 * 1024, end - start + 1);
             return new ResourceRegion(video, start, rangeLength);
         } else {
-            // long rangeLength = Math.min(1024 * 1024, contentLength);
             return new ResourceRegion(video, 0, contentLength);
         }
     }
@@ -353,7 +363,7 @@ public class MediaController {
         private List<String> fileIds;
     }
 
-    private record MediaPlayContext(@NotNull FileSystemProvider fileSystem, @NotNull String dataSource, @NotNull String id, long size) {
+    private record MediaPlayContext(@NotNull FileSystemProvider fileSystem, @NotNull String dataSource, @NotNull String id, long size, @NotNull String type) {
 
     }
 }

@@ -41,6 +41,9 @@ import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 
 @AllArgsConstructor
 public class LocalFileSystemProvider implements FileSystemProvider {
@@ -146,6 +149,12 @@ public class LocalFileSystemProvider implements FileSystemProvider {
             return Files.newInputStream(path);
         }
         throw new IllegalArgumentException("Unable to find entry: " + path);
+    }
+
+    @SneakyThrows
+    public @NotNull Resource getEntryResource(@NotNull String id) {
+        Path path = buildPath(id);
+        return new UrlResource(path.toUri());
     }
 
     @Override

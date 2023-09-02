@@ -1,5 +1,7 @@
 package org.homio.app.model.entity.widget.impl.video.sourceResolver;
 
+import static org.homio.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver.VideoEntityResponse.getVideoType;
+
 import lombok.RequiredArgsConstructor;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.api.EntityContext;
@@ -9,7 +11,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class VideoStreamWidgetVideoSourceResolver implements WidgetVideoSourceResolver {
+public class CameraServiceVideoSourceResolver implements WidgetVideoSourceResolver {
 
     private final EntityContext entityContext;
 
@@ -20,10 +22,13 @@ public class VideoStreamWidgetVideoSourceResolver implements WidgetVideoSourceRe
         BaseVideoEntity<?, ?> baseVideoStreamEntity = entityContext.getEntity(keys[0]);
         if (baseVideoStreamEntity != null) {
             String url = getUrl(keys[1], keys[0]);
-            VideoEntityResponse response = new VideoEntityResponse(ds, url);
+            VideoEntityResponse response = new VideoEntityResponse(ds, url, getVideoType(url));
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             baseVideoStreamEntity.assembleActions(uiInputBuilder);
             response.setActions(uiInputBuilder.buildAll());
+            if(!baseVideoStreamEntity.isStart()) {
+                response.setError("W.ERROR.VIDEO_NOT_STARTED");
+            }
             return response;
         }
         return null;
