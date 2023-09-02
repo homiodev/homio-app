@@ -171,6 +171,17 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     }
 
     @Override
+    public boolean exists(@NotNull String id) {
+        return Files.exists(buildPath(id));
+    }
+
+    @Override
+    @SneakyThrows
+    public long size(@NotNull String id) {
+        return Files.size(buildPath(id));
+    }
+
+    @Override
     @SneakyThrows
     public TreeNode delete(Set<String> ids) {
         Set<Path> removedFiles = new HashSet<>();
@@ -291,13 +302,12 @@ public class LocalFileSystemProvider implements FileSystemProvider {
         }
         Set<TreeNode> rootChildren = getChildren(trimToEmpty(rootPath));
         Set<TreeNode> currentChildren = rootChildren;
-        List<Path> items = StreamSupport.stream(Paths.get(id).spliterator(), false)
-                .collect(Collectors.toList());
+        List<Path> items = StreamSupport.stream(Paths.get(id).spliterator(), false).toList();
         for (int i = 0; i < items.size() - 1; i++) {
             Path pathItemId = items.get(i);
             String pathItemIdStr = fixPath(pathItemId);
             TreeNode foundedObject =
-                    currentChildren.stream().filter(c -> c.getId().equals(pathItemIdStr)).findAny().orElseThrow(() ->
+                currentChildren.stream().filter(c -> Objects.equals(c.getId(), pathItemIdStr)).findAny().orElseThrow(() ->
                             new IllegalStateException("Unable find object: " + pathItemIdStr));
             currentChildren = getChildren(pathItemIdStr);
             foundedObject.addChildren(currentChildren);
@@ -359,7 +369,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     // not optimised
     private void buildTreeNodeRecursively(Path parentPath, TreeNode root) throws IOException {
         try (Stream<Path> stream = Files.list(parentPath)) {
-            for (Path path : stream.collect(Collectors.toList())) {
+            for (Path path : stream.toList()) {
                 try {
                     if (!Files.isHidden(path)) {
                         TreeNode childTreeNode = root.addChild(buildTreeNode(path, path.toFile()));
@@ -373,7 +383,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
         }
     }
 
-    private Path buildPath(String id) {
+    private @NotNull Path buildPath(String id) {
         if (!id.startsWith(entity.getFileSystemRoot())) {
             return Paths.get(entity.getFileSystemRoot()).resolve(id);
         }
@@ -391,14 +401,14 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     }
 
     @SneakyThrows
-    private TreeNode buildTreeNode(Path path, File file) {
+    private @NotNull TreeNode buildTreeNode(Path path, File file) {
         String fullPath = fixPath(path.toAbsolutePath()).substring(entity.getFileSystemRoot().length());
         if (fullPath.startsWith("/")) {
             fullPath = fullPath.substring(1);
         }
         boolean isDirectory = file.isDirectory();
         boolean exists = file.exists();
-        String contentType = "";
+        String contentType;
         boolean ade = false;
         try {
             contentType = !isDirectory && exists ? StringUtils.defaultString(Files.probeContentType(path), TIKA.detect(path)) : null;

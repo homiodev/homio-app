@@ -17,9 +17,9 @@ public class VideoStreamWidgetVideoSourceResolver implements WidgetVideoSourceRe
     public VideoEntityResponse resolveDataSource(WidgetVideoSeriesEntity item) {
         String ds = item.getValueDataSource();
         String[] keys = ds.split("~~~");
-        BaseVideoEntity baseVideoStreamEntity = entityContext.getEntity(keys[0]);
+        BaseVideoEntity<?, ?> baseVideoStreamEntity = entityContext.getEntity(keys[0]);
         if (baseVideoStreamEntity != null) {
-            String url = getStreamUrl(keys[1], keys[0]);
+            String url = getUrl(keys[1], keys[0]);
             VideoEntityResponse response = new VideoEntityResponse(ds, url);
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             baseVideoStreamEntity.assembleActions(uiInputBuilder);
@@ -27,13 +27,6 @@ public class VideoStreamWidgetVideoSourceResolver implements WidgetVideoSourceRe
             return response;
         }
         return null;
-    }
-
-    private String getStreamUrl(String source, String entityID) {
-        if (source.equals("HLS")) {
-            return getUrl("hls.m3u8", entityID);
-        }
-        return getUrl(source, entityID);
     }
 
     public String getUrl(String path, String entityID) {

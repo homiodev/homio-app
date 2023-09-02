@@ -7,6 +7,8 @@ import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
 import static org.springframework.http.HttpHeaders.ETAG;
 import static org.springframework.http.HttpHeaders.LAST_MODIFIED;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import dev.failsafe.ExecutionContext;
 import dev.failsafe.Failsafe;
 import dev.failsafe.Fallback;
@@ -23,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +44,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.audio.AudioSink;
 import org.homio.api.audio.SelfContainedAudioSourceContainer;
 import org.homio.api.exception.NotFoundException;
+import org.homio.api.fs.FileSystemProvider;
 import org.homio.api.model.OptionModel;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.audio.AudioService;
@@ -50,6 +52,7 @@ import org.homio.app.manager.AddonService;
 import org.homio.app.manager.ImageService;
 import org.homio.app.manager.ImageService.ImageResponse;
 import org.homio.app.video.ffmpeg.FfmpegHardwareRepository;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -77,7 +80,9 @@ import org.springframework.web.context.request.WebRequest;
 @RequiredArgsConstructor
 public class MediaController {
 
-    private static final Map<String, String> fileIdToLocalStorage = new HashMap<>();
+    private static final Cache<String, MediaPlayContext> fileIdToMedia = CacheBuilder
+        .newBuilder().expireAfterAccess(Duration.ofHours(24)).build();
+
     private final ImageService imageService;
     private final EntityContext entityContext;
     private final AudioService audioService;
@@ -97,29 +102,20 @@ public class MediaController {
                    .withMaxRetries(3)
                    .build();
 
-    public static String createVideoLink(String dataSource) {
-        String id = "file_" + System.currentTimeMillis();
-        fileIdToLocalStorage.put(id, dataSource);
+    public static @NotNull String createVideoPlayLink(@NotNull FileSystemProvider fileSystem, @NotNull String resource) {
+        String id = "file_" + resource.hashCode();
+        fileIdToMedia.put(id, new MediaPlayContext(fileSystem, resource, resource, fileSystem.size(resource)));
         return "$DEVICE_URL/rest/media/video/" + id + "/play";
     }
 
     @GetMapping("/video/{fileId}/play")
-    public ResponseEntity<ResourceRegion> downloadFile(
-        @PathVariable("fileId") String fileId, @RequestHeader HttpHeaders headers)
-        throws IOException {
-        String source = fileIdToLocalStorage.get(fileId);
-        if (source == null) {
-            throw new IllegalArgumentException("Unable to find source for fileId: " + fileId);
+    public ResponseEntity<ResourceRegion> downloadFile(@PathVariable("fileId") String fileId, @RequestHeader HttpHeaders headers) {
+        MediaPlayContext context = fileIdToMedia.getIfPresent(fileId);
+        if (context == null) {
+            throw NotFoundException.fileNotFound(fileId);
         }
-        Path path = Paths.get(source);
-
-        DownloadFile downloadFile;
-        if (Files.exists(path)) {
-            downloadFile = new DownloadFile(new UrlResource(path.toUri()), Files.size(path), fileId, null);
-        } else {
-            throw new IllegalArgumentException("File: " + path + " not exists");
-        }
-
+        Resource resource = context.fileSystem.getEntryResource(context.id);
+        DownloadFile downloadFile = new DownloadFile(resource, context.size, fileId, null);
         ResourceRegion region = resourceRegion(downloadFile.stream(), downloadFile.size(), headers);
         return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
                              .contentType(MediaTypeFactory.getMediaType(downloadFile.stream()).orElse(MediaType.APPLICATION_OCTET_STREAM)).body(region);
@@ -355,5 +351,9 @@ public class MediaController {
     public static class ThumbnailRequest {
 
         private List<String> fileIds;
+    }
+
+    private record MediaPlayContext(@NotNull FileSystemProvider fileSystem, @NotNull String dataSource, @NotNull String id, long size) {
+
     }
 }

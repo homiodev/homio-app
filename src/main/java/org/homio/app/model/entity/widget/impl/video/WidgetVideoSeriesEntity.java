@@ -28,15 +28,6 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
         setJsonData("ap", value);
     }
 
-    @UIField(order = 12)
-    public boolean isShowRestartButton() {
-        return getJsonData("rb", false);
-    }
-
-    public void setShowRestartButton(boolean value) {
-        setJsonData("rb", value);
-    }
-
     @UIField(order = 13)
     public boolean isShowPictureInPicture() {
         return getJsonData("pip", false);
@@ -73,15 +64,6 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
         setJsonData("dd", value);
     }
 
-    @UIField(order = 17)
-    public boolean isShowFullScreen() {
-        return getJsonData("fs", true);
-    }
-
-    public void setShowFullScreen(boolean value) {
-        setJsonData("fs", value);
-    }
-
     @UIField(order = 18)
     public boolean isShowFastForward() {
         return getJsonData("ff", false);
@@ -103,7 +85,7 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
     @Override
     @UIField(order = 14, required = true, label = "widget.video_dataSource")
     @UIFieldDynamicSelection(value = VideoSeriesDataSourceDynamicOptionLoader.class, icon = "fas fa-film", iconColor = "#FF00FF")
-    @UIFieldTreeNodeSelection(pattern = ".*(\\.mp4|\\.m3u8)", iconColor = "#14A669", prefix = "file://")
+    @UIFieldTreeNodeSelection(pattern = ".*(\\.jpg|\\.webm|\\.ogv|\\.flv|\\.avi|\\.mpd|\\.mp4|\\.m3u8)", iconColor = "#14A669", prefix = "file://")
     @UIFieldIgnoreParent
     public String getValueDataSource() {
         return HasSingleValueDataSource.super.getValueDataSource();

@@ -4,7 +4,6 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.addon.camera.CameraController.camerasOpenStreams;
 import static org.homio.addon.camera.VideoConstants.CHANNEL_AUDIO_ALARM;
 import static org.homio.addon.camera.VideoConstants.CHANNEL_LAST_MOTION_TYPE;
-import static org.homio.addon.camera.VideoConstants.CHANNEL_START_STREAM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.MOTION_ALARM;
@@ -45,10 +44,10 @@ import lombok.val;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.Logger;
 import org.homio.addon.camera.CameraController.OpenStreamsContainer;
 import org.homio.addon.camera.ConfigurationException;
 import org.homio.addon.camera.OpenStreams;
-import org.homio.addon.camera.entity.StreamHLSOverFFMPEG;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.addon.camera.entity.VideoActionsContext;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
@@ -157,7 +156,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     private @Getter
     @Setter
     @NotNull String mjpegContentType = "";
-    public final VideoUrls urls = new VideoUrls();
+    public final @Getter VideoUrls urls = new VideoUrls();
 
     public BaseVideoService(T entity, EntityContext entityContext) {
         super(entityContext, entity, true);
@@ -353,7 +352,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     @UIVideoActionGetter(ENDPOINT_MOTION_THRESHOLD)
-    public DecimalType getMotionThreshold() {
+    public @NotNull DecimalType getMotionThreshold() {
         return new DecimalType(entity.getMotionThreshold());
     }
 
@@ -367,7 +366,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     @Override
-    public void motionDetected(boolean on, String key) {
+    public void motionDetected(boolean on, @NotNull String key) {
         if (on) {
             setAttribute(CHANNEL_LAST_MOTION_TYPE, new StringType(key));
         }
@@ -546,7 +545,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         return false;
     }
 
-    protected boolean hasAudioStream() {
+    public boolean hasAudioStream() {
         return entity.isHasAudioStream();
     }
 
@@ -601,26 +600,25 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     private String buildHlsOptions() {
-        StreamHLSOverFFMPEG hlsOptions = (StreamHLSOverFFMPEG) getEntity();
         List<String> options = new ArrayList<>();
         // To force a keyframe every 2 seconds you can specify the GOP size using -g:
         // Where 29.97 fps * 2s ~= 60 frames, meaning a keyframe each 60 frames.
-        options.add("-g %s".formatted(30 * hlsOptions.getHlsFileSec()));
-        options.add("-c:v " + hlsOptions.getVideoCodec()); // video codec
+        options.add("-g %s".formatted(30 * entity.getHlsFileSec()));
+        options.add("-c:v " + entity.getVideoCodec()); // video codec
         options.add("-hls_flags delete_segments"); // remove old segments
         options.add("-hls_init_time 1"); // build first ts ASAP
-        options.add("-hls_time " + hlsOptions.getHlsFileSec()); // ~ 2sec per file ?
-        options.add("-hls_list_size " + hlsOptions.getHlsListSize()); // how many files
-        if (isNotEmpty(hlsOptions.getHlsScale())) {
-            options.add("-vf scale=" + hlsOptions.getHlsScale()); // scale result video
+        options.add("-hls_time " + entity.getHlsFileSec()); // ~ 2sec per file ?
+        options.add("-hls_list_size " + entity.getHlsListSize()); // how many files
+        if (isNotEmpty(entity.getHlsScale())) {
+            options.add("-vf scale=" + entity.getHlsScale()); // scale result video
         }
         if (hasAudioStream()) {
-            options.add("-c:a " + hlsOptions.getAudioCodec());
+            options.add("-c:a " + entity.getAudioCodec());
             options.add("-ac 2"); // audio channels (stereo)
             options.add("-ab 32k"); // audio bitrate in Kb/s
             options.add("-ar 44100"); // audio sampling rate
         }
-        options.addAll(hlsOptions.getExtraOptions());
+        options.addAll(entity.getExtraOptions());
         return String.join(" ", options);
     }
 
@@ -683,7 +681,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             .buildFFMPEG(entityID, "FFMPEG record MP4", this, FFMPEGFormat.RECORD, inputOptions,
                 urls.getRtspUri(profile),
                 mp4OutOptions, filePath.toString(),
-                entity.getUser(), entity.getPassword().asString(), null);
+                entity.getUser(), entity.getPassword().asString());
         FFMPEG.run(ffmpegMP4, FFMPEG::startConverting);
     }
 
@@ -692,7 +690,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         FFMPEG ffmpegGIF = entityContext.media().buildFFMPEG(entityID, "FFMPEG GIF", this, FFMPEGFormat.GIF,
             gifInputOptions, urls.getRtspUri(profile),
             gifOutOptions, filePath.toString(), entity.getUser(),
-            entity.getPassword().asString(), null);
+            entity.getPassword().asString());
         FFMPEG.run(ffmpegGIF, FFMPEG::startConverting);
     }
 
@@ -713,24 +711,15 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         ffmpegMjpeg = entityContext.media().buildFFMPEG(entityID, "FFMPEG mjpeg", this,
             FFMPEGFormat.MJPEG, getFFMPEGInputOptions() + " -hide_banner", rtspUri,
             String.join(" ", entity.getMjpegOutOptions()), entity.getUrl("ipcamera.jpg"),
-            entity.getUser(), entity.getPassword().asString(), null);
+            entity.getUser(), entity.getPassword().asString());
         setAttribute("FFMPEG_MJPEG", new StringType(String.join(" ", ffmpegMjpeg.getCommandArrayList())));
 
         ffmpegSnapshot = entityContext.media().buildFFMPEG(entityID, "FFMPEG snapshot", this,
             FFMPEGFormat.SNAPSHOT, snapshotInputOptions, rtspUri,
             entity.getSnapshotOutOptionsAsString(),
             entity.getUrl("snapshot.jpg"),
-            entity.getUser(), entity.getPassword().asString(), null);
+            entity.getUser(), entity.getPassword().asString());
         setAttribute("FFMPEG_SNAPSHOT", new StringType(String.join(" ", ffmpegSnapshot.getCommandArrayList())));
-
-        if (entity instanceof StreamHLSOverFFMPEG hlsOverFFMPEG) {
-            ffmpegHLS = entityContext.media().buildFFMPEG(entityID, "FFMPEG HLS", this, FFMPEGFormat.HLS,
-                "-hide_banner " + getFFMPEGInputOptions(),
-                StringUtils.defaultString(hlsOverFFMPEG.getHlsRtspUri(), rtspUri),
-                buildHlsOptions(), getFfmpegHLSOutputPath().resolve("ipcamera.m3u8").toString(),
-                entity.getUser(), entity.getPassword().asString(),
-                () -> setAttribute(CHANNEL_START_STREAM, OnOffType.OFF));
-        }
     }
 
     private void createOrUpdateDeviceGroup() {
@@ -807,9 +796,18 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, (float) min, (float) max, writable), updateHandler);
     }
 
+    public @NotNull FFMPEG getOrCreateFFMPEGHLS(@Nullable String resolution) {
+        resolution = resolution == null ? "default" : resolution;
+        return ffmpegHLSStreams.computeIfAbsent(resolution, r -> entity.buildHlsFFMPEG(r, this));
+    }
+
     @Override
-    public void ffmpegLog(Level level, String message) {
+    public void ffmpegLog(@NotNull Level level, @NotNull String message) {
         log.log(level, "[{}]: {}", entityID, message);
         updateLastSeen();
+    }
+
+    public Logger getLog() {
+        return log;
     }
 }

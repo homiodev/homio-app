@@ -81,7 +81,7 @@ public class Scratch3FFmpegBlocks extends Scratch3ExtensionBlocks {
                 }
             }, RTSP_ALARMS, String.join(" ", ffmpegBuilder.inputArgs), input,
             String.join(" ", ffmpegBuilder.outputArgs),
-            output, "", "", null);
+            output, "", "");
         try {
             ffmpeg.startConverting();
             // wait to able process start

@@ -184,7 +184,7 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
         FFMPEG ffmpeg = entityContext.media().buildFFMPEG(getEntityID(), "FFMPEG loop record", ffmpegHandler,
                 RECORD, getVerbose() ? "" : "-hide_banner", source,
                 buildFFMPEGRecordCommand(folder), path.toString(),
-                videoStreamEntity.getUser(), videoStreamEntity.getPassword().asString(), null);
+                videoStreamEntity.getUser(), videoStreamEntity.getPassword().asString());
         ffmpegServices.put(id, ffmpeg);
         ffmpeg.startConverting();
     }

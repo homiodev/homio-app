@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Set;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
@@ -70,7 +69,7 @@ import org.json.JSONObject;
 @SuppressWarnings("unused")
 @Log4j2
 public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseVideoService<?, S>>
-        extends MediaEntity implements HasEntityLog, DeviceEndpointsBehaviourContract, EntityService<S, T> {
+        extends MediaEntity implements HasEntityLog, StreamHLSOverFFMPEG, DeviceEndpointsBehaviourContract, EntityService<S, T> {
 
     public static final String RUN_CMD = "<span class=\"chip\" style=\"color:%s;border-color: %s;\">%s</span>";
 
@@ -370,7 +369,12 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     public List<OptionModel> getVideoSources() {
-        return List.of(of("HLS"), of("MJPEG"), of("autofps.mjpeg"), of("autofps.mjpeg")));
+        return List.of(
+            of("ipcamera.m3u8", "HLS stream"),
+            of("snapshots.mjpeg", "MJPEG stream"),
+            of("autofps.mjpeg", "MJPEG(autofps) stream"),
+            of("ipcamera.mjpeg"),
+            of("ipcamera.mpd", "MPEG-DASH"));
     }
 
     public String getUrl(String path) {

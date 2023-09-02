@@ -1,38 +1,21 @@
 package org.homio.addon.camera.onvif.util;
 
 import io.netty.channel.Channel;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
- * Can be used to find the handle for a HTTP channel if you know the URL. The reply can optionally be stored for later use.
+ * Can be used to find the handle for an HTTP channel if you know the URL. The reply can optionally be stored for later use.
  */
+@Getter
 public class ChannelTracking {
 
-    private String storedReply = "";
-    private String requestUrl = "";
-    private Channel channel;
+    private final String requestUrl;
+    private final Channel channel;
+    private @Setter String reply = "";
 
     public ChannelTracking(Channel channel, String requestUrl) {
         this.channel = channel;
         this.requestUrl = requestUrl;
-    }
-
-    public String getRequestUrl() {
-        return requestUrl;
-    }
-
-    public Channel getChannel() {
-        return channel;
-    }
-
-    public void setChannel(Channel ch) {
-        channel = ch;
-    }
-
-    public String getReply() {
-        return storedReply;
-    }
-
-    public void setReply(String replyToStore) {
-        storedReply = replyToStore;
     }
 }

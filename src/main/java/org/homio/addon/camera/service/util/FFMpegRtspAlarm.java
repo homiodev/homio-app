@@ -76,7 +76,7 @@ public class FFMpegRtspAlarm {
                 service, FFMPEGFormat.RTSP_ALARMS, inputOptions, input,
                 String.join(" ", filterOptionsList), "-f null -",
                 videoStreamEntity.getUser(),
-                videoStreamEntity.getPassword().asString(), null);
+                videoStreamEntity.getPassword().asString());
         FFMPEG.run(ffmpegRtspHelper, FFMPEG::startConverting);
         service.setAttribute("FFMPEG_RTSP_ALARM", new StringType(String.join(" ", ffmpegRtspHelper.getCommandArrayList())));
     }

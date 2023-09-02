@@ -48,6 +48,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Log4j2
@@ -90,64 +91,31 @@ public class CameraController {
         entity.getService().getOnvifDeviceState().getEventDevices().fireEvent(req.getReader().toString());
     }
 
+    /**
+     * Handle hls .m3u8 files
+     */
     @SneakyThrows
-    @GetMapping("/{entityID}/ipcamera.m3u8")
-    public String getIpCameraM3U8(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
+    @GetMapping(value = "/{entityID}/ipcamera.m3u8", produces = "application/x-mpegURL")
+    public String getIpCameraM3U8(
+        @PathVariable("entityID") String entityID,
+        @RequestParam(value = "resolution", required = false) String resolutionParam) {
         BaseVideoEntity<?, ?> entity = getEntity(entityID);
+        if (resolutionParam != null) {
+            return getHlsFileWithoutResolution(entity, resolutionParam);
+        }
         List<String> resolutions = entity.getStreamResolutions();
         if (resolutions.isEmpty()) {
-            BaseVideoService<?, ?> service = entity.getService();
-            FFMPEG ffmpeg = service.getFfmpegHLS();
-            if (ffmpeg == null) {
-                throw NotFoundException.fileNotFound(Paths.get("hls.m3u8"));
-            }
-            resp.setContentType("application/x-mpegURL");
-            Path m3u8 = service.getFfmpegHLSOutputPath().resolve("hls.m3u8");
-            if (!ffmpeg.getIsAlive()) {
-                ffmpeg.stopConverting();
-                deleteFilesFromFolder(service.getFfmpegHLSOutputPath());
-                ffmpeg.startConverting();
-
-                int retry = 10;
-                while (retry-- > 0 && !Files.exists(m3u8)) {
-                    sleep(1000);
-                }
-                sendFile(resp, m3u8);
-            } else {
-                ffmpeg.setKeepAlive(8);
-                sendFile(resp, m3u8);
-            }
+            return getHlsFileWithoutResolution(entity, null);
         }
         StringBuilder file = new StringBuilder("#EXTM3U\n#EXT-X-VERSION:3\n");
         for (String resolution : resolutions) {
             String[] wh = resolution.split("x");
             double bitRate = Integer.parseInt(wh[0]) * Integer.parseInt(wh[1]) / 20D * 30;
             int bandwidth = (int) (bitRate / 8);
-            file.append("#EXT-X-STREAM-INF:BANDWIDTH=%s,RESOLUTION=%s\nrest/media/video/%s/hls.m3u8?bandwidth=%s\n\n"
+            file.append("#EXT-X-STREAM-INF:BANDWIDTH=%s,RESOLUTION=%s\nrest/media/video/%s/ipcamera.m3u8?resolution=%s\n\n"
                 .formatted(bandwidth, resolution, entityID, resolution));
         }
         return file.toString();
-    }
-
-    @SneakyThrows
-    private @NotNull BaseVideoEntity<?, ?> getEntity(String entityID) {
-        BaseVideoEntity<?, ?> entity = entityContext.getEntityRequire(entityID);
-        if (!entity.getStatus().isOnline()) {
-            throw new ServerException("Unable to run execute request. Video entity: %s has wrong status: %s".formatted(entity.getTitle(), entity.getStatus()))
-                .setStatus(HttpStatus.PRECONDITION_FAILED);
-        }
-        return entity;
-    }
-
-    private static void deleteFilesFromFolder(Path folder) {
-        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(folder)) {
-            for (Path path : directoryStream) {
-                if (Files.isRegularFile(path)) {
-                    Files.delete(path);
-                }
-            }
-        } catch (IOException ignore) {
-        }
     }
 
     /* @GetMapping("/{entityID}/ipcamera.mpd")
@@ -429,6 +397,47 @@ public class CameraController {
             while ((length = input.read(buffer)) > 0) {
                 output.write(buffer, 0, length);
             }
+        }
+    }
+
+    private static String getHlsFileWithoutResolution(BaseVideoEntity<?, ?> entity, String resolution) throws IOException {
+        BaseVideoService<?, ?> service = entity.getService();
+        FFMPEG ffmpeg = service.getOrCreateFFMPEGHLS(resolution);
+        Path m3u8 = Paths.get(ffmpeg.getMetadata().getString("output")).resolve("ipcamera.m3u8");
+        if (!ffmpeg.getIsAlive()) {
+            ffmpeg.stopConverting();
+            deleteFilesFromFolder(service.getFfmpegHLSOutputPath());
+            ffmpeg.startConverting();
+
+            int retry = 10;
+            while (retry-- > 0 && !Files.exists(m3u8)) {
+                sleep(1000);
+            }
+            return Files.readString(m3u8);
+        } else {
+            ffmpeg.setKeepAlive(8);
+            return Files.readString(m3u8);
+        }
+    }
+
+    @SneakyThrows
+    private @NotNull BaseVideoEntity<?, ?> getEntity(String entityID) {
+        BaseVideoEntity<?, ?> entity = entityContext.getEntityRequire(entityID);
+        if (!entity.getStatus().isOnline()) {
+            throw new ServerException("Unable to run execute request. Video entity: %s has wrong status: %s".formatted(entity.getTitle(), entity.getStatus()))
+                .setStatus(HttpStatus.PRECONDITION_FAILED);
+        }
+        return entity;
+    }
+
+    private static void deleteFilesFromFolder(Path folder) {
+        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(folder)) {
+            for (Path path : directoryStream) {
+                if (Files.isRegularFile(path)) {
+                    Files.delete(path);
+                }
+            }
+        } catch (IOException ignore) {
         }
     }
 }

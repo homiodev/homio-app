@@ -88,6 +88,7 @@ import org.homio.app.rest.ConsoleController;
 import org.homio.app.rest.FileSystemController;
 import org.homio.app.rest.ItemController;
 import org.homio.app.rest.SettingController;
+import org.homio.app.service.FileSystemService;
 import org.homio.app.service.cloud.CloudService;
 import org.homio.app.setting.ScanDevicesSetting;
 import org.homio.app.setting.ScanVideoStreamSourcesSetting;
@@ -131,7 +132,7 @@ public class EntityContextImpl implements EntityContext {
         BEAN_CONTEXT_CREATED.add(AddonService.class);
 
         BEAN_CONTEXT_CREATED.add(LogService.class);
-        BEAN_CONTEXT_CREATED.add(FileSystemController.class);
+        BEAN_CONTEXT_CREATED.add(FileSystemService.class);
         BEAN_CONTEXT_CREATED.add(ItemController.class);
         BEAN_CONTEXT_CREATED.add(PortService.class);
         BEAN_CONTEXT_CREATED.add(LoggerService.class);
@@ -140,7 +141,7 @@ public class EntityContextImpl implements EntityContext {
         BEAN_CONTEXT_CREATED.add(JwtTokenProvider.class);
         BEAN_CONTEXT_CREATED.add(CloudService.class);
 
-        BEAN_CONTEXT_REFRESH.add(FileSystemController.class);
+        BEAN_CONTEXT_REFRESH.add(FileSystemService.class);
         BEAN_CONTEXT_REFRESH.add(AddonService.class);
         BEAN_CONTEXT_REFRESH.add(ConsoleController.class);
         BEAN_CONTEXT_REFRESH.add(SettingRepository.class);

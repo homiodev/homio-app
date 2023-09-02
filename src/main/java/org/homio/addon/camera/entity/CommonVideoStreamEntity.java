@@ -18,8 +18,7 @@ import org.jetbrains.annotations.Nullable;
 @Getter
 @Entity
 @Accessors(chain = true)
-public class CommonVideoStreamEntity extends BaseVideoEntity<CommonVideoStreamEntity, CommonVideoService>
-        implements StreamHLSOverFFMPEG<CommonVideoStreamEntity> {
+public class CommonVideoStreamEntity extends BaseVideoEntity<CommonVideoStreamEntity, CommonVideoService> {
 
     @Override
     @UIField(order = 5, label = "url", inlineEdit = true, required = true)
@@ -43,7 +42,7 @@ public class CommonVideoStreamEntity extends BaseVideoEntity<CommonVideoStreamEn
     }
 
     @Override
-    public String getHlsRtspUri() {
+    public String getHlsRtspUriInput() {
         return null;
     }
 

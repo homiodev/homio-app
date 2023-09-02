@@ -19,7 +19,7 @@ public abstract class WidgetBaseEntityAndSeries<T extends WidgetBaseEntityAndSer
     @OrderBy("priority asc")
     @UIField(order = 30, hideInView = true)
     @MaxItems(10)
-    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "widgetEntity", targetEntity = WidgetSeriesEntity.class)
+    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "widgetEntity", targetEntity = WidgetSeriesEntity.class)
     private Set<S> series;
 
     @Override

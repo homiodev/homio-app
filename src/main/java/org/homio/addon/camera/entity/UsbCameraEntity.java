@@ -27,8 +27,7 @@ import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("unused")
 @Entity
-public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraService>
-        implements StreamHLSOverFFMPEG<UsbCameraEntity> {
+public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraService> {
 
     @Override
     @UIField(order = 1, label = "usbSource")
@@ -105,7 +104,7 @@ public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraS
     }
 
     @Override
-    public String getHlsRtspUri() {
+    public String getHlsRtspUriInput() {
         return "udp://@%s:%s".formatted(MACHINE_IP_ADDRESS, getStreamStartPort());
     }
 
@@ -156,8 +155,8 @@ public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraS
     }
 
     @Override
-    public @NotNull Icon getEntityIcon() {
-        return new Icon("fas fa-usb", "#4E783D");
+    public @Nullable String getModel() {
+        return "usb-camera";
     }
 
     @Override

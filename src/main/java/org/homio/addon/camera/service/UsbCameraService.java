@@ -110,7 +110,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
                 MUXER, SystemUtils.IS_OS_LINUX ? "-f v4l2" : "-f dshow", url,
                 String.join(" ", outputParams),
                 output,
-                "", "", null);
+                "", "");
             ffmpegUsbStream.startConverting();
         }
     }
@@ -121,7 +121,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     }
 
     @Override
-    protected boolean hasAudioStream() {
+    public boolean hasAudioStream() {
         return super.hasAudioStream() || isNotEmpty(entity.getAudioSource());
     }
 }

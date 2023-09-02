@@ -142,8 +142,6 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     }
 
     private void startLocalProcess() {
-        EntityContextBGP.cancel(processContext);
-
         // not need internet because we should fail create service if no internet
         if (!mediamtxGitHub.isLocalProjectInstalled()) {
             mediamtxGitHub.installLatestRelease(entityContext);
@@ -153,15 +151,11 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         String processStr = mediamtxGitHub.getLocalProjectPath().resolve("mediamtx")
             + " " + mediamtxGitHub.getLocalProjectPath().resolve("mediamtx.yml");
 
-        processContext = entityContext.bgp().processBuilder(getEntityID())
-                                      .attachLogger(log)
-                                      .attachEntityStatus(entity)
-                                      .execute(processStr);
-
         AtomicReference<String> errorRef = new AtomicReference<>();
         this.processContext = entityContext
             .bgp().processBuilder(getEntityID())
-            .onStarted(t -> entity.setStatusOnline())
+            .attachLogger(log)
+            .attachEntityStatus(entity)
             .onFinished((ex, responseCode) -> {
                 if (ex == null) {
                     if (errorRef.get() != null) {
@@ -182,13 +176,9 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
                         errorRef.set("W.ERROR.MTX_CONFIG");
                     }
                 }
-                logService(msg, level);
+                log.log(level, "[{}]: MediaMTX: {}", getEntity(), msg);
             })
             .execute(processStr);
-    }
-
-    private void logService(String msg, Level level) {
-        log.log(level, "MediaMTX: {}", msg);
     }
 
     @SneakyThrows

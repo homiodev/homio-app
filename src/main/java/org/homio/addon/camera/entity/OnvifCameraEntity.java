@@ -220,6 +220,11 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         return super.getError();
     }
 
+    @Override
+    public @Nullable String getHlsRtspUriInput() {
+        return null;
+    }
+
     @JsonIgnore
     private boolean isRequireAuth() {
         return getIeeeAddress() == null;

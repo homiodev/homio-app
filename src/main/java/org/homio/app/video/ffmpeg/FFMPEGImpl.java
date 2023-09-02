@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.Getter;
+import lombok.Setter;
 import org.apache.logging.log4j.Level;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
@@ -20,7 +21,7 @@ import org.homio.api.EntityContextMedia.FFMPEGHandler;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.impl.EntityContextBGPImpl;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.json.JSONObject;
 
 /**
  * Responsible for handling multiple ffmpeg conversions which are used for many tasks
@@ -30,12 +31,14 @@ public class FFMPEGImpl implements FFMPEG {
 
     public static Map<String, FFMPEGImpl> ffmpegMap = new HashMap<>();
 
-    private final FFMPEGHandler handler;
-    private final Runnable destroyListener;
-    private final @Getter String description;
     private final @Getter Date creationDate = new Date();
-    private final @NotNull FFMPEGFormat format;
+    private final @Getter JSONObject metadata = new JSONObject();
     private final @Getter List<String> commandArrayList = new ArrayList<>();
+
+    private final FFMPEGHandler handler;
+    private final @Getter String description;
+    private final @NotNull FFMPEGFormat format;
+    private @Setter Runnable destroyListener;
     private Process process = null;
     private IpVideoFfmpegThread ipVideoFfmpegThread;
     private int keepAlive = 8;
@@ -52,14 +55,12 @@ public class FFMPEGImpl implements FFMPEG {
         @NotNull String outArguments,
         @NotNull String output,
         @NotNull String username,
-        @NotNull String password,
-        @Nullable Runnable destroyListener) {
+        @NotNull String password) {
         FFMPEGImpl.ffmpegMap.put(entityID + "_" + description, this);
 
         this.entityID = entityID;
         this.description = description;
         this.format = format;
-        this.destroyListener = destroyListener;
         this.handler = handler;
         this.ipVideoFfmpegThread = new IpVideoFfmpegThread();
         inputArguments = inputArguments.trim();
@@ -93,15 +94,16 @@ public class FFMPEGImpl implements FFMPEG {
         keepAlive = seconds;
     }
 
-    public void stopProcessIfNoKeepAlive() {
+    public boolean stopProcessIfNoKeepAlive() {
         if (isRunning()) {
             if (keepAlive == 0) {
-                stopConverting();
+                return stopConverting();
             }
             if (keepAlive > 0) {
                 keepAlive--;
             }
         }
+        return false;
     }
 
     public synchronized boolean startConverting() {
@@ -125,7 +127,7 @@ public class FFMPEGImpl implements FFMPEG {
         return process != null && process.isAlive() && System.currentTimeMillis() - lastAnswerFromFFMPEG < 30000;
     }
 
-    public synchronized void stopConverting() {
+    public synchronized boolean stopConverting() {
         if (ipVideoFfmpegThread.isAlive()) {
             handler.ffmpegLog(Level.WARN, "Stopping '%s' ffmpeg %s now when keepalive is: %s".formatted(description, format, keepAlive));
             if (process != null) {
@@ -135,8 +137,10 @@ public class FFMPEGImpl implements FFMPEG {
             if (destroyListener != null) {
                 destroyListener.run();
             }
+            return true;
         }
         running = false;
+        return false;
     }
 
     private class IpVideoFfmpegThread extends Thread {

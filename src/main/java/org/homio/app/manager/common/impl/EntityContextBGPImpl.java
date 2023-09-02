@@ -882,6 +882,9 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                 try {
                     startedHandler.accept(this);
                 } catch (Exception ex) {
+                    if (entity != null) {
+                        entity.setStatusError(ex);
+                    }
                     getLogger().error("[{}]: Error during run process start handler. Err: {}", name, CommonUtils.getErrorMessage(ex));
                     throw ex;
                 }
@@ -930,6 +933,9 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         private void executeFinishHandler(Exception ex, int exitCode) {
             if (ex != null) {
                 getLogger().error("[{}]: Process finished with status: '{}' and error: '{}'", name, exitCode, CommonUtils.getErrorMessage(ex));
+                if (entity != null) {
+                    entity.setStatusError(ex);
+                }
             } else {
                 getLogger().info("[{}]: Process finished with status: {}", name, exitCode);
             }

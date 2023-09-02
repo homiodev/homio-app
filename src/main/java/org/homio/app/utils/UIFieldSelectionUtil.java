@@ -1,5 +1,6 @@
 package org.homio.app.utils;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
@@ -205,6 +206,7 @@ public final class UIFieldSelectionUtil {
 
             ObjectNode parameters = OBJECT_MAPPER.createObjectNode();
             parameters.set("fileSystemIds", OBJECT_MAPPER.valueToTree(fileSelection.fileSystemIds()));
+            parameters.put("prefix", fileSelection.prefix());
             parameters.put("rootPath", fileSelection.rootPath());
             parameters.put("ASD", fileSelection.allowSelectDirs());
             parameters.put("AMS", fileSelection.allowMultiSelect());
@@ -437,11 +439,15 @@ public final class UIFieldSelectionUtil {
         Map<String, List<OptionModel>> groupByKeyModels = options.stream().collect(groupingBy(OptionModel::getKey));
         for (Map.Entry<String, List<OptionModel>> entry : groupByKeyModels.entrySet()) {
             if (entry.getValue().size() > 1) {
-                Set<String> reqTarget = entry.getValue().stream()
-                                             .map(v -> v.getJson().get("REQ_TARGET").asText().split("~~~")[0])
-                                             .collect(toSet());
+                Set<String> reqTarget = entry
+                    .getValue().stream()
+                    .map(v -> {
+                        ObjectNode json = v.getJson();
+                        return json == null ? "" : json.path("REQ_TARGET").asText("").split("~~~")[0];
+                    }).collect(toSet());
                 if (reqTarget.contains(HasAggregateValueFromSeries.class.getSimpleName())) {
-                    entry.getValue().removeIf(e -> e.getJson().get("REQ_TARGET").asText().startsWith(HasGetStatusValue.class.getSimpleName()));
+                    entry.getValue().removeIf(e -> requireNonNull(e.getJson()).get("REQ_TARGET").asText()
+                                                                              .startsWith(HasGetStatusValue.class.getSimpleName()));
                 }
             }
         }
@@ -506,14 +512,18 @@ public final class UIFieldSelectionUtil {
             }
             List<OptionModel> options = fetchOptionsFromDynamicOptionLoader(params.targetClass, params.classEntityForDynamicOptionLoader, params.entityContext,
                 uiFieldTargetSelection, params.deps);
-            if (options != null) {
-                return options;
+            if (options == null) {
+                options = OptionModel.enumList((Class<? extends Enum>) params.targetClass);
             }
 
-            if (params.targetClass.isEnum()) {
-                return OptionModel.enumList((Class<? extends Enum>) params.targetClass);
+            if (options != null) {
+                for (OptionModel optionModel : options) {
+                    optionModel.json(jsonObject ->
+                        jsonObject.put("REQ_TARGET", params.classEntityForDynamicOptionLoader.getClass().getSimpleName() + "~~~simple"));
+                }
             }
-            return null;
+
+            return options;
         }),
         bean(UIFieldBeanSelection.class, params -> {
             List<OptionModel> list = new ArrayList<>();
