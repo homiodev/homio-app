@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -69,7 +68,7 @@ import org.json.JSONObject;
 @SuppressWarnings("unused")
 @Log4j2
 public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseVideoService<?, S>>
-        extends MediaEntity implements HasEntityLog, StreamHLSOverFFMPEG, DeviceEndpointsBehaviourContract, EntityService<S, T> {
+    extends MediaEntity implements HasEntityLog, StreamHLSOverFFMPEG, DeviceEndpointsBehaviourContract, EntityService<S, T> {
 
     public static final String RUN_CMD = "<span class=\"chip\" style=\"color:%s;border-color: %s;\">%s</span>";
 
@@ -84,11 +83,10 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     @UIFieldGroup("GENERAL")
     public String getRunningCommands() {
         List<String> commands = new ArrayList<>();
-        for (Entry<String, FFMPEG> entry : getService().getFfmpegHLSStreams().entrySet()) {
-            if (entry.getValue().isRunning()) {
-                commands.add(RUN_CMD.formatted("#57A4D1",
-                    entry.getValue().getIsAlive() ? "#57A4D1" : "#9C9C9C", "HLS[%s]".formatted(entry.getKey())));
-            }
+        FFMPEG ffmpegMainReStream = getService().getFfmpegMainReStream();
+        if (ffmpegMainReStream != null && ffmpegMainReStream.isRunning()) {
+            commands.add(RUN_CMD.formatted("#57A4D1",
+                ffmpegMainReStream.getIsAlive() ? "#57A4D1" : "#9C9C9C", ffmpegMainReStream.getDescription()));
         }
         if (FFMPEG.check(getService().getFfmpegSnapshot(), FFMPEG::isRunning, false)) {
             commands.add(RUN_CMD.formatted("#A2D154", "#A2D154", "SNAPSHOT"));
@@ -176,8 +174,8 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     public abstract String getFolderName();
 
     @UIContextMenuAction(value = "RECORD_MP4", icon = "fas fa-file-video", inputs = {
-            @UIActionInput(name = "fileName", value = "record_${timestamp}", min = 4, max = 30),
-            @UIActionInput(name = "secondsToRecord", type = UIActionInput.Type.number, value = "10", min = 5, max = 100)
+        @UIActionInput(name = "fileName", value = "record_${timestamp}", min = 4, max = 30),
+        @UIActionInput(name = "secondsToRecord", type = UIActionInput.Type.number, value = "10", min = 5, max = 100)
     })
     public ActionResponseModel recordMP4(JSONObject params) {
         S service = getService();
@@ -194,14 +192,14 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         return getJsonData("start", false);
     }
 
-    public BaseVideoEntity setStart(boolean start) {
+    public BaseVideoEntity<?, ?> setStart(boolean start) {
         setJsonData("start", start);
         return this;
     }
 
     @UIContextMenuAction(value = "RECORD_GIF", icon = "fas fa-magic", inputs = {
-            @UIActionInput(name = "fileName", value = "record_${timestamp}", min = 4, max = 30),
-            @UIActionInput(name = "secondsToRecord", type = UIActionInput.Type.number, value = "3", min = 1, max = 10)
+        @UIActionInput(name = "fileName", value = "record_${timestamp}", min = 4, max = 30),
+        @UIActionInput(name = "secondsToRecord", type = UIActionInput.Type.number, value = "3", min = 1, max = 10)
     })
     public ActionResponseModel recordGif(JSONObject params) {
         S service = getService();
@@ -226,9 +224,9 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     @UIField(order = 500, hideInEdit = true)
     @UIFieldImage
     @UIActionButton(name = "refresh", icon = "fas fa-sync",
-            actionHandler = BaseVideoEntity.UpdateSnapshotActionHandler.class)
+                    actionHandler = BaseVideoEntity.UpdateSnapshotActionHandler.class)
     @UIActionButton(name = "get", icon = "fas fa-camera",
-            actionHandler = BaseVideoEntity.GetSnapshotActionHandler.class)
+                    actionHandler = BaseVideoEntity.GetSnapshotActionHandler.class)
     public byte[] getSnapshot() {
         return optService().map(BaseVideoService::getSnapshot).orElse(null);
     }
@@ -368,14 +366,26 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         setJsonData("sr", value);
     }
 
+    @JsonIgnore
     public List<OptionModel> getVideoSources() {
-        return List.of(
-            of("ipcamera.m3u8", "HLS stream"),
-            of("snapshots.mjpeg", "MJPEG stream"),
-            of("autofps.mjpeg", "MJPEG(autofps) stream"),
-            of("ipcamera.mjpeg"),
-            of("ipcamera.mpd", "MPEG-DASH"));
+        List<OptionModel> videoSources = new ArrayList<>();
+        if (!getLowResolution().isEmpty()) {
+            videoSources.add(of("low.m3u8", "HLS stream[%s]".formatted(getLowResolution())));
+        }
+        if (!getHighResolution().isEmpty()) {
+            videoSources.add(of("high.m3u8", "HLS stream[%s]".formatted(getHighResolution())));
+        }
+        if (getLowResolution().isEmpty() && getHighResolution().isEmpty()) {
+            videoSources.add(of("default.m3u8", "HLS stream[default]"));
+        }
+        videoSources.add(of("snapshots.mjpeg", "MJPEG stream"));
+        videoSources.add(of("autofps.mjpeg", "MJPEG(autofps) stream"));
+        videoSources.add(of("ipcamera.mjpeg"));
+        videoSources.add(of("ipcamera.mpd", "MPEG-DASH"));
+
+        return videoSources;
     }
+
 
     public String getUrl(String path) {
         return "http://%s:%s/rest/media/video/%s/%s".formatted(MACHINE_IP_ADDRESS, SERVER_PORT, getEntityID(), path);
@@ -389,7 +399,8 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         return "ffmpeg";
     }
 
-    public @NotNull abstract String getRtspUri();
+    public @NotNull
+    abstract String getRtspUri();
 
     protected void fireUpdateSnapshot(EntityContext entityContext, JSONObject params) {
         if (!isStart()) {
@@ -406,8 +417,8 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         setMjpegOutOptions(join("~~~", "-q:v 5", "-r 2", "-vf scale=640:-2", "-update 1"));
         setSnapshotOutOptions(join("~~~", "-q:v 2", "-frames:v 1"));
         setGifOutOptions(
-                join("~~~", "-r 2", "-filter_complex scale=-2:360:flags=lanczos,setpts=0.5*PTS,split[o1][o2];[o1]palettegen[p];[o2]fifo[o3];" +
-                        "[o3][p]paletteuse"));
+            join("~~~", "-r 2", "-filter_complex scale=-2:360:flags=lanczos,setpts=0.5*PTS,split[o1][o2];[o1]palettegen[p];[o2]fifo[o3];" +
+                "[o3][p]paletteuse"));
     }
 
     @Override
@@ -474,15 +485,15 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
     public long getVideoParametersHashCode() {
         return getJsonDataHashCode("start", "gifOutOptions", "mjpegOutOptions", "imgOutOptions",
-                "motionOptions", "mp4OutOptions");
+            "motionOptions", "mp4OutOptions");
     }
 
     @Override
     public @NotNull String getDeviceFullName() {
         return "%s(%s) [${%s}]".formatted(
-                getTitle(),
-                getIeeeAddress(),
-                defaultIfEmpty(getPlace(), "W.ERROR.PLACE_NOT_SET"));
+            getTitle(),
+            getIeeeAddress(),
+            defaultIfEmpty(getPlace(), "W.ERROR.PLACE_NOT_SET"));
     }
 
     @Override

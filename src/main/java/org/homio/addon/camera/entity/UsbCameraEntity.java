@@ -3,14 +3,15 @@ package org.homio.addon.camera.entity;
 import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
 import jakarta.persistence.Entity;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.service.UsbCameraService;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
+import org.homio.api.EntityContextMedia.VideoInputDevice;
 import org.homio.api.model.ActionResponseModel;
-import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
@@ -140,6 +141,19 @@ public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraS
         setJsonData("sbr", value);
     }
 
+
+    @Override
+    @UIFieldDynamicSelection(value = SelectVideoResolutionSource.class, rawInput = true)
+    public String getLowResolution() {
+        return super.getLowResolution();
+    }
+
+    @Override
+    @UIFieldDynamicSelection(value = SelectVideoResolutionSource.class, rawInput = true)
+    public String getHighResolution() {
+        return super.getHighResolution();
+    }
+
     @Override
     public void beforePersist() {
         super.beforePersist();
@@ -182,6 +196,24 @@ public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraS
         @Override
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
             return OptionModel.list(parameters.getEntityContext().media().getVideoDevices());
+        }
+    }
+
+    public static class SelectVideoResolutionSource implements DynamicOptionLoader {
+
+        @Override
+        public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
+            UsbCameraEntity entity = (UsbCameraEntity) parameters.getBaseEntity();
+            List<OptionModel> list = new ArrayList<>();
+            list.add(OptionModel.of("", "PLACEHOLDER.NOT_SELECTED"));
+            if (StringUtils.isNotEmpty(entity.getIeeeAddress())) {
+                VideoInputDevice input = parameters.getEntityContext().media()
+                                                   .createVideoInputDevice(entity.getIeeeAddress());
+                for (String resolution : entity.getStreamResolutions()) {
+                    list.add(OptionModel.of(resolution));
+                }
+            }
+            return list;
         }
     }
 

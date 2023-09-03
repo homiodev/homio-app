@@ -49,6 +49,7 @@ import org.homio.addon.camera.CameraController.OpenStreamsContainer;
 import org.homio.addon.camera.ConfigurationException;
 import org.homio.addon.camera.OpenStreams;
 import org.homio.addon.camera.entity.BaseVideoEntity;
+import org.homio.addon.camera.entity.StreamHLSOverFFMPEG;
 import org.homio.addon.camera.entity.VideoActionsContext;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.service.util.FFMpegRtspAlarm;
@@ -127,9 +128,9 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     protected byte[] latestSnapshot = new byte[0];
     protected @Getter boolean motionDetected;
 
-    private final @Getter Map<String, FFMPEG> ffmpegHLSStreams = new ConcurrentHashMap<>();
-    protected @Getter @Nullable FFMPEG ffmpegSnapshot;
-    protected @Getter @Nullable FFMPEG ffmpegMjpeg;
+    private @Getter @Nullable FFMPEG ffmpegMainReStream;
+    private @Getter @Nullable FFMPEG ffmpegSnapshot;
+    private @Getter @Nullable FFMPEG ffmpegMjpeg;
 
     // run every 8 seconds to send requests to camera, etc...
     protected @Nullable ThreadContext<Void> pollCameraJob;
@@ -560,7 +561,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             snapshotJob = null;
         }
 
-        ffmpegHLSStreams.values().forEach(FFMPEG::stopConverting);
+        FFMPEG.run(ffmpegMainReStream, FFMPEG::stopConverting);
         FFMPEG.run(ffmpegMjpeg, FFMPEG::stopConverting);
         FFMPEG.run(ffmpegSnapshot, FFMPEG::stopConverting);
 
@@ -623,7 +624,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     protected void pollCameraRunnable() {
-        ffmpegHLSStreams.values().forEach(FFMPEG::stopProcessIfNoKeepAlive);
+        FFMPEG.run(ffmpegMainReStream, FFMPEG::stopProcessIfNoKeepAlive);
         FFMPEG.run(ffmpegMjpeg, FFMPEG::stopProcessIfNoKeepAlive);
         if (snapshotJob == null) {
             checkCameraConnection();
@@ -701,7 +702,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     void recreateFFmpeg() {
         FFMPEG.run(ffmpegMjpeg, FFMPEG::stopConverting);
         FFMPEG.run(ffmpegSnapshot, FFMPEG::stopConverting);
-        ffmpegHLSStreams.values().forEach(FFMPEG::stopConverting);
+        FFMPEG.run(ffmpegMainReStream, FFMPEG::stopConverting);
 
         this.snapshotInputOptions = getFFMPEGInputOptions() + " -threads 1 -y -skip_frame nokey -hide_banner -an";
         this.mp4OutOptions = String.join(" ", entity.getMp4OutOptions());
@@ -796,9 +797,14 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, (float) min, (float) max, writable), updateHandler);
     }
 
-    public @NotNull FFMPEG getOrCreateFFMPEGHLS(@Nullable String resolution) {
-        resolution = resolution == null ? "default" : resolution;
-        return ffmpegHLSStreams.computeIfAbsent(resolution, r -> entity.buildHlsFFMPEG(r, this));
+    public @NotNull FFMPEG getOrCreateFFMPEGHLS(@NotNull StreamHLSOverFFMPEG.Resolution resolution) {
+        if (ffmpegMainReStream == null || !ffmpegMainReStream.getDescription().equals("HLS[%s]".formatted(resolution))) {
+            if (ffmpegMainReStream != null) {
+                ffmpegMainReStream.stopConverting();
+            }
+            ffmpegMainReStream = entity.buildHlsFFMPEG(resolution, this);
+        }
+        return ffmpegMainReStream;
     }
 
     @Override

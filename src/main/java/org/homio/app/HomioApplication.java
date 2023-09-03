@@ -33,6 +33,10 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 })
 public class HomioApplication implements WebMvcConfigurer {
 
+    static {
+        System.setProperty("java.util.logging.SimpleFormatter.format", "[%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS] %4$-5s - %5$s%n");
+    }
+
     @SneakyThrows
     public static void main(String[] args) throws IOException {
         // set primary class loader

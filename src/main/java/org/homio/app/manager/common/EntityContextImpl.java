@@ -414,9 +414,10 @@ public class EntityContextImpl implements EntityContext {
 
         if (!changeFields.isEmpty()) {
             putToCache(entity, changeFields);
+
+            // fire change event manually
+            sendEntityUpdateNotification(entity, ItemAction.Update);
         }
-        // fire change event manually
-        sendEntityUpdateNotification(entity, ItemAction.Update);
     }
 
     @Override

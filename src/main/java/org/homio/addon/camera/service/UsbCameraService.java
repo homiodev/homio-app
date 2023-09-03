@@ -4,6 +4,9 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.api.EntityContextMedia.FFMPEGFormat.MUXER;
 import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
+import java.awt.Dimension;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -19,6 +22,8 @@ import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.VideoInputDevice;
 import org.homio.api.model.Icon;
 import org.homio.api.state.StringType;
+import org.homio.api.util.CommonUtils;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Log4j2
@@ -33,7 +38,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     }
 
     @Override
-    public void ffmpegLog(Level level, String message) {
+    public void ffmpegLog(@NotNull Level level, @NotNull String message) {
         log.log(level, "[{}]: {}", getEntityID(), message);
         bringCameraOnline();
     }
@@ -74,8 +79,26 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     protected void postInitializeCamera() {
         String ieeeAddress = Objects.requireNonNull(entity.getIeeeAddress());
         input = entityContext.media().createVideoInputDevice(ieeeAddress);
-        if (input != null && entity.getStreamResolutions().isEmpty() && input.getResolutions().length > 0) {
-            entityContext.updateDelayed(entity, e -> e.setStreamResolutions(String.join("~~~", input.getResolutionSet())));
+        if (input.getResolutions().length > 0) {
+            try {
+                entityContext.updateDelayed(entity, e -> {
+                    if (entity.getStreamResolutions().isEmpty()) {
+                        e.setStreamResolutions(String.join("~~~", input.getResolutionSet()));
+                    }
+                    if (entity.getLowResolution().isEmpty()) {
+                        Dimension dim = Arrays.stream(input.getResolutions())
+                                              .min(Comparator.comparingInt(dim2 -> dim2.width * dim2.height)).get();
+                        e.setLowResolution(String.format("%dx%d", dim.width, dim.height));
+                    }
+                    if (entity.getHighResolution().isEmpty()) {
+                        Dimension dim = Arrays.stream(input.getResolutions())
+                                              .max(Comparator.comparingInt(dim2 -> dim2.width * dim2.height)).get();
+                        e.setHighResolution(String.format("%dx%d", dim.width, dim.height));
+                    }
+                });
+            } catch (Exception ex) {
+                log.error("[{}]: Error while update usb camera: {}", getEntityID(), CommonUtils.getErrorMessage(ex));
+            }
         }
 
         String url = "video=\"" + ieeeAddress + "\"";

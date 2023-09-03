@@ -63,6 +63,7 @@ import org.homio.addon.camera.ui.UIVideoActionGetter;
 import org.homio.addon.camera.ui.UIVideoActionMetadata;
 import org.homio.addon.camera.ui.VideoActionType;
 import org.homio.api.EntityContext;
+import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
@@ -456,7 +457,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     public void openCamerasStream() {
         String mjpegUri = urls.getMjpegUri();
         if (mjpegUri.equals("ffmpeg")) {
-            ffmpegMjpeg.startConverting();
+            FFMPEG.run(getFfmpegMjpeg(), FFMPEG::startConverting);
         } else {
             closeChannel(getTinyUrl(mjpegUri));
             // Dahua cameras crash if you refresh (close and open) the stream without this delay.

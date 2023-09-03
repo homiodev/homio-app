@@ -14,7 +14,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -31,6 +30,8 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
+import org.homio.addon.camera.entity.StreamHLSOverFFMPEG;
+import org.homio.addon.camera.entity.StreamHLSOverFFMPEG.Resolution;
 import org.homio.addon.camera.onvif.impl.InstarBrandHandler;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.service.BaseVideoService;
@@ -48,7 +49,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Log4j2
@@ -95,27 +95,27 @@ public class CameraController {
      * Handle hls .m3u8 files
      */
     @SneakyThrows
-    @GetMapping(value = "/{entityID}/ipcamera.m3u8", produces = "application/x-mpegURL")
-    public String getIpCameraM3U8(
-        @PathVariable("entityID") String entityID,
-        @RequestParam(value = "resolution", required = false) String resolutionParam) {
-        BaseVideoEntity<?, ?> entity = getEntity(entityID);
-        if (resolutionParam != null) {
-            return getHlsFileWithoutResolution(entity, resolutionParam);
-        }
-        List<String> resolutions = entity.getStreamResolutions();
-        if (resolutions.isEmpty()) {
-            return getHlsFileWithoutResolution(entity, null);
-        }
-        StringBuilder file = new StringBuilder("#EXTM3U\n#EXT-X-VERSION:3\n");
-        for (String resolution : resolutions) {
-            String[] wh = resolution.split("x");
-            double bitRate = Integer.parseInt(wh[0]) * Integer.parseInt(wh[1]) / 20D * 30;
-            int bandwidth = (int) (bitRate / 8);
-            file.append("#EXT-X-STREAM-INF:BANDWIDTH=%s,RESOLUTION=%s\nrest/media/video/%s/ipcamera.m3u8?resolution=%s\n\n"
-                .formatted(bandwidth, resolution, entityID, resolution));
-        }
-        return file.toString();
+    @GetMapping(value = "/{entityID}/low.m3u8", produces = "application/x-mpegURL")
+    public String getHLSLowResolution(@PathVariable("entityID") String entityID) {
+        return getHLSFile(entityID, Resolution.low);
+    }
+
+    /**
+     * Handle hls .m3u8 files
+     */
+    @SneakyThrows
+    @GetMapping(value = "/{entityID}/high.m3u8", produces = "application/x-mpegURL")
+    public String getHLSHighResolution(@PathVariable("entityID") String entityID) {
+        return getHLSFile(entityID, Resolution.high);
+    }
+
+    /**
+     * Handle hls .m3u8 files
+     */
+    @SneakyThrows
+    @GetMapping(value = "/{entityID}/default.m3u8", produces = "application/x-mpegURL")
+    public String getHLSDefaultResolution(@PathVariable("entityID") String entityID) {
+        return getHLSFile(entityID, Resolution.def);
     }
 
     /* @GetMapping("/{entityID}/ipcamera.mpd")
@@ -400,24 +400,23 @@ public class CameraController {
         }
     }
 
-    private static String getHlsFileWithoutResolution(BaseVideoEntity<?, ?> entity, String resolution) throws IOException {
+    private String getHLSFile(String entityID, @NotNull StreamHLSOverFFMPEG.Resolution resolution) throws IOException {
+        BaseVideoEntity<?, ?> entity = getEntity(entityID);
         BaseVideoService<?, ?> service = entity.getService();
         FFMPEG ffmpeg = service.getOrCreateFFMPEGHLS(resolution);
-        Path m3u8 = Paths.get(ffmpeg.getMetadata().getString("output")).resolve("ipcamera.m3u8");
+        Path m3u8 = Paths.get(ffmpeg.getOutput());
         if (!ffmpeg.getIsAlive()) {
             ffmpeg.stopConverting();
-            deleteFilesFromFolder(service.getFfmpegHLSOutputPath());
             ffmpeg.startConverting();
 
             int retry = 10;
             while (retry-- > 0 && !Files.exists(m3u8)) {
                 sleep(1000);
             }
-            return Files.readString(m3u8);
         } else {
             ffmpeg.setKeepAlive(8);
-            return Files.readString(m3u8);
         }
+        return Files.readString(m3u8);
     }
 
     @SneakyThrows
@@ -428,16 +427,5 @@ public class CameraController {
                 .setStatus(HttpStatus.PRECONDITION_FAILED);
         }
         return entity;
-    }
-
-    private static void deleteFilesFromFolder(Path folder) {
-        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(folder)) {
-            for (Path path : directoryStream) {
-                if (Files.isRegularFile(path)) {
-                    Files.delete(path);
-                }
-            }
-        } catch (IOException ignore) {
-        }
     }
 }
