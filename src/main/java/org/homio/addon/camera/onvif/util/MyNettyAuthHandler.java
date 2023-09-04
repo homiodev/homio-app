@@ -3,6 +3,7 @@ package org.homio.addon.camera.onvif.util;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpResponse;
+import java.security.SecureRandom;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.service.OnvifCameraService;
@@ -100,7 +101,7 @@ public class MyNettyAuthHandler extends ChannelDuplexHandler {
         // create the MD5 hashes
         String ha1 = username + ":" + realm + ":" + password;
         ha1 = calcMD5Hash(ha1);
-        Random random = new Random();
+        Random random = new SecureRandom();
         String cnonce = Integer.toHexString(random.nextInt());
         ncCounter = (ncCounter > 125) ? 1 : ++ncCounter;
         String nc = String.format("%08X", ncCounter); // 8 digit hex number

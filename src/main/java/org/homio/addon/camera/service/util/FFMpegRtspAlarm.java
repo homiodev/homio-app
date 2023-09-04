@@ -67,7 +67,6 @@ public class FFMpegRtspAlarm {
         List<String> filterOptionsList = new ArrayList<>();
         filterOptionsList.add(this.audioThreshold > 0 ? "-af silencedetect=n=-" + audioThreshold + "dB:d=2" : "-an");
         if (this.motionThreshold > 0) {
-            filterOptionsList.addAll(videoStreamEntity.getMotionOptions());
             filterOptionsList.add("-vf select='gte(scene," + (motionThreshold / 100F) + ")',metadata=print");
         } else {
             filterOptionsList.add("-vn");

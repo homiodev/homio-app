@@ -1,5 +1,6 @@
 package org.homio.app.workspace.block.core;
 
+import java.security.SecureRandom;
 import lombok.Getter;
 import org.homio.api.EntityContext;
 import org.homio.api.state.DecimalType;
@@ -35,7 +36,7 @@ public class Scratch3OperatorBlocks extends Scratch3ExtensionBlocks {
         mathOps.put("log", a -> BigDecimal.valueOf(Math.log(a)));
     }
 
-    private final Random random = new Random();
+    private final Random random = new SecureRandom();
 
     public Scratch3OperatorBlocks(EntityContext entityContext) {
         super("operator", entityContext);

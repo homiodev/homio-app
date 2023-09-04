@@ -268,16 +268,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         return super.getIeeeAddress();
     }
 
-    @UIField(order = 140, hideInView = true, type = UIFieldType.Chips)
-    @UIFieldGroup("FFMPEG")
-    public List<String> getMotionOptions() {
-        return getJsonDataList("motionOptions");
-    }
-
-    public void setMotionOptions(String value) {
-        setJsonData("motionOptions", value);
-    }
-
     public int getMotionThreshold() {
         return getJsonData(ENDPOINT_MOTION_THRESHOLD, 40);
     }
