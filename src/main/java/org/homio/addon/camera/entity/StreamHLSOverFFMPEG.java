@@ -2,16 +2,13 @@ package org.homio.addon.camera.entity;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 import lombok.SneakyThrows;
-import org.apache.commons.io.FileUtils;
+import org.aspectj.util.FileUtil;
 import org.homio.addon.camera.service.BaseVideoService;
-import org.homio.api.EntityContextMedia;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
 import org.homio.api.entity.HasJsonData;
@@ -137,23 +134,19 @@ public interface StreamHLSOverFFMPEG extends HasJsonData {
         if (input == null) {
             input = service.getUrls().getRtspUri(resolution.toString()); // todo: not works
         }
-        EntityContextMedia.FFMPEG ffmpegHLS =
-            service.getEntityContext().media().buildFFMPEG(service.getEntityID() + "_" + resolution, "HLS[%s]".formatted(resolution),
-                service, FFMPEGFormat.HLS,
-                "-hide_banner " + service.getFFMPEGInputOptions(),
-                input,
-                buildHlsOptions(service, resolution), directory.resolve("stream.m3u8").toString(),
-                service.getEntity().getUser(), service.getEntity().getPassword().asString());
-        ffmpegHLS.addDestroyListener("hls-del-dir", () -> {
-            // clean all files on destroy
-            try {
-                FileUtils.deleteDirectory(directory.toFile());
-                Files.createDirectory(directory);
-            } catch (IOException e) {
-                service.getLog().warn("Unable to delete hls directory: {}", directory);
-            }
-        });
-        return ffmpegHLS;
+        String streamPrefix = "stream_%s".formatted(resolution);
+        return service.getEntityContext().media().buildFFMPEG(
+                          service.getEntityID() + "_" + resolution,
+                          "HLS[%s]".formatted(resolution),
+                          service, FFMPEGFormat.HLS,
+                          "-hide_banner " + service.getFFMPEGInputOptions(),
+                          input,
+                          buildHlsOptions(service, resolution), directory.resolve("%s.m3u8".formatted(streamPrefix)).toString(),
+                          service.getEntity().getUser(), service.getEntity().getPassword().asString())
+                      .addDestroyListener("del-old-segments", () -> {
+                          // clean all files on destroy
+                          FileUtil.deleteContents(directory.toFile(), pathname -> pathname.getName().startsWith(streamPrefix), false);
+                      });
     }
 
     default String buildHlsOptions(@NotNull BaseVideoService<? extends BaseVideoEntity<?, ?>, ?> service,

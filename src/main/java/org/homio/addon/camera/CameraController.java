@@ -406,7 +406,6 @@ public class CameraController {
         FFMPEG ffmpeg = service.getOrCreateFFMPEGHLS(resolution);
         Path m3u8 = Paths.get(ffmpeg.getOutput());
         if (!ffmpeg.getIsAlive()) {
-            ffmpeg.stopConverting();
             ffmpeg.startConverting();
 
             int retry = 10;

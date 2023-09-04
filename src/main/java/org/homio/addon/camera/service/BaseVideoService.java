@@ -797,10 +797,12 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, (float) min, (float) max, writable), updateHandler);
     }
 
-    public @NotNull FFMPEG getOrCreateFFMPEGHLS(@NotNull StreamHLSOverFFMPEG.Resolution resolution) {
+    public synchronized @NotNull FFMPEG getOrCreateFFMPEGHLS(@NotNull StreamHLSOverFFMPEG.Resolution resolution) {
         if (ffmpegMainReStream == null || !ffmpegMainReStream.getDescription().equals("HLS[%s]".formatted(resolution))) {
             if (ffmpegMainReStream != null) {
-                ffmpegMainReStream.stopConverting();
+                log.info("[{}]: Stopping HLS process: {}", entityID, ffmpegMainReStream.getDescription());
+                ffmpegMainReStream.stopConverting(Duration.ofSeconds(10));
+                log.info("[{}]: HLS process: {} successfully stopped", entityID, ffmpegMainReStream.getDescription());
             }
             ffmpegMainReStream = entity.buildHlsFFMPEG(resolution, this);
         }

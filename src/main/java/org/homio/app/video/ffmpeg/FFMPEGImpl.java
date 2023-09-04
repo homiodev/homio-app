@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -15,6 +16,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.FileHandler;
 import java.util.logging.LogRecord;
 import java.util.logging.SimpleFormatter;
@@ -68,7 +70,7 @@ public class FFMPEGImpl implements FFMPEG {
     private int keepAlive = 8;
     private final String entityID;
     private long lastAnswerFromFFMPEG = 0;
-    private @Getter boolean running;
+    private final @Getter AtomicBoolean running = new AtomicBoolean(false);
     private @Setter @Accessors(chain = true) @Nullable Path workingDirectory;
 
     @SneakyThrows
@@ -117,6 +119,11 @@ public class FFMPEGImpl implements FFMPEG {
             .formatted(description, format, String.join(" ", commandArrayList)));
     }
 
+    @Override
+    public boolean isRunning() {
+        return running.get();
+    }
+
     public void setKeepAlive(int seconds) {
         if (keepAlive == -1 && seconds > 1) {
             return;// When set to -1 this will not auto turn off stream.
@@ -152,8 +159,8 @@ public class FFMPEGImpl implements FFMPEG {
         }
         if (!processAlive) {
             ipVideoFfmpegThread = new IpVideoFfmpegThread();
+            running.set(true);
             ipVideoFfmpegThread.start();
-            running = true;
             return true;
         }
         return false;
@@ -163,14 +170,17 @@ public class FFMPEGImpl implements FFMPEG {
         return process != null && process.isAlive() && System.currentTimeMillis() - lastAnswerFromFFMPEG < 30000;
     }
 
-    public synchronized boolean stopConverting() {
+    @Override
+    public synchronized boolean stopConverting(Duration duration) {
         if (ipVideoFfmpegThread.isAlive()) {
             logWarn("Stopping '%s' ffmpeg %s now when keepalive is: %s".formatted(description, format, keepAlive));
             if (process != null) {
                 EntityContextBGPImpl.stopProcess(process, description);
                 process.destroyForcibly();
             }
-            finishFFMPEG();
+            if (duration != null) {
+                waitRunningProcess(duration);
+            }
             return true;
         }
         return false;
@@ -178,7 +188,7 @@ public class FFMPEGImpl implements FFMPEG {
 
     private void finishFFMPEG() {
         logInfo("Finish ffmpeg command '%s'".formatted(description));
-        running = false;
+        running.set(false);
 
         Collection<Runnable> destroyListeners = threadDestroyListeners;
         if (destroyListeners != null) {
@@ -195,7 +205,6 @@ public class FFMPEGImpl implements FFMPEG {
 
         IpVideoFfmpegThread() {
             setDaemon(true);
-            lastAnswerFromFFMPEG = System.currentTimeMillis();
             setName("VideoThread_" + format + "_" + entityID);
         }
 
@@ -209,52 +218,15 @@ public class FFMPEGImpl implements FFMPEG {
                     builder.directory(workingDirectory.toFile());
                 }
                 process = builder.start();
-                Process localProcess = process;
-                InputStream errorStream = localProcess.getErrorStream();
+                lastAnswerFromFFMPEG = System.currentTimeMillis();
+                InputStream errorStream = process.getErrorStream();
                 InputStreamReader errorStreamReader = new InputStreamReader(errorStream);
                 BufferedReader bufferedReader = new BufferedReader(errorStreamReader);
                 String line;
                 while ((line = bufferedReader.readLine()) != null) {
                     lastAnswerFromFFMPEG = System.currentTimeMillis();
                     if (format == FFMPEGFormat.RTSP_ALARMS) {
-                        logInfo(line);
-                        int motionThreshold = handler.getMotionThreshold().intValue();
-                        if (line.contains("lavfi.")) {
-                            // When the number of pixels that change are below the noise floor we need to look
-                            // across frames to confirm it is motion and not noise.
-                            if (countOfMotions < 10) {// Stop increasing otherwise it takes too long to go OFF
-                                countOfMotions++;
-                            }
-                            if (countOfMotions > 9
-                                || countOfMotions > 4 && motionThreshold > 10
-                                || countOfMotions > 3 && motionThreshold > 15
-                                || countOfMotions > 2 && motionThreshold > 30
-                                || countOfMotions > 0 && motionThreshold > 89) {
-                                handler.motionDetected(true, FFMPEG_MOTION_ALARM);
-                                if (countOfMotions < 2) {
-                                    countOfMotions = 4;// Used to debounce the Alarm.
-                                }
-                            }
-                        } else if (line.contains("speed=")) {
-                            if (countOfMotions > 0) {
-                                if (motionThreshold > 89) {
-                                    countOfMotions--;
-                                }
-                                if (motionThreshold > 10) {
-                                    countOfMotions -= 2;
-                                } else {
-                                    countOfMotions -= 4;
-                                }
-                                if (countOfMotions <= 0) {
-                                    handler.motionDetected(false, FFMPEG_MOTION_ALARM);
-                                    countOfMotions = 0;
-                                }
-                            }
-                        } else if (line.contains("silence_start")) {
-                            handler.audioDetected(false);
-                        } else if (line.contains("silence_end")) {
-                            handler.audioDetected(true);
-                        }
+                        handleRtspAlarm(line);
                     } else {
                         logDebug(line);
                     }
@@ -266,6 +238,47 @@ public class FFMPEGImpl implements FFMPEG {
                 handler.ffmpegError(CommonUtils.getErrorMessage(ex));
             } finally {
                 finishFFMPEG();
+            }
+        }
+
+        private void handleRtspAlarm(String line) {
+            logInfo(line);
+            int motionThreshold = handler.getMotionThreshold().intValue();
+            if (line.contains("lavfi.")) {
+                // When the number of pixels that change are below the noise floor we need to look
+                // across frames to confirm it is motion and not noise.
+                if (countOfMotions < 10) {// Stop increasing otherwise it takes too long to go OFF
+                    countOfMotions++;
+                }
+                if (countOfMotions > 9
+                    || countOfMotions > 4 && motionThreshold > 10
+                    || countOfMotions > 3 && motionThreshold > 15
+                    || countOfMotions > 2 && motionThreshold > 30
+                    || countOfMotions > 0 && motionThreshold > 89) {
+                    handler.motionDetected(true, FFMPEG_MOTION_ALARM);
+                    if (countOfMotions < 2) {
+                        countOfMotions = 4;// Used to debounce the Alarm.
+                    }
+                }
+            } else if (line.contains("speed=")) {
+                if (countOfMotions > 0) {
+                    if (motionThreshold > 89) {
+                        countOfMotions--;
+                    }
+                    if (motionThreshold > 10) {
+                        countOfMotions -= 2;
+                    } else {
+                        countOfMotions -= 4;
+                    }
+                    if (countOfMotions <= 0) {
+                        handler.motionDetected(false, FFMPEG_MOTION_ALARM);
+                        countOfMotions = 0;
+                    }
+                }
+            } else if (line.contains("silence_start")) {
+                handler.audioDetected(false);
+            } else if (line.contains("silence_end")) {
+                handler.audioDetected(true);
             }
         }
     }
@@ -283,5 +296,21 @@ public class FFMPEGImpl implements FFMPEG {
     private void logDebug(String message) {
         handler.ffmpegLog(Level.DEBUG, message);
         fileHandler.publish(new LogRecord(java.util.logging.Level.FINE, message));
+    }
+
+    @SneakyThrows
+    private void waitRunningProcess(Duration duration) {
+        long startTime = System.currentTimeMillis();
+        long timeoutMillis = duration.toMillis();
+        while (running.get()) {
+            if (System.currentTimeMillis() - startTime >= timeoutMillis) {
+                System.out.println("Timeout: AtomicBoolean did not become false within 10 seconds.");
+                break;
+            }
+            Thread.sleep(100);
+        }
+        if (running.get()) {
+            throw new IllegalStateException("Max timout occurs while waiting to stop ffmpeg process: " + getDescription());
+        }
     }
 }

@@ -28,60 +28,6 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
         setJsonData("ap", value);
     }
 
-    @UIField(order = 13)
-    public boolean isShowPictureInPicture() {
-        return getJsonData("pip", false);
-    }
-
-    public void setShowPictureInPicture(boolean value) {
-        setJsonData("pip", value);
-    }
-
-    @UIField(order = 14)
-    public boolean isShowCurrentTime() {
-        return getJsonData("ct", true);
-    }
-
-    public void setShowCurrentTime(boolean value) {
-        setJsonData("ct", value);
-    }
-
-    @UIField(order = 15)
-    public boolean isInvertTime() {
-        return getJsonData("it", false);
-    }
-
-    public void setInvertTime(boolean value) {
-        setJsonData("it", value);
-    }
-
-    @UIField(order = 16)
-    public boolean isShowDownloads() {
-        return getJsonData("dd", false);
-    }
-
-    public void setShowDownloads(boolean value) {
-        setJsonData("dd", value);
-    }
-
-    @UIField(order = 18)
-    public boolean isShowFastForward() {
-        return getJsonData("ff", false);
-    }
-
-    public void setShowFastForward(boolean value) {
-        setJsonData("ff", value);
-    }
-
-    @UIField(order = 19)
-    public boolean isShowRewind() {
-        return getJsonData("rw", false);
-    }
-
-    public void setShowRewind(boolean value) {
-        setJsonData("rw", value);
-    }
-
     @Override
     @UIField(order = 14, required = true, label = "widget.video_dataSource")
     @UIFieldDynamicSelection(value = VideoSeriesDataSourceDynamicOptionLoader.class, icon = "fas fa-film", iconColor = "#FF00FF")

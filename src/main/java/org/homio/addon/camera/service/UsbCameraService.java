@@ -147,4 +147,9 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     public boolean hasAudioStream() {
         return super.hasAudioStream() || isNotEmpty(entity.getAudioSource());
     }
+
+    @Override
+    protected void pollCameraRunnable() {
+        FFMPEG.run(ffmpegUsbStream, FFMPEG::restartIfRequire);
+    }
 }

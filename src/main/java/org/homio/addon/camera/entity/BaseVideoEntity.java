@@ -375,9 +375,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         if (!getHighResolution().isEmpty()) {
             videoSources.add(of("high.m3u8", "HLS stream[%s]".formatted(getHighResolution())));
         }
-        if (getLowResolution().isEmpty() && getHighResolution().isEmpty()) {
-            videoSources.add(of("default.m3u8", "HLS stream[default]"));
-        }
+        videoSources.add(of("default.m3u8", "HLS stream[default]"));
         videoSources.add(of("snapshots.mjpeg", "MJPEG stream"));
         videoSources.add(of("autofps.mjpeg", "MJPEG(autofps) stream"));
         videoSources.add(of("ipcamera.mjpeg"));
