@@ -3,6 +3,7 @@ package org.homio.app.video.ffmpeg;
 import static org.homio.api.EntityContextMedia.FFMPEG_MOTION_ALARM;
 import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
 
+import com.pivovarit.function.ThrowingRunnable;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -62,9 +63,9 @@ public class FFMPEGImpl implements FFMPEG {
     private final @Getter String description;
     private final @NotNull FFMPEGFormat format;
     private final @Getter String output;
-    private final @NotNull Map<String, Runnable> destroyListeners = new HashMap<>();
+    private final @NotNull Map<String, ThrowingRunnable<Exception>> destroyListeners = new HashMap<>();
     private final FileHandler fileHandler;
-    private @Nullable Collection<Runnable> threadDestroyListeners;
+    private @Nullable Collection<ThrowingRunnable<Exception>> threadDestroyListeners;
     private Process process = null;
     private IpVideoFfmpegThread ipVideoFfmpegThread;
     private int keepAlive = 8;
@@ -144,7 +145,7 @@ public class FFMPEGImpl implements FFMPEG {
     }
 
     @Override
-    public FFMPEG addDestroyListener(@NotNull String key, @NotNull Runnable destroyListener) {
+    public FFMPEG addDestroyListener(@NotNull String key, @NotNull ThrowingRunnable<Exception> destroyListener) {
         destroyListeners.put(key, destroyListener);
         return this;
     }
@@ -190,10 +191,14 @@ public class FFMPEGImpl implements FFMPEG {
         logInfo("Finish ffmpeg command '%s'".formatted(description));
         running.set(false);
 
-        Collection<Runnable> destroyListeners = threadDestroyListeners;
+        Collection<ThrowingRunnable<Exception>> destroyListeners = threadDestroyListeners;
         if (destroyListeners != null) {
             destroyListeners.removeIf(runnable -> {
-                runnable.run();
+                try {
+                    runnable.run();
+                } catch (Exception ex) {
+                    handler.ffmpegLog(Level.WARN, "Error during call destroy listener: %s".formatted(CommonUtils.getErrorMessage(ex)));
+                }
                 return true;
             });
         }

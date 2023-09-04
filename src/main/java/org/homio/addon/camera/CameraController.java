@@ -194,52 +194,63 @@ public class CameraController {
     @SneakyThrows
     @GetMapping("/{entityID}/ipcamera.mjpeg")
     public void requestCameraIpCameraMjpeg(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
-        BaseVideoEntity<?, ?> entity = getEntity(entityID);
-        BaseVideoService<?, ?> service = entity.getService();
-        StreamOutput output;
-        OpenStreams openStreams = getOpenStreamsContainer(entityID).openStreams;
-        String mjpegUri = service.urls.getMjpegUri();
+        try {
+            BaseVideoEntity<?, ?> entity = getEntity(entityID);
+            BaseVideoService<?, ?> service = entity.getService();
+            StreamOutput output;
+            OpenStreams openStreams = getOpenStreamsContainer(entityID).openStreams;
+            String mjpegUri = service.urls.getMjpegUri();
 
-        if (openStreams.isEmpty()) {
-            log.debug("First stream requested, opening up stream from camera");
-            service.openCamerasStream();
-            if (mjpegUri.isEmpty() || "ffmpeg".equals(mjpegUri)) {
+            if (openStreams.isEmpty()) {
+                log.debug("First stream requested, opening up stream from camera");
+                startMjpegStream(resp, service, entityID);
+                if (mjpegUri.isEmpty() || "ffmpeg".equals(mjpegUri)) {
+                    output = new StreamOutput(resp);
+                } else {
+                    output = new StreamOutput(resp, service.getMjpegContentType());
+                }
+            } else if (mjpegUri.isEmpty() || "ffmpeg".equals(mjpegUri)) {
                 output = new StreamOutput(resp);
             } else {
+                ChannelTracking tracker = service.getChannelTrack(service.getTinyUrl(mjpegUri));
+                if (tracker == null || !tracker.getChannel().isOpen()) {
+                    log.info("Not the first stream requested but the stream from camera was closed");
+                    startMjpegStream(resp, service, entityID);
+                }
                 output = new StreamOutput(resp, service.getMjpegContentType());
             }
-        } else if (mjpegUri.isEmpty() || "ffmpeg".equals(mjpegUri)) {
-            output = new StreamOutput(resp);
-        } else {
-            ChannelTracking tracker = service.getChannelTrack(service.getTinyUrl(mjpegUri));
-            if (tracker == null || !tracker.getChannel().isOpen()) {
-                log.info("Not the first stream requested but the stream from camera was closed");
-                service.openCamerasStream();
-            }
-            output = new StreamOutput(resp, service.getMjpegContentType());
-        }
-        output.setExtraStreamConsumer(service::processSnapshot);
-        output.setSkipDuplicates(true);
+            output.setExtraStreamConsumer(service::processSnapshot);
+            output.setSkipDuplicates(true);
 
-        openStreams.addStream(output);
-        do {
-            try {
-                output.sendFrame();
-            } catch (InterruptedException | IOException e) {
-                // Never stop streaming until IOException. Occurs when browser stops the stream.
-                openStreams.removeStream(output);
-                log.info("Now there are {} ipcamera.mjpeg streams open.", openStreams.getNumberOfStreams());
-                if (openStreams.isEmpty()) {
-                    if (output.isSnapshotBased()) {
-                        FFMPEG.run(service.getFfmpegMjpeg(), FFMPEG::stopConverting);
-                    } else {
-                        service.closeChannel(service.getTinyUrl(mjpegUri));
+            openStreams.addStream(output);
+            do {
+                try {
+                    output.sendFrame();
+                } catch (InterruptedException | IOException e) {
+                    // Never stop streaming until IOException. Occurs when browser stops the stream.
+                    openStreams.removeStream(output);
+                    log.info("Now there are {} ipcamera.mjpeg streams open.", openStreams.getNumberOfStreams());
+                    if (openStreams.isEmpty()) {
+                        if (output.isSnapshotBased()) {
+                            FFMPEG.run(service.getFfmpegMjpeg(), FFMPEG::stopConverting);
+                        } else {
+                            service.closeChannel(service.getTinyUrl(mjpegUri));
+                        }
+                        log.info("All ipcamera.mjpeg streams have stopped.");
                     }
-                    log.info("All ipcamera.mjpeg streams have stopped.");
+                    return;
                 }
-                return;
-            }
-        } while (!openStreams.isEmpty());
+            } while (!openStreams.isEmpty());
+        } finally {
+            log.info("[{}]: Closed all mjpeg", entityID);
+        }
+    }
+
+    private static void startMjpegStream(HttpServletResponse resp, BaseVideoService<?, ?> service, String entityID) {
+        service.startMjpegStream(() -> {
+            resp.getOutputStream().close();
+            getOpenStreamsContainer(entityID).openStreams.closeAllStreams();
+        });
     }
 
     @SneakyThrows

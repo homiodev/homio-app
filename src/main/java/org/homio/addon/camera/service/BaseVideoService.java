@@ -20,6 +20,7 @@ import static org.homio.api.model.endpoint.DeviceEndpoint.ENDPOINT_LAST_SEEN;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.pivovarit.function.ThrowingRunnable;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -289,7 +290,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             if (container != null) {
                 OpenStreams openStreams = container.openStreams;
                 if (!openStreams.isEmpty()) {
-                    openCamerasStream();
+                    startMjpegStream(() -> {});
                 }
             }
         }
@@ -298,10 +299,19 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     protected void onCameraConnected() {
     }
 
-    public void openCamerasStream() {
+    public void startMjpegStream(ThrowingRunnable<Exception> destroyListener) {
+        startFfmpegMjpeg(destroyListener);
+    }
+
+    public boolean startFfmpegMjpeg(ThrowingRunnable<Exception> destroyListener) {
         if (urls.getMjpegUri().equals("ffmpeg")) {
-            FFMPEG.run(ffmpegMjpeg, FFMPEG::startConverting);
+            FFMPEG.run(ffmpegMjpeg, ffmpeg -> {
+                ffmpeg.addDestroyListener("mjpeg", destroyListener);
+                ffmpeg.startConverting();
+            });
+            return true;
         }
+        return false;
     }
 
     public UIInputBuilder assembleActions() {
@@ -644,6 +654,9 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         FFMPEG.run(ffmpegMainReStream, FFMPEG::stopConverting);
 
         ffmpegMjpeg = entity.buildMjpegFFMPEG(this);
+        ffmpegMjpeg.addDestroyListener("mjpeg-destroy", () -> {
+
+        });
         ffmpegSnapshot = entity.buildSnapshotFFMPEG(this);
     }
 

@@ -3,6 +3,7 @@ package org.homio.addon.camera.service;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.pivovarit.function.ThrowingRunnable;
 import de.onvif.soap.OnvifDeviceState;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -63,7 +64,6 @@ import org.homio.addon.camera.ui.UIVideoActionGetter;
 import org.homio.addon.camera.ui.UIVideoActionMetadata;
 import org.homio.addon.camera.ui.VideoActionType;
 import org.homio.api.EntityContext;
-import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
@@ -440,11 +440,9 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     @Override
-    public void openCamerasStream() {
-        String mjpegUri = urls.getMjpegUri();
-        if (mjpegUri.equals("ffmpeg")) {
-            FFMPEG.run(getFfmpegMjpeg(), FFMPEG::startConverting);
-        } else {
+    public void startMjpegStream(ThrowingRunnable<Exception> destroyListener) {
+        if (!startFfmpegMjpeg(destroyListener)) {
+            String mjpegUri = urls.getMjpegUri();
             closeChannel(getTinyUrl(mjpegUri));
             // Dahua cameras crash if you refresh (close and open) the stream without this delay.
             mainEventLoopGroup.schedule(() -> sendHttpGET(mjpegUri), 300, TimeUnit.MILLISECONDS);

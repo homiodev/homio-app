@@ -88,6 +88,7 @@ public interface StreamMJPEG extends HasJsonData {
         List<String> options = new ArrayList<>();
         options.add("-q:v " + getMjpegSnapshotQuality()); // video quality
         options.add("-r " + getMjpegFrameRate());
+        options.add("-update 1");
 
         if (isNotEmpty(getMjpegScale())) {
             options.add("-vf scale=" + getMjpegScale()); // scale result video

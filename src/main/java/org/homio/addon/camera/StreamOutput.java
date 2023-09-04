@@ -1,5 +1,8 @@
 package org.homio.addon.camera;
 
+import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN;
+import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
+
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
 import java.awt.Graphics2D;
@@ -116,14 +119,15 @@ public class StreamOutput {
 
     private void sendInitialHeaders() {
         response.setContentType(contentType);
-        response.setHeader("Access-Control-Allow-Origin", "*");
-        response.setHeader("Access-Control-Expose-Headers", "*");
+        response.setHeader(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+        response.setHeader(ACCESS_CONTROL_EXPOSE_HEADERS, "*");
     }
 
     public void close() {
         try {
             output.close();
-        } catch (IOException ignored) {
+            fifo.put(new byte[0]); // awake thread
+        } catch (IOException | InterruptedException ignored) {
         }
     }
 
@@ -152,7 +156,10 @@ public class StreamOutput {
     }
 
     @SneakyThrows
-    private static final int[] getPixels(final BufferedImage img) {
+    private static int[] getPixels(final BufferedImage img) {
+        if (img == null) {
+            return new int[0];
+        }
 
         final int width = img.getWidth();
         final int height = img.getHeight();
