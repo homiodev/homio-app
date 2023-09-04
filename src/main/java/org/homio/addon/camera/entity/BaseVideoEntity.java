@@ -1,6 +1,5 @@
 package org.homio.addon.camera.entity;
 
-import static java.lang.String.join;
 import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
@@ -68,7 +67,13 @@ import org.json.JSONObject;
 @SuppressWarnings("unused")
 @Log4j2
 public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseVideoService<?, S>>
-    extends MediaEntity implements HasEntityLog, StreamHLSOverFFMPEG, DeviceEndpointsBehaviourContract, EntityService<S, T> {
+    extends MediaEntity implements
+    HasEntityLog,
+    StreamMJPEG,
+    StreamHLS,
+    StreamSnapshot,
+    DeviceEndpointsBehaviourContract,
+    EntityService<S, T> {
 
     public static final String RUN_CMD = "<span class=\"chip\" style=\"color:%s;border-color: %s;\">%s</span>";
 
@@ -182,7 +187,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         Path filePath = buildFilePathForRecord(service.getFfmpegMP4OutputPath(), params.getString("fileName"), "mp4");
         int secondsToRecord = params.getInt("secondsToRecord");
         log.debug("[{}]: Recording {}.mp4 for {} seconds.", getEntityID(), filePath, secondsToRecord);
-        service.recordMp4(filePath, null, secondsToRecord);
+        service.recordMp4Async(filePath, null, secondsToRecord);
         return ActionResponseModel.fired();
     }
 
@@ -206,7 +211,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         Path filePath = buildFilePathForRecord(service.getFfmpegGifOutputPath(), params.getString("fileName"), "gif");
         int secondsToRecord = params.getInt("secondsToRecord");
         log.debug("[{}]: Recording {}.gif for {} seconds.", getEntityID(), filePath, secondsToRecord);
-        service.recordGif(filePath, null, secondsToRecord);
+        service.recordGifAsync(filePath, null, secondsToRecord);
         return ActionResponseModel.fired();
     }
 
@@ -263,51 +268,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         return super.getIeeeAddress();
     }
 
-    @UIField(order = 120, hideInView = true, type = UIFieldType.Chips)
-    @UIFieldGroup(value = "FFMPEG", order = 70, borderColor = "#3BAD4A")
-    public List<String> getMp4OutOptions() {
-        return getJsonDataList("mp4OutOptions");
-    }
-
-    public void setMp4OutOptions(String value) {
-        setJsonData("mp4OutOptions", value);
-    }
-
-    @UIField(order = 125, hideInView = true, type = UIFieldType.Chips)
-    @UIFieldGroup("FFMPEG")
-    public List<String> getGifOutOptions() {
-        return getJsonDataList("gifOutOptions");
-    }
-
-    public void setGifOutOptions(String value) {
-        setJsonData("gifOutOptions", value);
-    }
-
-    @UIField(order = 130, hideInView = true, type = UIFieldType.Chips)
-    @UIFieldGroup("FFMPEG")
-    public List<String> getMjpegOutOptions() {
-        return getJsonDataList("mjpegOutOptions");
-    }
-
-    public void setMjpegOutOptions(String value) {
-        setJsonData("mjpegOutOptions", value);
-    }
-
-    @UIField(order = 135, hideInView = true, type = UIFieldType.Chips)
-    @UIFieldGroup("FFMPEG")
-    public List<String> getSnapshotOutOptions() {
-        return getJsonDataList("imgOutOptions");
-    }
-
-    public void setSnapshotOutOptions(String value) {
-        setJsonData("imgOutOptions", value);
-    }
-
-    @JsonIgnore
-    public String getSnapshotOutOptionsAsString() {
-        return join(" ", getSnapshotOutOptions());
-    }
-
     @UIField(order = 140, hideInView = true, type = UIFieldType.Chips)
     @UIFieldGroup("FFMPEG")
     public List<String> getMotionOptions() {
@@ -356,7 +316,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         setJsonData("spi", value);
     }
 
-    @UIField(order = 4, hideOnEmpty = true, type = UIFieldType.Chips)
+    @UIField(order = 4, hideOnEmpty = true, type = UIFieldType.Chips, hideInEdit = true)
     @UIFieldGroup("STREAMING")
     public List<String> getStreamResolutions() {
         return getJsonDataList("sr");
@@ -369,14 +329,14 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     @JsonIgnore
     public List<OptionModel> getVideoSources() {
         List<OptionModel> videoSources = new ArrayList<>();
-        if (!getLowResolution().isEmpty()) {
-            videoSources.add(of("low.m3u8", "HLS stream[%s]".formatted(getLowResolution())));
+        if (!getHlsLowResolution().isEmpty()) {
+            videoSources.add(of("low.m3u8", "HLS stream[%s]".formatted(getHlsLowResolution())));
         }
-        if (!getHighResolution().isEmpty()) {
-            videoSources.add(of("high.m3u8", "HLS stream[%s]".formatted(getHighResolution())));
+        if (!getHlsHighResolution().isEmpty()) {
+            videoSources.add(of("high.m3u8", "HLS stream[%s]".formatted(getHlsHighResolution())));
         }
         videoSources.add(of("default.m3u8", "HLS stream[default]"));
-        videoSources.add(of("snapshots.mjpeg", "MJPEG stream"));
+        // videoSources.add(of("snapshots.mjpeg", "MJPEG stream"));
         videoSources.add(of("autofps.mjpeg", "MJPEG(autofps) stream"));
         videoSources.add(of("ipcamera.mjpeg"));
         videoSources.add(of("ipcamera.mpd", "MPEG-DASH"));
@@ -405,18 +365,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
             throw new ServerException("ERROR.NOT_STARTED", getTitle());
         }
         getService().scheduleRequestSnapshot();
-    }
-
-    @Override
-    public void beforePersist() {
-        setAudioThreshold(40);
-        setMotionThreshold(40);
-        setMp4OutOptions(join("~~~", "-c:v copy", "-c:a copy"));
-        setMjpegOutOptions(join("~~~", "-q:v 5", "-r 2", "-vf scale=640:-2", "-update 1"));
-        setSnapshotOutOptions(join("~~~", "-q:v 2", "-frames:v 1"));
-        setGifOutOptions(
-            join("~~~", "-r 2", "-filter_complex scale=-2:360:flags=lanczos,setpts=0.5*PTS,split[o1][o2];[o1]palettegen[p];[o2]fifo[o3];" +
-                "[o3][p]paletteuse"));
     }
 
     @Override

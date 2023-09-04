@@ -30,8 +30,8 @@ public class VideoDeviceEndpoint extends BaseDeviceEndpoint<BaseVideoEntity> {
     public VideoDeviceEndpoint(
             @NotNull BaseVideoEntity device,
             @NotNull String endpointEntityID,
-            Set<String> range) {
-        this(true, device, endpointEntityID, EndpointType.select, null, null, range);
+            Set<String> range, boolean writable) {
+        this(writable, device, endpointEntityID, EndpointType.select, null, null, range);
     }
 
     public VideoDeviceEndpoint(

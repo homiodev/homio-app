@@ -351,20 +351,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         }
     }
 
-    @Override
-    public void motionDetected(boolean on, String key) {
-        super.motionDetected(on, key);
-        if (on) {
-            if (streamingAutoFps) {
-                startSnapshotPolling();
-            }
-        } else {
-            if (streamingAutoFps) {
-                stopSnapshotPolling();
-            }
-        }
-    }
-
     public String returnValueFromString(String rawString, String searchedString) {
         String result;
         int index = rawString.indexOf(searchedString);

@@ -3,9 +3,6 @@ package org.homio.addon.camera;
 public class VideoConstants {
 
     public static final String MOTION_ALARM = "motionAlarm";
-    public static final String CHANNEL_AUDIO_ALARM = "audioAlarm";
-    public static final String CHANNEL_LAST_MOTION_TYPE = "lastMotionType";
-    public static final String CHANNEL_START_STREAM = "startStream";
 
     public static final String ENDPOINT_MOTION_THRESHOLD = "motion_threshold";
     public static final String ENDPOINT_AUDIO_THRESHOLD = "audio_threshold";

@@ -19,7 +19,6 @@ import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGHandler;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.model.Icon;
-import org.homio.api.state.DecimalType;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldType;
@@ -145,28 +144,14 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
         BaseVideoService service = videoStreamEntity.getService();
 
         FFMPEGHandler ffmpegHandler = new FFMPEGHandler() {
-            @Override
-            public void motionDetected(boolean on, String key) {
-
-            }
 
             @Override
-            public void audioDetected(boolean on) {
-
-            }
-
-            @Override
-            public void ffmpegError(String error) {
+            public void ffmpegError(@NotNull String error) {
                 log.error("[{}]: Record error: <{}>", deviceEntity.getEntityID(), error);
             }
 
             @Override
-            public DecimalType getMotionThreshold() {
-                return new DecimalType(30);
-            }
-
-            @Override
-            public void ffmpegLog(Level level, String message) {
+            public void ffmpegLog(@NotNull Level level, @NotNull String message) {
                 log.log(level, "[{}]: {}", deviceEntity.getEntityID(), message);
             }
         };

@@ -85,15 +85,15 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
                     if (entity.getStreamResolutions().isEmpty()) {
                         e.setStreamResolutions(String.join("~~~", input.getResolutionSet()));
                     }
-                    if (entity.getLowResolution().isEmpty()) {
+                    if (entity.getHlsLowResolution().isEmpty()) {
                         Dimension dim = Arrays.stream(input.getResolutions())
                                               .min(Comparator.comparingInt(dim2 -> dim2.width * dim2.height)).get();
-                        e.setLowResolution(String.format("%dx%d", dim.width, dim.height));
+                        e.setHlsLowResolution(String.format("%dx%d", dim.width, dim.height));
                     }
-                    if (entity.getHighResolution().isEmpty()) {
+                    if (entity.getHlsHighResolution().isEmpty()) {
                         Dimension dim = Arrays.stream(input.getResolutions())
                                               .max(Comparator.comparingInt(dim2 -> dim2.width * dim2.height)).get();
-                        e.setHighResolution(String.format("%dx%d", dim.width, dim.height));
+                        e.setHlsHighResolution(String.format("%dx%d", dim.width, dim.height));
                     }
                 });
             } catch (Exception ex) {
@@ -105,14 +105,15 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
         if (isNotEmpty(entity.getAudioSource())) {
             url += ":audio=\"" + entity.getAudioSource() + "\"";
         }
-        Set<String> outputParams = new LinkedHashSet<>(entity.getStreamOptions());
+        Set<String> outputParams = new LinkedHashSet<>();
         outputParams.add("-f tee");
         outputParams.add("-preset ultrafast");
         outputParams.add("-tune zerolatency");
         outputParams.add("-framerate %s".formatted(entity.getStreamFramesPerSecond()));
         outputParams.add("-c:v libx264");
         outputParams.add("-b:v %sk".formatted(entity.getStreamBitRate()));
-        outputParams.add("-g %s".formatted(entity.getStreamFramesPerSecond() * 2)); // https://trac.ffmpeg.org/wiki/EncodingForStreamingSites#a-g
+        // https://trac.ffmpeg.org/wiki/EncodingForStreamingSites#a-g
+        outputParams.add("-g %s".formatted(entity.getStreamFramesPerSecond() * 2));
 
         if (isNotEmpty(entity.getAudioSource())) {
             url += ":audio=\"" + entity.getAudioSource() + "\"";
@@ -124,9 +125,9 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
         outputParams.add("-map 0");
 
         String output = "";
-        output += "[f=mpegts]udp://%s:%s?pkt_size=1316".formatted(MACHINE_IP_ADDRESS, entity.getStreamStartPort());
+        output += "[f=mpegts]udp://%s:%s?pkt_size=1316".formatted(MACHINE_IP_ADDRESS, entity.getReStreamUdpPort());
         output += "|[f=rtsp]%s".formatted(entity.getRtspUri());
-        setAttribute("MainStream", new StringType(output));
+        setAttribute("USB-TEE", new StringType(output));
 
         if(ffmpegUsbStream == null || !ffmpegUsbStream.getIsAlive()) {
             ffmpegUsbStream = entityContext.media().buildFFMPEG(getEntityID(), "FFmpeg usb udp re-streamer", this,

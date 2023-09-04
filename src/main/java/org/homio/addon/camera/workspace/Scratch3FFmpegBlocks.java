@@ -18,6 +18,7 @@ import org.homio.api.EntityContextMedia.FFMPEGHandler;
 import org.homio.api.state.DecimalType;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
 @Log4j2
@@ -55,30 +56,17 @@ public class Scratch3FFmpegBlocks extends Scratch3ExtensionBlocks {
         FFMPEG ffmpeg = entityContext.media().buildFFMPEG(workspaceBlock.getId(),
             "FFMPEG workspace", new FFMPEGHandler() {
 
-                @Override
-                public void motionDetected(boolean on, String key) {
-
-                }
 
                 @Override
-                public void audioDetected(boolean on) {
-
-                }
-
-                @Override
-                public void ffmpegError(String error) {
+                public void ffmpegError(@NotNull String error) {
                     log.error("FFmpeg error: <{}>", error);
                 }
 
                 @Override
-                public void ffmpegLog(Level level, String message) {
+                public void ffmpegLog(@NotNull Level level, @NotNull String message) {
                     log.log(level, "{}", message);
                 }
 
-                @Override
-                public DecimalType getMotionThreshold() {
-                    return new DecimalType(30);
-                }
             }, RTSP_ALARMS, String.join(" ", ffmpegBuilder.inputArgs), input,
             String.join(" ", ffmpegBuilder.outputArgs),
             output, "", "");

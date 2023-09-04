@@ -20,7 +20,7 @@ import org.homio.api.ui.field.UIFieldType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public interface StreamHLSOverFFMPEG extends HasJsonData {
+public interface StreamHLS extends HasJsonData {
 
     Pattern RESOLUTION_PATTERN = Pattern.compile("\\d+x\\d+");
 
@@ -29,23 +29,23 @@ public interface StreamHLSOverFFMPEG extends HasJsonData {
     @UIField(order = 1000, hideInView = true, type = UIFieldType.Chips)
     @UIFieldGroup(value = "HLS_GROUP", borderColor = "#79D136")
     @UIFieldTab("HLS")
-    default List<String> getExtraOptions() {
-        return getJsonDataList("extraOpts");
+    default List<String> getHlsExtraOptions() {
+        return getJsonDataList("hls_eo");
     }
 
-    default void setExtraOptions(String value) {
-        setJsonData("extraOpts", value);
+    default void setHlsExtraOptions(String value) {
+        setJsonData("hls_eo", value);
     }
 
     @UIField(order = 320, hideInView = true)
     @UIFieldGroup("HLS_GROUP")
     @UIFieldTab("HLS")
     default int getHlsListSize() {
-        return getJsonData("hlsListSize", 10);
+        return getJsonData("hls_ls", 10);
     }
 
     default void setHlsListSize(int value) {
-        setJsonData("hlsListSize", value);
+        setJsonData("hls_ls", value);
     }
 
     @UIField(order = 340, hideInView = true)
@@ -53,33 +53,33 @@ public interface StreamHLSOverFFMPEG extends HasJsonData {
     @UIFieldTab("HLS")
     @UIFieldSlider(min = 1, max = 60)
     default int getHlsFileSec() {
-        return getJsonData("hlsFileSec", 2);
+        return getJsonData("hls_fs", 2);
     }
 
     default void setHlsFileSec(int value) {
-        setJsonData("hlsFileSec", value);
+        setJsonData("hls_fs", value);
     }
 
     @UIField(order = 400, hideInView = true)
     @UIFieldGroup("HLS_GROUP")
     @UIFieldTab("HLS")
-    default String getVideoCodec() {
-        return getJsonData("vcodec", "h264");
+    default String getHlsVideoCodec() {
+        return getJsonData("hls_vc", "libx264");
     }
 
-    default void setVideoCodec(String value) {
-        setJsonData("vcodec", value);
+    default void setHlsVideoCodec(String value) {
+        setJsonData("hls_vc", value);
     }
 
     @UIField(order = 410, hideInView = true)
     @UIFieldGroup("HLS_GROUP")
     @UIFieldTab("HLS")
-    default String getAudioCodec() {
-        return getJsonData("acodec", "aac");
+    default String getHlsAudioCodec() {
+        return getJsonData("hls_ac", "aac");
     }
 
-    default void setAudioCodec(String value) {
-        setJsonData("acodec", value);
+    default void setHlsAudioCodec(String value) {
+        setJsonData("hls_ac", value);
     }
 
     @UIField(order = 320, hideInView = true)
@@ -96,11 +96,11 @@ public interface StreamHLSOverFFMPEG extends HasJsonData {
     @UIField(order = 400, hideInView = true)
     @UIFieldGroup("HLS_GROUP")
     @UIFieldTab("HLS")
-    default String getLowResolution() {
+    default String getHlsLowResolution() {
         return getJsonData("low");
     }
 
-    default void setLowResolution(String value) {
+    default void setHlsLowResolution(String value) {
         if (isNotEmpty(value)) {
             value = value.toLowerCase();
             if (!RESOLUTION_PATTERN.matcher(value).matches()) {
@@ -113,11 +113,11 @@ public interface StreamHLSOverFFMPEG extends HasJsonData {
     @UIField(order = 410, hideInView = true)
     @UIFieldGroup("HLS_GROUP")
     @UIFieldTab("HLS")
-    default String getHighResolution() {
+    default String getHlsHighResolution() {
         return getJsonData("high");
     }
 
-    default void setHighResolution(String value) {
+    default void setHlsHighResolution(String value) {
         if (isNotEmpty(value)) {
             value = value.toLowerCase();
             if (!RESOLUTION_PATTERN.matcher(value).matches()) {
@@ -155,7 +155,7 @@ public interface StreamHLSOverFFMPEG extends HasJsonData {
         // To force a keyframe every 2 seconds you can specify the GOP size using -g:
         // Where 29.97 fps * 2s ~= 60 frames, meaning a keyframe each 60 frames.
         options.add("-g %s".formatted(30 * getHlsFileSec()));
-        options.add("-c:v " + getVideoCodec()); // video codec
+        options.add("-c:v " + getHlsVideoCodec()); // video codec
         options.add("-hls_flags delete_segments"); // remove old segments
         options.add("-hls_init_time 1"); // build first ts ASAP
         options.add("-hls_time " + getHlsFileSec()); // ~ 2sec per file ?
@@ -163,20 +163,24 @@ public interface StreamHLSOverFFMPEG extends HasJsonData {
         options.add("-preset ultrafast");
         options.add("-tune zerolatency");
         if (resolution != Resolution.def) {
-            options.add("-s " + (resolution == Resolution.low ? service.getEntity().getLowResolution() : service.getEntity().getHighResolution()));
+            options.add("-s " + (resolution == Resolution.low ? service.getEntity().getHlsLowResolution() : service.getEntity().getHlsHighResolution()));
         }
 
         if (isNotEmpty(getHlsScale())) {
             options.add("-vf scale=" + getHlsScale()); // scale result video
         }
         if (service.hasAudioStream()) {
-            options.add("-c:a " + getAudioCodec());
+            options.add("-c:a " + getHlsAudioCodec());
             options.add("-ac 2"); // audio channels (stereo)
             options.add("-ab 32k"); // audio bitrate in Kb/s
             options.add("-ar 44100"); // audio sampling rate
         }
-        options.addAll(getExtraOptions());
+        options.addAll(getHlsExtraOptions());
         return String.join(" ", options);
+    }
+
+    default long getHlsHashCode() {
+        return getJsonDataHashCode("hls_eo", "hls_ls", "hls_fs", "hls_vc", "hls_scale", "hls_ac");
     }
 
     enum Resolution {

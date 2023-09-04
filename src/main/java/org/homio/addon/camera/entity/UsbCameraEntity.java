@@ -18,7 +18,6 @@ import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldPort;
 import org.homio.api.ui.field.UIFieldSlider;
-import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.selection.UIFieldSelectConfig;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
@@ -57,23 +56,13 @@ public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraS
         setJsonData("asource", value);
     }
 
-    @UIField(order = 100, hideInView = true, type = UIFieldType.Chips)
-    @UIFieldGroup("STREAMING")
-    public List<String> getStreamOptions() {
-        return getJsonDataList("stream");
-    }
-
-    public void setStreamOptions(String value) {
-        setJsonData("stream", value);
-    }
-
     @UIField(order = 90, hideInView = true)
     @UIFieldPort
-    public int getStreamStartPort() {
+    public int getReStreamUdpPort() {
         return getJsonData("streamPort", 35001);
     }
 
-    public void setStreamStartPort(int value) {
+    public void setReStreamUdpPort(int value) {
         setJsonData("streamPort", value);
     }
 
@@ -106,7 +95,7 @@ public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraS
 
     @Override
     public String getHlsRtspUriInput() {
-        return "udp://@%s:%s".formatted(MACHINE_IP_ADDRESS, getStreamStartPort());
+        return "udp://@%s:%s".formatted(MACHINE_IP_ADDRESS, getReStreamUdpPort());
     }
 
     @Override
@@ -144,20 +133,14 @@ public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraS
 
     @Override
     @UIFieldDynamicSelection(value = SelectVideoResolutionSource.class, rawInput = true)
-    public String getLowResolution() {
-        return super.getLowResolution();
+    public String getHlsLowResolution() {
+        return super.getHlsLowResolution();
     }
 
     @Override
     @UIFieldDynamicSelection(value = SelectVideoResolutionSource.class, rawInput = true)
-    public String getHighResolution() {
-        return super.getHighResolution();
-    }
-
-    @Override
-    public void beforePersist() {
-        super.beforePersist();
-        setVideoCodec("libx264");
+    public String getHlsHighResolution() {
+        return super.getHlsHighResolution();
     }
 
     @Override
@@ -221,8 +204,7 @@ public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraS
     public long getVideoParametersHashCode() {
         return super.getVideoParametersHashCode() +
                 (getIeeeAddress() == null ? 0 : getIeeeAddress().hashCode()) +
-                getJsonDataHashCode("asource", "stream", "streamPort",
-                    "extraOpts", "hlsListSize", "vcodec", "acodec", "hls_scale", "sfps", "sbr");
+            getJsonDataHashCode("asource", "stream", "streamPort", "sfps", "sbr");
     }
 
     @UIContextMenuAction(value = "GET_INFO", icon = "fab fa-quinscape", iconColor = "#899343")

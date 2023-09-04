@@ -30,8 +30,8 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
-import org.homio.addon.camera.entity.StreamHLSOverFFMPEG;
-import org.homio.addon.camera.entity.StreamHLSOverFFMPEG.Resolution;
+import org.homio.addon.camera.entity.StreamHLS;
+import org.homio.addon.camera.entity.StreamHLS.Resolution;
 import org.homio.addon.camera.onvif.impl.InstarBrandHandler;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.service.BaseVideoService;
@@ -162,7 +162,7 @@ public class CameraController {
                 || Duration.between(handler.getCurrentSnapshotTime(), Instant.now()).toMillis() < 1200;
     }
 
-    @SneakyThrows
+    /*@SneakyThrows
     @GetMapping("/{entityID}/snapshots.mjpeg")
     public void requestCameraSnapshotsMjpeg(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
         BaseVideoEntity<?, ?> entity = getEntity(entityID);
@@ -189,35 +189,38 @@ public class CameraController {
                 return;
             }
         } while (true);
-    }
+    }*/
 
     @SneakyThrows
     @GetMapping("/{entityID}/ipcamera.mjpeg")
     public void requestCameraIpCameraMjpeg(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
         BaseVideoEntity<?, ?> entity = getEntity(entityID);
-        BaseVideoService<?, ?> handler = entity.getService();
+        BaseVideoService<?, ?> service = entity.getService();
         StreamOutput output;
         OpenStreams openStreams = getOpenStreamsContainer(entityID).openStreams;
-        String mjpegUri = handler.urls.getMjpegUri();
+        String mjpegUri = service.urls.getMjpegUri();
 
         if (openStreams.isEmpty()) {
             log.debug("First stream requested, opening up stream from camera");
-            handler.openCamerasStream();
+            service.openCamerasStream();
             if (mjpegUri.isEmpty() || "ffmpeg".equals(mjpegUri)) {
                 output = new StreamOutput(resp);
             } else {
-                output = new StreamOutput(resp, handler.getMjpegContentType());
+                output = new StreamOutput(resp, service.getMjpegContentType());
             }
         } else if (mjpegUri.isEmpty() || "ffmpeg".equals(mjpegUri)) {
             output = new StreamOutput(resp);
         } else {
-            ChannelTracking tracker = handler.getChannelTrack(handler.getTinyUrl(mjpegUri));
+            ChannelTracking tracker = service.getChannelTrack(service.getTinyUrl(mjpegUri));
             if (tracker == null || !tracker.getChannel().isOpen()) {
-                log.debug("Not the first stream requested but the stream from camera was closed");
-                handler.openCamerasStream();
+                log.info("Not the first stream requested but the stream from camera was closed");
+                service.openCamerasStream();
             }
-            output = new StreamOutput(resp, handler.getMjpegContentType());
+            output = new StreamOutput(resp, service.getMjpegContentType());
         }
+        output.setExtraStreamConsumer(service::processSnapshot);
+        output.setSkipDuplicates(true);
+
         openStreams.addStream(output);
         do {
             try {
@@ -225,14 +228,14 @@ public class CameraController {
             } catch (InterruptedException | IOException e) {
                 // Never stop streaming until IOException. Occurs when browser stops the stream.
                 openStreams.removeStream(output);
-                log.debug("Now there are {} ipcamera.mjpeg streams open.", openStreams.getNumberOfStreams());
+                log.info("Now there are {} ipcamera.mjpeg streams open.", openStreams.getNumberOfStreams());
                 if (openStreams.isEmpty()) {
                     if (output.isSnapshotBased()) {
-                        FFMPEG.run(handler.getFfmpegMjpeg(), FFMPEG::stopConverting);
+                        FFMPEG.run(service.getFfmpegMjpeg(), FFMPEG::stopConverting);
                     } else {
-                        handler.closeChannel(handler.getTinyUrl(mjpegUri));
+                        service.closeChannel(service.getTinyUrl(mjpegUri));
                     }
-                    log.debug("All ipcamera.mjpeg streams have stopped.");
+                    log.info("All ipcamera.mjpeg streams have stopped.");
                 }
                 return;
             }
@@ -400,7 +403,7 @@ public class CameraController {
         }
     }
 
-    private String getHLSFile(String entityID, @NotNull StreamHLSOverFFMPEG.Resolution resolution) throws IOException {
+    private String getHLSFile(String entityID, @NotNull StreamHLS.Resolution resolution) throws IOException {
         BaseVideoEntity<?, ?> entity = getEntity(entityID);
         BaseVideoService<?, ?> service = entity.getService();
         FFMPEG ffmpeg = service.getOrCreateFFMPEGHLS(resolution);

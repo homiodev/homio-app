@@ -50,9 +50,7 @@ public class IpCameraBindingConstants {
     public static final String CHANNEL_TEXT_OVERLAY = "textOverlay";
     public static final String CHANNEL_EXTERNAL_LIGHT = "externalLight";
     public static final String CHANNEL_DOORBELL = "doorBell";
-    public static final String CHANNEL_LAST_MOTION_TYPE = "lastMotionType";
     public static final String CHANNEL_GOTO_PRESET = "gotoPreset";
-    public static final String CHANNEL_START_STREAM = "startStream";
     public static final String CHANNEL_ENABLE_PRIVACY_MODE = "enablePrivacyMode";
     public static final String CHANNEL_CAR_ALARM = "carAlarm";
     public static final String CHANNEL_HUMAN_ALARM = "humanAlarm";

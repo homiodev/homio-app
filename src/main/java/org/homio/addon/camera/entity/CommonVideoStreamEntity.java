@@ -58,11 +58,6 @@ public class CommonVideoStreamEntity extends BaseVideoEntity<CommonVideoStreamEn
     }
 
     @Override
-    public void beforePersist() {
-        setSnapshotOutOptions(join("~~~", "-update 1", "-frames:v 1"));
-    }
-
-    @Override
     public @Nullable String getError() {
         if (StringUtils.isEmpty(getIeeeAddress())) {
             return "W.ERROR.VIDEO_EMPTY_URI";
@@ -97,9 +92,7 @@ public class CommonVideoStreamEntity extends BaseVideoEntity<CommonVideoStreamEn
 
     @Override
     public long getVideoParametersHashCode() {
-        return super.getVideoParametersHashCode() +
-                (getIeeeAddress() == null ? 0 : getIeeeAddress().hashCode()) +
-                getJsonDataHashCode("extraOpts", "hlsListSize", "vcodec", "acodec", "hls_scale");
+        return super.getVideoParametersHashCode() + (getIeeeAddress() == null ? 0 : getIeeeAddress().hashCode());
     }
 
     @Override
