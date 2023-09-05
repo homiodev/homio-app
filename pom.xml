@@ -74,6 +74,11 @@
     </build>
     <dependencies>
       <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-gateway-mvc</artifactId>
+        <version>4.0.7</version>
+      </dependency>
+      <dependency>
         <artifactId>zip4j</artifactId>
         <groupId>net.lingala.zip4j</groupId>
         <version>2.11.5</version>

@@ -80,8 +80,7 @@ import org.onvif.ver10.schema.Profile;
 @Log4j2
 public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, OnvifCameraService> {
 
-    private static @NotNull
-    final Map<String, CameraBrandHandlerDescription> cameraBrands = new ConcurrentHashMap<>();
+    private static @NotNull final Map<String, CameraBrandHandlerDescription> cameraBrands = new ConcurrentHashMap<>();
     private final @NotNull ChannelGroup openChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
     @Getter
@@ -110,43 +109,43 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         onvifDeviceState.setUnreachableHandler(message -> this.disposeAndSetStatus(Status.OFFLINE, message));
 
         onvifDeviceState.getEventDevices().subscribe("RuleEngine/CellMotionDetector/Motion",
-                (dataName, dataValue) -> motionDetected(dataValue.equals("true"), IpCameraBindingConstants.CHANNEL_CELL_MOTION_ALARM));
+            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), IpCameraBindingConstants.CHANNEL_CELL_MOTION_ALARM));
         onvifDeviceState.getEventDevices().subscribe("VideoSource/MotionAlarm",
-                (dataName, dataValue) -> motionDetected(dataValue.equals("true"), IpCameraBindingConstants.CHANNEL_MOTION_ALARM));
+            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), IpCameraBindingConstants.CHANNEL_MOTION_ALARM));
         onvifDeviceState.getEventDevices().subscribe("AudioAnalytics/Audio/DetectedSound",
-                (dataName, dataValue) -> audioDetected(dataValue.equals("true")));
+            (dataName, dataValue) -> audioDetected(dataValue.equals("true")));
         onvifDeviceState.getEventDevices().subscribe("RuleEngine/FieldDetector/ObjectsInside",
-                (dataName, dataValue) -> motionDetected(dataValue.equals("true"), IpCameraBindingConstants.CHANNEL_FIELD_DETECTION_ALARM));
+            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), IpCameraBindingConstants.CHANNEL_FIELD_DETECTION_ALARM));
         onvifDeviceState.getEventDevices().subscribe("RuleEngine/LineDetector/Crossed",
-                (dataName, dataValue) -> motionDetected(dataName.equals("ObjectId"), IpCameraBindingConstants.CHANNEL_LINE_CROSSING_ALARM));
+            (dataName, dataValue) -> motionDetected(dataName.equals("ObjectId"), IpCameraBindingConstants.CHANNEL_LINE_CROSSING_ALARM));
         onvifDeviceState.getEventDevices().subscribe("RuleEngine/TamperDetector/Tamper",
-                (dataName, dataValue) -> setAttribute(IpCameraBindingConstants.CHANNEL_TAMPER_ALARM, OnOffType.of(dataValue.equals("true"))));
+            (dataName, dataValue) -> setAttribute(IpCameraBindingConstants.CHANNEL_TAMPER_ALARM, OnOffType.of(dataValue.equals("true"))));
         onvifDeviceState.getEventDevices().subscribe("Device/HardwareFailure/StorageFailure",
-                (dataName, dataValue) -> setAttribute(IpCameraBindingConstants.CHANNEL_STORAGE_ALARM, OnOffType.of(dataValue.equals("true"))));
+            (dataName, dataValue) -> setAttribute(IpCameraBindingConstants.CHANNEL_STORAGE_ALARM, OnOffType.of(dataValue.equals("true"))));
 
         onvifDeviceState.getEventDevices().subscribe(
-                "VideoSource/ImageTooDark/AnalyticsService",
-                "VideoSource/ImageTooDark/ImagingService",
-                "VideoSource/ImageTooDark/RecordingService",
-                (dataName, dataValue) -> setAttribute(IpCameraBindingConstants.CHANNEL_TOO_DARK_ALARM, OnOffType.of(dataValue.equals("true"))));
+            "VideoSource/ImageTooDark/AnalyticsService",
+            "VideoSource/ImageTooDark/ImagingService",
+            "VideoSource/ImageTooDark/RecordingService",
+            (dataName, dataValue) -> setAttribute(IpCameraBindingConstants.CHANNEL_TOO_DARK_ALARM, OnOffType.of(dataValue.equals("true"))));
 
         onvifDeviceState.getEventDevices().subscribe(
-                "VideoSource/GlobalSceneChange/AnalyticsService",
-                "VideoSource/GlobalSceneChange/ImagingService",
-                "VideoSource/GlobalSceneChange/RecordingService",
-                (dataName, dataValue) -> setAttribute(IpCameraBindingConstants.CHANNEL_SCENE_CHANGE_ALARM, OnOffType.of(dataValue.equals("true"))));
+            "VideoSource/GlobalSceneChange/AnalyticsService",
+            "VideoSource/GlobalSceneChange/ImagingService",
+            "VideoSource/GlobalSceneChange/RecordingService",
+            (dataName, dataValue) -> setAttribute(IpCameraBindingConstants.CHANNEL_SCENE_CHANGE_ALARM, OnOffType.of(dataValue.equals("true"))));
 
         onvifDeviceState.getEventDevices().subscribe(
-                "VideoSource/ImageTooBright/AnalyticsService",
-                "VideoSource/ImageTooBright/ImagingService",
-                "VideoSource/ImageTooBright/RecordingService",
-                (dataName, dataValue) -> setAttribute(IpCameraBindingConstants.CHANNEL_TOO_BRIGHT_ALARM, OnOffType.of(dataValue.equals("true"))));
+            "VideoSource/ImageTooBright/AnalyticsService",
+            "VideoSource/ImageTooBright/ImagingService",
+            "VideoSource/ImageTooBright/RecordingService",
+            (dataName, dataValue) -> setAttribute(IpCameraBindingConstants.CHANNEL_TOO_BRIGHT_ALARM, OnOffType.of(dataValue.equals("true"))));
 
         onvifDeviceState.getEventDevices().subscribe(
-                "VideoSource/ImageTooBlurry/AnalyticsService",
-                "VideoSource/ImageTooBlurry/ImagingService",
-                "VideoSource/ImageTooBlurry/RecordingService",
-                (dataName, dataValue) -> setAttribute(IpCameraBindingConstants.CHANNEL_TOO_BLURRY_ALARM, OnOffType.of(dataValue.equals("true"))));
+            "VideoSource/ImageTooBlurry/AnalyticsService",
+            "VideoSource/ImageTooBlurry/ImagingService",
+            "VideoSource/ImageTooBlurry/RecordingService",
+            (dataName, dataValue) -> setAttribute(IpCameraBindingConstants.CHANNEL_TOO_BLURRY_ALARM, OnOffType.of(dataValue.equals("true"))));
 
         if (entity.getCameraType() != null && getCameraBrands(entityContext).containsKey(entity.getCameraType())) {
             CameraBrandHandlerDescription cameraBrandHandlerDescription = getCameraBrands(entityContext).get(entity.getCameraType());
@@ -159,7 +158,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     public static Map<String, CameraBrandHandlerDescription> getCameraBrands(EntityContext entityContext) {
         if (cameraBrands.isEmpty()) {
             for (Class<? extends BaseOnvifCameraBrandHandler> brandHandlerClass :
-                    entityContext.getClassesWithParent(BaseOnvifCameraBrandHandler.class)) {
+                entityContext.getClassesWithParent(BaseOnvifCameraBrandHandler.class)) {
                 cameraBrands.put(brandHandlerClass.getSimpleName(), new CameraBrandHandlerDescription(brandHandlerClass));
             }
         }
@@ -234,7 +233,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
             mainBootstrap.option(ChannelOption.SO_KEEPALIVE, true);
             mainBootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4500);
             mainBootstrap.option(ChannelOption.SO_SNDBUF, 1024 * 8);
-            mainBootstrap.option(ChannelOption.SO_RCVBUF, 10*1024 * 1024);
+            mainBootstrap.option(ChannelOption.SO_RCVBUF, 10 * 1024 * 1024);
             mainBootstrap.option(ChannelOption.TCP_NODELAY, true);
             mainBootstrap.handler(new ChannelInitializer<SocketChannel>() {
 
@@ -245,7 +244,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                     socketChannel.pipeline().addLast(new IdleStateHandler(18, 0, 0));
                     socketChannel.pipeline().addLast(new HttpClientCodec());
                     socketChannel.pipeline().addLast(IpCameraBindingConstants.AUTH_HANDLER,
-                            new MyNettyAuthHandler(entity, OnvifCameraService.this));
+                        new MyNettyAuthHandler(entity, OnvifCameraService.this));
                     socketChannel.pipeline().addLast(IpCameraBindingConstants.COMMON_HANDLER, new CommonCameraHandler(OnvifCameraService.this));
 
                     socketChannel.pipeline().addLast(brandHandler.getClass().getSimpleName(), brandHandler.asBootstrapHandler());
@@ -280,30 +279,30 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         }
 
         mainBootstrap.connect(new InetSocketAddress(entity.getIp(), port))
-                .addListener((ChannelFutureListener) future -> {
-                    if (future == null) {
-                        return;
-                    }
-                    if (future.isDone() && future.isSuccess()) {
-                        Channel ch = future.channel();
-                        openChannels.add(ch);
-                        bringCameraOnline();
-                        log.debug("[{}]: Sending camera: {}: http://{}:{}{}", getEntityID(), httpMethod,
-                                entity.getIp(), port, httpRequestURL);
-                        channelTrackingMap.put(httpRequestURL, new ChannelTracking(ch, httpRequestURL));
+                     .addListener((ChannelFutureListener) future -> {
+                         if (future == null) {
+                             return;
+                         }
+                         if (future.isDone() && future.isSuccess()) {
+                             Channel ch = future.channel();
+                             openChannels.add(ch);
+                             bringCameraOnline();
+                             log.debug("[{}]: Sending camera: {}: http://{}:{}{}", getEntityID(), httpMethod,
+                                 entity.getIp(), port, httpRequestURL);
+                             channelTrackingMap.put(httpRequestURL, new ChannelTracking(ch, httpRequestURL));
 
-                        CommonCameraHandler commonHandler = (CommonCameraHandler) ch.pipeline().get(IpCameraBindingConstants.COMMON_HANDLER);
-                        commonHandler.setRequestUrl(httpRequestURLFull);
-                        MyNettyAuthHandler authHandler = (MyNettyAuthHandler) ch.pipeline().get(IpCameraBindingConstants.AUTH_HANDLER);
-                        authHandler.setURL(httpMethod, httpRequestURL);
+                             CommonCameraHandler commonHandler = (CommonCameraHandler) ch.pipeline().get(IpCameraBindingConstants.COMMON_HANDLER);
+                             commonHandler.setRequestUrl(httpRequestURLFull);
+                             MyNettyAuthHandler authHandler = (MyNettyAuthHandler) ch.pipeline().get(IpCameraBindingConstants.AUTH_HANDLER);
+                             authHandler.setURL(httpMethod, httpRequestURL);
 
-                        brandHandler.handleSetURL(ch.pipeline(), httpRequestURL);
-                        ch.writeAndFlush(request);
-                    } else { // an error occurred
-                        log.warn("[{}]: Error handle camera: <{}>. Error: <{}>", getEntityID(), entity, getErrorMessage(future.cause()));
-                        cameraCommunicationError("Connection Timeout");
-                    }
-                });
+                             brandHandler.handleSetURL(ch.pipeline(), httpRequestURL);
+                             ch.writeAndFlush(request);
+                         } else { // an error occurred
+                             log.warn("[{}]: Error handle camera: <{}>. Error: <{}>", getEntityID(), entity, getErrorMessage(future.cause()));
+                             cameraCommunicationError("Connection Timeout");
+                         }
+                     });
     }
 
     public void storeHttpReply(String url, String content) {
@@ -452,15 +451,15 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     @Override
     protected void updateNotificationBlock() {
         CameraEntrypoint.updateCamera(entityContext, getEntity(),
-                () -> {
-                    val brand = getCameraBrands(entityContext).get(entity.getCameraType());
-                    return entity.getIp() + ":" + entity.getOnvifPort() + " " + brand.getName();
-                }, new Icon("fas fa-wifi", "#0E578F"),
-                actionBuilder -> actionBuilder.addButton("RESTART", new Icon("fas fa-power-off"),
-                        (entityContext, params) -> {
-                            String response = onvifDeviceState.getInitialDevices().reboot();
-                            return ActionResponseModel.showSuccess(response);
-                        }));
+            () -> {
+                val brand = getCameraBrands(entityContext).get(entity.getCameraType());
+                return entity.getIp() + ":" + entity.getOnvifPort() + " " + brand.getName();
+            }, new Icon("fas fa-wifi", "#0E578F"),
+            actionBuilder -> actionBuilder.addButton("RESTART", new Icon("fas fa-power-off"),
+                (entityContext, params) -> {
+                    String response = onvifDeviceState.getInitialDevices().reboot();
+                    return ActionResponseModel.showSuccess(response);
+                }));
     }
 
     /**
@@ -526,14 +525,9 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     @Override
     protected void postInitializeCamera() {
         onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(),
-                entity.getUser(), entity.getPassword().asString());
-        if (urls.getSnapshotUri().equals("ffmpeg")) {
-            urls.setSnapshotUri(brandHandler.getSnapshotUri(false));
-        }
-        String mjpegUri = urls.getMjpegUri();
-        if (mjpegUri.equals("ffmpeg")) {
-            urls.setMjpegUri(brandHandler.getMjpegUri());
-        }
+            entity.getUser(), entity.getPassword().asString());
+        urls.setSnapshotUri(brandHandler.getSnapshotUri(false));
+        urls.setMjpegUri(brandHandler.getMjpegUri());
         brandHandler.postInitializeCamera(entityContext);
     }
 
@@ -605,19 +599,19 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     public ActionResponseModel authenticate() {
         entityContext.ui().sendDialogRequest("cam_auth", "CONTEXT.ACTION.AUTHENTICATE",
-                (responseType, pressedButton, parameters) ->
-                        fireAuth(parameters),
-                dialogModel -> {
-                    dialogModel.disableKeepOnUi();
-                    dialogModel.appearance(new Icon("fas fa-camera"), null);
-                    List<ActionInputParameter> inputs = new ArrayList<>();
-                    inputs.add(ActionInputParameter.text("field.user", entity.getUser()));
-                    inputs.add(ActionInputParameter.text("field.password", entity.getPassword().asString()));
+            (responseType, pressedButton, parameters) ->
+                fireAuth(parameters),
+            dialogModel -> {
+                dialogModel.disableKeepOnUi();
+                dialogModel.appearance(new Icon("fas fa-camera"), null);
+                List<ActionInputParameter> inputs = new ArrayList<>();
+                inputs.add(ActionInputParameter.text("field.user", entity.getUser()));
+                inputs.add(ActionInputParameter.text("field.password", entity.getPassword().asString()));
 
-                    dialogModel.submitButton("CONTEXT.ACTION.AUTHENTICATE", button ->
-                            button.setIcon("fas fa-sign-in-alt")
-                    ).group("General", inputs);
-                });
+                dialogModel.submitButton("CONTEXT.ACTION.AUTHENTICATE", button ->
+                    button.setIcon("fas fa-sign-in-alt")
+                ).group("General", inputs);
+            });
         return null;
     }
 
@@ -653,6 +647,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     @RequiredArgsConstructor
     public static class LowRequest {
+
         private final Runnable handler;
     }
 }

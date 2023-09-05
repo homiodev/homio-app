@@ -2,13 +2,11 @@ package org.homio.addon.camera.service.util;
 
 import static org.apache.commons.lang3.StringUtils.defaultString;
 
-import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -101,34 +99,5 @@ public class VideoUrls {
         private @NotNull String mjpegUri = "ffmpeg";
         private @NotNull String snapshotUri = "ffmpeg";
         private @NotNull String rtspUri = "ffmpeg";
-    }
-
-    @SneakyThrows
-    public static String getCorrectUrlFormat(String longUrl) {
-        if (longUrl.equals("ffmpeg") || !longUrl.startsWith("http")) {
-            return longUrl;
-        }
-
-        try {
-            URL url = new URL(longUrl);
-            int port = url.getPort();
-            String temp;
-            if (port == -1) {
-                if (url.getQuery() == null) {
-                    temp = url.getPath();
-                } else {
-                    temp = url.getPath() + "?" + url.getQuery();
-                }
-            } else {
-                if (url.getQuery() == null) {
-                    temp = ":" + url.getPort() + url.getPath();
-                } else {
-                    temp = ":" + url.getPort() + url.getPath() + "?" + url.getQuery();
-                }
-            }
-            return temp;
-        } catch (Exception ignore) {
-        }
-        return longUrl;
     }
 }

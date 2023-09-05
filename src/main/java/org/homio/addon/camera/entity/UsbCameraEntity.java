@@ -1,7 +1,5 @@
 package org.homio.addon.camera.entity;
 
-import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
-
 import jakarta.persistence.Entity;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +20,7 @@ import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.selection.UIFieldSelectConfig;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
+import org.homio.app.model.entity.MediaMTXEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -42,6 +41,11 @@ public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraS
     @UIFieldIgnore
     public boolean isHasAudioStream() {
         return super.isHasAudioStream();
+    }
+
+    @Override
+    protected void appendAdditionHLSStreams(OptionModel m3u8) {
+        m3u8.addChild(OptionModel.of("mediamtx.m3u8", "MediaMTX HLS"));
     }
 
     @UIField(order = 2)
@@ -81,16 +85,6 @@ public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraS
     @Override
     public long getEntityServiceHashCode() {
         return Objects.hashCode(getIeeeAddress()) + getJsonDataHashCode("start", "asource", "stream", "streamPort");
-    }
-
-    @Override
-    public String getHlsRtspUriInput() {
-        return "udp://@%s:%s".formatted(MACHINE_IP_ADDRESS, getReStreamUdpPort());
-    }
-
-    @Override
-    public @NotNull String getRtspUri() {
-        return "rtsp://%s:%s/%s".formatted(MACHINE_IP_ADDRESS, MediaMTXEntity.RTSP_PORT, getEntityID());
     }
 
     @Override

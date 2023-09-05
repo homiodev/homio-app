@@ -1,34 +1,40 @@
-package org.homio.addon.camera.service;
+package org.homio.app.service.video;
 
-import static org.homio.addon.camera.entity.MediaMTXEntity.mediamtxGitHub;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.api.util.JsonUtils.YAML_OBJECT_MAPPER;
+import static org.homio.app.model.entity.MediaMTXEntity.mediamtxGitHub;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import jakarta.validation.constraints.Null;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.http.HttpRequest;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
-import org.homio.addon.camera.entity.MediaMTXEntity;
-import org.homio.addon.camera.entity.MediaMTXEntity.LogLevel;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextBGP;
 import org.homio.api.EntityContextBGP.ProcessContext;
+import org.homio.api.EntityContextMedia.MediaMTXSource;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Status;
 import org.homio.api.service.EntityService.ServiceInstance;
+import org.homio.app.model.entity.MediaMTXEntity;
+import org.homio.app.model.entity.MediaMTXEntity.LogLevel;
 import org.homio.hquery.Curl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -37,8 +43,11 @@ import org.jetbrains.annotations.Nullable;
 public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     implements HasEntityIdentifier {
 
+    private final Map<String, MediaMTXSource> successRegistered = new ConcurrentHashMap<>();
+    private final Map<String, MediaMTXSource> pendingRegistrations = new ConcurrentHashMap<>();
+    private final List<String> pendingRemoveRegistrations = new CopyOnWriteArrayList<>();
     private final Path configurationPath = mediamtxGitHub.getLocalProjectPath().resolve("mediamtx.yml");
-    private @Getter @Null String apiURL;
+    private @Getter @Nullable String apiURL;
 
     private ProcessContext processContext;
     private ObjectNode configuration;
@@ -116,6 +125,31 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         return null;
     }
 
+    public void addSource(@NotNull String path, MediaMTXSource source) {
+        if (!successRegistered.containsKey(path) && !pendingRegistrations.containsKey(path)) {
+            pendingRegistrations.put(path, source);
+            if (entity.getStatus().isOnline()) {
+                registerAllSources();
+            }
+        }
+    }
+
+    public void removeSource(String path) {
+        pendingRegistrations.remove(path);
+        MediaMTXSource source = successRegistered.remove(path);
+        // if source was registered already
+        if (source == null) {
+            pendingRemoveRegistrations.add(path);
+            HttpRequest request = Curl.createPostRequest("%s/v2/config/paths/remove/%s".formatted(apiURL, path));
+            Curl.sendAsync(request, Void.class, (unused, code) -> {
+                if (code == 200) {
+                    log.error("[{}]: MediaMTX: Video source with path /{} successfully removed", entityID, path);
+                    pendingRemoveRegistrations.remove(path);
+                }
+            });
+        }
+    }
+
     @Override
     protected void initialize() {
         destroy();
@@ -156,6 +190,13 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
             .bgp().processBuilder(getEntityID())
             .attachLogger(log)
             .attachEntityStatus(entity)
+            .onStarted(() -> {
+                registerAllSources();
+                // re-register all path if MediaMTX was restarted
+                for (Entry<String, MediaMTXSource> entry : successRegistered.entrySet()) {
+                    registerPath(entry.getKey(), entry.getValue());
+                }
+            })
             .onFinished((ex, responseCode) -> {
                 if (ex == null) {
                     if (errorRef.get() != null) {
@@ -234,5 +275,22 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     @SneakyThrows
     public void backupData(BackupContext backupContext) {
         Files.copy(configurationPath, backupContext.getBackupPath().resolve(configurationPath.getFileName()));
+    }
+
+    private void registerAllSources() {
+        for (Entry<String, MediaMTXSource> entry : pendingRegistrations.entrySet()) {
+            registerPath(entry.getKey(), entry.getValue());
+        }
+    }
+
+    private void registerPath(@NotNull String path, @NotNull MediaMTXSource source) {
+        HttpRequest request = Curl.createPostRequest("%s/v2/config/paths/add/%s".formatted(apiURL, path), source);
+        Curl.sendAsync(request, Void.class, (unused, code) -> {
+            if (code == 200) {
+                log.error("[{}]: MediaMTX: Video source with path /{} successfully registered. Source: {}", entityID, path, source.getSource());
+                pendingRegistrations.remove(path);
+                successRegistered.put(path, source);
+            }
+        });
     }
 }

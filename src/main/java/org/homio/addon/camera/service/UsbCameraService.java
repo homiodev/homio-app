@@ -2,9 +2,10 @@ package org.homio.addon.camera.service;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.api.EntityContextMedia.FFMPEGFormat.MUXER;
-import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
 import java.awt.Dimension;
+import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -20,10 +21,13 @@ import org.homio.addon.camera.ConfigurationException;
 import org.homio.addon.camera.entity.UsbCameraEntity;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
+import org.homio.api.EntityContextMedia.MediaMTXSource;
 import org.homio.api.EntityContextMedia.VideoInputDevice;
 import org.homio.api.model.Icon;
+import org.homio.api.model.OptionModel;
 import org.homio.api.state.StringType;
 import org.homio.api.util.CommonUtils;
+import org.homio.app.model.entity.MediaMTXEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -64,6 +68,30 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     }
 
     @Override
+    public List<OptionModel> getLogSources() {
+        ArrayList<OptionModel> list = new ArrayList<>(super.getLogSources());
+        list.add(OptionModel.of("tee", "FFMPEG muxer"));
+        return list;
+    }
+
+    @Override
+    public @Nullable InputStream getSourceLogInputStream(@NotNull String sourceID) {
+        if ("tee".equals(sourceID)) {
+            return getFFMPEGLogInputStream(ffmpegUsbStream);
+        }
+        return super.getSourceLogInputStream(sourceID);
+    }
+
+    @Override
+    public String getHlsUri() {
+        return getUdpUrl();
+    }
+
+    private @NotNull String getUdpUrl() {
+        return "udp://238.0.0.1:%s".formatted(entity.getReStreamUdpPort());
+    }
+
+    @Override
     protected void updateNotificationBlock() {
         CameraEntrypoint.updateCamera(entityContext, getEntity(),
                 null,
@@ -73,6 +101,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
 
     @Override
     protected void postInitializeCamera() {
+        urls.setRtspUri("rtsp://127.0.0.1:%s/%s".formatted(MediaMTXEntity.RTSP_PORT, getEntityID()));
         String ieeeAddress = Objects.requireNonNull(entity.getIeeeAddress());
         input = entityContext.media().createVideoInputDevice(ieeeAddress);
         if (input.getResolutions().length > 0) {
@@ -107,6 +136,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
         outputParams.add("-tune zerolatency");
         outputParams.add("-framerate %s".formatted(entity.getStreamFramesPerSecond()));
         outputParams.add("-c:v libx264");
+        outputParams.add("-hide_banner");
         outputParams.add("-b:v %sk".formatted(entity.getStreamBitRate()));
         // https://trac.ffmpeg.org/wiki/EncodingForStreamingSites#a-g
         outputParams.add("-g %s".formatted(entity.getStreamFramesPerSecond() * 2));
@@ -121,8 +151,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
         outputParams.add("-map 0");
 
         String output = "";
-        output += "[f=mpegts]udp://%s:%s?pkt_size=1316".formatted(MACHINE_IP_ADDRESS, entity.getReStreamUdpPort());
-        output += "|[f=rtsp]%s".formatted(entity.getRtspUri());
+        output += "[f=mpegts]%s?pkt_size=1316".formatted(getUdpUrl());
         setAttribute("USB-TEE", new StringType(output));
 
         if(ffmpegUsbStream == null || !ffmpegUsbStream.getIsAlive()) {
@@ -133,6 +162,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
                 "", "");
             ffmpegUsbStream.startConverting();
         }
+        entityContext.media().registerMediaMTXSource(getEntityID(), new MediaMTXSource(getUdpUrl()));
     }
 
     @Override
@@ -148,5 +178,6 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     @Override
     protected void pollCameraRunnable() {
         FFMPEG.run(ffmpegUsbStream, FFMPEG::restartIfRequire);
+        super.pollCameraRunnable();
     }
 }

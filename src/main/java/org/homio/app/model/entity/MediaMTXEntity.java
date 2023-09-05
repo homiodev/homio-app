@@ -1,4 +1,4 @@
-package org.homio.addon.camera.entity;
+package org.homio.app.model.entity;
 
 import static org.homio.api.util.Constants.DANGER_COLOR;
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
@@ -9,7 +9,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.addon.camera.service.MediaMTXService;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.HasFirmwareVersion;
 import org.homio.api.entity.log.HasEntityLog;
@@ -28,6 +27,7 @@ import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
+import org.homio.app.service.video.MediaMTXService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -45,7 +45,7 @@ public final class MediaMTXEntity extends MediaEntity implements HasEntityLog,
                          return entityContext.hardware().execute(executable + " --version");
                      });
 
-    public static void ensureEntityExists(EntityContext entityContext) {
+    public static MediaMTXEntity ensureEntityExists(EntityContext entityContext) {
         MediaMTXEntity entity = entityContext.getEntity(MediaMTXEntity.class, PRIMARY_DEVICE);
         if (entity == null) {
             entity = new MediaMTXEntity();
@@ -53,6 +53,7 @@ public final class MediaMTXEntity extends MediaEntity implements HasEntityLog,
             entity.setJsonData("dis_del", true);
             entityContext.save(entity);
         }
+        return entity;
     }
 
     @Override

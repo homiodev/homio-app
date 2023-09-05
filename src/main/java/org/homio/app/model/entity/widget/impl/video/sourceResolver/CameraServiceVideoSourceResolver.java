@@ -20,8 +20,12 @@ public class CameraServiceVideoSourceResolver implements WidgetVideoSourceResolv
         String ds = item.getValueDataSource();
         String[] keys = ds.split("~~~");
         BaseVideoEntity<?, ?> baseVideoStreamEntity = entityContext.getEntity(keys[0]);
-        if (baseVideoStreamEntity != null) {
-            String url = getUrl(keys[1], keys[0]);
+        if (baseVideoStreamEntity != null && keys.length >= 2) {
+            String videoIdentifier = keys[keys.length - 1];
+            if (videoIdentifier.equals("mediamtx.m3u8")) {
+                videoIdentifier = "mediamtx/index.m3u8";
+            }
+            String url = getUrl(videoIdentifier, keys[0]);
             VideoEntityResponse response = new VideoEntityResponse(ds, url, getVideoType(url));
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             baseVideoStreamEntity.assembleActions(uiInputBuilder);

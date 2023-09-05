@@ -516,13 +516,6 @@ public final class UIFieldSelectionUtil {
                 options = OptionModel.enumList((Class<? extends Enum>) params.targetClass);
             }
 
-            if (options != null) {
-                for (OptionModel optionModel : options) {
-                    optionModel.json(jsonObject ->
-                        jsonObject.put("REQ_TARGET", params.classEntityForDynamicOptionLoader.getClass().getSimpleName() + "~~~simple"));
-                }
-            }
-
             return options;
         }),
         bean(UIFieldBeanSelection.class, params -> {

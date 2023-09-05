@@ -18,13 +18,10 @@ import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.UIFieldTab;
 import org.homio.api.ui.field.UIFieldType;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public interface StreamHLS extends HasJsonData {
 
     Pattern RESOLUTION_PATTERN = Pattern.compile("\\d+x\\d+");
-
-    @Nullable String getHlsRtspUriInput();
 
     @UIField(order = 1, hideInView = true)
     @UIFieldGroup(value = "HLS_GROUP", order = 1, borderColor = "#79D136")
@@ -141,9 +138,9 @@ public interface StreamHLS extends HasJsonData {
     @SneakyThrows
     default @NotNull FFMPEG buildHlsFFMPEG(@NotNull Resolution resolution, BaseVideoService<? extends BaseVideoEntity<?, ?>, ?> service) {
         Path directory = service.getFfmpegHLSOutputPath();
-        String input = getHlsRtspUriInput();
+        String input = service.getHlsUri();
         if (input == null) {
-            input = service.getUrls().getRtspUri(resolution.toString()); // todo: not works
+            throw new IllegalArgumentException("Unable to find video service hls url");
         }
         String streamPrefix = "stream_%s".formatted(resolution);
         return service.getEntityContext().media().buildFFMPEG(

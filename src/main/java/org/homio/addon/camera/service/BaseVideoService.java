@@ -6,7 +6,6 @@ import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.MOTION_ALARM;
 import static org.homio.addon.camera.entity.StreamMJPEG.mp4OutOptions;
-import static org.homio.addon.camera.service.util.VideoUrls.getCorrectUrlFormat;
 import static org.homio.api.EntityContextMedia.FFMPEG_MOTION_ALARM;
 import static org.homio.api.model.Status.DONE;
 import static org.homio.api.model.Status.ERROR;
@@ -22,6 +21,7 @@ import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pivovarit.function.ThrowingRunnable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -51,6 +51,7 @@ import org.homio.addon.camera.ConfigurationException;
 import org.homio.addon.camera.OpenStreams;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.addon.camera.entity.StreamHLS;
+import org.homio.addon.camera.entity.StreamHLS.Resolution;
 import org.homio.addon.camera.entity.VideoActionsContext;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.service.util.FFMpegRtspAlarm;
@@ -64,6 +65,7 @@ import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
 import org.homio.api.EntityContextMedia.FFMPEGHandler;
 import org.homio.api.model.Icon;
+import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.model.device.ConfigDeviceDefinition;
 import org.homio.api.model.device.ConfigDeviceDefinitionService;
@@ -100,6 +102,30 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     public @NotNull List<ConfigDeviceDefinition> findDevices() {
         return CONFIG_DEVICE_SERVICE.findDeviceDefinitionModels(entity.getModel(), Set.of());
+    }
+
+    public List<OptionModel> getLogSources() {
+        return List.of(
+            OptionModel.of("mjpeg", "FFMPEG mjpeg"),
+            OptionModel.of("main", "FFMPEG hls"),
+            OptionModel.of("snapshot", "FFMPEG snapshot"));
+    }
+
+    public @Nullable InputStream getSourceLogInputStream(@NotNull String sourceID) {
+        return switch (sourceID) {
+            case "mjpeg" -> getFFMPEGLogInputStream(ffmpegMjpeg);
+            case "snapshot" -> getFFMPEGLogInputStream(ffmpegSnapshot);
+            case "main" -> getFFMPEGLogInputStream(ffmpegMainReStream);
+            default -> null;
+        };
+    }
+
+    public String getHlsUri() {
+        return urls.getRtspUri();
+    }
+
+    protected final @Nullable InputStream getFFMPEGLogInputStream(@Nullable FFMPEG ffmpeg) {
+        return FFMPEG.check(ffmpeg, f -> Files.newInputStream(f.getLogPath()), null);
     }
 
     protected abstract void updateNotificationBlock();
@@ -225,10 +251,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer());
 
         try {
-            this.urls.setRtspUri(entity.getRtspUri());
-            this.urls.setMjpegUri(getCorrectUrlFormat(entity.getMjpegUrl()));
-            this.urls.setSnapshotUri(getCorrectUrlFormat(entity.getSnapshotUrl()));
-
             postInitializeCamera();
             recreateFFmpeg();
 
@@ -302,10 +324,10 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     public boolean startFfmpegMjpeg(ThrowingRunnable<Exception> destroyListener) {
         if (urls.getMjpegUri().equals("ffmpeg")) {
-            FFMPEG.run(ffmpegMjpeg, ffmpeg -> {
-                ffmpeg.addDestroyListener("mjpeg", destroyListener);
-                ffmpeg.startConverting();
-            });
+            FFMPEG.run(ffmpegMjpeg, ffmpeg -> ffmpeg.stopConverting(Duration.ofSeconds(10)));
+            ffmpegMjpeg = entity.buildMjpegFFMPEG(this);
+            ffmpegMjpeg.addDestroyListener("mjpeg", destroyListener);
+            ffmpegMjpeg.startConverting();
             return true;
         }
         return false;
@@ -341,10 +363,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         } else {
             requestSnapshotByUri();
         }
-    }
-
-    public void startMJPEGRecord() {
-        FFMPEG.run(ffmpegMjpeg, FFMPEG::startConverting);
     }
 
     @UIVideoActionGetter(ENDPOINT_AUDIO_THRESHOLD)
@@ -646,10 +664,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         FFMPEG.run(ffmpegSnapshot, FFMPEG::stopConverting);
         FFMPEG.run(ffmpegMainReStream, FFMPEG::stopConverting);
 
-        ffmpegMjpeg = entity.buildMjpegFFMPEG(this);
-        ffmpegMjpeg.addDestroyListener("mjpeg-destroy", () -> {
-
-        });
         ffmpegSnapshot = entity.buildSnapshotFFMPEG(this);
     }
 

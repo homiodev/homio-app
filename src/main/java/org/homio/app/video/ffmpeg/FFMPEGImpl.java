@@ -65,6 +65,7 @@ public class FFMPEGImpl implements FFMPEG {
     private final @Getter String output;
     private final @NotNull Map<String, ThrowingRunnable<Exception>> destroyListeners = new HashMap<>();
     private final FileHandler fileHandler;
+    private final @Getter @NotNull Path logPath;
     private @Nullable Collection<ThrowingRunnable<Exception>> threadDestroyListeners;
     private Process process = null;
     private IpVideoFfmpegThread ipVideoFfmpegThread;
@@ -87,7 +88,8 @@ public class FFMPEGImpl implements FFMPEG {
         @NotNull String password) {
         FFMPEGImpl.ffmpegMap.put(entityID + "_" + description, this);
 
-        this.fileHandler = new FileHandler(FFMPEG_LOG_PATH.resolve(entityID + "_" + description + ".log").toString(), 1024 * 1024, 1, false);
+        this.logPath = FFMPEG_LOG_PATH.resolve(entityID + "_" + description + ".log");
+        this.fileHandler = new FileHandler(logPath.toString(), 1024 * 1024, 1, false);
         this.fileHandler.setFormatter(new SimpleFormatter());
 
         this.entityID = entityID;
@@ -235,7 +237,7 @@ public class FFMPEGImpl implements FFMPEG {
                     } else {
                         logDebug(line);
                     }
-                    if (line.contains("No such file or directory")) {
+                    if (line.contains("No such file or directory") || line.contains("Could not run graph")) {
                         handler.ffmpegError(line);
                     }
                 }

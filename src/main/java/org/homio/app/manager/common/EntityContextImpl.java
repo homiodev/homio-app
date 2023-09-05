@@ -71,6 +71,7 @@ import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.homio.app.manager.common.impl.EntityContextVarImpl;
 import org.homio.app.manager.common.impl.EntityContextWorkspaceImpl;
 import org.homio.app.model.entity.LocalBoardEntity;
+import org.homio.app.model.entity.MediaMTXEntity;
 import org.homio.app.model.entity.user.UserAdminEntity;
 import org.homio.app.model.entity.user.UserBaseEntity;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
@@ -248,6 +249,7 @@ public class EntityContextImpl implements EntityContext {
         UserAdminEntity.ensureUserExists(this);
         LocalBoardEntity.ensureDeviceExists(this);
         SshTmateEntity.ensureEntityExists(this);
+        MediaMTXEntity.ensureEntityExists(this);
 
         entityContextSetting.onContextCreated();
         entityContextVar.onContextCreated();

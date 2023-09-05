@@ -167,15 +167,6 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         return super.getAlarmInputUrl();
     }
 
-    @Override
-    public @NotNull String getSnapshotUrl() {
-        return getJsonDataRequire("snapshotUrl", "ffmpeg");
-    }
-
-    public void setSnapshotUrl(String value) {
-        setJsonData("snapshotUrl", value);
-    }
-
     @UIField(order = 2, hideInView = true)
     @UIFieldGroup("ADVANCED")
     public String getCustomMotionAlarmUrl() {
@@ -197,22 +188,6 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     }
 
     @Override
-    @UIField(order = 4, hideInView = true)
-    @UIFieldGroup("ADVANCED")
-    public @NotNull String getMjpegUrl() {
-        return getJsonDataRequire("mjpegUrl", "ffmpeg");
-    }
-
-    public void setMjpegUrl(String value) {
-        setJsonData("mjpegUrl", value);
-    }
-
-    @Override
-    public @NotNull String getRtspUri() {
-        return getFfmpegInput();
-    }
-
-    @Override
     public @Nullable String getError() {
         if (isRequireAuth()) {
             return "W.ERROR.CAMERA_REQ_AUTH_DESCRIPTION";
@@ -220,24 +195,9 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         return super.getError();
     }
 
-    @Override
-    public @Nullable String getHlsRtspUriInput() {
-        return null;
-    }
-
     @JsonIgnore
     private boolean isRequireAuth() {
         return getIeeeAddress() == null;
-    }
-
-    @UIField(order = 50, hideInView = true)
-    @UIFieldGroup("ADVANCED")
-    public String getFfmpegInput() {
-        return getJsonData("ffmpegInput", "ffmpeg");
-    }
-
-    public void setFfmpegInput(String value) {
-        setJsonData("ffmpegInput", value);
     }
 
     @UIField(order = 155, hideInView = true)

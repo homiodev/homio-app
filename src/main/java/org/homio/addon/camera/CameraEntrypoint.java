@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.BaseVideoEntity;
-import org.homio.addon.camera.entity.MediaMTXEntity;
 import org.homio.addon.camera.scanner.OnvifCameraHttpScanner;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.EntityContext;
@@ -28,7 +27,6 @@ public class CameraEntrypoint implements AddonEntrypoint {
 
     @SneakyThrows
     public void init() {
-        MediaMTXEntity.ensureEntityExists(entityContext);
         entityContext.event().runOnceOnInternetUp("scan-cameras", () -> {
             // fire rescan whole possible items to see if ip address has been changed
             entityContext.getBean(OnvifCameraHttpScanner.class).executeScan(entityContext, null, null, true);

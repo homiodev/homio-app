@@ -1,57 +1,15 @@
 package org.homio.addon.camera.scanner;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.*;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.rtsp.*;
-import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.AttributeKey;
-import io.netty.util.CharsetUtil;
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.addon.camera.entity.CommonVideoStreamEntity;
-import org.homio.addon.camera.rtsp.message.sdp.SdpMessage;
-import org.homio.addon.camera.rtsp.message.sdp.SdpParser;
-import org.homio.addon.camera.setting.CameraScanPortRangeSetting;
-import org.homio.addon.camera.setting.rtsp.ScanRtspIpAddressMaxPingTimeoutSetting;
-import org.homio.addon.camera.setting.rtsp.ScanRtspPortsSetting;
-import org.homio.addon.camera.setting.rtsp.ScanRtspUrlsSetting;
-import org.homio.api.EntityContext;
-import org.homio.api.model.Status;
-import org.homio.api.service.scan.BaseItemsDiscovery;
-import org.homio.api.service.scan.VideoStreamScanner;
-import org.homio.api.util.Lang;
-import org.homio.hquery.ProgressBar;
-import org.homio.hquery.hardware.network.NetworkHardwareRepository;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
-
-import java.net.URI;
-import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static io.netty.handler.codec.rtsp.RtspDecoder.DEFAULT_MAX_CONTENT_LENGTH;
-import static io.netty.handler.codec.rtsp.RtspHeaderNames.CONTENT_BASE;
 
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class RtspStreamScanner implements VideoStreamScanner {
+public class RtspStreamScanner /*implements VideoStreamScanner*/ {
 
-    public static final AttributeKey<URI> URL = AttributeKey.valueOf("url");
+    /*public static final AttributeKey<URI> URL = AttributeKey.valueOf("url");
     private static final int THREAD_COUNT = 8;
     private static final int BOOTSTRAP_AWAIT_TERMINATION_SEC = 60;
     public static Map<String, SdpMessage> rtspUrlToSdpMessage = new ConcurrentHashMap<>();
@@ -251,5 +209,5 @@ public class RtspStreamScanner implements VideoStreamScanner {
             pipeline.addLast(new HttpObjectAggregator(DEFAULT_MAX_CONTENT_LENGTH));
             pipeline.addLast(new NettyRtspChannelHandler(uri));
         }
-    }
+    }*/
 }

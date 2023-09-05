@@ -318,7 +318,12 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             return new ResponseEntity<>(
                 outputStream -> {
                     try (InputStream inputStream = ((HasEntitySourceLog) entity).getSourceLogInputStream(sourceID)) {
+                        if (inputStream == null) {
+                            throw new NotFoundException("");
+                        }
                         inputStream.transferTo(outputStream);
+                    } catch (Exception e) {
+                        outputStream.write("No file found".getBytes());
                     }
                 },
                 HttpStatus.OK);

@@ -11,6 +11,7 @@ import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -31,6 +32,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
 import org.homio.api.entity.log.HasEntityLog;
+import org.homio.api.entity.log.HasEntitySourceLog;
 import org.homio.api.entity.types.MediaEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
@@ -69,6 +71,7 @@ import org.json.JSONObject;
 public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseVideoService<?, S>>
     extends MediaEntity implements
     HasEntityLog,
+    HasEntitySourceLog,
     StreamMJPEG,
     StreamHLS,
     StreamSnapshot,
@@ -307,7 +310,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     @JsonIgnore
     public List<OptionModel> getVideoSources() {
         List<OptionModel> videoSources = new ArrayList<>();
-        assembleStream("Hls streams(.m3u8)", m3u8 -> {
+        assembleStream("hls", "Hls streams(.m3u8)", m3u8 -> {
             m3u8.addChild(of("default.m3u8", "HLS stream [default]"));
             if (!getHlsLowResolution().isEmpty()) {
                 m3u8.addChild(of("low.m3u8", "HLS stream[%s]".formatted(getHlsLowResolution())));
@@ -316,16 +319,16 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
                 m3u8.addChild(of("high.m3u8", "HLS stream[%s]".formatted(getHlsHighResolution())));
             }
             appendAdditionHLSStreams(m3u8);
-        });
-        assembleStream("Mjpeg streams(.jpg)", mjpeg -> {
+        }, videoSources);
+        assembleStream("mjpeg", "Mjpeg streams(.jpg)", mjpeg -> {
             mjpeg.addChild(of("ipcamera.mjpeg"));
             //videoSources.add(of("autofps.mjpeg", "MJPEG(autofps) stream"));
             appendAdditionMjpegStreams(mjpeg);
-        });
-        assembleStream("Mjpeg dash(.mdp)", dash -> {
+        }, videoSources);
+        assembleStream("dash", "Mjpeg dash(.mpd)", dash -> {
             //dash.addChild(of("ipcamera.mpd", "MPEG-DASH"));
             appendAdditionMjpegDashStreams(dash);
-        });
+        }, videoSources);
 
         return videoSources;
     }
@@ -342,30 +345,18 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
     }
 
-    private OptionModel assembleStream(String name, Consumer<OptionModel> consumer) {
-        OptionModel optionModel = of(name, name);
+    private void assembleStream(String key, String title, Consumer<OptionModel> consumer, List<OptionModel> videoSources) {
+        OptionModel optionModel = of(key, title);
         consumer.accept(optionModel);
-        if (optionModel.getChildren() != null && optionModel.getChildren().size() == 1) {
-            return optionModel.getChildren().iterator().next();
-        } else {
-            return optionModel;
+        List<OptionModel> children = optionModel.getChildren();
+        if (children != null && !children.isEmpty()) {
+            videoSources.add(optionModel);
         }
     }
 
     public String getUrl(String path) {
         return "http://%s:%s/rest/media/video/%s/%s".formatted(MACHINE_IP_ADDRESS, SERVER_PORT, getEntityID(), path);
     }
-
-    public @NotNull String getSnapshotUrl() {
-        return "ffmpeg";
-    }
-
-    public @NotNull String getMjpegUrl() {
-        return "ffmpeg";
-    }
-
-    public @NotNull
-    abstract String getRtspUri();
 
     protected void fireUpdateSnapshot(EntityContext entityContext, JSONObject params) {
         if (!isStart()) {
@@ -472,5 +463,16 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     @Override
     public void logBuilder(EntityLogBuilder entityLogBuilder) {
         entityLogBuilder.addTopicFilterByEntityID(CameraEntrypoint.class.getPackage());
+    }
+
+    @Override
+    @SneakyThrows
+    public @Nullable InputStream getSourceLogInputStream(@NotNull String sourceID) {
+        return getService().getSourceLogInputStream(sourceID);
+    }
+
+    @Override
+    public @NotNull List<OptionModel> getLogSources() {
+        return getService().getLogSources();
     }
 }

@@ -44,7 +44,10 @@ import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.jetbrains.annotations.NotNull;
 import org.onvif.ver10.schema.Profile;
+import org.springframework.cloud.gateway.mvc.ProxyExchange;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -89,6 +92,25 @@ public class CameraController {
     public void postOnvifEvent(@PathVariable("entityID") String entityID, HttpServletRequest req) {
         OnvifCameraEntity entity = entityContext.getEntityRequire(entityID);
         entity.getService().getOnvifDeviceState().getEventDevices().fireEvent(req.getReader().toString());
+    }
+
+    @GetMapping("/{entityID}/mediamtx/{path}")
+    public ResponseEntity<?> getMediaMTXHls(@PathVariable("entityID") String entityID,
+        @PathVariable("path") String path, ProxyExchange<byte[]> proxy) {
+        return proxyUrl(proxy, 8888, entityID, path);
+    }
+
+    private ResponseEntity<?> proxyUrl(ProxyExchange<byte[]> proxy, int port, String entityID, String path) {
+        ResponseEntity<byte[]> response = proxy.uri("http://localhost:%s/%s/%s".formatted(port, entityID, path)).get();
+        HttpHeaders responseHeaders = new HttpHeaders();
+        response.getHeaders().forEach((headerName, headerValues) -> {
+            if (!headerName.equalsIgnoreCase(ACCESS_CONTROL_ALLOW_ORIGIN)) {
+                responseHeaders.addAll(headerName, headerValues);
+            }
+        });
+        return ResponseEntity.status(response.getStatusCode())
+                             .headers(responseHeaders)
+                             .body(response.getBody());
     }
 
     /**

@@ -9,13 +9,14 @@ import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.EntityContextMedia;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.model.entity.MediaMTXEntity;
 import org.homio.app.video.ffmpeg.FFMPEGImpl;
 import org.homio.app.video.ffmpeg.FfmpegHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 
 @Log4j2
 @RequiredArgsConstructor
-public class EntityContextMediaImpl implements EntityContextMedia {
+public class EntityContextMediaImpl implements EntityContextMedia  {
 
     @Getter
     private final EntityContextImpl entityContext;
@@ -27,6 +28,17 @@ public class EntityContextMediaImpl implements EntityContextMedia {
     @Override
     public void fireFfmpeg(@NotNull String inputOptions, @NotNull String source, @NotNull String output, int maxWaitTimeout) {
         repo.fireFfmpeg(FFMPEG_LOCATION, inputOptions, source, output, maxWaitTimeout);
+    }
+
+    @Override
+    public void registerMediaMTXSource(@NotNull String path, @NotNull MediaMTXSource source) {
+        MediaMTXEntity.ensureEntityExists(entityContext)
+                      .getService().addSource(path, source);
+    }
+
+    @Override
+    public void unRegisterMediaMTXSource(@NotNull String path) {
+        MediaMTXEntity.ensureEntityExists(entityContext).getService().removeSource(path);
     }
 
     @Override
