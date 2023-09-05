@@ -240,16 +240,6 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         setJsonData("ffmpegInput", value);
     }
 
-    @UIField(order = 105, hideInView = true)
-    @UIFieldGroup("ADVANCED")
-    public String getFfmpegInputOptions() {
-        return getJsonData("ffmpegInputOptions", "");
-    }
-
-    public void setFfmpegInputOptions(String value) {
-        setJsonData("ffmpegInputOptions", value);
-    }
-
     @UIField(order = 155, hideInView = true)
     @UIFieldGroup(value = "PTZ", order = 300, borderColor = "#960055")
     public boolean isPtzContinuous() {

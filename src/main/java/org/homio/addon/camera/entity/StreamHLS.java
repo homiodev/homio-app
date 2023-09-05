@@ -26,19 +26,8 @@ public interface StreamHLS extends HasJsonData {
 
     @Nullable String getHlsRtspUriInput();
 
-    @UIField(order = 1000, hideInView = true, type = UIFieldType.Chips)
+    @UIField(order = 1, hideInView = true)
     @UIFieldGroup(value = "HLS_GROUP", borderColor = "#79D136")
-    @UIFieldTab("HLS")
-    default List<String> getHlsExtraOptions() {
-        return getJsonDataList("hls_eo");
-    }
-
-    default void setHlsExtraOptions(String value) {
-        setJsonData("hls_eo", value);
-    }
-
-    @UIField(order = 320, hideInView = true)
-    @UIFieldGroup("HLS_GROUP")
     @UIFieldTab("HLS")
     default int getHlsListSize() {
         return getJsonData("hls_ls", 10);
@@ -48,7 +37,7 @@ public interface StreamHLS extends HasJsonData {
         setJsonData("hls_ls", value);
     }
 
-    @UIField(order = 340, hideInView = true)
+    @UIField(order = 2, hideInView = true)
     @UIFieldGroup("HLS_GROUP")
     @UIFieldTab("HLS")
     @UIFieldSlider(min = 1, max = 60)
@@ -60,7 +49,7 @@ public interface StreamHLS extends HasJsonData {
         setJsonData("hls_fs", value);
     }
 
-    @UIField(order = 400, hideInView = true)
+    @UIField(order = 3, hideInView = true, label = "videoCodec")
     @UIFieldGroup("HLS_GROUP")
     @UIFieldTab("HLS")
     default String getHlsVideoCodec() {
@@ -71,7 +60,7 @@ public interface StreamHLS extends HasJsonData {
         setJsonData("hls_vc", value);
     }
 
-    @UIField(order = 410, hideInView = true)
+    @UIField(order = 4, hideInView = true)
     @UIFieldGroup("HLS_GROUP")
     @UIFieldTab("HLS")
     default String getHlsAudioCodec() {
@@ -82,7 +71,7 @@ public interface StreamHLS extends HasJsonData {
         setJsonData("hls_ac", value);
     }
 
-    @UIField(order = 320, hideInView = true)
+    @UIField(order = 5, hideInView = true, label = "videoScale")
     @UIFieldGroup("HLS_GROUP")
     @UIFieldTab("HLS")
     default String getHlsScale() {
@@ -93,7 +82,7 @@ public interface StreamHLS extends HasJsonData {
         setJsonData("hls_scale", value);
     }
 
-    @UIField(order = 400, hideInView = true)
+    @UIField(order = 6, hideInView = true)
     @UIFieldGroup("HLS_GROUP")
     @UIFieldTab("HLS")
     default String getHlsLowResolution() {
@@ -110,7 +99,7 @@ public interface StreamHLS extends HasJsonData {
         setJsonData("low", value);
     }
 
-    @UIField(order = 410, hideInView = true)
+    @UIField(order = 7, hideInView = true)
     @UIFieldGroup("HLS_GROUP")
     @UIFieldTab("HLS")
     default String getHlsHighResolution() {
@@ -127,6 +116,28 @@ public interface StreamHLS extends HasJsonData {
         setJsonData("high", value);
     }
 
+    @UIField(order = 8, hideInView = true, type = UIFieldType.Chips, label = "ffmpegInOptions")
+    @UIFieldGroup("HLS_GROUP")
+    @UIFieldTab("HLS")
+    default List<String> getHlsInputOptions() {
+        return getJsonDataList("hls_io");
+    }
+
+    default void setHlsInputOptions(String value) {
+        setJsonData("hls_io", value);
+    }
+
+    @UIField(order = 9, hideInView = true, type = UIFieldType.Chips, label = "ffmpegOutOptions")
+    @UIFieldGroup(value = "HLS_GROUP", borderColor = "#79D136")
+    @UIFieldTab("HLS")
+    default List<String> getHlsOutputOptions() {
+        return getJsonDataList("hls_oo");
+    }
+
+    default void setHlsOutputOptions(String value) {
+        setJsonData("hls_oo", value);
+    }
+
     @SneakyThrows
     default @NotNull FFMPEG buildHlsFFMPEG(@NotNull Resolution resolution, BaseVideoService<? extends BaseVideoEntity<?, ?>, ?> service) {
         Path directory = service.getFfmpegHLSOutputPath();
@@ -139,7 +150,7 @@ public interface StreamHLS extends HasJsonData {
                           service.getEntityID() + "_" + resolution,
                           "HLS[%s]".formatted(resolution),
                           service, FFMPEGFormat.HLS,
-                          "-hide_banner " + service.getFFMPEGInputOptions(),
+                          String.join(" ", getHlsInputOptions()),
                           input,
                           buildHlsOptions(service, resolution), directory.resolve("%s.m3u8".formatted(streamPrefix)).toString(),
                           service.getEntity().getUser(), service.getEntity().getPassword().asString())
@@ -162,6 +173,7 @@ public interface StreamHLS extends HasJsonData {
         options.add("-hls_list_size " + getHlsListSize()); // how many files
         options.add("-preset ultrafast");
         options.add("-tune zerolatency");
+        options.add("-hide_banner");
         if (resolution != Resolution.def) {
             options.add("-s " + (resolution == Resolution.low ? service.getEntity().getHlsLowResolution() : service.getEntity().getHlsHighResolution()));
         }
@@ -175,12 +187,8 @@ public interface StreamHLS extends HasJsonData {
             options.add("-ab 32k"); // audio bitrate in Kb/s
             options.add("-ar 44100"); // audio sampling rate
         }
-        options.addAll(getHlsExtraOptions());
+        options.addAll(getHlsOutputOptions());
         return String.join(" ", options);
-    }
-
-    default long getHlsHashCode() {
-        return getJsonDataHashCode("hls_eo", "hls_ls", "hls_fs", "hls_vc", "hls_scale", "hls_ac");
     }
 
     enum Resolution {

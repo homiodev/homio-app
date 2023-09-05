@@ -162,35 +162,6 @@ public class CameraController {
                 || Duration.between(handler.getCurrentSnapshotTime(), Instant.now()).toMillis() < 1200;
     }
 
-    /*@SneakyThrows
-    @GetMapping("/{entityID}/snapshots.mjpeg")
-    public void requestCameraSnapshotsMjpeg(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
-        BaseVideoEntity<?, ?> entity = getEntity(entityID);
-        BaseVideoService<?, ?> handler = entity.getService();
-        handler.setStreamingSnapshotMjpeg(true);
-        handler.startSnapshotPolling();
-        StreamOutput output = new StreamOutput(resp);
-        OpenStreams openSnapshotStreams = getOpenStreamsContainer(entityID).openSnapshotStreams;
-        openSnapshotStreams.addStream(output);
-        do {
-            try {
-                output.sendSnapshotBasedFrame(handler.getSnapshot());
-                sleep(entity.getSnapshotPollInterval());
-            } catch (Exception e) {
-                // Never stop streaming until IOException. Occurs when browser stops the stream.
-                openSnapshotStreams.removeStream(output);
-                log.debug("Now there are {} snapshots.mjpeg streams open.",
-                        openSnapshotStreams.getNumberOfStreams());
-                if (openSnapshotStreams.isEmpty()) {
-                    handler.setStreamingSnapshotMjpeg(false);
-                    handler.stopSnapshotPolling();
-                    log.debug("All snapshots.mjpeg streams have stopped.");
-                }
-                return;
-            }
-        } while (true);
-    }*/
-
     @SneakyThrows
     @GetMapping("/{entityID}/ipcamera.mjpeg")
     public void requestCameraIpCameraMjpeg(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
@@ -258,34 +229,37 @@ public class CameraController {
     public void requestCameraAutoFps(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
         BaseVideoEntity<?, ?> entity = getEntity(entityID);
         BaseVideoService<?, ?> service = entity.getService();
-
         service.setStreamingAutoFps(true);
         StreamOutput output = new StreamOutput(resp);
         OpenStreams openAutoFpsStreams = getOpenStreamsContainer(entityID).openAutoFpsStreams;
         openAutoFpsStreams.addStream(output);
-        int counter = 0;
-        do {
-            try {
-                if (service.isMotionDetected()) {
-                    output.sendSnapshotBasedFrame(service.getSnapshot());
-                } // every 8 seconds if no motion or the first three snapshots to fill any FIFO
-                else if (counter % 8 == 0 || counter < 3) {
-                    output.sendSnapshotBasedFrame(service.getSnapshot());
-                }
-                counter++;
-                sleep(1000);
-            } catch (Exception e) {
-                // Never stop streaming until IOException. Occurs when browser stops the stream.
-                openAutoFpsStreams.removeStream(output);
-                log.debug("Now there are {} autofps.mjpeg streams open.",
+
+        try {
+            int counter = 0;
+            do {
+                try {
+                    if (service.isMotionDetected()) {
+                        output.sendSnapshotBasedFrame(service.getSnapshot());
+                    } // every 8 seconds if no motion or the first three snapshots to fill any FIFO
+                    else if (counter % 8 == 0 || counter < 3) {
+                        output.sendSnapshotBasedFrame(service.getSnapshot());
+                    }
+                    counter++;
+                    sleep(1000);
+                } catch (Exception e) {
+                    // Never stop streaming until IOException. Occurs when browser stops the stream.
+                    openAutoFpsStreams.removeStream(output);
+                    log.debug("Now there are {} autofps.mjpeg streams open.",
                         openAutoFpsStreams.getNumberOfStreams());
-                if (openAutoFpsStreams.isEmpty()) {
-                    service.setStreamingAutoFps(false);
-                    log.debug("All autofps.mjpeg streams have stopped.");
+                    return;
                 }
-                return;
+            } while (true);
+        } finally {
+            if (openAutoFpsStreams.isEmpty()) {
+                service.setStreamingAutoFps(false);
+                log.debug("All autofps.mjpeg streams have stopped.");
             }
-        } while (true);
+        }
     }
 
     @GetMapping("/{entityID}/instar")
@@ -367,12 +341,10 @@ public class CameraController {
     public static final class OpenStreamsContainer {
 
         public final OpenStreams openStreams = new OpenStreams();
-        public final OpenStreams openSnapshotStreams = new OpenStreams();
         public final OpenStreams openAutoFpsStreams = new OpenStreams();
 
         public void dispose() {
             openStreams.closeAllStreams();
-            openSnapshotStreams.closeAllStreams();
             openAutoFpsStreams.closeAllStreams();
         }
     }

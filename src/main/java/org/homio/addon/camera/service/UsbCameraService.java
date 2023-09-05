@@ -8,6 +8,7 @@ import java.awt.Dimension;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import lombok.Getter;
@@ -55,11 +56,6 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
         keepMjpegRunning();
         // skip taking snapshot
         bringCameraOnline();
-    }
-
-    @Override
-    public String getFFMPEGInputOptions(String profile) {
-        return "";
     }
 
     @Override

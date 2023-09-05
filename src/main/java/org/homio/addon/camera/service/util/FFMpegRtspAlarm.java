@@ -1,5 +1,11 @@
 package org.homio.addon.camera.service.util;
 
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.BaseVideoEntity;
@@ -9,13 +15,7 @@ import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
 import org.homio.api.state.StringType;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-
+// TODO: not tested
 @Log4j2
 @RequiredArgsConstructor
 public class FFMpegRtspAlarm {
@@ -25,7 +25,7 @@ public class FFMpegRtspAlarm {
     private int motionThreshold;
     private int audioThreshold;
     private final EntityContext entityContext;
-    private final BaseVideoEntity videoStreamEntity;
+    private final BaseVideoEntity<?, ?> videoStreamEntity;
 
     public void addMotionAlarmListener(String listener) {
         motionAlarmObservers.add(listener);
@@ -44,8 +44,8 @@ public class FFMpegRtspAlarm {
     }
 
     private void runFFMPEGRtspAlarmThread() {
-        BaseVideoService service = videoStreamEntity.getService();
-        String inputOptions = service.getFFMPEGInputOptions();
+        BaseVideoService<?, ?> service = videoStreamEntity.getService();
+        String inputOptions = "";
 
         if (ffmpegRtspHelper != null) {
             // stop stream if threshold - 0

@@ -2,6 +2,7 @@ package org.homio.addon.camera.entity;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.nio.file.Path;
@@ -23,19 +24,8 @@ public interface StreamMJPEG extends HasJsonData {
 
     String mp4OutOptions = "-c:v copy -c:a copy";
 
-    @UIField(order = 1000, hideInView = true, type = UIFieldType.Chips)
-    @UIFieldGroup(value = "MGPEG_GROUP", borderColor = "#6BB030")
-    @UIFieldTab("MJPEG")
-    default List<String> getMjpegExtraOptions() {
-        return getJsonDataList("mjpeg_eo");
-    }
-
-    default void setMjpegExtraOptions(String value) {
-        setJsonData("mjpeg_eo", value);
-    }
-
-    @UIField(order = 320, hideInView = true)
-    @UIFieldGroup("MGPEG_GROUP")
+    @UIField(order = 1, hideInView = true)
+    @UIFieldGroup(value = "MGPEG_GROUP", borderColor = "#B09F3E")
     @UIFieldTab("MJPEG")
     @UIFieldSlider(min = 0, max = 10)
     default int getMjpegSnapshotQuality() {
@@ -46,7 +36,7 @@ public interface StreamMJPEG extends HasJsonData {
         setJsonData("mjpeg_q", value);
     }
 
-    @UIField(order = 340, hideInView = true)
+    @UIField(order = 2, hideInView = true)
     @UIFieldGroup("MGPEG_GROUP")
     @UIFieldTab("MJPEG")
     @UIFieldSlider(min = 0.1, max = 4, step = 0.1, header = "frames/sec")
@@ -58,7 +48,7 @@ public interface StreamMJPEG extends HasJsonData {
         setJsonData("mjpeg_rate", value);
     }
 
-    @UIField(order = 320, hideInView = true)
+    @UIField(order = 3, hideInView = true, label = "videoScale")
     @UIFieldGroup("MGPEG_GROUP")
     @UIFieldTab("MJPEG")
     default String getMjpegScale() {
@@ -69,7 +59,7 @@ public interface StreamMJPEG extends HasJsonData {
         setJsonData("mjpeg_scale", value);
     }
 
-    @UIField(order = 505, hideInView = true)
+    @UIField(order = 4, hideInView = true, label = "ffmpegInOptions")
     @UIFieldGroup("MGPEG_GROUP")
     @UIFieldTab("MJPEG")
     default String getMjpegInputOptions() {
@@ -80,28 +70,30 @@ public interface StreamMJPEG extends HasJsonData {
         setJsonData("mjpeg_io", value);
     }
 
+    @UIField(order = 5, hideInView = true, type = UIFieldType.Chips, label = "ffmpegOutOptions")
+    @UIFieldGroup("MGPEG_GROUP")
+    @UIFieldTab("MJPEG")
+    default List<String> getMjpegOutputOptions() {
+        return getJsonDataList("mjpeg_oo");
+    }
+
+    default void setMjpegOutputOptions(String value) {
+        setJsonData("mjpeg_oo", value);
+    }
+
     default @NotNull <S extends BaseVideoService<T, S>, T extends BaseVideoEntity<T, S>> FFMPEG buildMjpegFFMPEG(
         BaseVideoService<T, S> service) {
         T entity = service.getEntity();
         String rtspUri = service.getUrls().getRtspUri();
 
-        List<String> options = new ArrayList<>();
-        options.add("-q:v " + getMjpegSnapshotQuality()); // video quality
-        options.add("-r " + getMjpegFrameRate());
-        options.add("-update 1");
-
-        if (isNotEmpty(getMjpegScale())) {
-            options.add("-vf scale=" + getMjpegScale()); // scale result video
-        }
-        options.addAll(getMjpegExtraOptions());
-        String outOptions = String.join(" ", options);
+        String outOptions = getMjpegOutOptions();
 
         return service.getEntityContext().media().buildFFMPEG(
             service.getEntityID(),
             "MJPEG",
             service,
             FFMPEGFormat.MJPEG,
-            getMjpegInputOptions() + " -hide_banner",
+            getMjpegInputOptions(),
             rtspUri,
             outOptions,
             entity.getUrl("ipcamera.jpg"),
@@ -109,10 +101,23 @@ public interface StreamMJPEG extends HasJsonData {
             entity.getPassword().asString());
     }
 
-    default <T extends BaseVideoEntity<T, S>, S extends BaseVideoService<T, S>> void recordMp4Async(
-        Path filePath, String profile, int secondsToRecord, BaseVideoService<T, S> service) {
-        String inputOptions = service.getFFMPEGInputOptions(profile);
-        inputOptions = "-y -t " + secondsToRecord + " -hide_banner " + inputOptions;
+    @JsonIgnore
+    private String getMjpegOutOptions() {
+        List<String> options = new ArrayList<>();
+        options.add("-q:v " + getMjpegSnapshotQuality()); // video quality
+        options.add("-r " + getMjpegFrameRate());
+        options.add("-update 1");
+        options.add("-hide_banner");
+
+        if (isNotEmpty(getMjpegScale())) {
+            options.add("-vf scale=" + getMjpegScale()); // scale result video
+        }
+        options.addAll(getMjpegOutputOptions());
+        return String.join(" ", options);
+    }
+
+    default void recordMp4Async(Path filePath, String profile, int secondsToRecord, BaseVideoService<?, ?> service) {
+        String inputOptions = "-y -t " + secondsToRecord + " -hide_banner";
         FFMPEG ffmpegMP4 = service.getEntityContext()
                                   .media()
                                   .buildFFMPEG(service.getEntityID(), "MP4",

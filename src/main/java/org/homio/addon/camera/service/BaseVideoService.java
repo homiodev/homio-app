@@ -104,8 +104,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     protected abstract void updateNotificationBlock();
 
-    public abstract String getFFMPEGInputOptions(@Nullable String profile);
-
     protected abstract boolean pingCamera();
 
     protected abstract void dispose0();
@@ -149,7 +147,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     protected Instant lastSnapshotRequest = Instant.now();
     protected @Getter Instant currentSnapshotTime = Instant.now();
 
-    protected @Setter boolean streamingSnapshotMjpeg = false;
     protected @Setter boolean streamingAutoFps = false;
 
     private @Getter
@@ -350,10 +347,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         FFMPEG.run(ffmpegMjpeg, FFMPEG::startConverting);
     }
 
-    public String getFFMPEGInputOptions() {
-        return getFFMPEGInputOptions(null);
-    }
-
     @UIVideoActionGetter(ENDPOINT_AUDIO_THRESHOLD)
     public DecimalType getAudioAlarmThreshold() {
         return new DecimalType(entity.getAudioThreshold());
@@ -416,7 +409,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     @SneakyThrows
     protected void takeSnapshotSync(@Nullable String profile, @NotNull Path output) {
-        fireFfmpegSync(profile, output, "", entity.getSnapshotOutputOptions(this), 20);
+        fireFfmpegSync(profile, output, "", entity.getSnapshotOutOptions(), 20);
     }
 
     @UIVideoEndpointAction(ENDPOINT_AUDIO_THRESHOLD)
@@ -587,9 +580,9 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             }
         }
         Set<String> inputs = new HashSet<>();
-        inputs.add("-y -hide_banner");
+        inputs.add("-y");
+        inputs.add("-hide_banner");
         inputs.add(inputArguments);
-        inputs.add(getFFMPEGInputOptions(profile));
         entityContext.media().fireFfmpeg(join(" ", inputs), input, outOptions + " " + output, maxTimeout);
     }
 
@@ -636,7 +629,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     public void recordGifAsync(Path filePath, @Nullable String profile, int secondsToRecord) {
-        String gifInputOptions = "-y -t " + secondsToRecord + " -hide_banner " + getFFMPEGInputOptions();
+        String gifInputOptions = "-y -t " + secondsToRecord + " -hide_banner";
         FFMPEG ffmpegGIF = entityContext.media().buildFFMPEG(entityID, "FFMPEG GIF", new FFMPEGHandler(){}, FFMPEGFormat.GIF,
             gifInputOptions, urls.getRtspUri(profile),
             gifOutOptions, filePath.toString(), entity.getUser(),

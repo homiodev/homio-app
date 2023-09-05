@@ -167,25 +167,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     @Override
-    public String getFFMPEGInputOptions(@Nullable String profile) {
-        String inputOptions = entity.getFfmpegInputOptions();
-        String rtspUri = urls.getRtspUri(profile);
-        if (rtspUri.isEmpty()) {
-            log.warn("[{}]: The camera tried to use a FFmpeg feature when no valid input for FFmpeg is provided.", getEntityID());
-            return null;
-        }
-        if (rtspUri.toLowerCase().contains("rtsp")) {
-            if (inputOptions.isEmpty()) {
-                inputOptions = "-rtsp_transport tcp";
-            }
-        }
-        if (!inputOptions.contains("timeout")) {
-            inputOptions += " -timeout " + TimeUnit.SECONDS.toMicros(10);
-        }
-        return inputOptions;
-    }
-
-    @Override
     protected boolean pingCamera() {
         try {
             HardwareUtils.ping(entity.getIp(), entity.getRestPort());

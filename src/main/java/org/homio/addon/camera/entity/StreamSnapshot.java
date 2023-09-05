@@ -2,6 +2,7 @@ package org.homio.addon.camera.entity;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.util.ArrayList;
@@ -19,14 +20,14 @@ import org.homio.api.ui.field.UIFieldType;
 
 public interface StreamSnapshot extends HasJsonData {
 
-    @UIField(order = 1000, hideInView = true, type = UIFieldType.Chips)
+    @UIField(order = 1000, hideInView = true, type = UIFieldType.Chips, label = "ffmpegOutOptions")
     @UIFieldGroup(value = "SNAPSHOT_GROUP", borderColor = "#79D136")
     @UIFieldTab("SNAPSHOT")
-    default List<String> getSnapshotExtraOptions() {
+    default List<String> getSnapshotOutputOptions() {
         return getJsonDataList("snap_eo");
     }
 
-    default void setSnapshotExtraOptions(String value) {
+    default void setSnapshotOutputOptions(String value) {
         setJsonData("snap_eo", value);
     }
 
@@ -42,7 +43,7 @@ public interface StreamSnapshot extends HasJsonData {
         setJsonData("snap_q", value);
     }
 
-    @UIField(order = 320, hideInView = true)
+    @UIField(order = 320, hideInView = true, label = "videoScale")
     @UIFieldGroup("SNAPSHOT_GROUP")
     @UIFieldTab("SNAPSHOT")
     default String getSnapshotScale() {
@@ -53,14 +54,14 @@ public interface StreamSnapshot extends HasJsonData {
         setJsonData("snap_scale", value);
     }
 
-    @UIField(order = 505, hideInView = true)
+    @UIField(order = 505, hideInView = true, label = "ffmpegInOptions")
     @UIFieldGroup("SNAPSHOT_GROUP")
     @UIFieldTab("SNAPSHOT")
-    default String getSnapshotExtraInputOptions() {
+    default String getSnapshotInputOptions() {
         return getJsonData("snap_io");
     }
 
-    default void setSnapshotExtraInputOptions(String value) {
+    default void setSnapshotInputOptions(String value) {
         setJsonData("snap_io", value);
     }
 
@@ -74,18 +75,17 @@ public interface StreamSnapshot extends HasJsonData {
             "SNAPSHOT",
             new FFMPEGHandler(){},
             FFMPEGFormat.SNAPSHOT,
-            getSnapshotExtraInputOptions(),
+            getSnapshotInputOptions(),
             rtspUri,
-            getSnapshotOutputOptions(service),
+            getSnapshotOutOptions(),
             entity.getUrl("snapshot.jpg"),
             entity.getUser(),
             entity.getPassword().asString());
     }
 
-    default <T extends BaseVideoEntity<T, S>, S extends BaseVideoService<T, S>> String getSnapshotOutputOptions(
-        BaseVideoService<T, S> service) {
+    @JsonIgnore
+    default String getSnapshotOutOptions() {
         List<String> options = new ArrayList<>();
-        options.add(service.getFFMPEGInputOptions());
         options.add("-q:v " + getSnapshotQuality());
         options.add("-threads 1");
         options.add("-frames:v 1");
@@ -96,7 +96,7 @@ public interface StreamSnapshot extends HasJsonData {
         if (isNotEmpty(getSnapshotScale())) {
             options.add("-vf scale=" + getSnapshotScale());
         }
-        options.addAll(getSnapshotExtraOptions());
+        options.addAll(getSnapshotOutputOptions());
         return String.join(" ", options);
     }
 }

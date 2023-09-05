@@ -56,16 +56,6 @@ public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraS
         setJsonData("asource", value);
     }
 
-    @UIField(order = 90, hideInView = true)
-    @UIFieldPort
-    public int getReStreamUdpPort() {
-        return getJsonData("streamPort", 35001);
-    }
-
-    public void setReStreamUdpPort(int value) {
-        setJsonData("streamPort", value);
-    }
-
     @Override
     protected void assembleExtraRunningCommands(List<String> commands) {
         if (FFMPEG.check(getService().getFfmpegUsbStream(), FFMPEG::isRunning, false)) {
@@ -106,6 +96,17 @@ public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraS
     @Override
     protected @NotNull String getDevicePrefix() {
         return "usbcam";
+    }
+
+    @UIField(order = 90, hideInView = true)
+    @UIFieldPort
+    @UIFieldGroup(value = "STREAMING", order = 10, borderColor = "#59B8AD")
+    public int getReStreamUdpPort() {
+        return getJsonData("streamPort", 35001);
+    }
+
+    public void setReStreamUdpPort(int value) {
+        setJsonData("streamPort", value);
     }
 
     @UIField(order = 100, hideInView = true)

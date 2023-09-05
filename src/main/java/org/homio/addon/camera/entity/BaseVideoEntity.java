@@ -294,18 +294,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         setJsonData("hasAudioStream", value);
     }
 
-    // this is parameter handles when motion/audio detects or when fires snapshot.mjpeg
-    @UIField(order = 3, hideInView = true)
-    @UIFieldSlider(min = 1, max = 10)
-    @UIFieldGroup("STREAMING")
-    public int getSnapshotPollInterval() {
-        return getJsonData("spi", 1);
-    }
-
-    public void setSnapshotPollInterval(int value) {
-        setJsonData("spi", value);
-    }
-
     @UIField(order = 4, hideOnEmpty = true, type = UIFieldType.Chips, hideInEdit = true)
     @UIFieldGroup("STREAMING")
     public List<String> getStreamResolutions() {
@@ -325,8 +313,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         if (!getHlsHighResolution().isEmpty()) {
             videoSources.add(of("high.m3u8", "HLS stream[%s]".formatted(getHlsHighResolution())));
         }
-        videoSources.add(of("default.m3u8", "HLS stream[default]"));
-        // videoSources.add(of("snapshots.mjpeg", "MJPEG stream"));
+        videoSources.add(of("default.m3u8", "HLS stream"));
         videoSources.add(of("autofps.mjpeg", "MJPEG(autofps) stream"));
         videoSources.add(of("ipcamera.mjpeg"));
         videoSources.add(of("ipcamera.mpd", "MPEG-DASH"));
