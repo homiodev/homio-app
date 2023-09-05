@@ -27,7 +27,7 @@ public interface StreamHLS extends HasJsonData {
     @Nullable String getHlsRtspUriInput();
 
     @UIField(order = 1, hideInView = true)
-    @UIFieldGroup(value = "HLS_GROUP", borderColor = "#79D136")
+    @UIFieldGroup(value = "HLS_GROUP", order = 1, borderColor = "#79D136")
     @UIFieldTab("HLS")
     default int getHlsListSize() {
         return getJsonData("hls_ls", 10);
@@ -60,7 +60,7 @@ public interface StreamHLS extends HasJsonData {
         setJsonData("hls_vc", value);
     }
 
-    @UIField(order = 4, hideInView = true)
+    @UIField(order = 4, hideInView = true, label = "audioCodec")
     @UIFieldGroup("HLS_GROUP")
     @UIFieldTab("HLS")
     default String getHlsAudioCodec() {
@@ -82,8 +82,8 @@ public interface StreamHLS extends HasJsonData {
         setJsonData("hls_scale", value);
     }
 
-    @UIField(order = 6, hideInView = true)
-    @UIFieldGroup("HLS_GROUP")
+    @UIField(order = 1, hideInView = true)
+    @UIFieldGroup(value = "HLS_STREAMS", order = 4, borderColor = "#7E80C4")
     @UIFieldTab("HLS")
     default String getHlsLowResolution() {
         return getJsonData("low");
@@ -99,8 +99,8 @@ public interface StreamHLS extends HasJsonData {
         setJsonData("low", value);
     }
 
-    @UIField(order = 7, hideInView = true)
-    @UIFieldGroup("HLS_GROUP")
+    @UIField(order = 2, hideInView = true)
+    @UIFieldGroup("HLS_STREAMS")
     @UIFieldTab("HLS")
     default String getHlsHighResolution() {
         return getJsonData("high");
@@ -116,8 +116,8 @@ public interface StreamHLS extends HasJsonData {
         setJsonData("high", value);
     }
 
-    @UIField(order = 8, hideInView = true, type = UIFieldType.Chips, label = "ffmpegInOptions")
-    @UIFieldGroup("HLS_GROUP")
+    @UIField(order = 1, hideInView = true, type = UIFieldType.Chips, label = "ffmpegInOptions")
+    @UIFieldGroup(value = "ADVANCED", order = 50, borderColor = "#FF1E00")
     @UIFieldTab("HLS")
     default List<String> getHlsInputOptions() {
         return getJsonDataList("hls_io");
@@ -127,8 +127,8 @@ public interface StreamHLS extends HasJsonData {
         setJsonData("hls_io", value);
     }
 
-    @UIField(order = 9, hideInView = true, type = UIFieldType.Chips, label = "ffmpegOutOptions")
-    @UIFieldGroup(value = "HLS_GROUP", borderColor = "#79D136")
+    @UIField(order = 2, hideInView = true, type = UIFieldType.Chips, label = "ffmpegOutOptions")
+    @UIFieldGroup("ADVANCED")
     @UIFieldTab("HLS")
     default List<String> getHlsOutputOptions() {
         return getJsonDataList("hls_oo");

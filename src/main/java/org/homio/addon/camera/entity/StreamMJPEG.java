@@ -24,8 +24,8 @@ public interface StreamMJPEG extends HasJsonData {
 
     String mp4OutOptions = "-c:v copy -c:a copy";
 
-    @UIField(order = 1, hideInView = true)
-    @UIFieldGroup(value = "MGPEG_GROUP", borderColor = "#B09F3E")
+    @UIField(order = 1, hideInView = true, label = "snapshotQuality")
+    @UIFieldGroup(value = "MGPEG_GROUP", order = 1, borderColor = "#B09F3E")
     @UIFieldTab("MJPEG")
     @UIFieldSlider(min = 0, max = 10)
     default int getMjpegSnapshotQuality() {
@@ -36,7 +36,7 @@ public interface StreamMJPEG extends HasJsonData {
         setJsonData("mjpeg_q", value);
     }
 
-    @UIField(order = 2, hideInView = true)
+    @UIField(order = 2, hideInView = true, label = "frameRate")
     @UIFieldGroup("MGPEG_GROUP")
     @UIFieldTab("MJPEG")
     @UIFieldSlider(min = 0.1, max = 4, step = 0.1, header = "frames/sec")
@@ -59,8 +59,8 @@ public interface StreamMJPEG extends HasJsonData {
         setJsonData("mjpeg_scale", value);
     }
 
-    @UIField(order = 4, hideInView = true, label = "ffmpegInOptions")
-    @UIFieldGroup("MGPEG_GROUP")
+    @UIField(order = 1, hideInView = true, label = "ffmpegInOptions")
+    @UIFieldGroup(value = "ADVANCED", order = 50, borderColor = "#FF1E00")
     @UIFieldTab("MJPEG")
     default String getMjpegInputOptions() {
         return getJsonData("mjpeg_io");
@@ -70,8 +70,8 @@ public interface StreamMJPEG extends HasJsonData {
         setJsonData("mjpeg_io", value);
     }
 
-    @UIField(order = 5, hideInView = true, type = UIFieldType.Chips, label = "ffmpegOutOptions")
-    @UIFieldGroup("MGPEG_GROUP")
+    @UIField(order = 2, hideInView = true, type = UIFieldType.Chips, label = "ffmpegOutOptions")
+    @UIFieldGroup("ADVANCED")
     @UIFieldTab("MJPEG")
     default List<String> getMjpegOutputOptions() {
         return getJsonDataList("mjpeg_oo");

@@ -20,19 +20,8 @@ import org.homio.api.ui.field.UIFieldType;
 
 public interface StreamSnapshot extends HasJsonData {
 
-    @UIField(order = 1000, hideInView = true, type = UIFieldType.Chips, label = "ffmpegOutOptions")
-    @UIFieldGroup(value = "SNAPSHOT_GROUP", borderColor = "#79D136")
-    @UIFieldTab("SNAPSHOT")
-    default List<String> getSnapshotOutputOptions() {
-        return getJsonDataList("snap_eo");
-    }
-
-    default void setSnapshotOutputOptions(String value) {
-        setJsonData("snap_eo", value);
-    }
-
-    @UIField(order = 320, hideInView = true)
-    @UIFieldGroup("SNAPSHOT_GROUP")
+    @UIField(order = 1, hideInView = true)
+    @UIFieldGroup(value = "SNAPSHOT_GROUP", order = 1, borderColor = "#79D136")
     @UIFieldTab("SNAPSHOT")
     @UIFieldSlider(min = 0, max = 10)
     default int getSnapshotQuality() {
@@ -43,7 +32,7 @@ public interface StreamSnapshot extends HasJsonData {
         setJsonData("snap_q", value);
     }
 
-    @UIField(order = 320, hideInView = true, label = "videoScale")
+    @UIField(order = 2, hideInView = true, label = "videoScale")
     @UIFieldGroup("SNAPSHOT_GROUP")
     @UIFieldTab("SNAPSHOT")
     default String getSnapshotScale() {
@@ -54,8 +43,8 @@ public interface StreamSnapshot extends HasJsonData {
         setJsonData("snap_scale", value);
     }
 
-    @UIField(order = 505, hideInView = true, label = "ffmpegInOptions")
-    @UIFieldGroup("SNAPSHOT_GROUP")
+    @UIField(order = 1, hideInView = true, label = "ffmpegInOptions")
+    @UIFieldGroup(value = "ADVANCED", order = 50, borderColor = "#FF1E00")
     @UIFieldTab("SNAPSHOT")
     default String getSnapshotInputOptions() {
         return getJsonData("snap_io");
@@ -63,6 +52,17 @@ public interface StreamSnapshot extends HasJsonData {
 
     default void setSnapshotInputOptions(String value) {
         setJsonData("snap_io", value);
+    }
+
+    @UIField(order = 2, hideInView = true, type = UIFieldType.Chips, label = "ffmpegOutOptions")
+    @UIFieldGroup("ADVANCED")
+    @UIFieldTab("SNAPSHOT")
+    default List<String> getSnapshotOutputOptions() {
+        return getJsonDataList("snap_eo");
+    }
+
+    default void setSnapshotOutputOptions(String value) {
+        setJsonData("snap_eo", value);
     }
 
     default <T extends BaseVideoEntity<T, S>, S extends BaseVideoService<T, S>> FFMPEG buildSnapshotFFMPEG(

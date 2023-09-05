@@ -19,6 +19,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
@@ -49,7 +50,6 @@ import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldCodeEditor;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;
-import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIActionButton;
 import org.homio.api.ui.field.action.UIActionInput;
@@ -307,20 +307,50 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     @JsonIgnore
     public List<OptionModel> getVideoSources() {
         List<OptionModel> videoSources = new ArrayList<>();
-        if (!getHlsLowResolution().isEmpty()) {
-            videoSources.add(of("low.m3u8", "HLS stream[%s]".formatted(getHlsLowResolution())));
-        }
-        if (!getHlsHighResolution().isEmpty()) {
-            videoSources.add(of("high.m3u8", "HLS stream[%s]".formatted(getHlsHighResolution())));
-        }
-        videoSources.add(of("default.m3u8", "HLS stream"));
-        videoSources.add(of("autofps.mjpeg", "MJPEG(autofps) stream"));
-        videoSources.add(of("ipcamera.mjpeg"));
-        videoSources.add(of("ipcamera.mpd", "MPEG-DASH"));
+        assembleStream("Hls streams(.m3u8)", m3u8 -> {
+            m3u8.addChild(of("default.m3u8", "HLS stream [default]"));
+            if (!getHlsLowResolution().isEmpty()) {
+                m3u8.addChild(of("low.m3u8", "HLS stream[%s]".formatted(getHlsLowResolution())));
+            }
+            if (!getHlsHighResolution().isEmpty()) {
+                m3u8.addChild(of("high.m3u8", "HLS stream[%s]".formatted(getHlsHighResolution())));
+            }
+            appendAdditionHLSStreams(m3u8);
+        });
+        assembleStream("Mjpeg streams(.jpg)", mjpeg -> {
+            mjpeg.addChild(of("ipcamera.mjpeg"));
+            //videoSources.add(of("autofps.mjpeg", "MJPEG(autofps) stream"));
+            appendAdditionMjpegStreams(mjpeg);
+        });
+        assembleStream("Mjpeg dash(.mdp)", dash -> {
+            //dash.addChild(of("ipcamera.mpd", "MPEG-DASH"));
+            appendAdditionMjpegDashStreams(dash);
+        });
 
         return videoSources;
     }
 
+    protected void appendAdditionMjpegDashStreams(OptionModel dash) {
+
+    }
+
+    protected void appendAdditionMjpegStreams(OptionModel mjpeg) {
+
+    }
+
+    protected void appendAdditionHLSStreams(OptionModel m3u8) {
+
+    }
+
+    private OptionModel assembleStream(String name, Consumer<OptionModel> consumer) {
+        OptionModel optionModel = of(name, name);
+        consumer.accept(optionModel);
+        if (optionModel.getChildren() != null && optionModel.getChildren().size() == 1) {
+            return optionModel.getChildren().iterator().next();
+        } else {
+            return optionModel;
+        }
+    }
 
     public String getUrl(String path) {
         return "http://%s:%s/rest/media/video/%s/%s".formatted(MACHINE_IP_ADDRESS, SERVER_PORT, getEntityID(), path);
