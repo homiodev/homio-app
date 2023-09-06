@@ -152,7 +152,7 @@ public class CameraController {
      */
     @GetMapping(value = "/{entityID}/video.mpd", produces = "application/dash+xml")
     public String requestCameraIpCameraMpd(@PathVariable("entityID") String entityID) {
-        return createFfmpegAndGetFile(entityID, BaseVideoService::getOrCreateFfmpegDash, 30);
+        return createFfmpegAndGetFile(entityID, BaseVideoService::getOrCreateFfmpegDash, 60);
     }
 
     /**

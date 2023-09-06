@@ -45,6 +45,7 @@ import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
+import org.aspectj.util.FileUtil;
 import org.homio.addon.camera.CameraController.OpenStreamsContainer;
 import org.homio.addon.camera.ConfigurationException;
 import org.homio.addon.camera.OpenStreams;
@@ -738,16 +739,20 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     public synchronized @NotNull FFMPEG getOrCreateFfmpegHls(@NotNull StreamHLS.Resolution resolution) {
-        return buildReStreamFFMPEG("HLS[%s]".formatted(resolution), () -> entity.buildHlsFFMPEG(resolution, this));
+        return buildReStreamFFMPEG("HLS[%s]".formatted(resolution), () -> entity.buildHlsFfmpeg(resolution, this));
     }
 
     public synchronized @NotNull FFMPEG getOrCreateFfmpegDash() {
+        return buildReStreamFFMPEG("DASH", () -> entity.build(resolution, this));
+
         return buildReStreamFFMPEG("DASH", () -> {
             BaseVideoService<T, S> service = this;
             String input = service.getHlsUri();
             if (input == null) {
                 throw new IllegalArgumentException("Unable to find video service hls url");
             }
+
+            String streamPrefix = "%s_dash".formatted(service.getEntity());
 
             List<String> options = new ArrayList<>();
             options.add("-c:v libx264");
@@ -757,22 +762,25 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             options.add("-use_timeline 1");
             options.add("-window_size 10");
             options.add("-extra_window_size 5");
-            options.add("-init_seg_name " + entityID + "_init-stream$RepresentationID$.$ext$");
-            options.add("-media_seg_name "+ entityID + "chunk-stream$RepresentationID$-$Number%05d$.$ext$");
+            options.add("-init_seg_name " + streamPrefix + "_init-stream$RepresentationID$.$ext$");
+            options.add("-media_seg_name " + streamPrefix + "_chunk-stream$RepresentationID$-$Number%05d$.$ext$");
             options.add("-f dash");
             String outOption = join(" ", options);
 
             return service.getEntityContext().media().buildFFMPEG(
                               service.getEntityID(),
                               "DASH",
-                              service, FFMPEGFormat.MJPEG,
+                              service, FFMPEGFormat.DASH,
                               "-re",
                               input,
                               outOption,
-                              "%s.mpd".formatted(entityID),
+                              "%s.mpd".formatted(streamPrefix),
                               service.getEntity().getUser(),
                               service.getEntity().getPassword().asString())
-                          .setWorkingDirectory(BaseVideoService.SHARE_DIR);
+                          .setWorkingDirectory(BaseVideoService.SHARE_DIR)
+                          .addDestroyListener("DOS", () ->
+                              FileUtil.deleteContents(BaseVideoService.SHARE_DIR.toFile(),
+                                  file -> file.getName().startsWith(streamPrefix), false));
         });
     }
 

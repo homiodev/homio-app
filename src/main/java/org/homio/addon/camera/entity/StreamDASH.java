@@ -18,7 +18,7 @@ import org.homio.api.ui.field.UIFieldTab;
 import org.homio.api.ui.field.UIFieldType;
 import org.jetbrains.annotations.NotNull;
 
-public interface StreamHLS extends HasJsonData {
+public interface StreamDASH extends HasJsonData {
 
     Pattern RESOLUTION_PATTERN = Pattern.compile("\\d+x\\d+");
 
@@ -147,20 +147,21 @@ public interface StreamHLS extends HasJsonData {
     }
 
     @SneakyThrows
-    default @NotNull FFMPEG buildHlsFfmpeg(@NotNull Resolution resolution, BaseVideoService<? extends BaseVideoEntity<?, ?>, ?> service) {
+    default @NotNull FFMPEG buildDashFfmpeg(BaseVideoService<? extends BaseVideoEntity<?, ?>, ?> service) {
         String input = service.getHlsUri();
         if (input == null) {
             throw new IllegalArgumentException("Unable to find video service hls url");
         }
-        String streamPrefix = "%s_hls_%s".formatted(service.getEntity(), resolution);
+        String streamPrefix = "%s_dash".formatted(service.getEntity());
         return service.getEntityContext().media().buildFFMPEG(
-                          service.getEntityID() + "_" + resolution,
-                          "HLS[%s]".formatted(resolution),
-                          service, FFMPEGFormat.HLS,
-                          String.join(" ", getHlsInputOptions()),
+                          service.getEntityID(),
+                          "DASH",
+                          service,
+                          FFMPEGFormat.DASH,
+                          "-re " + String.join(" ", getHlsInputOptions()),
                           input,
-                          buildHlsOptions(service, resolution, streamPrefix),
-                          "%s.m3u8".formatted(streamPrefix),
+                          buildDashOptions(service, streamPrefix),
+                          "%s.mpd".formatted(streamPrefix),
                           service.getEntity().getUser(),
                           service.getEntity().getPassword().asString())
                       .setWorkingDirectory(BaseVideoService.SHARE_DIR)
@@ -170,34 +171,17 @@ public interface StreamHLS extends HasJsonData {
                       });
     }
 
-    default String buildHlsOptions(@NotNull BaseVideoService<? extends BaseVideoEntity<?, ?>, ?> service,
-        @NotNull Resolution resolution, String streamPrefix) {
+    default String buildDashOptions(@NotNull BaseVideoService<? extends BaseVideoEntity<?, ?>, ?> service, String streamPrefix) {
         List<String> options = new ArrayList<>();
-        // To force a keyframe every 2 seconds you can specify the GOP size using -g:
-        // Where 29.97 fps * 2s ~= 60 frames, meaning a keyframe each 60 frames.
-        options.add("-g %s".formatted(30 * getHlsFileSec()));
-        options.add("-c:v " + getHlsVideoCodec()); // video codec
-        options.add("-b:v %sk" + getHlsBitRate()); // video bitrate
-        options.add("-hls_flags delete_segments"); // remove old segments
-        options.add("-hls_init_time 1"); // build first ts ASAP
-        options.add("-hls_time " + getHlsFileSec()); // ~ 2sec per file ?
-        options.add("-hls_list_size " + getHlsListSize()); // how many files
-        options.add("-preset ultrafast");
-        options.add("-tune zerolatency");
-        options.add("-hide_banner");
-        options.add("-hls_segment_filename %s_%%02d.ts".formatted(streamPrefix));
-        switch (resolution) {
-            case low -> {
-                if (isNotEmpty(service.getEntity().getHlsLowResolution())) {
-                    options.add("-s %s".formatted(service.getEntity().getHlsLowResolution()));
-                }
-            }
-            case high -> {
-                if (isNotEmpty(service.getEntity().getHlsHighResolution())) {
-                    options.add("-s %s".formatted(service.getEntity().getHlsHighResolution()));
-                }
-            }
-        }
+        options.add("-c:v libx264");
+        options.add("-b:v %sk" + getHlsBitRate());
+        options.add("-use_template 1");
+        options.add("-use_timeline 1");
+        options.add("-window_size 10");
+        options.add("-extra_window_size 5");
+        options.add("-init_seg_name " + streamPrefix + "_init-stream$RepresentationID$.$ext$");
+        options.add("-media_seg_name " + streamPrefix + "_chunk-stream$RepresentationID$-$Number%05d$.$ext$");
+        options.add("-f dash");
         if (isNotEmpty(getHlsScale())) {
             options.add("-vf scale=" + getHlsScale()); // scale result video
         }
@@ -209,9 +193,5 @@ public interface StreamHLS extends HasJsonData {
         }
         options.addAll(getHlsOutputOptions());
         return String.join(" ", options);
-    }
-
-    enum Resolution {
-        low, high, def
     }
 }
