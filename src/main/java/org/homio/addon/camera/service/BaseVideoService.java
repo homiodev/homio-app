@@ -652,7 +652,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     public void recordGifAsync(Path filePath, @Nullable String profile, int secondsToRecord) {
         String gifInputOptions = "-y -t " + secondsToRecord + " -hide_banner";
-        FFMPEG ffmpegGIF = entityContext.media().buildFFMPEG(entityID, "FFMPEG GIF", new FFMPEGHandler(){}, FFMPEGFormat.GIF,
+        FFMPEG ffmpegGIF = entityContext.media().buildFFMPEG(entityID, "FFMPEG GIF", new FFMPEGHandler() {}, FFMPEGFormat.GIF,
             gifInputOptions, urls.getRtspUri(profile),
             gifOutOptions, filePath.toString(), entity.getUser(),
             entity.getPassword().asString());
@@ -759,7 +759,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             }
 
             List<String> options = new ArrayList<>();
-           // options.add("–r 25");
+            // options.add("–r 25");
             options.add("-c:v libx264");
             options.add("-map v:0");
             options.add("-b:v:0 2M");
@@ -771,15 +771,16 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             String outOption = join(" ", options);
 
             return service.getEntityContext().media().buildFFMPEG(
-                service.getEntityID(),
-                "DASH",
-                service, FFMPEGFormat.MJPEG,
-                "-re",
-                input,
-                outOption,
-                directory.resolve("dash.mdp").toString(),
-                service.getEntity().getUser(),
-                service.getEntity().getPassword().asString());
+                              service.getEntityID(),
+                              "DASH",
+                              service, FFMPEGFormat.MJPEG,
+                              "-re",
+                              input,
+                              outOption,
+                              "dash.mdp",
+                              service.getEntity().getUser(),
+                              service.getEntity().getPassword().asString())
+                          .setWorkingDirectory(directory);
         });
     }
 

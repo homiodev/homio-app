@@ -13,10 +13,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -45,6 +45,8 @@ import org.homio.api.model.Status;
 import org.jetbrains.annotations.NotNull;
 import org.onvif.ver10.schema.Profile;
 import org.springframework.cloud.gateway.mvc.ProxyExchange;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -143,7 +145,7 @@ public class CameraController {
     @SneakyThrows
     @GetMapping(value = "/{entityID}/default.mpd", produces = "application/dash+xml")
     public String requestCameraIpCameraMpd(@PathVariable("entityID") String entityID) {
-        return createFfmpegAndGetFile(entityID, BaseVideoService::getOrCreateFfmpegDash);
+        return createFfmpegAndGetFile(entityID, BaseVideoService::getOrCreateFfmpegDash, 30);
     }
 
     @GetMapping("/{entityID}/ipcamera.gif")
@@ -290,11 +292,20 @@ public class CameraController {
         instar.alarmTriggered(req.getPathInfo() + "?" + req.getQueryString());
     }
 
-    @GetMapping("/{entityID}/{filename}.ts")
-    public void requestCameraTs(
+    @SneakyThrows
+    @GetMapping(value = "/{entityID}/{filename}.m4s", produces = "video/mp4")
+    public ResponseEntity<Resource> requestDashM4S(
             @PathVariable("entityID") String entityID,
-            @PathVariable("filename") String filename,
-            HttpServletResponse resp) {
+            @PathVariable("filename") String filename) {
+        return new ResponseEntity<>(new UrlResource(getEntity(entityID).getService().getFfmpegHLSOutputPath().resolve("%s.m4s".formatted(filename))
+            .toUri()), HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/{entityID}/{filename}.ts", produces = "video/MP2T")
+    public void requestCameraTs(
+        @PathVariable("entityID") String entityID,
+        @PathVariable("filename") String filename,
+        HttpServletResponse resp) {
         sendFile(entityID, resp, "video/MP2T", s -> s.getFfmpegHLSOutputPath().resolve(filename + ".ts"));
     }
 
@@ -408,19 +419,18 @@ public class CameraController {
     }
 
     private String getHLSFile(String entityID, @NotNull StreamHLS.Resolution resolution) throws IOException {
-        return createFfmpegAndGetFile(entityID, service -> service.getOrCreateFfmpegHls(resolution));
+        return createFfmpegAndGetFile(entityID, service -> service.getOrCreateFfmpegHls(resolution), 10);
     }
 
-    private String createFfmpegAndGetFile(String entityID, Function<BaseVideoService<?, ?>, FFMPEG> ffmpegCreator) throws IOException {
+    private String createFfmpegAndGetFile(String entityID, Function<BaseVideoService<?, ?>, FFMPEG> ffmpegCreator, int retrySec) throws IOException {
         BaseVideoEntity<?, ?> entity = getEntity(entityID);
         BaseVideoService<?, ?> service = entity.getService();
         FFMPEG ffmpeg = ffmpegCreator.apply(service);
-        Path m3u8 = Paths.get(ffmpeg.getOutput());
+        Path m3u8 = ffmpeg.getOutputFile();
         if (!ffmpeg.getIsAlive()) {
             ffmpeg.startConverting();
 
-            int retry = 10;
-            while (retry-- > 0 && !Files.exists(m3u8)) {
+            while (retrySec-- > 0 && !Files.exists(m3u8)) {
                 sleep(1000);
             }
         } else {

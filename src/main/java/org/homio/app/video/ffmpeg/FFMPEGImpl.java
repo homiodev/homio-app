@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -69,6 +70,7 @@ public class FFMPEGImpl implements FFMPEG {
     private @Nullable Collection<ThrowingRunnable<Exception>> threadDestroyListeners;
     private Process process = null;
     private IpVideoFfmpegThread ipVideoFfmpegThread;
+    // this is indicator that tells if this ffmpeg command is still need by 3th part request
     private int keepAlive = 8;
     private final String entityID;
     private long lastAnswerFromFFMPEG = 0;
@@ -120,6 +122,14 @@ public class FFMPEGImpl implements FFMPEG {
         commandArrayList.add(0, FFMPEG_LOCATION);
         logWarn("Generated ffmpeg command '%s' for: %s.\n%s\n\n"
             .formatted(description, format, String.join(" ", commandArrayList)));
+    }
+
+    @Override
+    public Path getOutputFile() {
+        if(workingDirectory == null) {
+            return Paths.get(output);
+        }
+        return workingDirectory.resolve(output);
     }
 
     @Override
