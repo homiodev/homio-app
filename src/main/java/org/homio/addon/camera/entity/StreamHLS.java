@@ -2,7 +2,6 @@ package org.homio.addon.camera.entity;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -57,7 +56,19 @@ public interface StreamHLS extends HasJsonData {
         setJsonData("hls_vc", value);
     }
 
-    @UIField(order = 4, hideInView = true, label = "audioCodec")
+    @UIField(order = 4, hideInView = true, label = "bitrate")
+    @UIFieldGroup("HLS_GROUP")
+    @UIFieldTab("HLS")
+    @UIFieldSlider(min = 512, max = 4000)
+    default int getHlsBitRate() {
+        return getJsonData("hls_vc", 2000);
+    }
+
+    default void setHlsBitRate(int value) {
+        setJsonData("hls_vc", value);
+    }
+
+    @UIField(order = 5, hideInView = true, label = "audioCodec")
     @UIFieldGroup("HLS_GROUP")
     @UIFieldTab("HLS")
     default String getHlsAudioCodec() {
@@ -68,7 +79,7 @@ public interface StreamHLS extends HasJsonData {
         setJsonData("hls_ac", value);
     }
 
-    @UIField(order = 5, hideInView = true, label = "videoScale")
+    @UIField(order = 6, hideInView = true, label = "videoScale")
     @UIFieldGroup("HLS_GROUP")
     @UIFieldTab("HLS")
     default String getHlsScale() {
@@ -137,33 +148,34 @@ public interface StreamHLS extends HasJsonData {
 
     @SneakyThrows
     default @NotNull FFMPEG buildHlsFFMPEG(@NotNull Resolution resolution, BaseVideoService<? extends BaseVideoEntity<?, ?>, ?> service) {
-        Path directory = service.getFfmpegHLSOutputPath();
         String input = service.getHlsUri();
         if (input == null) {
             throw new IllegalArgumentException("Unable to find video service hls url");
         }
-        String streamPrefix = "stream_%s".formatted(resolution);
+        String streamPrefix = "%s_%s".formatted(service.getEntity(), resolution);
         return service.getEntityContext().media().buildFFMPEG(
                           service.getEntityID() + "_" + resolution,
                           "HLS[%s]".formatted(resolution),
                           service, FFMPEGFormat.HLS,
                           String.join(" ", getHlsInputOptions()),
                           input,
-                          buildHlsOptions(service, resolution), directory.resolve("%s.m3u8".formatted(streamPrefix)).toString(),
+                          buildHlsOptions(service, resolution, streamPrefix), "%s.m3u8".formatted(streamPrefix),
                           service.getEntity().getUser(), service.getEntity().getPassword().asString())
+                      .setWorkingDirectory(BaseVideoService.SHARE_DIR)
                       .addDestroyListener("del-old-segments", () -> {
-                          // clean all files on destroy
-                          FileUtil.deleteContents(directory.toFile(), pathname -> pathname.getName().startsWith(streamPrefix), false);
+                          FileUtil.deleteContents(BaseVideoService.SHARE_DIR.toFile(),
+                              file -> file.getName().startsWith(streamPrefix), false);
                       });
     }
 
     default String buildHlsOptions(@NotNull BaseVideoService<? extends BaseVideoEntity<?, ?>, ?> service,
-        @NotNull Resolution resolution) {
+        @NotNull Resolution resolution, String streamPrefix) {
         List<String> options = new ArrayList<>();
         // To force a keyframe every 2 seconds you can specify the GOP size using -g:
         // Where 29.97 fps * 2s ~= 60 frames, meaning a keyframe each 60 frames.
         options.add("-g %s".formatted(30 * getHlsFileSec()));
         options.add("-c:v " + getHlsVideoCodec()); // video codec
+        options.add("-b:v %sk" + getHlsBitRate()); // video bitrate
         options.add("-hls_flags delete_segments"); // remove old segments
         options.add("-hls_init_time 1"); // build first ts ASAP
         options.add("-hls_time " + getHlsFileSec()); // ~ 2sec per file ?
@@ -171,10 +183,19 @@ public interface StreamHLS extends HasJsonData {
         options.add("-preset ultrafast");
         options.add("-tune zerolatency");
         options.add("-hide_banner");
-        if (resolution != Resolution.def) {
-            options.add("-s " + (resolution == Resolution.low ? service.getEntity().getHlsLowResolution() : service.getEntity().getHlsHighResolution()));
+        options.add("-hls_segment_filename %s_hls_%%02d.ts".formatted(streamPrefix));
+        switch (resolution) {
+            case low -> {
+                if (isNotEmpty(service.getEntity().getHlsLowResolution())) {
+                    options.add("-s %s".formatted(service.getEntity().getHlsLowResolution()));
+                }
+            }
+            case high -> {
+                if (isNotEmpty(service.getEntity().getHlsHighResolution())) {
+                    options.add("-s %s".formatted(service.getEntity().getHlsHighResolution()));
+                }
+            }
         }
-
         if (isNotEmpty(getHlsScale())) {
             options.add("-vf scale=" + getHlsScale()); // scale result video
         }

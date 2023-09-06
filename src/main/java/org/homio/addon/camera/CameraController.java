@@ -1,5 +1,6 @@
 package org.homio.addon.camera;
 
+import static org.homio.addon.camera.service.BaseVideoService.SHARE_DIR;
 import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN;
 import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
 import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
@@ -13,7 +14,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -118,8 +118,7 @@ public class CameraController {
     /**
      * Handle hls .m3u8 files
      */
-    @SneakyThrows
-    @GetMapping(value = "/{entityID}/low.m3u8", produces = "application/x-mpegURL")
+    @GetMapping(value = "/{entityID}/video_low.m3u8", produces = "application/x-mpegURL")
     public String getHLSLowResolution(@PathVariable("entityID") String entityID) {
         return getHLSFile(entityID, Resolution.low);
     }
@@ -127,8 +126,7 @@ public class CameraController {
     /**
      * Handle hls .m3u8 files
      */
-    @SneakyThrows
-    @GetMapping(value = "/{entityID}/high.m3u8", produces = "application/x-mpegURL")
+    @GetMapping(value = "/{entityID}/video_high.m3u8", produces = "application/x-mpegURL")
     public String getHLSHighResolution(@PathVariable("entityID") String entityID) {
         return getHLSFile(entityID, Resolution.high);
     }
@@ -136,16 +134,33 @@ public class CameraController {
     /**
      * Handle hls .m3u8 files
      */
-    @SneakyThrows
-    @GetMapping(value = "/{entityID}/default.m3u8", produces = "application/x-mpegURL")
+    @GetMapping(value = "/{entityID}/video.m3u8", produces = "application/x-mpegURL")
     public String getHLSDefaultResolution(@PathVariable("entityID") String entityID) {
         return getHLSFile(entityID, Resolution.def);
     }
 
-    @SneakyThrows
-    @GetMapping(value = "/{entityID}/default.mpd", produces = "application/dash+xml")
+    /**
+     * Handle hls segment files
+     */
+    @GetMapping(value = "/{filename}.ts", produces = "video/MP2T")
+    public ResponseEntity<Resource> requestHlsTS(@PathVariable("filename") String filename) {
+        return getFile(filename, "ts");
+    }
+
+    /**
+     * Handle dash .mpd file
+     */
+    @GetMapping(value = "/{entityID}/video.mpd", produces = "application/dash+xml")
     public String requestCameraIpCameraMpd(@PathVariable("entityID") String entityID) {
         return createFfmpegAndGetFile(entityID, BaseVideoService::getOrCreateFfmpegDash, 30);
+    }
+
+    /**
+     * Handle dash segment .m4s files
+     */
+    @GetMapping(value = "/{filename}.m4s", produces = "video/mp4")
+    public ResponseEntity<Resource> requestDashM4S(@PathVariable("filename") String filename) {
+        return getFile(filename, "m4s");
     }
 
     @GetMapping("/{entityID}/ipcamera.gif")
@@ -186,7 +201,7 @@ public class CameraController {
     }
 
     @SneakyThrows
-    @GetMapping("/{entityID}/ipcamera.mjpeg")
+    @GetMapping("/{entityID}/video.mjpeg")
     public void requestCameraIpCameraMjpeg(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
         try {
             BaseVideoEntity<?, ?> entity = getEntity(entityID);
@@ -290,23 +305,6 @@ public class CameraController {
         OnvifCameraEntity entity = (OnvifCameraEntity) getEntity(entityID);
         InstarBrandHandler instar = (InstarBrandHandler) entity.getService().getBrandHandler();
         instar.alarmTriggered(req.getPathInfo() + "?" + req.getQueryString());
-    }
-
-    @SneakyThrows
-    @GetMapping(value = "/{entityID}/{filename}.m4s", produces = "video/mp4")
-    public ResponseEntity<Resource> requestDashM4S(
-            @PathVariable("entityID") String entityID,
-            @PathVariable("filename") String filename) {
-        return new ResponseEntity<>(new UrlResource(getEntity(entityID).getService().getFfmpegHLSOutputPath().resolve("%s.m4s".formatted(filename))
-            .toUri()), HttpStatus.OK);
-    }
-
-    @GetMapping(value = "/{entityID}/{filename}.ts", produces = "video/MP2T")
-    public void requestCameraTs(
-        @PathVariable("entityID") String entityID,
-        @PathVariable("filename") String filename,
-        HttpServletResponse resp) {
-        sendFile(entityID, resp, "video/MP2T", s -> s.getFfmpegHLSOutputPath().resolve(filename + ".ts"));
     }
 
     @GetMapping("/{entityID}/{filename}.gif")
@@ -418,25 +416,34 @@ public class CameraController {
         }
     }
 
-    private String getHLSFile(String entityID, @NotNull StreamHLS.Resolution resolution) throws IOException {
+    private @NotNull String getHLSFile(String entityID, @NotNull StreamHLS.Resolution resolution) {
         return createFfmpegAndGetFile(entityID, service -> service.getOrCreateFfmpegHls(resolution), 10);
     }
 
-    private String createFfmpegAndGetFile(String entityID, Function<BaseVideoService<?, ?>, FFMPEG> ffmpegCreator, int retrySec) throws IOException {
+    @SneakyThrows
+    private @NotNull String createFfmpegAndGetFile(String entityID,
+        Function<BaseVideoService<?, ?>, FFMPEG> ffmpegCreator, int retrySec) {
         BaseVideoEntity<?, ?> entity = getEntity(entityID);
         BaseVideoService<?, ?> service = entity.getService();
         FFMPEG ffmpeg = ffmpegCreator.apply(service);
-        Path m3u8 = ffmpeg.getOutputFile();
+        Path outputFile = ffmpeg.getOutputFile();
         if (!ffmpeg.getIsAlive()) {
             ffmpeg.startConverting();
 
-            while (retrySec-- > 0 && !Files.exists(m3u8)) {
+            while (retrySec-- > 0 && !Files.exists(outputFile)) {
                 sleep(1000);
             }
         } else {
             ffmpeg.setKeepAlive(8);
         }
-        return Files.readString(m3u8);
+        return Files.readString(outputFile);
+    }
+
+
+    @SneakyThrows
+    private static @NotNull ResponseEntity<Resource> getFile(String filename, String extension) {
+        UrlResource resource = new UrlResource(SHARE_DIR.resolve("%s.%s".formatted(filename, extension)).toUri());
+        return new ResponseEntity<>(resource, HttpStatus.OK);
     }
 
     @SneakyThrows

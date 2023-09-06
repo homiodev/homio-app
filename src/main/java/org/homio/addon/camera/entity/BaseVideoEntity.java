@@ -306,22 +306,22 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     public List<OptionModel> getVideoSources() {
         List<OptionModel> videoSources = new ArrayList<>();
         assembleStream("hls", "Hls streams(.m3u8)", m3u8 -> {
-            m3u8.addChild(of("default.m3u8", "HLS stream [default]"));
+            m3u8.addChild(of("video.m3u8", "HLS [default]"));
             if (!getHlsLowResolution().isEmpty()) {
-                m3u8.addChild(of("low.m3u8", "HLS stream[%s]".formatted(getHlsLowResolution())));
+                m3u8.addChild(of("video_low.m3u8", "HLS [%s]".formatted(getHlsLowResolution())));
             }
             if (!getHlsHighResolution().isEmpty()) {
-                m3u8.addChild(of("high.m3u8", "HLS stream[%s]".formatted(getHlsHighResolution())));
+                m3u8.addChild(of("video_high.m3u8", "HLS [%s]".formatted(getHlsHighResolution())));
             }
             appendAdditionHLSStreams(m3u8);
         }, videoSources);
         assembleStream("mjpeg", "Mjpeg streams(.jpg)", mjpeg -> {
-            mjpeg.addChild(of("ipcamera.mjpeg"));
+            mjpeg.addChild(of("video.mjpeg", "Mjpeg(.mjpeg)"));
             //videoSources.add(of("autofps.mjpeg", "MJPEG(autofps) stream"));
             appendAdditionMjpegStreams(mjpeg);
         }, videoSources);
         assembleStream("dash", "Mjpeg dash(.mpd)", dash -> {
-            dash.addChild(of("default.mpd", "Mpeg-dash(.mpd)"));
+            dash.addChild(of("video.mpd", "Mpeg-dash(.mpd)"));
             appendAdditionMjpegDashStreams(dash);
         }, videoSources);
 

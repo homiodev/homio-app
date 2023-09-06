@@ -20,7 +20,6 @@ import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pivovarit.function.ThrowingRunnable;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -43,7 +42,6 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
@@ -93,6 +91,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     extends EntityService.ServiceInstance<T> implements VideoActionsContext<T>,
     FFMPEGHandler {
 
+    public static final Path SHARE_DIR = CommonUtils.getTmpPath();
     public static final ConfigDeviceDefinitionService CONFIG_DEVICE_SERVICE =
         new ConfigDeviceDefinitionService("camera-devices.json");
     private static final int MAX_PING_ERRORS = 10;
@@ -145,7 +144,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     private @Getter Path ffmpegOutputPath;
     private @Getter Path ffmpegGifOutputPath;
     private @Getter Path ffmpegMP4OutputPath;
-    private @Getter Path ffmpegHLSOutputPath;
     private @Getter Path ffmpegImageOutputPath;
 
     private @Getter final Map<String, State> attributes = new ConcurrentHashMap<>();
@@ -453,12 +451,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         ffmpegImageOutputPath = CommonUtils.createDirectoriesIfNotExists(ffmpegOutputPath.resolve("images"));
         ffmpegGifOutputPath = CommonUtils.createDirectoriesIfNotExists(ffmpegOutputPath.resolve("gif"));
         ffmpegMP4OutputPath = CommonUtils.createDirectoriesIfNotExists(ffmpegOutputPath.resolve("mp4"));
-        ffmpegHLSOutputPath = CommonUtils.createDirectoriesIfNotExists(ffmpegOutputPath.resolve("hls"));
-        try {
-            FileUtils.cleanDirectory(ffmpegHLSOutputPath.toFile());
-        } catch (IOException e) {
-            throw new RuntimeException("Unable to clean path: " + ffmpegHLSOutputPath);
-        }
         initialize();
     }
 
@@ -752,14 +744,12 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     public synchronized @NotNull FFMPEG getOrCreateFfmpegDash() {
         return buildReStreamFFMPEG("DASH", () -> {
             BaseVideoService<T, S> service = this;
-            Path directory = service.getFfmpegHLSOutputPath();
             String input = service.getHlsUri();
             if (input == null) {
                 throw new IllegalArgumentException("Unable to find video service hls url");
             }
 
             List<String> options = new ArrayList<>();
-            // options.add("–r 25");
             options.add("-c:v libx264");
             options.add("-map v:0");
             options.add("-b:v:0 2M");
@@ -767,6 +757,8 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             options.add("-use_timeline 1");
             options.add("-window_size 10");
             options.add("-extra_window_size 5");
+            options.add("-init_seg_name " + entityID + "_init-stream$RepresentationID$.$ext$");
+            options.add("-media_seg_name "+ entityID + "chunk-stream$RepresentationID$-$Number%05d$.$ext$");
             options.add("-f dash");
             String outOption = join(" ", options);
 
@@ -777,10 +769,10 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
                               "-re",
                               input,
                               outOption,
-                              "dash.mdp",
+                              "%s.mpd".formatted(entityID),
                               service.getEntity().getUser(),
                               service.getEntity().getPassword().asString())
-                          .setWorkingDirectory(directory);
+                          .setWorkingDirectory(BaseVideoService.SHARE_DIR);
         });
     }
 
