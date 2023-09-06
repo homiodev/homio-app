@@ -140,12 +140,11 @@ public class CameraController {
         return getHLSFile(entityID, Resolution.def);
     }
 
-    /* @GetMapping("/{entityID}/ipcamera.mpd")
-    public void requestCameraIpCameraMpd(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
-        BaseVideoEntity entity = getEntity(entityID);
-        resp.setContentType("application/dash+xml");
-        sendFile(resp, entity.getService().getFfmpegMP4OutputPath() + "/ipcamera.mpd");
-    }*/
+    @SneakyThrows
+    @GetMapping(value = "/{entityID}/default.mpd", produces = "application/dash+xml")
+    public String requestCameraIpCameraMpd(@PathVariable("entityID") String entityID) {
+        return createFfmpegAndGetFile(entityID, BaseVideoService::getOrCreateFfmpegDash);
+    }
 
     @GetMapping("/{entityID}/ipcamera.gif")
     public void requestCameraIpCameraGif(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
@@ -409,9 +408,13 @@ public class CameraController {
     }
 
     private String getHLSFile(String entityID, @NotNull StreamHLS.Resolution resolution) throws IOException {
+        return createFfmpegAndGetFile(entityID, service -> service.getOrCreateFfmpegHls(resolution));
+    }
+
+    private String createFfmpegAndGetFile(String entityID, Function<BaseVideoService<?, ?>, FFMPEG> ffmpegCreator) throws IOException {
         BaseVideoEntity<?, ?> entity = getEntity(entityID);
         BaseVideoService<?, ?> service = entity.getService();
-        FFMPEG ffmpeg = service.getOrCreateFFMPEGHLS(resolution);
+        FFMPEG ffmpeg = ffmpegCreator.apply(service);
         Path m3u8 = Paths.get(ffmpeg.getOutput());
         if (!ffmpeg.getIsAlive()) {
             ffmpeg.startConverting();

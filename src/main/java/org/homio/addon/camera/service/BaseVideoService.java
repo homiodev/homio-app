@@ -26,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -51,7 +52,6 @@ import org.homio.addon.camera.ConfigurationException;
 import org.homio.addon.camera.OpenStreams;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.addon.camera.entity.StreamHLS;
-import org.homio.addon.camera.entity.StreamHLS.Resolution;
 import org.homio.addon.camera.entity.VideoActionsContext;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.service.util.FFMpegRtspAlarm;
@@ -107,7 +107,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     public List<OptionModel> getLogSources() {
         return List.of(
             OptionModel.of("mjpeg", "FFMPEG mjpeg"),
-            OptionModel.of("main", "FFMPEG hls"),
+            OptionModel.of("main", "FFMPEG hls/dash"),
             OptionModel.of("snapshot", "FFMPEG snapshot"));
     }
 
@@ -122,6 +122,10 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     public String getHlsUri() {
         return urls.getRtspUri();
+    }
+
+    public FFMPEG[] getFfmpegCommands() {
+        return new FFMPEG[]{ffmpegMjpeg, ffmpegSnapshot, ffmpegMainReStream};
     }
 
     protected final @Nullable InputStream getFFMPEGLogInputStream(@Nullable FFMPEG ffmpeg) {
@@ -741,8 +745,42 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, (float) min, (float) max, writable), updateHandler);
     }
 
-    public synchronized @NotNull FFMPEG getOrCreateFFMPEGHLS(@NotNull StreamHLS.Resolution resolution) {
+    public synchronized @NotNull FFMPEG getOrCreateFfmpegHls(@NotNull StreamHLS.Resolution resolution) {
         return buildReStreamFFMPEG("HLS[%s]".formatted(resolution), () -> entity.buildHlsFFMPEG(resolution, this));
+    }
+
+    public synchronized @NotNull FFMPEG getOrCreateFfmpegDash() {
+        return buildReStreamFFMPEG("DASH", () -> {
+            BaseVideoService<T, S> service = this;
+            Path directory = service.getFfmpegHLSOutputPath();
+            String input = service.getHlsUri();
+            if (input == null) {
+                throw new IllegalArgumentException("Unable to find video service hls url");
+            }
+
+            List<String> options = new ArrayList<>();
+           // options.add("–r 25");
+            options.add("-c:v libx264");
+            options.add("-map v:0");
+            options.add("-b:v:0 2M");
+            options.add("-use_template 1");
+            options.add("-use_timeline 1");
+            options.add("-window_size 10");
+            options.add("-extra_window_size 5");
+            options.add("-f dash");
+            String outOption = join(" ", options);
+
+            return service.getEntityContext().media().buildFFMPEG(
+                service.getEntityID(),
+                "DASH",
+                service, FFMPEGFormat.MJPEG,
+                "-re",
+                input,
+                outOption,
+                directory.resolve("dash.mdp").toString(),
+                service.getEntity().getUser(),
+                service.getEntity().getPassword().asString());
+        });
     }
 
     @Override

@@ -15,12 +15,10 @@ import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldPort;
-import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.selection.UIFieldSelectConfig;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
-import org.homio.app.model.entity.MediaMTXEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -61,13 +59,6 @@ public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraS
     }
 
     @Override
-    protected void assembleExtraRunningCommands(List<String> commands) {
-        if (FFMPEG.check(getService().getFfmpegUsbStream(), FFMPEG::isRunning, false)) {
-            commands.add(RUN_CMD.formatted("#D05362", "#D05362", "TEE"));
-        }
-    }
-
-    @Override
     public String getFolderName() {
         return "camera";
     }
@@ -102,29 +93,6 @@ public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraS
     public void setReStreamUdpPort(int value) {
         setJsonData("streamPort", value);
     }
-
-    @UIField(order = 100, hideInView = true)
-    @UIFieldGroup("STREAMING")
-    @UIFieldSlider(min = 1, max = 60)
-    public int getStreamFramesPerSecond() {
-        return getJsonData("sfps", 15);
-    }
-
-    public void setStreamFramesPerSecond(int value) {
-        setJsonData("sfps", value);
-    }
-
-    @UIField(order = 100, hideInView = true)
-    @UIFieldGroup("STREAMING")
-    @UIFieldSlider(min = 100, max = 2500)
-    public int getStreamBitRate() {
-        return getJsonData("sbr", 500);
-    }
-
-    public void getStreamBitRate(int value) {
-        setJsonData("sbr", value);
-    }
-
 
     @Override
     @UIFieldDynamicSelection(value = SelectVideoResolutionSource.class, rawInput = true)

@@ -61,7 +61,7 @@ public class FFMPEGImpl implements FFMPEG {
 
     private final FFMPEGHandler handler;
     private final @Getter String description;
-    private final @NotNull FFMPEGFormat format;
+    private final @Getter @NotNull FFMPEGFormat format;
     private final @Getter String output;
     private final @NotNull Map<String, ThrowingRunnable<Exception>> destroyListeners = new HashMap<>();
     private final FileHandler fileHandler;
@@ -89,7 +89,7 @@ public class FFMPEGImpl implements FFMPEG {
         FFMPEGImpl.ffmpegMap.put(entityID + "_" + description, this);
 
         this.logPath = FFMPEG_LOG_PATH.resolve(entityID + "_" + description + ".log");
-        this.fileHandler = new FileHandler(logPath.toString(), 1024 * 1024, 1, false);
+        this.fileHandler = new FileHandler(logPath.toString(), 1024 * 1024, 1, true);
         this.fileHandler.setFormatter(new SimpleFormatter());
 
         this.entityID = entityID;
@@ -219,7 +219,8 @@ public class FFMPEGImpl implements FFMPEG {
         public void run() {
             try {
                 threadDestroyListeners = new ArrayList<>(destroyListeners.values());
-                logInfo("Starting ffmpeg command '%s'".formatted(description));
+                logInfo("Starting ffmpeg[%s] command '%s'. Run: %s".formatted(format,
+                    description, String.join(" ", commandArrayList)));
                 ProcessBuilder builder = new ProcessBuilder(commandArrayList.toArray(new String[0]));
                 if (workingDirectory != null) {
                     builder.directory(workingDirectory.toFile());

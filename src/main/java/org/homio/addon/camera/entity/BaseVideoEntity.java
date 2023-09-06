@@ -91,16 +91,11 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     @UIFieldGroup("GENERAL")
     public String getRunningCommands() {
         List<String> commands = new ArrayList<>();
-        FFMPEG ffmpegMainReStream = getService().getFfmpegMainReStream();
-        if (ffmpegMainReStream != null && ffmpegMainReStream.isRunning()) {
-            commands.add(RUN_CMD.formatted("#57A4D1",
-                ffmpegMainReStream.getIsAlive() ? "#57A4D1" : "#9C9C9C", ffmpegMainReStream.getDescription()));
-        }
-        if (FFMPEG.check(getService().getFfmpegSnapshot(), FFMPEG::isRunning, false)) {
-            commands.add(RUN_CMD.formatted("#A2D154", "#A2D154", "SNAPSHOT"));
-        }
-        if (FFMPEG.check(getService().getFfmpegMjpeg(), FFMPEG::isRunning, false)) {
-            commands.add(RUN_CMD.formatted("#7FAEAA", "#7FAEAA", "MJPEG"));
+        for (FFMPEG ffmpeg : getService().getFfmpegCommands()) {
+            if (ffmpeg != null && ffmpeg.isRunning()) {
+                String color = ffmpeg.getIsAlive() ? ffmpeg.getFormat().getColor() : "#9C9C9C";
+                commands.add(RUN_CMD.formatted(color, color, ffmpeg.getDescription()));
+            }
         }
         assembleExtraRunningCommands(commands);
         if (commands.isEmpty()) {
@@ -326,7 +321,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
             appendAdditionMjpegStreams(mjpeg);
         }, videoSources);
         assembleStream("dash", "Mjpeg dash(.mpd)", dash -> {
-            //dash.addChild(of("ipcamera.mpd", "MPEG-DASH"));
+            dash.addChild(of("default.mpd", "Mpeg-dash(.mpd)"));
             appendAdditionMjpegDashStreams(dash);
         }, videoSources);
 

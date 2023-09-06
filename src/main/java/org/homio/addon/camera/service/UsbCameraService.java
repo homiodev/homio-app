@@ -1,7 +1,8 @@
 package org.homio.addon.camera.service;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.homio.api.EntityContextMedia.FFMPEGFormat.MUXER;
+import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
+import static org.homio.api.EntityContextMedia.FFMPEGFormat.RE;
 
 import java.awt.Dimension;
 import java.io.InputStream;
@@ -25,7 +26,6 @@ import org.homio.api.EntityContextMedia.MediaMTXSource;
 import org.homio.api.EntityContextMedia.VideoInputDevice;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
-import org.homio.api.state.StringType;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.MediaMTXEntity;
 import org.jetbrains.annotations.NotNull;
@@ -35,7 +35,7 @@ import org.jetbrains.annotations.Nullable;
 @Getter
 public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCameraService> {
 
-    private FFMPEG ffmpegUsbStream;
+    private FFMPEG ffmpegReStream;
     private @Nullable VideoInputDevice input;
 
     public UsbCameraService(UsbCameraEntity entity, EntityContext entityContext) {
@@ -56,7 +56,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
         }
 
         // restart if not alive
-        ffmpegUsbStream.startConverting();
+        ffmpegReStream.startConverting();
         keepMjpegRunning();
         // skip taking snapshot
         bringCameraOnline();
@@ -64,7 +64,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
 
     @Override
     protected boolean pingCamera() {
-        return ffmpegUsbStream.getIsAlive();
+        return ffmpegReStream.getIsAlive();
     }
 
     @Override
@@ -77,7 +77,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     @Override
     public @Nullable InputStream getSourceLogInputStream(@NotNull String sourceID) {
         if ("tee".equals(sourceID)) {
-            return getFFMPEGLogInputStream(ffmpegUsbStream);
+            return getFFMPEGLogInputStream(ffmpegReStream);
         }
         return super.getSourceLogInputStream(sourceID);
     }
@@ -85,6 +85,10 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     @Override
     public String getHlsUri() {
         return getUdpUrl();
+    }
+
+    public FFMPEG[] getFfmpegCommands() {
+        return new FFMPEG[]{getFfmpegMjpeg(), getFfmpegSnapshot(), getFfmpegMainReStream(), getFfmpegReStream()};
     }
 
     private @NotNull String getUdpUrl() {
@@ -126,48 +130,49 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
             }
         }
 
-        String url = "video=\"" + ieeeAddress + "\"";
-        if (isNotEmpty(entity.getAudioSource())) {
-            url += ":audio=\"" + entity.getAudioSource() + "\"";
+        String url = "";
+        if (SystemUtils.IS_OS_WINDOWS) {
+            url = "video=\"" + ieeeAddress + "\"";
+            if (isNotEmpty(entity.getAudioSource())) {
+                url += ":audio=\"" + entity.getAudioSource() + "\"";
+            }
+        } else {
+            url = ieeeAddress;
+            if (isNotEmpty(entity.getAudioSource())) {
+                url += "-f alsa -i " + entity.getAudioSource();
+            }
         }
+
         Set<String> outputParams = new LinkedHashSet<>();
-        outputParams.add("-f tee");
         outputParams.add("-preset ultrafast");
         outputParams.add("-tune zerolatency");
-        outputParams.add("-framerate %s".formatted(entity.getStreamFramesPerSecond()));
-        outputParams.add("-c:v libx264");
         outputParams.add("-hide_banner");
-        outputParams.add("-b:v %sk".formatted(entity.getStreamBitRate()));
-        // https://trac.ffmpeg.org/wiki/EncodingForStreamingSites#a-g
-        outputParams.add("-g %s".formatted(entity.getStreamFramesPerSecond() * 2));
+        outputParams.add("-vcodec libx264");
 
-        if (isNotEmpty(entity.getAudioSource())) {
-            url += ":audio=\"" + entity.getAudioSource() + "\"";
+        outputParams.add("-f mpegts");
+
+        /*if (isNotEmpty(entity.getAudioSource())) {
+            url += " -f dshow -i audio=\"" + entity.getAudioSource() + "\"";
             outputParams.add("-c:a mp2");
             outputParams.add("-b:a 128k");
             outputParams.add("-ar 44100");
             outputParams.add("-ac 2");
-        }
-        outputParams.add("-map 0");
+        }*/
 
-        String output = "";
-        output += "[f=mpegts]%s?pkt_size=1316".formatted(getUdpUrl());
-        setAttribute("USB-TEE", new StringType(output));
-
-        if(ffmpegUsbStream == null || !ffmpegUsbStream.getIsAlive()) {
-            ffmpegUsbStream = entityContext.media().buildFFMPEG(getEntityID(), "FFmpeg usb udp re-streamer", this,
-                MUXER, SystemUtils.IS_OS_LINUX ? "-f v4l2" : "-f dshow", url,
+        if (ffmpegReStream == null || !ffmpegReStream.getIsAlive()) {
+            ffmpegReStream = entityContext.media().buildFFMPEG(getEntityID(), "TEE", this,
+                RE, IS_OS_LINUX ? "-f v4l2" : "-f dshow", url,
                 String.join(" ", outputParams),
-                output,
+                getUdpUrl() + "?pkt_size=1316",
                 "", "");
-            ffmpegUsbStream.startConverting();
+            ffmpegReStream.startConverting();
         }
         entityContext.media().registerMediaMTXSource(getEntityID(), new MediaMTXSource(getUdpUrl()));
     }
 
     @Override
     protected void dispose0() {
-        FFMPEG.run(ffmpegUsbStream, FFMPEG::stopConverting);
+        FFMPEG.run(ffmpegReStream, FFMPEG::stopConverting);
     }
 
     @Override
@@ -177,7 +182,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
 
     @Override
     protected void pollCameraRunnable() {
-        FFMPEG.run(ffmpegUsbStream, FFMPEG::restartIfRequire);
+        FFMPEG.run(ffmpegReStream, FFMPEG::restartIfRequire);
         super.pollCameraRunnable();
     }
 }
