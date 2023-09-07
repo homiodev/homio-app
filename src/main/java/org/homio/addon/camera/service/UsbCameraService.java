@@ -87,6 +87,11 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
         return getUdpUrl();
     }
 
+    @Override
+    public String getDashUri() {
+        return getUdpUrl();
+    }
+
     public FFMPEG[] getFfmpegCommands() {
         return new FFMPEG[]{getFfmpegMjpeg(), getFfmpegSnapshot(), getFfmpegMainReStream(), getFfmpegReStream()};
     }

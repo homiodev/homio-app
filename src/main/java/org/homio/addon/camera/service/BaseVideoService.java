@@ -124,6 +124,10 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         return urls.getRtspUri();
     }
 
+    public String getDashUri() {
+        return urls.getRtspUri();
+    }
+
     public FFMPEG[] getFfmpegCommands() {
         return new FFMPEG[]{ffmpegMjpeg, ffmpegSnapshot, ffmpegMainReStream};
     }
@@ -743,45 +747,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     public synchronized @NotNull FFMPEG getOrCreateFfmpegDash() {
-        return buildReStreamFFMPEG("DASH", () -> entity.build(resolution, this));
-
-        return buildReStreamFFMPEG("DASH", () -> {
-            BaseVideoService<T, S> service = this;
-            String input = service.getHlsUri();
-            if (input == null) {
-                throw new IllegalArgumentException("Unable to find video service hls url");
-            }
-
-            String streamPrefix = "%s_dash".formatted(service.getEntity());
-
-            List<String> options = new ArrayList<>();
-            options.add("-c:v libx264");
-            options.add("-map v:0");
-            options.add("-b:v:0 2M");
-            options.add("-use_template 1");
-            options.add("-use_timeline 1");
-            options.add("-window_size 10");
-            options.add("-extra_window_size 5");
-            options.add("-init_seg_name " + streamPrefix + "_init-stream$RepresentationID$.$ext$");
-            options.add("-media_seg_name " + streamPrefix + "_chunk-stream$RepresentationID$-$Number%05d$.$ext$");
-            options.add("-f dash");
-            String outOption = join(" ", options);
-
-            return service.getEntityContext().media().buildFFMPEG(
-                              service.getEntityID(),
-                              "DASH",
-                              service, FFMPEGFormat.DASH,
-                              "-re",
-                              input,
-                              outOption,
-                              "%s.mpd".formatted(streamPrefix),
-                              service.getEntity().getUser(),
-                              service.getEntity().getPassword().asString())
-                          .setWorkingDirectory(BaseVideoService.SHARE_DIR)
-                          .addDestroyListener("DOS", () ->
-                              FileUtil.deleteContents(BaseVideoService.SHARE_DIR.toFile(),
-                                  file -> file.getName().startsWith(streamPrefix), false));
-        });
+        return buildReStreamFFMPEG("DASH", () -> entity.buildDashFfmpeg(this));
     }
 
     @Override

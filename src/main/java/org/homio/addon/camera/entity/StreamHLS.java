@@ -152,7 +152,7 @@ public interface StreamHLS extends HasJsonData {
         if (input == null) {
             throw new IllegalArgumentException("Unable to find video service hls url");
         }
-        String streamPrefix = "%s_hls_%s".formatted(service.getEntity(), resolution);
+        String streamPrefix = "%s_hls_%s".formatted(service.getEntityID(), resolution);
         return service.getEntityContext().media().buildFFMPEG(
                           service.getEntityID() + "_" + resolution,
                           "HLS[%s]".formatted(resolution),
@@ -176,12 +176,12 @@ public interface StreamHLS extends HasJsonData {
         // To force a keyframe every 2 seconds you can specify the GOP size using -g:
         // Where 29.97 fps * 2s ~= 60 frames, meaning a keyframe each 60 frames.
         options.add("-g %s".formatted(30 * getHlsFileSec()));
-        options.add("-c:v " + getHlsVideoCodec()); // video codec
-        options.add("-b:v %sk" + getHlsBitRate()); // video bitrate
+        options.add("-c:v %s".formatted(getHlsVideoCodec())); // video codec
+        options.add("-b:v %sk".formatted(getHlsBitRate())); // video bitrate
         options.add("-hls_flags delete_segments"); // remove old segments
         options.add("-hls_init_time 1"); // build first ts ASAP
-        options.add("-hls_time " + getHlsFileSec()); // ~ 2sec per file ?
-        options.add("-hls_list_size " + getHlsListSize()); // how many files
+        options.add("-hls_time %s".formatted(getHlsFileSec())); // ~ 2sec per file ?
+        options.add("-hls_list_size %s".formatted(getHlsListSize())); // how many files
         options.add("-preset ultrafast");
         options.add("-tune zerolatency");
         options.add("-hide_banner");
@@ -199,10 +199,10 @@ public interface StreamHLS extends HasJsonData {
             }
         }
         if (isNotEmpty(getHlsScale())) {
-            options.add("-vf scale=" + getHlsScale()); // scale result video
+            options.add("-vf scale=%s".formatted(getHlsScale())); // scale result video
         }
         if (service.hasAudioStream()) {
-            options.add("-c:a " + getHlsAudioCodec());
+            options.add("-c:a %s".formatted(getHlsAudioCodec()));
             options.add("-ac 2"); // audio channels (stereo)
             options.add("-ab 32k"); // audio bitrate in Kb/s
             options.add("-ar 44100"); // audio sampling rate

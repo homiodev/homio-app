@@ -16,6 +16,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -118,24 +119,24 @@ public class CameraController {
     /**
      * Handle hls .m3u8 files
      */
-    @GetMapping(value = "/{entityID}/video_low.m3u8", produces = "application/x-mpegURL")
-    public String getHLSLowResolution(@PathVariable("entityID") String entityID) {
+    @GetMapping(value = "/{entityID}_video_low.m3u8", produces = "application/x-mpegURL")
+    public ResponseEntity<String> getHLSLowResolution(@PathVariable("entityID") String entityID) {
         return getHLSFile(entityID, Resolution.low);
     }
 
     /**
      * Handle hls .m3u8 files
      */
-    @GetMapping(value = "/{entityID}/video_high.m3u8", produces = "application/x-mpegURL")
-    public String getHLSHighResolution(@PathVariable("entityID") String entityID) {
+    @GetMapping(value = "/{entityID}_video_high.m3u8", produces = "application/x-mpegURL")
+    public ResponseEntity<String> getHLSHighResolution(@PathVariable("entityID") String entityID) {
         return getHLSFile(entityID, Resolution.high);
     }
 
     /**
      * Handle hls .m3u8 files
      */
-    @GetMapping(value = "/{entityID}/video.m3u8", produces = "application/x-mpegURL")
-    public String getHLSDefaultResolution(@PathVariable("entityID") String entityID) {
+    @GetMapping(value = "/{entityID}_video.m3u8", produces = "application/x-mpegURL")
+    public ResponseEntity<String> getHLSDefaultResolution(@PathVariable("entityID") String entityID) {
         return getHLSFile(entityID, Resolution.def);
     }
 
@@ -150,8 +151,8 @@ public class CameraController {
     /**
      * Handle dash .mpd file
      */
-    @GetMapping(value = "/{entityID}/video.mpd", produces = "application/dash+xml")
-    public String requestCameraIpCameraMpd(@PathVariable("entityID") String entityID) {
+    @GetMapping(value = "/{entityID}_video.mpd", produces = "application/dash+xml")
+    public ResponseEntity<String> requestCameraIpCameraMpd(@PathVariable("entityID") String entityID) {
         return createFfmpegAndGetFile(entityID, BaseVideoService::getOrCreateFfmpegDash, 60);
     }
 
@@ -201,7 +202,7 @@ public class CameraController {
     }
 
     @SneakyThrows
-    @GetMapping("/{entityID}/video.mjpeg")
+    @GetMapping("/{entityID}_video.mjpeg")
     public void requestCameraIpCameraMjpeg(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
         try {
             BaseVideoEntity<?, ?> entity = getEntity(entityID);
@@ -416,12 +417,12 @@ public class CameraController {
         }
     }
 
-    private @NotNull String getHLSFile(String entityID, @NotNull StreamHLS.Resolution resolution) {
+    private ResponseEntity<String> getHLSFile(String entityID, @NotNull StreamHLS.Resolution resolution) {
         return createFfmpegAndGetFile(entityID, service -> service.getOrCreateFfmpegHls(resolution), 10);
     }
 
     @SneakyThrows
-    private @NotNull String createFfmpegAndGetFile(String entityID,
+    private ResponseEntity<String> createFfmpegAndGetFile(String entityID,
         Function<BaseVideoService<?, ?>, FFMPEG> ffmpegCreator, int retrySec) {
         BaseVideoEntity<?, ?> entity = getEntity(entityID);
         BaseVideoService<?, ?> service = entity.getService();
@@ -436,14 +437,22 @@ public class CameraController {
         } else {
             ffmpeg.setKeepAlive(8);
         }
-        return Files.readString(outputFile);
+        try {
+            return new ResponseEntity<>(Files.readString(outputFile), HttpStatus.OK);
+        } catch (NoSuchFileException ne) {
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+        }
     }
 
 
     @SneakyThrows
     private static @NotNull ResponseEntity<Resource> getFile(String filename, String extension) {
         UrlResource resource = new UrlResource(SHARE_DIR.resolve("%s.%s".formatted(filename, extension)).toUri());
-        return new ResponseEntity<>(resource, HttpStatus.OK);
+        if (resource.exists()) {
+            return new ResponseEntity<>(resource, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(null, HttpStatus.OK);
+        }
     }
 
     @SneakyThrows

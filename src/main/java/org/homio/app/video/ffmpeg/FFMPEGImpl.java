@@ -120,8 +120,6 @@ public class FFMPEGImpl implements FFMPEG {
         Collections.addAll(commandArrayList, String.join(" ", builder).split("\\s+"));
         // ffmpegLocation may have a space in its folder
         commandArrayList.add(0, FFMPEG_LOCATION);
-        logWarn("Generated ffmpeg command '%s' for: %s.\n%s\n\n"
-            .formatted(description, format, String.join(" ", commandArrayList)));
     }
 
     @Override

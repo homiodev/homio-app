@@ -40,6 +40,6 @@ public class CameraServiceVideoSourceResolver implements WidgetVideoSourceResolv
     }
 
     public String getUrl(String path, String entityID) {
-        return "$DEVICE_URL/rest/media/video/%s/%s".formatted(entityID, path);
+        return "$DEVICE_URL/rest/media/video/%s_%s".formatted(entityID, path);
     }
 }

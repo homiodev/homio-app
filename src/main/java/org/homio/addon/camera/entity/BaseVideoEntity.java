@@ -74,6 +74,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     HasEntitySourceLog,
     StreamMJPEG,
     StreamHLS,
+    StreamDASH,
     StreamSnapshot,
     DeviceEndpointsBehaviourContract,
     EntityService<S, T> {
