@@ -43,7 +43,12 @@ public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraS
 
     @Override
     protected void appendAdditionHLSStreams(OptionModel m3u8) {
-        m3u8.addChild(OptionModel.of("mediamtx.m3u8", "MediaMTX HLS"));
+        m3u8.addChild(OptionModel.of("mediamtx/index.m3u8", "MediaMTX HLS"));
+    }
+
+    @Override
+    protected void appendAdditionWebRTCStreams(OptionModel m3u8) {
+        m3u8.addChild(OptionModel.of("mediamtx/video.webrtc", "MediaMTX WebRTC"));
     }
 
     @UIField(order = 2)

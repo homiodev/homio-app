@@ -325,6 +325,9 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
             dash.addChild(of("video.mpd", "Mpeg-dash(.mpd)"));
             appendAdditionMjpegDashStreams(dash);
         }, videoSources);
+        assembleStream("webrtc", "WebRTC", webrtc -> {
+            appendAdditionWebRTCStreams(webrtc);
+        }, videoSources);
 
         return videoSources;
     }
@@ -338,6 +341,10 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     protected void appendAdditionHLSStreams(OptionModel m3u8) {
+
+    }
+
+    protected void appendAdditionWebRTCStreams(OptionModel m3u8) {
 
     }
 

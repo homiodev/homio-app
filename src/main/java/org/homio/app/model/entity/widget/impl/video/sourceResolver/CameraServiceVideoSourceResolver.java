@@ -7,6 +7,7 @@ import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.api.EntityContext;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -23,9 +24,6 @@ public class CameraServiceVideoSourceResolver implements WidgetVideoSourceResolv
         BaseVideoEntity<?, ?> baseVideoStreamEntity = entityContext.getEntity(entityID);
         if (baseVideoStreamEntity != null && keys.length >= 2) {
             String videoIdentifier = keys[keys.length - 1];
-            if (videoIdentifier.equals("mediamtx.m3u8")) {
-                videoIdentifier = "mediamtx/index.m3u8";
-            }
             String url = getUrl(videoIdentifier, entityID);
             VideoEntityResponse response = new VideoEntityResponse(ds, url, getVideoType(url));
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
@@ -40,6 +38,6 @@ public class CameraServiceVideoSourceResolver implements WidgetVideoSourceResolv
     }
 
     public String getUrl(String path, String entityID) {
-        return "$DEVICE_URL/rest/media/video/%s_%s".formatted(entityID, path);
+        return "$DEVICE_URL/rest/media/video/%s/%s".formatted(entityID, path);
     }
 }

@@ -3,17 +3,12 @@ package org.homio.addon.camera;
 import static org.homio.addon.camera.service.BaseVideoService.SHARE_DIR;
 import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN;
 import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
-import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
-import static org.springframework.http.HttpHeaders.CONTENT_LENGTH;
-import static org.springframework.http.HttpHeaders.PRAGMA;
 
 import jakarta.servlet.AsyncContext;
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -39,21 +34,25 @@ import org.homio.addon.camera.service.BaseVideoService;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
-import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.onvif.ver10.schema.Profile;
 import org.springframework.cloud.gateway.mvc.ProxyExchange;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpRange;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -97,29 +96,32 @@ public class CameraController {
         entity.getService().getOnvifDeviceState().getEventDevices().fireEvent(req.getReader().toString());
     }
 
-    @GetMapping("/{entityID}/mediamtx/{path}")
-    public ResponseEntity<?> getMediaMTXHls(@PathVariable("entityID") String entityID,
-        @PathVariable("path") String path, ProxyExchange<byte[]> proxy) {
-        return proxyUrl(proxy, 8888, entityID, path);
+    @PostMapping("/{entityID}/mediamtx/video.webrtc")
+    public ResponseEntity<?> postMediaMtxWebRTC(@PathVariable("entityID") String entityID, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
+        return proxyUrl(proxy, 8889, entityID, "whep", request.getQueryString(), ProxyExchange::post);
     }
 
-    private ResponseEntity<?> proxyUrl(ProxyExchange<byte[]> proxy, int port, String entityID, String path) {
-        ResponseEntity<byte[]> response = proxy.uri("http://localhost:%s/%s/%s".formatted(port, entityID, path)).get();
-        HttpHeaders responseHeaders = new HttpHeaders();
-        response.getHeaders().forEach((headerName, headerValues) -> {
-            if (!headerName.equalsIgnoreCase(ACCESS_CONTROL_ALLOW_ORIGIN)) {
-                responseHeaders.addAll(headerName, headerValues);
-            }
-        });
-        return ResponseEntity.status(response.getStatusCode())
-                             .headers(responseHeaders)
-                             .body(response.getBody());
+    @PatchMapping("/{entityID}/mediamtx/video.webrtc")
+    public ResponseEntity<?> patchMediaMtxWebRTC(@PathVariable("entityID") String ignore) {
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    @GetMapping("/{entityID}/mediamtx/{filename}.m3u8")
+    public ResponseEntity<?> getMediaMtxHls(@PathVariable("entityID") String entityID,
+        @PathVariable("filename") String filename, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
+        return proxyUrl(proxy, 8888, entityID, filename + ".m3u8", request.getQueryString(), ProxyExchange::get);
+    }
+
+    @GetMapping("/{entityID}/mediamtx/{filename}.mp4")
+    public ResponseEntity<?> getMediaMtxHlsMp4(@PathVariable("entityID") String entityID,
+        @PathVariable("filename") String filename, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
+        return proxyUrl(proxy, 8888, entityID, filename + ".mp4", request.getQueryString(), ProxyExchange::get);
     }
 
     /**
      * Handle hls .m3u8 files
      */
-    @GetMapping(value = "/{entityID}_video_low.m3u8", produces = "application/x-mpegURL")
+    @GetMapping(value = "/{entityID}/video_low.m3u8", produces = "application/x-mpegURL")
     public ResponseEntity<String> getHLSLowResolution(@PathVariable("entityID") String entityID) {
         return getHLSFile(entityID, Resolution.low);
     }
@@ -127,7 +129,7 @@ public class CameraController {
     /**
      * Handle hls .m3u8 files
      */
-    @GetMapping(value = "/{entityID}_video_high.m3u8", produces = "application/x-mpegURL")
+    @GetMapping(value = "/{entityID}/video_high.m3u8", produces = "application/x-mpegURL")
     public ResponseEntity<String> getHLSHighResolution(@PathVariable("entityID") String entityID) {
         return getHLSFile(entityID, Resolution.high);
     }
@@ -135,7 +137,7 @@ public class CameraController {
     /**
      * Handle hls .m3u8 files
      */
-    @GetMapping(value = "/{entityID}_video.m3u8", produces = "application/x-mpegURL")
+    @GetMapping(value = "/{entityID}/video.m3u8", produces = "application/x-mpegURL")
     public ResponseEntity<String> getHLSDefaultResolution(@PathVariable("entityID") String entityID) {
         return getHLSFile(entityID, Resolution.def);
     }
@@ -143,15 +145,16 @@ public class CameraController {
     /**
      * Handle hls segment files
      */
-    @GetMapping(value = "/{filename}.ts", produces = "video/MP2T")
-    public ResponseEntity<Resource> requestHlsTS(@PathVariable("filename") String filename) {
+    @GetMapping(value = "/{entityID}/{filename}.ts", produces = "video/MP2T")
+    public ResponseEntity<Resource> requestHlsTS(@PathVariable("entityID") String ignore,
+        @PathVariable("filename") String filename) {
         return getFile(filename, "ts");
     }
 
     /**
      * Handle dash .mpd file
      */
-    @GetMapping(value = "/{entityID}_video.mpd", produces = "application/dash+xml")
+    @GetMapping(value = "/{entityID}/video.mpd", produces = "application/dash+xml")
     public ResponseEntity<String> requestCameraIpCameraMpd(@PathVariable("entityID") String entityID) {
         return createFfmpegAndGetFile(entityID, BaseVideoService::getOrCreateFfmpegDash, 60);
     }
@@ -159,14 +162,15 @@ public class CameraController {
     /**
      * Handle dash segment .m4s files
      */
-    @GetMapping(value = "/{filename}.m4s", produces = "video/mp4")
-    public ResponseEntity<Resource> requestDashM4S(@PathVariable("filename") String filename) {
+    @GetMapping(value = "/{entityID}/{filename}.m4s", produces = "video/mp4")
+    public ResponseEntity<Resource> requestDashM4S(
+        @PathVariable("entityID") String ignore, @PathVariable("filename") String filename) {
         return getFile(filename, "m4s");
     }
 
-    @GetMapping("/{entityID}/ipcamera.gif")
-    public void requestCameraIpCameraGif(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
-        sendFile(entityID, resp, "image/gif", s -> s.getFfmpegGifOutputPath().resolve("ipcamera.gif"));
+    @GetMapping(value = "/{entityID}/ipcamera.gif", produces = "image/gif")
+    public ResponseEntity<?> requestCameraIpCameraGif(@PathVariable("entityID") String entityID) {
+        return getFile(entityID, s -> s.getFfmpegGifOutputPath().resolve("ipcamera.gif"), null);
     }
 
     @GetMapping("/{entityID}/ipcamera.jpg")
@@ -177,7 +181,7 @@ public class CameraController {
         BaseVideoEntity<?, ?> entity = getEntity(entityID);
         BaseVideoService<?, ?> handler = entity.getService();
         // Use cached image if recent. Cameras can take > 1sec to send back a reply.
-        // Example an Image item/widget may have a 1 second refresh.
+        // Example an Image item/widget may have a 1-second refresh.
         if (isUseCachedImage(handler)) {
             sendSnapshotImage(resp, handler.getSnapshot());
         } else {
@@ -202,7 +206,7 @@ public class CameraController {
     }
 
     @SneakyThrows
-    @GetMapping("/{entityID}_video.mjpeg")
+    @GetMapping("/{entityID}/video.mjpeg")
     public void requestCameraIpCameraMjpeg(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
         try {
             BaseVideoEntity<?, ?> entity = getEntity(entityID);
@@ -308,28 +312,26 @@ public class CameraController {
         instar.alarmTriggered(req.getPathInfo() + "?" + req.getQueryString());
     }
 
-    @GetMapping("/{entityID}/{filename}.gif")
-    public void requestCameraGif(
+    @GetMapping(value = "/{entityID}/{filename}.gif", produces = "image/gif")
+    public ResponseEntity<?> requestCameraGif(
             @PathVariable("entityID") String entityID,
-            @PathVariable("filename") String filename,
-            HttpServletResponse resp) {
-        sendFile(entityID, resp, "image/gif", s -> s.getFfmpegGifOutputPath().resolve(filename + ".gif"));
+        @PathVariable("filename") String filename) {
+        return getFile(entityID, s -> s.getFfmpegGifOutputPath().resolve(filename + ".gif"), null);
     }
 
-    @GetMapping("/{entityID}/{filename}.jpg")
-    public void requestCameraJpg(
+    @GetMapping(value = "/{entityID}/{filename}.jpg", produces = "image/jpg")
+    public ResponseEntity<?> requestCameraJpg(
             @PathVariable("entityID") String entityID,
-            @PathVariable("filename") String filename,
-            HttpServletResponse resp) {
-        sendFile(entityID, resp, "image/jpg", s -> s.getFfmpegGifOutputPath().resolve(filename + ".jpg"));
+        @PathVariable("filename") String filename) {
+        return getFile(entityID, s -> s.getFfmpegGifOutputPath().resolve(filename + ".jpg"), null);
     }
 
-    @GetMapping("/{entityID}/{filename}.mp4")
-    public void requestCameraMP4(
+    @GetMapping(value = "/{entityID}/{filename}.mp4", produces = "video/mp4")
+    public @NotNull ResponseEntity<?> requestCameraMP4(
             @PathVariable("entityID") String entityID,
             @PathVariable("filename") String filename,
-            HttpServletResponse resp) {
-        sendFile(entityID, resp, "video/mp4", s -> s.getFfmpegGifOutputPath().resolve(filename + ".mp4"));
+        @RequestHeader HttpHeaders headers) {
+        return getFile(entityID, s -> s.getFfmpegGifOutputPath().resolve(filename + ".mp4"), headers);
     }
 
     @GetMapping("/ffmpegWithProfiles")
@@ -386,35 +388,29 @@ public class CameraController {
         } catch (Exception ignore) {}
     }
 
-    private void sendFile(String entityID, HttpServletResponse resp, String contentType, Function<BaseVideoService<?, ?>, Path> pathSupplier) {
-        BaseVideoEntity<?, ?> entity = getEntity(entityID);
-        resp.setContentType(contentType);
-        sendFile(resp, pathSupplier.apply(entity.getService()));
-    }
-
     @SneakyThrows
-    private void sendFile(HttpServletResponse response, Path file) {
-        if (!Files.exists(file)) {
-            throw NotFoundException.fileNotFound(file);
+    private ResponseEntity<?> getFile(
+        @NotNull String entityID,
+        @NotNull Function<BaseVideoService<?, ?>, Path> pathSupplier,
+        @Nullable HttpHeaders headers) {
+        BaseVideoEntity<?, ?> entity = getEntity(entityID);
+        Path filePath = pathSupplier.apply(entity.getService());
+        UrlResource resource = new UrlResource(filePath.toUri());
+        if (!resource.exists()) {
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
-        long fileSize = Files.size(file);
-        if (fileSize <= 0) {
-            throw new NotFoundException("File: %s found but empty".formatted(file));
-        }
-        response.setBufferSize((int) fileSize);
-        response.setHeader(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
-        response.setHeader(ACCESS_CONTROL_EXPOSE_HEADERS, "*");
-        response.setHeader(CONTENT_LENGTH, String.valueOf(fileSize));
-        response.setHeader(PRAGMA, "no-cache");
-        response.setHeader(CACHE_CONTROL, "max-age=0, no-cache, no-store");
-        try (BufferedInputStream input = new BufferedInputStream(Files.newInputStream(file), (int) fileSize);
-             BufferedOutputStream output = new BufferedOutputStream(response.getOutputStream(), (int) fileSize)) {
-            byte[] buffer = new byte[(int) fileSize];
-            int length;
-            while ((length = input.read(buffer)) > 0) {
-                output.write(buffer, 0, length);
+        if (headers != null) {
+            HttpRange range = headers.getRange().isEmpty() ? null : headers.getRange().get(0);
+            if (range != null) {
+                long contentLength = resource.contentLength();
+                long start = range.getRangeStart(contentLength);
+                long end = range.getRangeEnd(contentLength);
+                long rangeLength = Math.min(end - start + 1, contentLength);
+                ResourceRegion region = new ResourceRegion(resource, start, rangeLength);
+                return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).body(region);
             }
         }
+        return new ResponseEntity<>(resource, HttpStatus.OK);
     }
 
     private ResponseEntity<String> getHLSFile(String entityID, @NotNull StreamHLS.Resolution resolution) {
@@ -451,7 +447,7 @@ public class CameraController {
         if (resource.exists()) {
             return new ResponseEntity<>(resource, HttpStatus.OK);
         } else {
-            return new ResponseEntity<>(null, HttpStatus.OK);
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
     }
 
@@ -463,5 +459,19 @@ public class CameraController {
                 .setStatus(HttpStatus.PRECONDITION_FAILED);
         }
         return entity;
+    }
+
+    private ResponseEntity<?> proxyUrl(ProxyExchange<byte[]> proxy, int port, String entityID, String path,
+        String queryString, Function<ProxyExchange<byte[]>, ResponseEntity<byte[]>> handler) {
+        if (queryString != null) {
+            path += "?" + queryString;
+        }
+        ResponseEntity<byte[]> response = handler.apply(proxy.uri("http://localhost:%s/%s/%s".formatted(port, entityID, path)));
+        HttpHeaders responseHeaders = new HttpHeaders();
+
+        responseHeaders.add(ACCESS_CONTROL_EXPOSE_HEADERS, "*");
+        return ResponseEntity.status(response.getStatusCode())
+                             .headers(responseHeaders)
+                             .body(response.getBody());
     }
 }

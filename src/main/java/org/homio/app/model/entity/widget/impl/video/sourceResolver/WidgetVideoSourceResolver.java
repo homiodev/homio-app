@@ -58,6 +58,9 @@ public interface WidgetVideoSourceResolver {
             if (url.endsWith(".mpd")) {
                 return "application/dash+xml";
             }
+            if (url.endsWith(".webrtc")) {
+                return "video/webrtc";
+            }
             return "video/unknown";
         }
     }
