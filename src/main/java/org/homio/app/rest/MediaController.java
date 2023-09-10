@@ -111,7 +111,7 @@ public class MediaController {
         return "$DEVICE_URL/rest/media/video/" + id + "/play";
     }
 
-    @GetMapping("/video/{fileId}/content")
+    /*@GetMapping("/video/{fileId}/content")
     public ResponseEntity<Resource> getVideoFileContent(@PathVariable("fileId") String fileId) {
         MediaPlayContext context = fileIdToMedia.getIfPresent(fileId);
         if (context == null) {
@@ -119,7 +119,7 @@ public class MediaController {
         }
         Resource resource = context.fileSystem.getEntryResource(context.id);
         return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.parseMediaType(context.type)).body(resource);
-    }
+    }*/
 
     @GetMapping("/video/{fileId}/play")
     public ResponseEntity<ResourceRegion> downloadFile(@PathVariable("fileId") String fileId, @RequestHeader HttpHeaders headers) {

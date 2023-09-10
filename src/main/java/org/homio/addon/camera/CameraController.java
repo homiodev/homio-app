@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -66,26 +67,17 @@ public class CameraController {
     public static final Map<String, OpenStreamsContainer> camerasOpenStreams = new ConcurrentHashMap<>();
 
     /**
-     * Consume mjpeg from ffmpeg. See ffmpegMjpeg
-     */
-    @SneakyThrows
-    @PostMapping("/{entityID}/ipcamera.jpg")
-    public void postIpCamera(@PathVariable("entityID") String entityID, HttpServletRequest req) {
-        // ffmpeg sends data here for ipcamera.mjpeg streams when camera has no native stream.
-        ServletInputStream snapshotData = req.getInputStream();
-        getOpenStreamsContainer(entityID).openStreams.queueFrame(snapshotData.readAllBytes());
-        snapshotData.close();
-    }
-
-    /**
-     * Consume camera image snapshot
+     * Consume mjpeg/image from ffmpeg. See ffmpegMjpeg/ffmpegSnapshot
      */
     @SneakyThrows
     @PostMapping("/{entityID}/snapshot.jpg")
-    public void postSnapshot(@PathVariable("entityID") String entityID, HttpServletRequest req) {
+    public void postIpCamera(@PathVariable("entityID") String entityID, HttpServletRequest req) {
+        // ffmpeg sends data here for ipcamera.mjpeg streams when camera has no native stream.
         ServletInputStream snapshotData = req.getInputStream();
-        BaseVideoEntity<?, ?> entity = entityContext.getEntityRequire(entityID);
-        entity.getService().processSnapshot(snapshotData.readAllBytes());
+        OpenStreamsContainer container = getOpenStreamsContainer(entityID);
+        byte[] image = snapshotData.readAllBytes();
+        container.openStreams.queueFrame(image);
+        container.getEntity().getService().processSnapshot(image);
         snapshotData.close();
     }
 
@@ -173,11 +165,11 @@ public class CameraController {
         return getFile(entityID, s -> s.getFfmpegGifOutputPath().resolve("ipcamera.gif"), null);
     }
 
-    @GetMapping("/{entityID}/ipcamera.jpg")
+    @GetMapping("/{entityID}/snapshot.jpg")
     public void requestCameraIpCameraJpg(
-            @PathVariable("entityID") String entityID,
-            HttpServletRequest req,
-            HttpServletResponse resp) {
+        @PathVariable("entityID") String entityID,
+        HttpServletRequest req,
+        HttpServletResponse resp) {
         BaseVideoEntity<?, ?> entity = getEntity(entityID);
         BaseVideoService<?, ?> handler = entity.getService();
         // Use cached image if recent. Cameras can take > 1sec to send back a reply.
@@ -193,7 +185,7 @@ public class CameraController {
                     sleep(100);
                 } // 5 sec timeout OR a new snapshot comes back from camera
                 while (Duration.between(startTime, Instant.now()).toMillis() < 5000
-                        && Duration.between(handler.getCurrentSnapshotTime(), Instant.now()).toMillis() > 1200);
+                    && Duration.between(handler.getCurrentSnapshotTime(), Instant.now()).toMillis() > 1200);
                 sendSnapshotImage(resp, handler.getSnapshot());
                 asyncContext.complete();
             });
@@ -217,7 +209,7 @@ public class CameraController {
 
             if (openStreams.isEmpty()) {
                 log.debug("First stream requested, opening up stream from camera");
-                startMjpegStream(resp, service, entityID);
+                startMjpegStream(service);
                 if (mjpegUri.isEmpty() || "ffmpeg".equals(mjpegUri)) {
                     output = new StreamOutput(resp);
                 } else {
@@ -229,7 +221,7 @@ public class CameraController {
                 ChannelTracking tracker = service.getChannelTrack(service.getTinyUrl(mjpegUri));
                 if (tracker == null || !tracker.getChannel().isOpen()) {
                     log.info("Not the first stream requested but the stream from camera was closed");
-                    startMjpegStream(resp, service, entityID);
+                    startMjpegStream(service);
                 }
                 output = new StreamOutput(resp, service.getMjpegContentType());
             }
@@ -260,10 +252,12 @@ public class CameraController {
         }
     }
 
-    private static void startMjpegStream(HttpServletResponse resp, BaseVideoService<?, ?> service, String entityID) {
+    public static void startMjpegStream(BaseVideoService<?, ?> service) {
         service.startMjpegStream(() -> {
-            resp.getOutputStream().close();
-            getOpenStreamsContainer(entityID).openStreams.closeAllStreams();
+            OpenStreamsContainer container = camerasOpenStreams.get(service.getEntityID());
+            if (container != null) {
+                container.dispose();
+            }
         });
     }
 
@@ -314,22 +308,22 @@ public class CameraController {
 
     @GetMapping(value = "/{entityID}/{filename}.gif", produces = "image/gif")
     public ResponseEntity<?> requestCameraGif(
-            @PathVariable("entityID") String entityID,
+        @PathVariable("entityID") String entityID,
         @PathVariable("filename") String filename) {
         return getFile(entityID, s -> s.getFfmpegGifOutputPath().resolve(filename + ".gif"), null);
     }
 
     @GetMapping(value = "/{entityID}/{filename}.jpg", produces = "image/jpg")
     public ResponseEntity<?> requestCameraJpg(
-            @PathVariable("entityID") String entityID,
+        @PathVariable("entityID") String entityID,
         @PathVariable("filename") String filename) {
         return getFile(entityID, s -> s.getFfmpegGifOutputPath().resolve(filename + ".jpg"), null);
     }
 
     @GetMapping(value = "/{entityID}/{filename}.mp4", produces = "video/mp4")
     public @NotNull ResponseEntity<?> requestCameraMP4(
-            @PathVariable("entityID") String entityID,
-            @PathVariable("filename") String filename,
+        @PathVariable("entityID") String entityID,
+        @PathVariable("filename") String filename,
         @RequestHeader HttpHeaders headers) {
         return getFile(entityID, s -> s.getFfmpegGifOutputPath().resolve(filename + ".mp4"), headers);
     }
@@ -343,7 +337,7 @@ public class CameraController {
                     OnvifCameraService service = (OnvifCameraService) videoStreamEntity.getService();
                     for (Profile profile : service.getOnvifDeviceState().getProfiles()) {
                         list.add(OptionModel.of(videoStreamEntity.getEntityID() + "/" + profile.getToken(),
-                                videoStreamEntity.getTitle() + " (" + profile.getVideoEncoderConfiguration().getResolution().toString() + ")"));
+                            videoStreamEntity.getTitle() + " (" + profile.getVideoEncoderConfiguration().getResolution().toString() + ")"));
                     }
                 } else {
                     list.add(OptionModel.of(videoStreamEntity.getEntityID(), videoStreamEntity.getTitle()));
@@ -367,14 +361,18 @@ public class CameraController {
         servletOut.write(snapshot);
     }
 
-    private static OpenStreamsContainer getOpenStreamsContainer(String entityID) {
-        return camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer());
+    private OpenStreamsContainer getOpenStreamsContainer(String entityID) {
+        return camerasOpenStreams.computeIfAbsent(entityID, s ->
+            new OpenStreamsContainer(entityContext.getEntity(entityID)));
     }
 
+    @Getter
+    @RequiredArgsConstructor
     public static final class OpenStreamsContainer {
 
-        public final OpenStreams openStreams = new OpenStreams();
-        public final OpenStreams openAutoFpsStreams = new OpenStreams();
+        private final OpenStreams openStreams = new OpenStreams();
+        private final OpenStreams openAutoFpsStreams = new OpenStreams();
+        private final BaseVideoEntity<?, ?> entity;
 
         public void dispose() {
             openStreams.closeAllStreams();

@@ -19,6 +19,7 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
@@ -64,6 +65,7 @@ import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntity;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoEntity;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 import org.homio.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver;
+import org.homio.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver.VideoEntityResponse;
 import org.homio.app.model.rest.WidgetDataRequest;
 import org.homio.app.repository.widget.WidgetTabRepository;
 import org.homio.app.rest.widget.WidgetChartsController.SingleValueData;
@@ -178,11 +180,22 @@ public class WidgetController {
                 WidgetVideoSourceResolver.VideoEntityResponse response = videoSourceResolver.resolveDataSource(item);
                 if (response != null) {
                     result.add(response);
+                    handlePoster(item, response);
                     break;
                 }
             }
         }
         return result;
+    }
+
+    private static void handlePoster(WidgetVideoSeriesEntity item, VideoEntityResponse response) {
+        if (StringUtils.isNotEmpty(item.getPosterDataSource())) {
+            response.setPoster(item.getPosterDataSource());
+            if (item.getPosterDataSource().startsWith("file://")) {
+                response.setPoster("$DEVICE_URL/rest/media/image/%s"
+                    .formatted(item.getPosterDataSource().substring("file://".length())));
+            }
+        }
     }
 
     @PostMapping("/video/action")

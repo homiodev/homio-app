@@ -1,4 +1,9 @@
 spring:
+  cloud:
+    gateway:
+      httpclient:
+        connect-timeout: 45000
+        response-timeout: 60s
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher

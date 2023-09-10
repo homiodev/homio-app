@@ -26,6 +26,7 @@ public interface WidgetVideoSourceResolver {
         private @Nullable @Setter @Accessors(chain = true) String error;
         private final @NotNull List<String> resolutions = new ArrayList<>();
         private @Nullable @Setter Collection<UIInputEntity> actions;
+        private @Nullable @Setter String poster;
 
         public static @NotNull String getVideoType(String url) {
             if (url.startsWith("https://youtu")) {
@@ -39,6 +40,9 @@ public interface WidgetVideoSourceResolver {
             }
             if (url.endsWith(".jpg")) {
                 return "image/jpg";
+            }
+            if (url.endsWith(".mjpeg")) {
+                return "video/mjpeg";
             }
             if (url.endsWith(".ts")) {
                 return "video/MP2T";

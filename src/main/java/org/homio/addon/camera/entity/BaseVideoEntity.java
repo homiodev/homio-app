@@ -183,6 +183,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     })
     public ActionResponseModel recordMP4(JSONObject params) {
         S service = getService();
+        service.assertOnline();
         Path filePath = buildFilePathForRecord(service.getFfmpegMP4OutputPath(), params.getString("fileName"), "mp4");
         int secondsToRecord = params.getInt("secondsToRecord");
         log.debug("[{}]: Recording {}.mp4 for {} seconds.", getEntityID(), filePath, secondsToRecord);
@@ -207,6 +208,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     })
     public ActionResponseModel recordGif(JSONObject params) {
         S service = getService();
+        service.assertOnline();
         Path filePath = buildFilePathForRecord(service.getFfmpegGifOutputPath(), params.getString("fileName"), "gif");
         int secondsToRecord = params.getInt("secondsToRecord");
         log.debug("[{}]: Recording {}.gif for {} seconds.", getEntityID(), filePath, secondsToRecord);

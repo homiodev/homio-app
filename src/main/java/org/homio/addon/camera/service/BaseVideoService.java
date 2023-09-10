@@ -25,7 +25,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -45,10 +44,9 @@ import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
-import org.aspectj.util.FileUtil;
+import org.homio.addon.camera.CameraController;
 import org.homio.addon.camera.CameraController.OpenStreamsContainer;
 import org.homio.addon.camera.ConfigurationException;
-import org.homio.addon.camera.OpenStreams;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.addon.camera.entity.StreamHLS;
 import org.homio.addon.camera.entity.VideoActionsContext;
@@ -63,6 +61,7 @@ import org.homio.api.EntityContextBGP.ThreadContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
 import org.homio.api.EntityContextMedia.FFMPEGHandler;
+import org.homio.api.exception.ServerException;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
@@ -190,7 +189,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     public BaseVideoService(T entity, EntityContext entityContext) {
         super(entityContext, entity, true);
         ffMpegRtspAlarm = new FFMpegRtspAlarm(entityContext, entity);
-        camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer());
+        camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer(entity));
     }
 
     private void createConnectionJob() {
@@ -220,13 +219,13 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     protected void keepMjpegRunning() {
-        OpenStreamsContainer openStreams = camerasOpenStreams.get(entityID);
-        if (!openStreams.openStreams.isEmpty()) {
+        OpenStreamsContainer container = camerasOpenStreams.get(entityID);
+        if (!container.getOpenStreams().isEmpty()) {
             String mjpegUri = urls.getMjpegUri();
             if (!mjpegUri.isEmpty() && !"ffmpeg".equals(mjpegUri)) {
-                openStreams.openStreams.queueFrame(("--" + openStreams.openStreams.boundary + "\r\n\r\n").getBytes());
+                container.getOpenStreams().queueFrame(("--" + container.getOpenStreams().boundary + "\r\n\r\n").getBytes());
             }
-            openStreams.openStreams.queueFrame(getSnapshot());
+            container.getOpenStreams().queueFrame(getSnapshot());
         }
     }
 
@@ -255,7 +254,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         addPrimaryEndpoint();
         updateEntityStatus(INITIALIZE, null);
         log.info("[{}]: Initialize camera: <{}>", entityID, getEntity());
-        camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer());
+        camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer(entity));
 
         try {
             postInitializeCamera();
@@ -296,6 +295,9 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     public final void bringCameraOnline() {
         communicationError = 0;
+        if (!entity.isStart()) {
+            return;
+        }
         updateLastSeen();
         if (EntityContextBGP.cancel(cameraConnectionJob)) {
             cameraConnectionJob = null;
@@ -314,9 +316,8 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             // auto restart mjpeg stream now camera is back online.
             OpenStreamsContainer container = camerasOpenStreams.get(entityID);
             if (container != null) {
-                OpenStreams openStreams = container.openStreams;
-                if (!openStreams.isEmpty()) {
-                    startMjpegStream(() -> {});
+                if (!container.getOpenStreams().isEmpty()) {
+                    CameraController.startMjpegStream(this);
                 }
             }
         }
@@ -330,7 +331,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     public boolean startFfmpegMjpeg(ThrowingRunnable<Exception> destroyListener) {
-        if (urls.getMjpegUri().equals("ffmpeg")) {
+        if ("ffmpeg".equals(urls.getMjpegUri())) {
             FFMPEG.run(ffmpegMjpeg, ffmpeg -> ffmpeg.stopConverting(Duration.ofSeconds(10)));
             ffmpegMjpeg = entity.buildMjpegFFMPEG(this);
             ffmpegMjpeg.addDestroyListener("mjpeg", destroyListener);
@@ -425,11 +426,18 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     @SneakyThrows
     public final RawType recordImageSync(String profile) {
+        assertOnline();
         Path output = getFfmpegImageOutputPath().resolve("tmp.jpg");
         takeSnapshotSync(profile, output);
         latestSnapshot = Files.readAllBytes(output);
         updateLastSeen();
         return new RawType(latestSnapshot, MimeTypeUtils.IMAGE_JPEG_VALUE, "snapshot.jpg");
+    }
+
+    public void assertOnline() {
+        if (!entity.getStatus().isOnline()) {
+            throw new ServerException("W.ERROR.VIDEO_OFFLINE");
+        }
     }
 
     @SneakyThrows
@@ -607,7 +615,8 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     protected void pollCameraRunnable() {
         FFMPEG.run(ffmpegMainReStream, FFMPEG::stopProcessIfNoKeepAlive);
-        FFMPEG.run(ffmpegMjpeg, FFMPEG::stopProcessIfNoKeepAlive);
+        // keep mjpeg alive forever. Should be handled by CameraController.
+        // FFMPEG.run(ffmpegMjpeg, FFMPEG::stopProcessIfNoKeepAlive);
 
         if (FFMPEG.check(ffmpegMainReStream, FFMPEG::getIsAlive, false)) {
             return;

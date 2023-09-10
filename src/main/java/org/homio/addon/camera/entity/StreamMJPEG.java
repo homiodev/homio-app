@@ -96,7 +96,7 @@ public interface StreamMJPEG extends HasJsonData {
             getMjpegInputOptions(),
             rtspUri,
             outOptions,
-            entity.getUrl("ipcamera.jpg"),
+            entity.getUrl("snapshot.jpg"),
             entity.getUser(),
             entity.getPassword().asString());
     }

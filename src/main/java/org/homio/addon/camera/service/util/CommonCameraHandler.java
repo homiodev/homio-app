@@ -1,25 +1,23 @@
 package org.homio.addon.camera.service.util;
 
+import static org.homio.addon.camera.CameraController.camerasOpenStreams;
+
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.OnvifCameraService;
-
-import java.util.Objects;
-
-import static org.homio.addon.camera.CameraController.camerasOpenStreams;
 
 // These methods handle the response from all camera brands, nothing specific to 1 brand.
 @Log4j2
@@ -49,18 +47,16 @@ public class CommonCameraHandler extends ChannelDuplexHandler {
                             // Some cameras use first letter uppercase and others don't.
                             switch (name.toLowerCase()) { // Possible localization issues doing this
                                 case "content-type" -> contentType = response.headers().getAsString(name);
-                                case "content-length" ->
-                                        bytesToReceive = Integer.parseInt(response.headers().getAsString(name));
+                                case "content-length" -> bytesToReceive = Integer.parseInt(response.headers().getAsString(name));
                             }
                         }
                         if (contentType.contains("multipart")) {
                             boundary = Helper.searchString(contentType, "boundary=");
                             if (service.urls.getMjpegUri().equals(requestUrl)) {
-                                if (msg instanceof HttpMessage) {
-                                    // very start of stream only
-                                    service.setMjpegContentType(contentType);
-                                    camerasOpenStreams.get(service.getEntityID()).openStreams.updateContentType(contentType, boundary);
-                                }
+                                // very start of stream only
+                                service.setMjpegContentType(contentType);
+                                camerasOpenStreams.get(service.getEntityID()).getOpenStreams()
+                                                  .updateContentType(contentType, boundary);
                             }
                         } else if (contentType.contains("image/jp")) {
                             if (bytesToReceive == 0) {
@@ -80,7 +76,7 @@ public class CommonCameraHandler extends ChannelDuplexHandler {
                     // multiple MJPEG stream packets come back as this.
                     byte[] chunkedFrame = new byte[content.content().readableBytes()];
                     content.content().getBytes(content.content().readerIndex(), chunkedFrame);
-                    camerasOpenStreams.get(service.getEntityID()).openStreams.queueFrame(chunkedFrame);
+                    camerasOpenStreams.get(service.getEntityID()).getOpenStreams().queueFrame(chunkedFrame);
                 } else {
 
                     // Found some cameras use Content-Type: image/jpg instead of image/jpeg
@@ -114,7 +110,7 @@ public class CommonCameraHandler extends ChannelDuplexHandler {
                                     endIndex = incomingMessage.indexOf("\r\n", beginIndex);
                                     if (endIndex != -1) {
                                         bytesToReceive = Integer.parseInt(
-                                                incomingMessage.substring(beginIndex + 15, endIndex).strip());
+                                            incomingMessage.substring(beginIndex + 15, endIndex).strip());
                                     }
                                 }
                             }
@@ -170,10 +166,10 @@ public class CommonCameraHandler extends ChannelDuplexHandler {
         }
         if (cause instanceof ArrayIndexOutOfBoundsException) {
             log.debug("[{}]: Camera sent {} bytes when the content-length header was {}.", service.getEntityID(),
-                    bytesAlreadyReceived, bytesToReceive);
+                bytesAlreadyReceived, bytesToReceive);
         } else {
             log.warn("[{}]: !!!! Camera possibly closed the channel on the binding, cause reported is: {}",
-                    service.getEntityID(), cause.getMessage());
+                service.getEntityID(), cause.getMessage());
         }
         ctx.close();
     }
