@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.FileHandler;
 import java.util.logging.LogRecord;
 import java.util.logging.SimpleFormatter;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -43,7 +44,7 @@ import org.json.JSONObject;
 @SuppressWarnings("unused")
 public class FFMPEGImpl implements FFMPEG {
 
-    private static final Path FFMPEG_LOG_PATH;
+    public static final @NotNull Path FFMPEG_LOG_PATH;
 
     static {
         Path ffmpegLogPath = CommonUtils.getLogsPath().resolve("ffmpeg");
@@ -67,8 +68,9 @@ public class FFMPEGImpl implements FFMPEG {
     private final @NotNull Map<String, ThrowingRunnable<Exception>> destroyListeners = new HashMap<>();
     private final FileHandler fileHandler;
     private final @Getter @NotNull Path logPath;
+    private final @Getter String cmd;
     private @Nullable Collection<ThrowingRunnable<Exception>> threadDestroyListeners;
-    private Process process = null;
+    private @Getter Process process = null;
     private IpVideoFfmpegThread ipVideoFfmpegThread;
     // this is indicator that tells if this ffmpeg command is still need by 3th part request
     private int keepAlive = 8;
@@ -118,6 +120,7 @@ public class FFMPEGImpl implements FFMPEG {
         builder.add(output.trim());
 
         Collections.addAll(commandArrayList, String.join(" ", builder).split("\\s+"));
+        cmd = "ffmpeg " + String.join(" ", commandArrayList);
         // ffmpegLocation may have a space in its folder
         commandArrayList.add(0, FFMPEG_LOCATION);
     }

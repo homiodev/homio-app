@@ -6,6 +6,13 @@ import com.sshtools.client.sftp.SftpClientTask;
 import com.sshtools.client.sftp.SftpFile;
 import com.sshtools.common.sftp.SftpStatusException;
 import com.sshtools.common.ssh.SshException;
+import java.io.InputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Condition;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.homio.api.EntityContext;
@@ -16,13 +23,6 @@ import org.homio.app.ssh.SshGenericFileSystem.SshFile;
 import org.homio.app.ssh.SshGenericFileSystem.SshFileService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.io.InputStream;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
-import java.util.concurrent.locks.Condition;
-import java.util.stream.Collectors;
 
 public class SshGenericFileSystem extends BaseCachedFileSystemProvider<SshGenericEntity, SshFile, SshFileService> {
 
@@ -171,7 +171,9 @@ public class SshGenericFileSystem extends BaseCachedFileSystemProvider<SshGeneri
 
         }
 
+        @SneakyThrows
         private @NotNull SftpClientTask getSftpService() {
+            AtomicReference<Exception> ex = new AtomicReference<>(null);
             if (sftpService == null || sftpService.isClosed()) {
                 Condition waitCondition = lock.newCondition();
                 inLock(condition::signal);
@@ -197,11 +199,14 @@ public class SshGenericFileSystem extends BaseCachedFileSystemProvider<SshGeneri
                             }
                         });
                     } catch (Exception e) {
+                        ex.set(e);
                         inLock(waitCondition::signal);
-                        throw new RuntimeException(e);
                     }
                 });
                 inLock(waitCondition::await);
+            }
+            if (ex.get() != null) {
+                throw ex.get();
             }
             return sftpService;
         }

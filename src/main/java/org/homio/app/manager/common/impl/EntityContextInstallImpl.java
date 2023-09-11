@@ -4,13 +4,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextInstall;
 import org.homio.api.service.DependencyExecutableInstaller;
-import org.homio.app.manager.install.FfmpegInstaller;
 import org.homio.app.manager.install.NodeJsInstaller;
 import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
@@ -25,10 +25,6 @@ public class EntityContextInstallImpl implements EntityContextInstall {
     @SneakyThrows
     public EntityContextInstallImpl(EntityContext entityContext) {
         this.entityContext = entityContext;
-        createContext(FfmpegInstaller.class).requireAsync(null, installed -> {
-            if (installed) {log.info("FFPMEG service successfully installed");}
-            cache.remove(FfmpegInstaller.class);
-        });
     }
 
     @Override
@@ -36,12 +32,17 @@ public class EntityContextInstallImpl implements EntityContextInstall {
         return createContext(NodeJsInstaller.class);
     }
 
+    @Override
+    public @NotNull InstallContext createInstallContext(Class<? extends DependencyExecutableInstaller> installerClass) {
+        return createContext(installerClass);
+    }
+
     private <T extends DependencyExecutableInstaller> InstallContext createContext(Class<T> installerClass) {
         return cache.computeIfAbsent(installerClass, aClass ->
             new InstallContext() {
                 private final T installer;
                 private volatile boolean installing;
-                private final List<Consumer<Boolean>> waiters = new ArrayList<>();
+                private final List<BiConsumer<Boolean, Exception>> waiters = new ArrayList<>();
 
                 {
                     try {
@@ -52,9 +53,9 @@ public class EntityContextInstallImpl implements EntityContextInstall {
                 }
 
                 @Override
-                public synchronized void requireAsync(@Nullable String version, Consumer<Boolean> finishHandler) {
+                public synchronized void requireAsync(@Nullable String version, BiConsumer<Boolean, Exception> finishHandler) {
                     if (getVersion() != null) {
-                        finishHandler.accept(false);
+                        finishHandler.accept(false, null);
                         return;
                     }
                     waiters.add(finishHandler);
@@ -69,8 +70,8 @@ public class EntityContextInstallImpl implements EntityContextInstall {
                     entityContext.bgp().runWithProgress("install-" + installer.getName())
                                  .onFinally(exception -> {
                                      installing = false;
-                                     for (Consumer<Boolean> waiter : waiters) {
-                                         waiter.accept(true);
+                                     for (BiConsumer<Boolean, Exception> waiter : waiters) {
+                                         waiter.accept(true, exception);
                                      }
                                      waiters.clear();
                                  })

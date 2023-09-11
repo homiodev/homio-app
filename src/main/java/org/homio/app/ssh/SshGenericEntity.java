@@ -153,16 +153,6 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         return getJsonData("pub_cmn");
     }
 
-    @UIField(order = 10)
-    @UIFieldGroup("SECURITY")
-    public boolean isShowHiddenFiles() {
-        return getJsonData("shf", false);
-    }
-
-    public void setShowHiddenFiles(boolean value) {
-        setJsonData("shf", value);
-    }
-
     @UIField(order = 1)
     @UIFieldGroup(order = 20, value = "FS", borderColor = "#914991")
     public @NotNull String getFileSystemRoot() {
@@ -171,6 +161,16 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
 
     public void setFileSystemRoot(String value) {
         setJsonData("fs_root", value);
+    }
+
+    @UIField(order = 2)
+    @UIFieldGroup("FS")
+    public boolean isShowHiddenFiles() {
+        return getJsonData("shf", false);
+    }
+
+    public void setShowHiddenFiles(boolean value) {
+        setJsonData("shf", value);
     }
 
     @JsonIgnore

@@ -69,18 +69,4 @@ public class EntityContextMediaImpl implements EntityContextMedia  {
         @NotNull String password) {
         return new FFMPEGImpl(entityID, description, handler, format, inputArguments, input, outArguments, output, username, password);
     }
-
-    public void onContextCreated() throws Exception {
-        entityContext.bgp().registerThreadsPuller("camera-ffmpeg", threadPuller -> {
-            for (Map.Entry<String, FFMPEGImpl> threadEntry : FFMPEGImpl.ffmpegMap.entrySet()) {
-                FFMPEG ffmpeg = threadEntry.getValue();
-                if (ffmpeg.getIsAlive()) {
-                    threadPuller.addThread(threadEntry.getKey(), ffmpeg.getDescription(), ffmpeg.getCreationDate(),
-                        "working", null,
-                        "Command: " + String.join(" ", ffmpeg.getCommandArrayList())
-                    );
-                }
-            }
-        });
-    }
 }

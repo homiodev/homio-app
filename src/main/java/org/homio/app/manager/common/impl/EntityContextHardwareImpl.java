@@ -1,16 +1,20 @@
 package org.homio.app.manager.common.impl;
 
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import java.util.ArrayList;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.EntityContextHardware;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.hquery.ProgressBar;
 import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.ArrayList;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -98,5 +102,37 @@ public class EntityContextHardwareImpl implements EntityContextHardware {
     @Override
     public void reboot() {
         hardwareRepository.reboot();
+    }
+
+    @Override
+    @SneakyThrows
+    public @NotNull ProcessStat getProcessStat(long pid) {
+        if (SystemUtils.IS_OS_WINDOWS) {
+            String result = execute("powershell -Command \"(Get-Process -Id " + pid + " | Select-Object WS, CPU) | ConvertTo-Json\"");
+            JsonNode jsonNode;
+            jsonNode = OBJECT_MAPPER.readValue(result, JsonNode.class);
+            long ws = jsonNode.path("WS").asLong(0L);
+            double cpu = jsonNode.path("CPU").asDouble(0D);
+            double pc = 0;
+            if (ws > 0) {
+                pc = ((double) ws / EntityContextStorageImpl.TOTAL_MEMORY) * 100;
+            }
+            return new ProcessStatImpl(cpu, pc, ws);
+        } else {
+            String[] result = execute("ps -p " + pid + " -o %cpu,%mem,rss --no-headers").trim().split(" ");
+            return new ProcessStatImpl(
+                Double.parseDouble(result[0].trim()),
+                Double.parseDouble(result[1].trim()),
+                Long.parseLong(result[2].trim()));
+        }
+    }
+
+    @Getter
+    @RequiredArgsConstructor
+    private static class ProcessStatImpl implements ProcessStat {
+
+        private final double cpuUsage;
+        private final double memUsage;
+        private final long mem;
     }
 }

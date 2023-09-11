@@ -70,10 +70,10 @@ import org.homio.app.manager.common.impl.EntityContextStorageImpl;
 import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.homio.app.manager.common.impl.EntityContextVarImpl;
 import org.homio.app.manager.common.impl.EntityContextWorkspaceImpl;
+import org.homio.app.model.entity.FFMPEGEntity;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.app.model.entity.MediaMTXEntity;
 import org.homio.app.model.entity.user.UserAdminEntity;
-import org.homio.app.model.entity.user.UserBaseEntity;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
@@ -86,7 +86,6 @@ import org.homio.app.repository.device.AllDeviceRepository;
 import org.homio.app.repository.widget.WidgetRepository;
 import org.homio.app.repository.widget.WidgetSeriesRepository;
 import org.homio.app.rest.ConsoleController;
-import org.homio.app.rest.FileSystemController;
 import org.homio.app.rest.ItemController;
 import org.homio.app.rest.SettingController;
 import org.homio.app.service.FileSystemService;
@@ -250,12 +249,12 @@ public class EntityContextImpl implements EntityContext {
         LocalBoardEntity.ensureDeviceExists(this);
         SshTmateEntity.ensureEntityExists(this);
         MediaMTXEntity.ensureEntityExists(this);
+        FFMPEGEntity.ensureEntityExists(this);
 
         entityContextSetting.onContextCreated();
         entityContextVar.onContextCreated();
         entityContextUI.onContextCreated();
         entityContextBGP.onContextCreated();
-        entityContextMedia.onContextCreated();
         // initialize all addons
         addon.onContextCreated();
         entityContextWorkspace.onContextCreated(workspaceService);
