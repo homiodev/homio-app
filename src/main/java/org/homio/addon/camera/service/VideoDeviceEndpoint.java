@@ -112,9 +112,4 @@ public class VideoDeviceEndpoint extends BaseDeviceEndpoint<BaseVideoEntity> {
         device.getService().updateLastSeen();
         return null;
     }
-
-    @Override
-    public @NotNull Set<String> getHiddenEndpoints() {
-        return Set.of();
-    }
 }

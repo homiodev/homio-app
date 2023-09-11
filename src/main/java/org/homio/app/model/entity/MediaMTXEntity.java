@@ -4,21 +4,33 @@ import static org.homio.api.util.Constants.DANGER_COLOR;
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.Entity;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.HasFirmwareVersion;
+import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.MediaEntity;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.FileContentType;
 import org.homio.api.model.FileModel;
 import org.homio.api.model.Icon;
+import org.homio.api.model.device.ConfigDeviceDefinition;
+import org.homio.api.model.device.ConfigDeviceDefinitionService;
+import org.homio.api.model.endpoint.BaseDeviceEndpoint;
+import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.repository.GitHubProject;
 import org.homio.api.service.EntityService;
+import org.homio.api.state.DecimalType;
+import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
@@ -34,8 +46,9 @@ import org.json.JSONObject;
 
 @Entity
 @UISidebarChildren(icon = "fas fa-square-rss", color = "#308BB3", allowCreateItem = false)
-public final class MediaMTXEntity extends MediaEntity implements HasEntityLog,
-    HasFirmwareVersion, EntityService<MediaMTXService, MediaMTXEntity> {
+public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
+    HasFirmwareVersion, EntityService<MediaMTXService, MediaMTXEntity>,
+    DeviceEndpointsBehaviourContract {
 
     public static final int RTSP_PORT = 8554;
     public static final GitHubProject mediamtxGitHub =
@@ -257,5 +270,75 @@ public final class MediaMTXEntity extends MediaEntity implements HasEntityLog,
 
     public enum LogLevel {
         error, warn, info, debug
+    }
+
+    @Override
+    public @NotNull String getDeviceFullName() {
+        return "-";
+    }
+
+    @Override
+    public @NotNull Map<String, ? extends DeviceEndpoint> getDeviceEndpoints() {
+        Map<String, StreamEndpoint> streams = new HashMap<>();
+        JsonNode list = getService().getApiList();
+        for (JsonNode node : list.get("items")) {
+            streams.put(node.toString(), new StreamEndpoint(node, this));
+        }
+        return streams;
+    }
+
+    @Override
+    public @NotNull List<ConfigDeviceDefinition> findMatchDeviceConfigurations() {
+        return List.of();
+    }
+
+    @Override
+    public @Nullable ConfigDeviceDefinitionService getConfigDeviceDefinitionService() {
+        return null;
+    }
+
+    public static class StreamEndpoint extends BaseDeviceEndpoint<MediaMTXEntity> {
+
+        private final boolean ready;
+        private final @Getter String description;
+
+        public StreamEndpoint(JsonNode node, MediaMTXEntity entity) {
+            super("MTX");
+            this.endpointEntityID = node.get("name").asText();
+            this.entityContext = entity.getEntityContext();
+            this.device = entity;
+            this.endpointType = EndpointType.string;
+            this.icon = createIcon(node.get("source").get("type").asText());
+            this.ready = node.get("ready").asBoolean();
+            if (!ready) {
+                this.icon.setColor(Color.RED);
+            }
+            this.value = new DecimalType(node.get("readers").size());
+            this.writable = false;
+            this.description = node.get("conf").get("source").asText();
+        }
+
+        private Icon createIcon(String sourceType) {
+            return switch (sourceType) {
+                case "srtSource" -> new Icon("fas fa-disease", "#6259B8");
+                case "hlsSource" -> new Icon("fas fa-square-rss", "#C44401");
+                case "rpiCameraSource" -> new Icon("fab fa-raspberry-pi", "#B81E00");
+                case "rtmpSource" -> new Icon("fas fa-tower-cell", "#9BAA2A");
+                case "rtspSource" -> new Icon("fas fa-blog", "#399AAA");
+                case "webRTCSource" -> new Icon("fas fa-globe", "#A71ABD");
+                case "udpSource" -> new Icon("fas fa-kip-sign", "#9BAA2A");
+                default -> new Icon("fas fa-fw fa-film", "#767873");
+            };
+        }
+
+        @Override
+        public @NotNull String getName(boolean shortFormat) {
+            return "/" + endpointEntityID;
+        }
+
+        @Override
+        public @NotNull String getDeviceID() {
+            return device.getEntityID();
+        }
     }
 }
