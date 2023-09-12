@@ -23,6 +23,7 @@ import org.homio.addon.camera.service.OnvifCameraService;
 @Log4j2
 @RequiredArgsConstructor
 public class CommonCameraHandler extends ChannelDuplexHandler {
+    public static final String COMMON_HANDLER = "commonHandler";
 
     private int bytesToReceive = 0;
     private int bytesAlreadyReceived = 0;

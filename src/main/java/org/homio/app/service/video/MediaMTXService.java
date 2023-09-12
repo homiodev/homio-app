@@ -1,6 +1,5 @@
 package org.homio.app.service.video;
 
-import static org.homio.api.util.CommonUtils.getErrorMessage;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.api.util.JsonUtils.YAML_OBJECT_MAPPER;
 import static org.homio.app.model.entity.MediaMTXEntity.mediamtxGitHub;
@@ -15,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -32,6 +32,7 @@ import org.homio.api.EntityContextMedia.MediaMTXSource;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Status;
+import org.homio.api.model.UpdatableValue;
 import org.homio.api.service.EntityService.ServiceInstance;
 import org.homio.app.model.entity.MediaMTXEntity;
 import org.homio.app.model.entity.MediaMTXEntity.LogLevel;
@@ -48,6 +49,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     private final List<String> pendingRemoveRegistrations = new CopyOnWriteArrayList<>();
     private final Path configurationPath = mediamtxGitHub.getLocalProjectPath().resolve("mediamtx.yml");
     private @Getter @Nullable String apiURL;
+    private @Nullable UpdatableValue<JsonNode> pathData;
 
     private ProcessContext processContext;
     private ObjectNode configuration;
@@ -59,14 +61,18 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     }
 
     public JsonNode getApiList() {
-        if (apiURL != null) {
-            try {
-                return Curl.get(apiURL + "/v2/paths/list", JsonNode.class);
-            } catch (Exception ex) {
-                log.warn("Unable to fetch api list: {}", getErrorMessage(ex));
-            }
+        if (apiURL == null) {
+            return OBJECT_MAPPER.createObjectNode();
         }
-        return OBJECT_MAPPER.createObjectNode();
+        if (pathData == null) {
+            pathData = UpdatableValue.wrap(Curl.get(apiURL + "/v2/paths/list", JsonNode.class), "paths");
+        }
+        return pathData.getFreshValue(Duration.ofSeconds(60), () ->
+            Curl.sendAsync(Curl.createGetRequest(apiURL + "/v2/paths/list"), JsonNode.class, (data, code) -> {
+                if (code == 200) {
+                    pathData.update(data);
+                }
+            }));
     }
 
     public void dispose(@Nullable Exception ex) {

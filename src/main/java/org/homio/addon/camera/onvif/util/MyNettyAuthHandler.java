@@ -1,5 +1,7 @@
 package org.homio.addon.camera.onvif.util;
 
+import static org.homio.addon.camera.service.util.VideoUtils.calcMD5Hash;
+
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpResponse;
@@ -18,6 +20,7 @@ import java.util.Random;
  */
 @Log4j2
 public class MyNettyAuthHandler extends ChannelDuplexHandler {
+    public static final String AUTH_HANDLER = "authorizationHandler";
 
     private final String username;
     private final String password;
@@ -37,21 +40,6 @@ public class MyNettyAuthHandler extends ChannelDuplexHandler {
     public void setURL(String method, String url) {
         httpUrl = url;
         httpMethod = method;
-    }
-
-    private String calcMD5Hash(String toHash) {
-        try {
-            MessageDigest messageDigest = MessageDigest.getInstance("MD5");
-            byte[] array = messageDigest.digest(toHash.getBytes());
-            StringBuilder stringBuffer = new StringBuilder();
-            for (byte bt : array) {
-                stringBuffer.append(Integer.toHexString((bt & 0xFF) | 0x100), 1, 3);
-            }
-            return stringBuffer.toString();
-        } catch (NoSuchAlgorithmException e) {
-            log.warn("NoSuchAlgorithmException error when calculating MD5 hash");
-        }
-        return "";
     }
 
     // Method can be used a few ways. processAuth(null, string,string, false) to return the digest on demand, and

@@ -75,8 +75,11 @@ public class VideoUrls {
     }
 
     private String getOrDefaultUri(String profile, Function<ProfileUrls, String> uriGetter) {
+        if(profile == null) {
+            return getOrDefaultUri(uriGetter);
+        }
         String url = null;
-        if (profile != null && urls.containsKey(profile)) {
+        if (urls.containsKey(profile)) {
             url = uriGetter.apply(urls.get(profile));
         }
         if (url == null) {

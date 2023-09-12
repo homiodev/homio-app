@@ -1,5 +1,7 @@
 package org.homio.addon.camera.workspace;
 
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
+
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import java.io.IOException;
@@ -16,13 +18,13 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.homio.addon.camera.CameraEntrypoint;
+import org.homio.addon.camera.VideoConstants.Events;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoPlaybackStorage;
 import org.homio.addon.camera.entity.VideoPlaybackStorage.DownloadFile;
 import org.homio.addon.camera.entity.storage.VideoBaseStorageService;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
-import org.homio.addon.camera.onvif.util.IpCameraBindingConstants;
 import org.homio.addon.camera.service.BaseVideoService;
 import org.homio.api.EntityContext;
 import org.homio.api.model.OptionModel.KeyValueEnum;
@@ -275,7 +277,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
             entity.getService().audioDetected(onOffType.boolValue())),
 
         MotionAlarm("Motion alarm", (entity, onOffType, workspaceBlock) ->
-            entity.getService().motionDetected(onOffType.boolValue(), IpCameraBindingConstants.CHANNEL_EXTERNAL_MOTION));
+            entity.getService().motionDetected(onOffType.boolValue(), Events.ExternalMotionAlarm));
 
         @Getter
         private final String value;
@@ -292,14 +294,14 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
     private enum BoolHatMenuEnum implements KeyValueEnum {
         AudioAlarm("Audio alarm", (entity, onOffType, workspaceBlock, next) -> {
             BroadcastLock audioAlarm = workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock,
-                    IpCameraBindingConstants.CHANNEL_AUDIO_ALARM + ":" + entity.getEntityID());
+                ENDPOINT_ENABLE_AUDIO_ALARM + ":" + entity.getEntityID());
             workspaceBlock.subscribeToLock(audioAlarm, state -> ((OnOffType) state).boolValue() == onOffType.boolValue(),
                     next::handle);
         }),
 
         MotionAlarm("Motion alarm", (entity, onOffType, workspaceBlock, next) -> {
             BroadcastLock motionAlarm =
-                    workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock, IpCameraBindingConstants.MOTION_ALARM + ":" + entity.getEntityID());
+                workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock, Events.MotionAlarm + ":" + entity.getEntityID());
             workspaceBlock.subscribeToLock(motionAlarm, state -> ((OnOffType) state).boolValue() == onOffType.boolValue(),
                     next::handle);
         });
@@ -336,8 +338,11 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
 
     @RequiredArgsConstructor
     private enum CameraProfileReportCommands implements KeyValueEnum {
-        Snapshot("Snapshot", (workspaceBlock, scratch, cameraProfile) ->
-                cameraProfile.entity.getService().recordImageSync(cameraProfile.profile)),
+        Snapshot("Snapshot", (workspaceBlock, scratch, cameraProfile) -> {
+            BaseVideoService<?, ?> service = cameraProfile.entity.getService();
+            service.assertOnline();
+            return service.recordImageSync(cameraProfile.profile);
+        }),
         LastPlayback("Last playback", (workspaceBlock, scratch, cameraProfile) -> {
             BaseVideoEntity<?, ?> entity = cameraProfile.entity;
             if (entity instanceof VideoPlaybackStorage videoPlaybackStorage) {

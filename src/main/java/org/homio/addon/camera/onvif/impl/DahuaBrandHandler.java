@@ -1,13 +1,34 @@
 package org.homio.addon.camera.onvif.impl;
 
+import static org.homio.addon.camera.VideoConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT;
+import static org.homio.addon.camera.VideoConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT2;
+import static org.homio.addon.camera.VideoConstants.CHANNEL_ENABLE_PRIVACY_MODE;
+import static org.homio.addon.camera.VideoConstants.CHANNEL_EXTERNAL_ALARM_INPUT;
+import static org.homio.addon.camera.VideoConstants.CHANNEL_EXTERNAL_ALARM_INPUT2;
+import static org.homio.addon.camera.VideoConstants.CHANNEL_TEXT_OVERLAY;
+import static org.homio.addon.camera.VideoConstants.CM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LED;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LINE_CROSSING_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_MOTION_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_PARKING_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_SCENE_CHANGE_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_TOO_BLURRY_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_TOO_DARK_ALARM;
+import static org.homio.addon.camera.VideoConstants.Events;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.util.Helper;
-import org.homio.addon.camera.onvif.util.IpCameraBindingConstants;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.addon.camera.ui.UIVideoActionGetter;
@@ -15,12 +36,6 @@ import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
-import static org.homio.addon.camera.VideoConstants.*;
 
 /**
  * responsible for handling commands, which are sent to one of the channels.
@@ -50,16 +65,16 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
             log.debug("[{}]: HTTP Result back from camera is \t:{}:", entityID, content);
             // determine if the motion detection is turned on or off.
             if (content.contains("table.MotionDetect[0].Enable=true")) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, OnOffType.ON);
+                setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.ON);
             } else if (content.contains("table.MotionDetect[" + nvrChannel + "].Enable=false")) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, OnOffType.OFF);
+                setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.OFF);
             }
 
             // determine if the audio alarm is turned on or off.
             if (content.contains("table.AudioDetect[0].MutationDetect=true")) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_AUDIO_ALARM, OnOffType.ON);
+                setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.ON);
             } else if (content.contains("table.AudioDetect[0].MutationDetect=false")) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_AUDIO_ALARM, OnOffType.OFF);
+                setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.OFF);
             }
 
             // Handle AudioMutationThreshold alarm
@@ -70,71 +85,71 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
 
             // CrossLineDetection alarm on/off
             if (content.contains("table.VideoAnalyseRule[0][1].Enable=true")) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_LINE_CROSSING_ALARM, OnOffType.ON);
+                setAttribute(ENDPOINT_ENABLE_LINE_CROSSING_ALARM, OnOffType.ON);
             } else if (content.contains("table.VideoAnalyseRule[0][1].Enable=false")) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_LINE_CROSSING_ALARM, OnOffType.OFF);
+                setAttribute(ENDPOINT_ENABLE_LINE_CROSSING_ALARM, OnOffType.OFF);
             }
             // Privacy Mode on/off
             if (content.contains("table.LeLensMask[0].Enable=true")) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_PRIVACY_MODE, OnOffType.ON);
+                setAttribute(CHANNEL_ENABLE_PRIVACY_MODE, OnOffType.ON);
             } else if (content.contains("table.LeLensMask[0].Enable=false")) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_PRIVACY_MODE, OnOffType.OFF);
+                setAttribute(CHANNEL_ENABLE_PRIVACY_MODE, OnOffType.OFF);
             }
         } finally {
             ReferenceCountUtil.release(msg);
         }
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_ENABLE_PRIVACY_MODE)
+    @UIVideoActionGetter(CHANNEL_ENABLE_PRIVACY_MODE)
     public State getEnablePrivacyMode() {
-        return getAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_PRIVACY_MODE);
+        return getAttribute(CHANNEL_ENABLE_PRIVACY_MODE);
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_PRIVACY_MODE, order = 70, icon = "fas fa-user-secret")
+    @UIVideoAction(name = CHANNEL_ENABLE_PRIVACY_MODE, order = 70, icon = "fas fa-user-secret")
     public void setEnablePrivacyMode(boolean on) {
-        service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&LeLensMask[0].Enable=" + on);
+        service.sendHttpGET(CM + "setConfig&LeLensMask[0].Enable=" + on);
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT2, order = 47, icon = "fas fa-bell")
+    @UIVideoAction(name = CHANNEL_ACTIVATE_ALARM_OUTPUT2, order = 47, icon = "fas fa-bell")
     public void activateAlarmOutput2(boolean on) {
-        service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&AlarmOut[1].Mode=" + boolToInt(on));
+        service.sendHttpGET(CM + "setConfig&AlarmOut[1].Mode=" + boolToInt(on));
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT, order = 45, icon = "fas fa-bell")
+    @UIVideoAction(name = CHANNEL_ACTIVATE_ALARM_OUTPUT, order = 45, icon = "fas fa-bell")
     public void activateAlarmOutput(boolean on) {
-        service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&AlarmOut[1].Mode=" + boolToInt(on));
+        service.sendHttpGET(CM + "setConfig&AlarmOut[1].Mode=" + boolToInt(on));
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM)
+    @UIVideoActionGetter(ENDPOINT_ENABLE_MOTION_ALARM)
     public State getEnableMotionAlarm() {
-        return getAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM);
+        return getAttribute(ENDPOINT_ENABLE_MOTION_ALARM);
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, order = 14, icon = "fas fa-running")
+    @UIVideoAction(name = ENDPOINT_ENABLE_MOTION_ALARM, order = 14, icon = "fas fa-running")
     public void setEnableMotionAlarm(boolean on) {
         if (on) {
-            service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&MotionDetect[0].Enable=true&MotionDetect[0].EventHandler.Dejitter=1");
+            service.sendHttpGET(CM + "setConfig&MotionDetect[0].Enable=true&MotionDetect[0].EventHandler.Dejitter=1");
         } else {
-            service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&MotionDetect[0].Enable=false");
+            service.sendHttpGET(CM + "setConfig&MotionDetect[0].Enable=false");
         }
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_ENABLE_LINE_CROSSING_ALARM)
+    @UIVideoActionGetter(ENDPOINT_ENABLE_LINE_CROSSING_ALARM)
     public State getEnableLineCrossingAlarm() {
-        return getAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_LINE_CROSSING_ALARM);
+        return getAttribute(ENDPOINT_ENABLE_LINE_CROSSING_ALARM);
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_LINE_CROSSING_ALARM, order = 150, icon = "fas fa-grip-lines-vertical")
+    @UIVideoAction(name = ENDPOINT_ENABLE_LINE_CROSSING_ALARM, order = 150, icon = "fas fa-grip-lines-vertical")
     public void setEnableLineCrossingAlarm(boolean on) {
-        service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&VideoAnalyseRule[0][1].Enable=" + on);
+        service.sendHttpGET(CM + "setConfig&VideoAnalyseRule[0][1].Enable=" + on);
     }
 
     @Override
     public void setMotionAlarmThreshold(int threshold) {
         if (threshold > 0) {
-            service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&AudioDetect[0].MutationDetect=true&AudioDetect[0].EventHandler.Dejitter=1");
+            service.sendHttpGET(CM + "setConfig&AudioDetect[0].MutationDetect=true&AudioDetect[0].EventHandler.Dejitter=1");
         } else {
-            service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&AudioDetect[0].MutationDetect=false");
+            service.sendHttpGET(CM + "setConfig&AudioDetect[0].MutationDetect=false");
         }
     }
 
@@ -143,9 +158,9 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
         if (audioThreshold != this.audioThreshold) {
             this.audioThreshold = audioThreshold;
             if (this.audioThreshold > 0) {
-                service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&AudioDetect[0].MutationThreold=" + audioThreshold);
+                service.sendHttpGET(CM + "setConfig&AudioDetect[0].MutationThreold=" + audioThreshold);
             } else {
-                service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&AudioDetect[0].MutationThreold=1");
+                service.sendHttpGET(CM + "setConfig&AudioDetect[0].MutationThreold=1");
             }
         }
     }
@@ -154,7 +169,7 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
     public void autoLED(boolean on) {
         if (on) {
             setAttribute(ENDPOINT_ENABLE_LED, null/*UnDefType.UNDEF*/);
-            service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&Lighting[0][0].Mode=Auto");
+            service.sendHttpGET(CM + "setConfig&Lighting[0][0].Mode=Auto");
         }
     }
 
@@ -168,9 +183,9 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
         return on -> {
             setAttribute(ENDPOINT_AUTO_LED, OnOffType.OFF);
             if (!on) {
-                service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&Lighting[0][0].Mode=Off");
+                service.sendHttpGET(CM + "setConfig&Lighting[0][0].Mode=Off");
             } else {
-                service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&Lighting[0][0].Mode=Manual");
+                service.sendHttpGET(CM + "setConfig&Lighting[0][0].Mode=Manual");
             } /*else {
                         ipCameraHandler.sendHttpGET(
                                 CM + "setConfig&Lighting[0][0].Mode=Manual&Lighting[0][0].MiddleLight[0].Light="
@@ -184,14 +199,14 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
         return () -> Optional.ofNullable(getAttribute(ENDPOINT_ENABLE_LED)).map(State::boolValue).orElse(false);
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_TEXT_OVERLAY, order = 100, icon = "fas fa-paragraph")
+    @UIVideoAction(name = CHANNEL_TEXT_OVERLAY, order = 100, icon = "fas fa-paragraph")
     public void textOverlay(String value) {
         String text = Helper.encodeSpecialChars(value);
         if (text.isEmpty()) {
-            service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&VideoWidget[0].CustomTitle[1].EncodeBlend=false");
+            service.sendHttpGET(CM + "setConfig&VideoWidget[0].CustomTitle[1].EncodeBlend=false");
         } else {
             service.sendHttpGET(
-                    IpCameraBindingConstants.CM + "setConfig&VideoWidget[0].CustomTitle[1].EncodeBlend=true&VideoWidget[0].CustomTitle[1].Text="
+                    CM + "setConfig&VideoWidget[0].CustomTitle[1].EncodeBlend=true&VideoWidget[0].CustomTitle[1].Text="
                             + text);
         }
     }
@@ -238,44 +253,44 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
             switch (code) {
                 case "VideoMotion" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
+                        service.motionDetected(true, Events.MotionAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
+                        service.motionDetected(false, Events.MotionAlarm);
                     }
                 }
                 case "TakenAwayDetection" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, IpCameraBindingConstants.CHANNEL_ITEM_TAKEN);
+                        service.motionDetected(true, Events.ItemTakenDetection);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, IpCameraBindingConstants.CHANNEL_ITEM_TAKEN);
+                        service.motionDetected(false, Events.ItemTakenDetection);
                     }
                 }
                 case "LeftDetection" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, IpCameraBindingConstants.CHANNEL_ITEM_LEFT);
+                        service.motionDetected(true, Events.ItemLeftDetection);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, IpCameraBindingConstants.CHANNEL_ITEM_LEFT);
+                        service.motionDetected(false, Events.ItemLeftDetection);
                     }
                 }
                 case "SmartMotionVehicle" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, IpCameraBindingConstants.CHANNEL_CAR_ALARM);
+                        service.motionDetected(true, Events.CarAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, IpCameraBindingConstants.CHANNEL_CAR_ALARM);
+                        service.motionDetected(false, Events.CarAlarm);
                     }
                 }
                 case "SmartMotionHuman" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, IpCameraBindingConstants.CHANNEL_HUMAN_ALARM);
+                        service.motionDetected(true, Events.HumanAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, IpCameraBindingConstants.CHANNEL_HUMAN_ALARM);
+                        service.motionDetected(false, Events.HumanAlarm);
                     }
                 }
                 case "CrossLineDetection" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, IpCameraBindingConstants.CHANNEL_LINE_CROSSING_ALARM);
+                        service.motionDetected(true, Events.LineCrossAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, IpCameraBindingConstants.CHANNEL_LINE_CROSSING_ALARM);
+                        service.motionDetected(false, Events.LineCrossAlarm);
                     }
                 }
                 case "AudioMutation" -> {
@@ -287,64 +302,64 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
                 }
                 case "FaceDetection" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, IpCameraBindingConstants.CHANNEL_FACE_DETECTED);
+                        service.motionDetected(true, Events.FaceDetect);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, IpCameraBindingConstants.CHANNEL_FACE_DETECTED);
+                        service.motionDetected(false, Events.FaceDetect);
                     }
                 }
                 case "ParkingDetection" -> {
                     if (action.equals("Start")) {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_PARKING_ALARM, OnOffType.ON);
+                        setAttribute(ENDPOINT_PARKING_ALARM, OnOffType.ON);
                     } else if (action.equals("Stop")) {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_PARKING_ALARM, OnOffType.OFF);
+                        setAttribute(ENDPOINT_PARKING_ALARM, OnOffType.OFF);
                     }
                 }
                 case "CrossRegionDetection" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, IpCameraBindingConstants.CHANNEL_FIELD_DETECTION_ALARM);
+                        service.motionDetected(true, Events.FieldDetectAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, IpCameraBindingConstants.CHANNEL_FIELD_DETECTION_ALARM);
+                        service.motionDetected(false, Events.FieldDetectAlarm);
                     }
                 }
                 case "VideoLoss", "VideoBlind" -> {
                     if (action.equals("Start")) {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_TOO_DARK_ALARM, OnOffType.ON);
+                        setAttribute(ENDPOINT_TOO_DARK_ALARM, OnOffType.ON);
                     } else if (action.equals("Stop")) {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_TOO_DARK_ALARM, OnOffType.OFF);
+                        setAttribute(ENDPOINT_TOO_DARK_ALARM, OnOffType.OFF);
                     }
                 }
                 case "VideoAbnormalDetection" -> {
                     if (action.equals("Start")) {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_SCENE_CHANGE_ALARM, OnOffType.ON);
+                        setAttribute(ENDPOINT_SCENE_CHANGE_ALARM, OnOffType.ON);
                     } else if (action.equals("Stop")) {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_SCENE_CHANGE_ALARM, OnOffType.OFF);
+                        setAttribute(ENDPOINT_SCENE_CHANGE_ALARM, OnOffType.OFF);
                     }
                 }
                 case "VideoUnFocus" -> {
                     if (action.equals("Start")) {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_TOO_BLURRY_ALARM, OnOffType.ON);
+                        setAttribute(ENDPOINT_TOO_BLURRY_ALARM, OnOffType.ON);
                     } else if (action.equals("Stop")) {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_TOO_BLURRY_ALARM, OnOffType.OFF);
+                        setAttribute(ENDPOINT_TOO_BLURRY_ALARM, OnOffType.OFF);
                     }
                 }
                 case "AlarmLocal" -> {
                     if (action.equals("Start")) {
                         if (content.contains("index=0")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_EXTERNAL_ALARM_INPUT, OnOffType.ON);
+                            setAttribute(CHANNEL_EXTERNAL_ALARM_INPUT, OnOffType.ON);
                         } else {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_EXTERNAL_ALARM_INPUT2, OnOffType.ON);
+                            setAttribute(CHANNEL_EXTERNAL_ALARM_INPUT2, OnOffType.ON);
                         }
                     } else if (action.equals("Stop")) {
                         if (content.contains("index=0")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
+                            setAttribute(CHANNEL_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
                         } else {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_EXTERNAL_ALARM_INPUT2, OnOffType.OFF);
+                            setAttribute(CHANNEL_EXTERNAL_ALARM_INPUT2, OnOffType.OFF);
                         }
                     }
                 }
-                case "LensMaskOpen" -> setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_PRIVACY_MODE, OnOffType.ON);
+                case "LensMaskOpen" -> setAttribute(CHANNEL_ENABLE_PRIVACY_MODE, OnOffType.ON);
                 case "LensMaskClose" ->
-                        setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_PRIVACY_MODE, OnOffType.OFF);
+                        setAttribute(CHANNEL_ENABLE_PRIVACY_MODE, OnOffType.OFF);
                 case "TimeChange", "NTPAdjustTime", "StorageChange", "Reboot", "NewFile", "VideoMotionInfo", "RtspSessionDisconnect", "LeFunctionStatusSync", "RecordDelete" -> {
                 }
                 default -> log.debug("[{}]: Unrecognised Dahua event, Code={}, action={}", entityID, code, action);

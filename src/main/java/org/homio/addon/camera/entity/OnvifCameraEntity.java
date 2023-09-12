@@ -136,16 +136,6 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         return this;
     }
 
-    @UIField(order = 2, hideInView = true)
-    @UIFieldGroup("ONVIF")
-    public int getOnvifMediaProfile() {
-        return getJsonData("onvifMediaProfile", 0);
-    }
-
-    public void setOnvifMediaProfile(int value) {
-        setJsonData("onvifMediaProfile", value);
-    }
-
     @Override
     @UIField(order = 1, hideInView = true, label = "cameraUsername")
     @UIFieldGroup(order = 7, value = "SECURITY", borderColor = "#23ADAB")

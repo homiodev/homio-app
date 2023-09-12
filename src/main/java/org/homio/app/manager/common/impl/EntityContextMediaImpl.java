@@ -67,6 +67,6 @@ public class EntityContextMediaImpl implements EntityContextMedia  {
         @NotNull String output,
         @NotNull String username,
         @NotNull String password) {
-        return new FFMPEGImpl(entityID, description, handler, format, inputArguments, input, outArguments, output, username, password);
+        return new FFMPEGImpl(entityID, description, handler, format, inputArguments, input, outArguments, output, username, password, entityContext);
     }
 }

@@ -286,7 +286,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     @UIField(order = 300, hideInView = true)
-    @UIFieldGroup("STREAMING")
+    @UIFieldGroup(value = "STREAMING", order = 10, borderColor = "#59B8AD")
     public boolean isHasAudioStream() {
         return getJsonData("hasAudioStream", false);
     }
@@ -296,7 +296,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     @UIField(order = 4, hideOnEmpty = true, type = UIFieldType.Chips, hideInEdit = true)
-    @UIFieldGroup("STREAMING")
+    @UIFieldGroup(value = "STREAMING", order = 10, borderColor = "#59B8AD")
     public List<String> getStreamResolutions() {
         return getJsonDataList("sr");
     }
@@ -425,6 +425,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         @Override
         public ActionResponseModel handleAction(EntityContext entityContext, JSONObject params) {
             BaseVideoEntity<?, ?> entity = entityContext.getEntityRequire(params.getString("entityID"));
+            entity.getService().assertOnline();
             byte[] image = entity.getService().recordImageSync(null).byteArrayValue();
             String encodedValue = "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(image);
             FileModel snapshot = new FileModel("Snapshot", encodedValue, FileContentType.image);
@@ -478,6 +479,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
     @Override
     public @NotNull List<OptionModel> getLogSources() {
-        return getService().getLogSources();
+        return optService().map(s -> s.getLogSources()).orElse(List.of());
     }
 }

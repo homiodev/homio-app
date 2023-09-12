@@ -1,6 +1,5 @@
 package org.homio.app.video.ffmpeg;
 
-import static org.homio.api.EntityContextMedia.FFMPEG_MOTION_ALARM;
 import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
 
 import com.pivovarit.function.ThrowingRunnable;
@@ -18,22 +17,26 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.FileHandler;
 import java.util.logging.LogRecord;
 import java.util.logging.SimpleFormatter;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.Level;
+import org.homio.api.EntityContextHardware.ProcessStat;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
 import org.homio.api.EntityContextMedia.FFMPEGHandler;
+import org.homio.api.model.UpdatableValue;
 import org.homio.api.util.CommonUtils;
+import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.impl.EntityContextBGPImpl;
+import org.homio.app.manager.common.impl.EntityContextHardwareImpl.ProcessStatImpl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -45,6 +48,7 @@ import org.json.JSONObject;
 public class FFMPEGImpl implements FFMPEG {
 
     public static final @NotNull Path FFMPEG_LOG_PATH;
+    private static final Map<String, UpdatableValue<ProcessStat>> PROCESS_STAT_LOADING_CACHE = new ConcurrentHashMap<>();
 
     static {
         Path ffmpegLogPath = CommonUtils.getLogsPath().resolve("ffmpeg");
@@ -69,8 +73,9 @@ public class FFMPEGImpl implements FFMPEG {
     private final FileHandler fileHandler;
     private final @Getter @NotNull Path logPath;
     private final @Getter String cmd;
+    private final EntityContextImpl entityContext;
     private @Nullable Collection<ThrowingRunnable<Exception>> threadDestroyListeners;
-    private @Getter Process process = null;
+    private Process process = null;
     private IpVideoFfmpegThread ipVideoFfmpegThread;
     // this is indicator that tells if this ffmpeg command is still need by 3th part request
     private int keepAlive = 8;
@@ -89,7 +94,9 @@ public class FFMPEGImpl implements FFMPEG {
         @NotNull String outArguments,
         @NotNull String output,
         @NotNull String username,
-        @NotNull String password) {
+        @NotNull String password,
+        @NotNull EntityContextImpl entityContext) {
+        this.entityContext = entityContext;
         FFMPEGImpl.ffmpegMap.put(entityID + "_" + description, this);
 
         this.logPath = FFMPEG_LOG_PATH.resolve(entityID + "_" + description + ".log");
@@ -174,6 +181,7 @@ public class FFMPEGImpl implements FFMPEG {
         if (!processAlive) {
             ipVideoFfmpegThread = new IpVideoFfmpegThread();
             running.set(true);
+            FFMPEGImpl.ffmpegMap.put(entityID + "_" + description, this);
             ipVideoFfmpegThread.start();
             return true;
         }
@@ -200,6 +208,20 @@ public class FFMPEGImpl implements FFMPEG {
         return false;
     }
 
+    @SneakyThrows
+    public ProcessStat getProcessStat(Runnable onRefreshUpdated) {
+        UpdatableValue<ProcessStat> cachedValue = PROCESS_STAT_LOADING_CACHE.computeIfAbsent(entityID,
+            s -> UpdatableValue.wrap(new ProcessStatImpl(0, 0, 0), entityID));
+        return cachedValue.getFreshValue(Duration.ofSeconds(10), () -> {
+            entityContext.bgp().builder("fetch-ffmpeg-proc-stat")
+                         .execute(() -> {
+                             cachedValue.update(entityContext.hardware().getProcessStat(process.pid()));
+                             onRefreshUpdated.run();
+                         });
+
+        });
+    }
+
     private void finishFFMPEG() {
         logInfo("Finish ffmpeg command '%s'".formatted(description));
         running.set(false);
@@ -215,6 +237,8 @@ public class FFMPEGImpl implements FFMPEG {
                 return true;
             });
         }
+
+        FFMPEGImpl.ffmpegMap.remove(entityID + "_" + description, this);
     }
 
     private class IpVideoFfmpegThread extends Thread {
@@ -274,7 +298,7 @@ public class FFMPEGImpl implements FFMPEG {
                     || countOfMotions > 3 && motionThreshold > 15
                     || countOfMotions > 2 && motionThreshold > 30
                     || countOfMotions > 0 && motionThreshold > 89) {
-                    handler.motionDetected(true, FFMPEG_MOTION_ALARM);
+                    handler.motionDetected(true);
                     if (countOfMotions < 2) {
                         countOfMotions = 4;// Used to debounce the Alarm.
                     }
@@ -290,7 +314,7 @@ public class FFMPEGImpl implements FFMPEG {
                         countOfMotions -= 4;
                     }
                     if (countOfMotions <= 0) {
-                        handler.motionDetected(false, FFMPEG_MOTION_ALARM);
+                        handler.motionDetected(false);
                         countOfMotions = 0;
                     }
                 }

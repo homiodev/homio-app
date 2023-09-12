@@ -1,8 +1,13 @@
 package org.homio.addon.camera.onvif.impl;
 
+import static org.homio.addon.camera.VideoConstants.CHANNEL_TEXT_OVERLAY;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_EXTERNAL_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LED;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_MOTION_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_PIR_ALARM;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -11,10 +16,10 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.extern.log4j.Log4j2;
+import org.homio.addon.camera.VideoConstants.Events;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
 import org.homio.addon.camera.onvif.util.Helper;
-import org.homio.addon.camera.onvif.util.IpCameraBindingConstants;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.api.EntityContext;
@@ -59,47 +64,47 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
                 }
                 case "/param.cgi?cmd=getoverlayattr&-region=1" -> {// Text Overlays
                     if (content.contains("var show_1=\"0\"")) {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_TEXT_OVERLAY, StringType.EMPTY);
+                        setAttribute(CHANNEL_TEXT_OVERLAY, StringType.EMPTY);
                     } else {
                         value1 = Helper.searchString(content, "var name_1=\"");
                         if (!value1.isEmpty()) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_TEXT_OVERLAY, new StringType(value1));
+                            setAttribute(CHANNEL_TEXT_OVERLAY, new StringType(value1));
                         }
                     }
                 }
                 case "/cgi-bin/hi3510/param.cgi?cmd=getmdattr" -> {// Motion Alarm
                     // Motion Alarm
                     if (content.contains("var m1_enable=\"1\"")) {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, OnOffType.ON);
+                        setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.ON);
                     } else {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, OnOffType.OFF);
+                        setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.OFF);
                     }
                 }
                 case "/cgi-bin/hi3510/param.cgi?cmd=getaudioalarmattr" -> {// Audio Alarm
                     if (content.contains("var aa_enable=\"1\"")) {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_AUDIO_ALARM, OnOffType.ON);
+                        setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.ON);
                         value1 = Helper.searchString(content, "var aa_value=\"");
                         if (!value1.isEmpty()) {
                             setAttribute(ENDPOINT_AUDIO_THRESHOLD, new DecimalType(value1));
                         }
                     } else {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_AUDIO_ALARM, OnOffType.OFF);
+                        setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.OFF);
                     }
                 }
                 case "param.cgi?cmd=getpirattr" -> {// PIR Alarm
                     if (content.contains("var pir_enable=\"1\"")) {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_PIR_ALARM, OnOffType.ON);
+                        setAttribute(ENDPOINT_ENABLE_PIR_ALARM, OnOffType.ON);
                     } else {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_PIR_ALARM, OnOffType.OFF);
+                        setAttribute(ENDPOINT_ENABLE_PIR_ALARM, OnOffType.OFF);
                     }
                     // Reset the Alarm, need to find better place to put this.
-                    service.motionDetected(false, IpCameraBindingConstants.CHANNEL_PIR_ALARM);
+                    service.motionDetected(false, Events.PirAlarm);
                 }
                 case "/param.cgi?cmd=getioattr" -> {// External Alarm Input
                     if (content.contains("var io_enable=\"1\"")) {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_EXTERNAL_ALARM_INPUT, OnOffType.ON);
+                        setAttribute(ENDPOINT_ENABLE_EXTERNAL_ALARM, OnOffType.ON);
                     } else {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
+                        setAttribute(ENDPOINT_ENABLE_EXTERNAL_ALARM, OnOffType.OFF);
                     }
                 }
                 default -> {
@@ -137,7 +142,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
         }
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, order = 14, icon = "fas fa-running")
+    @UIVideoAction(name = ENDPOINT_ENABLE_MOTION_ALARM, order = 14, icon = "fas fa-running")
     public void enableMotionAlarm(boolean on) {
         int val = boolToInt(on);
         service.sendHttpGET("/cgi-bin/hi3510/param.cgi?cmd=setmdattr&-enable=" + val +
@@ -145,7 +150,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
             "&-name=4");
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_TEXT_OVERLAY, order = 100, icon = "fas fa-paragraph")
+    @UIVideoAction(name = CHANNEL_TEXT_OVERLAY, order = 100, icon = "fas fa-paragraph")
     public void textOverlay(String value) {
         String text = Helper.encodeSpecialChars(value);
         if (text.isEmpty()) {
@@ -176,12 +181,12 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
         return () -> Optional.ofNullable(getAttribute(ENDPOINT_ENABLE_LED)).map(State::boolValue).orElse(false);
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_PIR_ALARM, order = 120, icon = "fas fa-compress-alt")
+    @UIVideoAction(name = ENDPOINT_ENABLE_PIR_ALARM, order = 120, icon = "fas fa-compress-alt")
     public void enablePirAlarm(boolean on) {
         service.sendHttpGET("/param.cgi?cmd=setpirattr&-pir_enable=" + boolToInt(on));
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_EXTERNAL_ALARM_INPUT, order = 250, icon = "fas fa-external-link-square-alt")
+    @UIVideoAction(name = ENDPOINT_ENABLE_EXTERNAL_ALARM, order = 250, icon = "fas fa-external-link-square-alt")
     public void enableExternalAlarmInput(boolean on) {
         service.sendHttpGET("/param.cgi?cmd=setioattr&-io_enable=" + boolToInt(on));
     }
@@ -190,20 +195,20 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
         log.debug("[{}]: Alarm has been triggered:{}", entityID, alarm);
         switch (alarm) {
             case "/instar?&active=1", "/instar?&active=2", "/instar?&active=3", "/instar?&active=4" ->
-                service.motionDetected(true, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
+                service.motionDetected(true, Events.MotionAlarm);
             case "/instar?&active=5" ->// PIR
-                service.motionDetected(true, IpCameraBindingConstants.CHANNEL_PIR_ALARM);
+                service.motionDetected(true, Events.PirAlarm);
             case "/instar?&active=6" ->// Audio Alarm
                 service.audioDetected(true);
             case "/instar?&active=7", "/instar?&active=8", "/instar?&active=9", "/instar?&active=10" ->// Motion Area 4
-                service.motionDetected(true, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
+                service.motionDetected(true, Events.MotionAlarm);
         }
     }
 
     @Override
     public void pollCameraRunnable() {
-        service.motionDetected(false, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
-        service.motionDetected(false, IpCameraBindingConstants.CHANNEL_PIR_ALARM);
+        service.motionDetected(false, Events.MotionAlarm);
+        service.motionDetected(false, Events.PirAlarm);
         service.audioDetected(false);
     }
 

@@ -1,10 +1,15 @@
 package org.homio.addon.camera.onvif.impl;
 
+import static org.homio.addon.camera.VideoConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT;
+import static org.homio.addon.camera.VideoConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT2;
+import static org.homio.addon.camera.VideoConstants.CHANNEL_DOORBELL;
+import static org.homio.addon.camera.VideoConstants.CHANNEL_EXTERNAL_LIGHT;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.log4j.Log4j2;
+import org.homio.addon.camera.VideoConstants.Events;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
-import org.homio.addon.camera.onvif.util.IpCameraBindingConstants;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.api.state.OnOffType;
@@ -31,16 +36,16 @@ public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
             String content = msg.toString();
             log.debug("[{}]: HTTP Result back from camera is \t:{}:", entityID, content);
             if (content.contains("doorbell:H")) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_DOORBELL, OnOffType.ON);
+                setAttribute(CHANNEL_DOORBELL, OnOffType.ON);
             }
             if (content.contains("doorbell:L")) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_DOORBELL, OnOffType.OFF);
+                setAttribute(CHANNEL_DOORBELL, OnOffType.OFF);
             }
             if (content.contains("motionsensor:L")) {
-                service.motionDetected(false, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
+                service.motionDetected(false, Events.MotionAlarm);
             }
             if (content.contains("motionsensor:H")) {
-                service.motionDetected(true, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
+                service.motionDetected(true, Events.MotionAlarm);
             }
         } finally {
             ReferenceCountUtil.release(msg);
@@ -76,21 +81,21 @@ public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
         return "/bha-api/monitor.cgi?ring=doorbell,motionsensor";
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_EXTERNAL_LIGHT, order = 200, icon = "fas fa-sun")
+    @UIVideoAction(name = CHANNEL_EXTERNAL_LIGHT, order = 200, icon = "fas fa-sun")
     public void externalLight(boolean on) {
         if (on) {
             service.sendHttpGET("/bha-api/light-on.cgi");
         }
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT2, order = 47, icon = "fas fa-bell")
+    @UIVideoAction(name = CHANNEL_ACTIVATE_ALARM_OUTPUT2, order = 47, icon = "fas fa-bell")
     public void activateAlarmOutput2(boolean on) {
         if (on) {
             service.sendHttpGET("/bha-api/open-door.cgi?r=2");
         }
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT, order = 45, icon = "fas fa-bell")
+    @UIVideoAction(name = CHANNEL_ACTIVATE_ALARM_OUTPUT, order = 45, icon = "fas fa-bell")
     public void activateAlarmOutput(boolean on) {
         if (on) {
             service.sendHttpGET("/bha-api/open-door.cgi");

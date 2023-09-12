@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextHardware;
@@ -186,6 +187,7 @@ public class FFMPEGEntity extends MediaEntity implements
 
         private final String description;
 
+        @SneakyThrows
         public FfmpegInstanceEndpoint(FFMPEGImpl ffmpeg, FFMPEGEntity entity) {
             super("FFMPEG");
             this.endpointEntityID = ffmpeg.getDescription();
@@ -196,7 +198,7 @@ public class FFMPEGEntity extends MediaEntity implements
             this.writable = false;
             this.description = ffmpeg.getCmd();
             if (ffmpeg.getIsAlive()) {
-                ProcessStat stat = entity.getEntityContext().hardware().getProcessStat(ffmpeg.getProcess().pid());
+                ProcessStat stat = ffmpeg.getProcessStat(this::updateUI);
                 this.value = new StringType("Cpu(%.2f%%), Mem(%.2f%%)".formatted(stat.getCpuUsage(), stat.getMemUsage()));
             } else {
                 this.value = new StringType("Dead");

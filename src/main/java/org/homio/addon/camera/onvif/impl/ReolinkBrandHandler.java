@@ -1,14 +1,84 @@
 package org.homio.addon.camera.onvif.impl;
 
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_3DNR;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ANTI_FLICKER;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_BANDWIDTH;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_BGCOLOR;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_BLACK_LIGHT;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_BLC;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_BLUE_GAIN;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_BRIGHT;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_CONTRAST;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_CPU_LOADING;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_DATETIME_POSITION;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_DATETIME_SHOW;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_DAY_NIGHT;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_DRC;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_EXPOSURE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_HDD;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_HUE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_IMAGE_MIRROR;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_IMAGE_ROTATE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_NAME_POSITION;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_NAME_SHOW;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_RECORD_AUDIO;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_RED_GAIN;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_SATURATION;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_SHARPEN;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_MAIN_BITRATE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_MAIN_FRAMERATE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_MAIN_H264_PROFILE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_MAIN_RESOLUTION;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_SECONDARY_BITRATE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_SECONDARY_FRAMERATE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_SECONDARY_H264_PROFILE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_SECONDARY_RESOLUTION;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_WATERMARK_SHOW;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_WHITE_BALANCE;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import lombok.*;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.net.http.HttpRequest;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.SneakyThrows;
+import lombok.ToString;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
@@ -26,7 +96,11 @@ import org.homio.api.EntityContext;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.endpoint.DeviceEndpoint;
-import org.homio.api.state.*;
+import org.homio.api.state.DecimalType;
+import org.homio.api.state.JsonType;
+import org.homio.api.state.OnOffType;
+import org.homio.api.state.State;
+import org.homio.api.state.StringType;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.api.util.CommonUtils;
@@ -42,30 +116,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.client.RestTemplate;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.http.HttpRequest;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.homio.addon.camera.VideoConstants.*;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-
 @Log4j2
 @CameraBrandHandler("Reolink")
 public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
-        BrandCameraHasMotionAlarm, VideoPlaybackStorage {
+    BrandCameraHasMotionAlarm, VideoPlaybackStorage {
 
     private static final Map<String, EndpointConfiguration> configurations = new HashMap<>();
 
@@ -125,9 +179,9 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         addConfig(new EndpointConfiguration(ENDPOINT_STREAM_SECONDARY_H264_PROFILE, ConfigType.select, "Enc", "mainStream/profile"));
 
         addConfig(new EndpointConfiguration(ENDPOINT_CPU_LOADING, ConfigType.number, "Performance", "cpuUsed")
-                .setWritable(false));
+            .setWritable(false));
         addConfig(new EndpointConfiguration(ENDPOINT_BANDWIDTH, ConfigType.number, "Performance", "codecRate")
-                .setWritable(false));
+            .setWritable(false));
     }
 
     private static void addConfig(EndpointConfiguration configuration) {
@@ -136,14 +190,14 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @Override
     public LinkedHashMap<Long, Boolean> getAvailableDaysPlaybacks(EntityContext entityContext, String profile, Date fromDate,
-                                                                  Date toDate) {
+        Date toDate) {
         ReolinkBrandHandler reolinkBrandHandler = (ReolinkBrandHandler) getEntity().getService().getBrandHandler();
         SearchRequest request = new SearchRequest(new Search(1, profile, Time.of(fromDate), Time.of(toDate)));
         Root[] root = reolinkBrandHandler.firePost("cmd=Search", true, new ReolinkBrandHandler.ReolinkCmd(1, "Search",
-                OBJECT_MAPPER.valueToTree(request)));
+            OBJECT_MAPPER.valueToTree(request)));
         if (root[0].error != null) {
             throw new RuntimeException(
-                    "Reolink error fetch days: " + root[0].error.detail + ". RspCode: " + root[0].error.rspCode);
+                "Reolink error fetch days: " + root[0].error.detail + ". RspCode: " + root[0].error.rspCode);
         }
         LinkedHashMap<Long, Boolean> res = new LinkedHashMap<>();
         Calendar cal = Calendar.getInstance();
@@ -181,11 +235,11 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @Override
     public DownloadFile downloadPlaybackFile(EntityContext entityContext, String profile, String fileId, Path path)
-            throws Exception {
+        throws Exception {
         String fullUrl = getAuthUrl("cmd=Download&source=" + fileId + "&output=" + fileId, true);
         restTemplate.execute(fullUrl, HttpMethod.GET, null, clientHttpResponse -> {
             StreamUtils.copy(clientHttpResponse.getBody(),
-                    Files.newOutputStream(path, StandardOpenOption.CREATE, StandardOpenOption.WRITE));
+                Files.newOutputStream(path, StandardOpenOption.CREATE, StandardOpenOption.WRITE));
             return path;
         });
 
@@ -197,7 +251,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     public List<PlaybackFile> getPlaybackFiles(EntityContext entityContext, String profile, Date from, Date to) {
         SearchRequest request = new SearchRequest(new Search(0, profile, Time.of(from), Time.of(to)));
         Root[] root = firePost("cmd=Search", true, new ReolinkBrandHandler.ReolinkCmd(1, "Search",
-                OBJECT_MAPPER.valueToTree(request)));
+            OBJECT_MAPPER.valueToTree(request)));
         if (root[0].error != null) {
             throw new RuntimeException("RspCode: " + root[0].error.rspCode + ". Details: " + root[0].error.detail);
         }
@@ -222,7 +276,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     public Consumer<Boolean> getIRLedHandler() {
         return on -> {
             if (firePostGetCode(ReolinkCommand.SetIrLights,
-                    new ReolinkCmd(0, "SetIrLights", OBJECT_MAPPER.valueToTree(new SetIrLightsRequest(on))))) {
+                new ReolinkCmd(0, "SetIrLights", OBJECT_MAPPER.valueToTree(new SetIrLightsRequest(on))))) {
                 setAttribute(ENDPOINT_AUTO_LED, OnOffType.of(on));
                 getEntityContext().ui().sendSuccessMessage("Reolink set IR light applied successfully");
             }
@@ -551,11 +605,12 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @Override
     public @Nullable String getSnapshotUri(boolean live) {
-        if(live) {
+        /*if (live) {
             loginIfRequire();
             return "/cgi-bin/api.cgi?cmd=Snap&channel=%s&rs=homio&token=%s".formatted(nvrChannel, token);
         }
-        return "/cgi-bin/api.cgi?cmd=Snap&channel=%s&rs=homio".formatted(nvrChannel);
+        return "/cgi-bin/api.cgi?cmd=Snap&channel=%s&rs=homio".formatted(nvrChannel);*/
+        return null;
     }
 
     @Override
@@ -589,15 +644,17 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         loginIfRequire();
 
         Root[] roots = firePost("", true,
-                new ReolinkCmd(1, "GetDevInfo", channelParam),
-                new ReolinkCmd(1, "GetHddInfo", channelParam),
-                new ReolinkCmd(1, "GetPerformance", channelParam),
-                new ReolinkCmd(1, "GetLocalLink", channelParam),
-                new ReolinkCmd(1, "GetIrLights", channelParam),
-                new ReolinkCmd(1, "GetOsd", channelParam),
-                new ReolinkCmd(1, "GetEnc", channelParam),
-                new ReolinkCmd(1, "GetImage", channelParam),
-                new ReolinkCmd(1, "GetIsp", channelParam));
+            new ReolinkCmd(1, "GetAbility", OBJECT_MAPPER.createObjectNode().set("User",
+                OBJECT_MAPPER.createObjectNode().put("userName", getEntity().getUser()))),
+            new ReolinkCmd(1, "GetDevInfo", channelParam),
+            new ReolinkCmd(1, "GetHddInfo", channelParam),
+            new ReolinkCmd(1, "GetPerformance", channelParam),
+            new ReolinkCmd(1, "GetLocalLink", channelParam),
+            new ReolinkCmd(1, "GetIrLights", channelParam),
+            new ReolinkCmd(1, "GetOsd", channelParam),
+            new ReolinkCmd(1, "GetEnc", channelParam),
+            new ReolinkCmd(1, "GetImage", channelParam),
+            new ReolinkCmd(1, "GetIsp", channelParam));
         if (roots != null) {
             for (Root objectNode : roots) {
                 String cmd = objectNode.cmd;
@@ -640,8 +697,20 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
                 handleGetDevInfoCommand(objectNode);
                 yield true;
             }
+            case "GetAbility" -> {
+                handleGetAbilityCommand(objectNode);
+                yield true;
+            }
             default -> false;
         };
+    }
+
+    private void handleGetAbilityCommand(Root objectNode) {
+        JsonNode ability = objectNode.value.get("Ability");
+        int permit = ability.path("alarmAudio").path("permit").asInt(0);
+        if (permit > 0) {
+            throw new IllegalStateException("Not tested yet");
+        }
     }
 
     private void handleGetDevInfoCommand(Root objectNode) {
@@ -649,7 +718,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         String model = devInfo.path("model").asText("");
         String hardVer = devInfo.path("hardVer").asText("");
         if ((isNotEmpty(model) && !model.equals(getEntity().getModel()))
-                || (isNotEmpty(hardVer) && !hardVer.equals(getEntity().getHardwareId()))) {
+            || (isNotEmpty(hardVer) && !hardVer.equals(getEntity().getHardwareId()))) {
             getEntityContext().updateDelayed(getEntity(), entity -> {
                 entity.setModel(model);
                 entity.setHardwareId(hardVer);
@@ -674,7 +743,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         String link = localLink.path("activeLink").asText("");
         String mac = localLink.path("mac").asText("").toUpperCase();
         if ((isEmpty(getEntity().getMac()) && isNotEmpty(mac))
-                || (isEmpty(getEntity().getActiveLink()) && isNotEmpty(link))) {
+            || (isEmpty(getEntity().getActiveLink()) && isNotEmpty(link))) {
             getEntityContext().updateDelayed(getEntity(), entity -> {
                 entity.setActiveLink(link);
                 entity.setMac(mac);
@@ -685,7 +754,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     private void handleGetIrLightCommand(Root objectNode) {
         setAttribute(ENDPOINT_AUTO_LED, OnOffType.of("auto".equals(objectNode.value.get("IrLights").get("state").asText())));
         service.addEndpointSwitch(ENDPOINT_AUTO_LED, state -> setAutoLed(state.boolValue()), true)
-                .setValue(isAutoLed(), true);
+               .setValue(isAutoLed(), true);
     }
 
     @Override
@@ -703,8 +772,8 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     public Root[] firePost(String url, boolean requireAuth, ReolinkCmd... commands) {
         String fullUrl = getAuthUrl(url, requireAuth);
         var requestEntity = RequestEntity.post(new URL(fullUrl).toURI())
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(Arrays.asList(commands));
+                                         .contentType(MediaType.APPLICATION_JSON)
+                                         .body(Arrays.asList(commands));
         ResponseEntity<String> exchange = restTemplate.exchange(requestEntity, String.class);
         if (exchange.getBody() == null) {
             return null;
@@ -777,7 +846,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         request.set(configuration.group, setting.getJsonNode());
         ReolinkCommand command = ReolinkCommand.valueOf("Set" + configuration.group);
         if (firePostGetCode(command,
-                new ReolinkCmd(0, command.name(), request))) {
+            new ReolinkCmd(0, command.name(), request))) {
             getEntityContext().ui().sendSuccessMessage("Reolink '" + configuration.key + "' changed  successfully");
         }
     }
@@ -797,7 +866,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         request.set(configuration.group, setting.getJsonNode());
         ReolinkCommand command = ReolinkCommand.valueOf("Set" + configuration.group);
         if (firePostGetCode(command,
-                new ReolinkCmd(0, command.name(), request))) {
+            new ReolinkCmd(0, command.name(), request))) {
             getEntityContext().ui().sendSuccessMessage("Reolink '" + configuration.key + "' changed  successfully");
         }
     }
@@ -873,13 +942,13 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         public static Time of(Date date) {
             LocalDateTime time = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
             return new Time(time.getYear(), time.getMonthValue(), time.getDayOfMonth(), time.getHour(), time.getMinute(),
-                    time.getSecond());
+                time.getSecond());
         }
 
         public static Date from(Time time) {
             return Date.from(
-                    LocalDateTime.of(time.year, time.mon, time.day, time.hour, time.min, time.sec).atZone(ZoneId.systemDefault())
-                            .toInstant());
+                LocalDateTime.of(time.year, time.mon, time.day, time.hour, time.min, time.sec).atZone(ZoneId.systemDefault())
+                             .toInstant());
         }
     }
 

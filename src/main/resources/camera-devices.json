@@ -302,6 +302,192 @@
       "order": 2580,
       "icon": "fa-address-card",
       "iconColor": "#8035A6"
+    },
+    {
+      "name": "enable_audio_alarm",
+      "stateless": true,
+      "order": 380,
+      "icon": "fa-car-on",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "enable_motion_alarm",
+      "stateless": true,
+      "order": 390,
+      "icon": "fa-road-circle-exclamation",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "enable_field_alarm",
+      "stateless": true,
+      "order": 400,
+      "icon": "fa-shield-virus",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "enable_line_cross_alarm",
+      "stateless": true,
+      "order": 410,
+      "icon": "fa-people-line",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "enable_external_alarm",
+      "stateless": true,
+      "order": 410,
+      "icon": "fa-people-line",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "enable_pir_alarm",
+      "stateless": true,
+      "order": 420,
+      "icon": "fa-lightbulb",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "parking_alarm",
+      "stateless": true,
+      "order": 430,
+      "icon": "fa-square-parking",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "tamper_alarm",
+      "stateless": true,
+      "order": 440,
+      "icon": "fa-caravan",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "too_dark_alarm",
+      "stateless": true,
+      "order": 450,
+      "icon": "fa-moon",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "storage_alarm",
+      "stateless": true,
+      "order": 460,
+      "icon": "fa-database",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "scene_change_alarm",
+      "stateless": true,
+      "order": 470,
+      "icon": "fa-clone",
+      "iconColor": "#8035A6"
+    },{
+      "name": "too_bright_alarm",
+      "stateless": true,
+      "order": 480,
+      "icon": "fa-sun",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "too_blurry_alarm",
+      "stateless": true,
+      "order": 490,
+      "icon": "fa-people-line",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "pan",
+      "stateless": true,
+      "order": 500,
+      "icon": "fa-panorama",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "tilt",
+      "stateless": true,
+      "order": 510,
+      "icon": "fa-sort",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "zoom",
+      "stateless": true,
+      "order": 520,
+      "icon": "fa-magnifying-glass-plus",
+      "iconColor": "#8035A6"
+    },
+
+
+
+
+
+
+    {
+      "name": "activate_alarm_output",
+      "stateless": true,
+      "order": 520,
+      "icon": "fa-house-medical",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "activate_alarm_output2",
+      "stateless": true,
+      "order": 520,
+      "icon": "fa-house-chimney-medical",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "trigger_external_alarm_input",
+      "stateless": true,
+      "order": 520,
+      "icon": "fa-bell",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "external_alarm_input",
+      "stateless": true,
+      "order": 520,
+      "icon": "far fa-bell",
+      "iconColor": "#8035A6"
+    }, {
+      "name": "external_alarm_input2",
+      "stateless": true,
+      "order": 520,
+      "icon": "far fa-bell",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "text_overlay",
+      "stateless": true,
+      "order": 520,
+      "icon": "fa-font",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "external_light",
+      "stateless": true,
+      "order": 520,
+      "icon": "fa-circle-half-stroke",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "door_bell",
+      "stateless": true,
+      "order": 520,
+      "icon": "fa-door-open",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "goto_preset",
+      "stateless": true,
+      "order": 520,
+      "icon": "fa-gift",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "enable_privacy_mode",
+      "stateless": true,
+      "order": 520,
+      "icon": "fa-lock",
+      "iconColor": "#8035A6"
     }
   ]
 }

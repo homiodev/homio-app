@@ -2,7 +2,7 @@ package org.homio.addon.camera;
 
 public class VideoConstants {
 
-    public static final String MOTION_ALARM = "motionAlarm";
+    public static final String CM = "/cgi-bin/configManager.cgi?action=";
 
     public static final String ENDPOINT_MOTION_THRESHOLD = "motion_threshold";
     public static final String ENDPOINT_AUDIO_THRESHOLD = "audio_threshold";
@@ -50,4 +50,49 @@ public class VideoConstants {
     public static final String ENDPOINT_BANDWIDTH = "bandwidth";
 
     public static final String ENDPOINT_HDD = "hdd";
+
+    public static final String ENDPOINT_ENABLE_AUDIO_ALARM = "enable_audio_alarm";
+    public static final String ENDPOINT_ENABLE_MOTION_ALARM = "enable_motion_alarm";
+    public static final String ENDPOINT_ENABLE_FIELD_DETECTION_ALARM = "enable_field_alarm";
+    public static final String ENDPOINT_ENABLE_LINE_CROSSING_ALARM = "enable_line_cross_alarm";
+    public static final String ENDPOINT_ENABLE_EXTERNAL_ALARM = "enable_external_alarm";
+    public static final String ENDPOINT_ENABLE_PIR_ALARM = "enable_pir_alarm";
+    public static final String ENDPOINT_PARKING_ALARM = "parking_alarm";
+    public static final String ENDPOINT_TAMPER_ALARM = "tamper_alarm";
+    public static final String ENDPOINT_TOO_DARK_ALARM = "too_dark_alarm";
+    public static final String ENDPOINT_STORAGE_ALARM = "storage_alarm";
+    public static final String ENDPOINT_SCENE_CHANGE_ALARM = "scene_change_alarm";
+    public static final String ENDPOINT_TOO_BRIGHT_ALARM = "too_bright_alarm";
+    public static final String ENDPOINT_TOO_BLURRY_ALARM = "too_blurry_alarm";
+
+    public static final String ENDPOINT_PAN = "pan";
+    public static final String ENDPOINT_TILT = "tilt";
+    public static final String ENDPOINT_ZOOM = "zoom";
+
+    public static final String CHANNEL_ACTIVATE_ALARM_OUTPUT = "activate_alarm_output";
+    public static final String CHANNEL_ACTIVATE_ALARM_OUTPUT2 = "activate_alarm_output2";
+    public static final String CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT = "trigger_external_alarm_input";
+    public static final String CHANNEL_EXTERNAL_ALARM_INPUT = "external_alarm_input";
+    public static final String CHANNEL_EXTERNAL_ALARM_INPUT2 = "external_alarm_input2";
+
+    public static final String CHANNEL_TEXT_OVERLAY = "text_overlay";
+    public static final String CHANNEL_EXTERNAL_LIGHT = "external_light";
+    public static final String CHANNEL_DOORBELL = "door_bell";
+    public static final String CHANNEL_GOTO_PRESET = "goto_preset";
+    public static final String CHANNEL_ENABLE_PRIVACY_MODE = "enable_privacy_mode";
+
+    public enum Events {
+        MotionAlarm,
+        FieldDetectAlarm,
+        LineCrossAlarm,
+        PirAlarm,
+        CellMotionAlarm,
+        ItemTakenDetection,
+        ItemLeftDetection,
+        CarAlarm,
+        HumanAlarm,
+        FaceDetect,
+        ExternalMotionAlarm,
+        AudioAlarm
+    }
 }

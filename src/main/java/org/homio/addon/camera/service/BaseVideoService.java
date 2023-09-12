@@ -4,9 +4,7 @@ import static java.lang.String.join;
 import static org.homio.addon.camera.CameraController.camerasOpenStreams;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
-import static org.homio.addon.camera.VideoConstants.MOTION_ALARM;
 import static org.homio.addon.camera.entity.StreamMJPEG.mp4OutOptions;
-import static org.homio.api.EntityContextMedia.FFMPEG_MOTION_ALARM;
 import static org.homio.api.model.Status.DONE;
 import static org.homio.api.model.Status.ERROR;
 import static org.homio.api.model.Status.INITIALIZE;
@@ -44,9 +42,11 @@ import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
+import org.apache.poi.ss.formula.functions.Even;
 import org.homio.addon.camera.CameraController;
 import org.homio.addon.camera.CameraController.OpenStreamsContainer;
 import org.homio.addon.camera.ConfigurationException;
+import org.homio.addon.camera.VideoConstants.Events;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.addon.camera.entity.StreamHLS;
 import org.homio.addon.camera.entity.VideoActionsContext;
@@ -198,7 +198,12 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             .intervalWithDelay(Duration.ofSeconds(30))
             .execute(() -> {
                 try {
-                    pollCameraConnection();
+                    if (!entity.getStatus().isOnline()) {
+                        pollCameraConnection();
+                    }
+                    if (entity.getStatus().isOnline() && EntityContextBGP.cancel(cameraConnectionJob)) {
+                        cameraConnectionJob = null;
+                    }
                 } catch (Exception ex) {
                     String message = CommonUtils.getErrorMessage(ex);
                     if (ex instanceof ConfigurationException
@@ -299,9 +304,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             return;
         }
         updateLastSeen();
-        if (EntityContextBGP.cancel(cameraConnectionJob)) {
-            cameraConnectionJob = null;
-        }
 
         if (!entity.getStatus().isOnline()) {
             setAttribute("URLS", new JsonType(OBJECT_MAPPER.convertValue(urls, ObjectNode.class)));
@@ -309,7 +311,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             onCameraConnected();
 
             pollCameraJob = entityContext.bgp().builder("video-poll-" + entityID)
-                                         .delay(Duration.ofSeconds(1))
+                                         .delay(Duration.ofSeconds(8))
                                          .interval(Duration.ofSeconds(8))
                                          .execute(this::pollCameraRunnable);
 
@@ -392,16 +394,19 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         entityContext.event().fireEventIfNotSame(key + ":" + entityID, state);
     }
 
-    @Override
-    public void motionDetected(boolean on, @NotNull String key) {
-        setAttribute(key, OnOffType.of(on));
-        setAttribute(MOTION_ALARM, OnOffType.of(on));
+    public void motionDetected(boolean on, @NotNull Events event) {
+        setAttribute(event.name(), OnOffType.of(on));
         motionDetected = on;
     }
 
     @Override
+    public void motionDetected(boolean on) {
+        motionDetected(on, Events.MotionAlarm);
+    }
+
+    @Override
     public void audioDetected(boolean on) {
-        // what here?
+        setAttribute(Events.AudioAlarm.name(), OnOffType.of(on));
     }
 
     public void processSnapshot(byte[] incomingSnapshot) {
@@ -426,7 +431,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     @SneakyThrows
     public final RawType recordImageSync(String profile) {
-        assertOnline();
         Path output = getFfmpegImageOutputPath().resolve("tmp.jpg");
         takeSnapshotSync(profile, output);
         latestSnapshot = Files.readAllBytes(output);
@@ -460,6 +464,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     @Override
     protected void firstInitialize() {
+        log.info("[{}]: First init", entityID);
         ffmpegOutputPath = CommonUtils.getMediaPath().resolve(entity.getFolderName()).resolve(entityID);
         ffmpegImageOutputPath = CommonUtils.createDirectoriesIfNotExists(ffmpegOutputPath.resolve("images"));
         ffmpegGifOutputPath = CommonUtils.createDirectoriesIfNotExists(ffmpegOutputPath.resolve("gif"));
@@ -547,7 +552,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     protected void setMotionAlarmThreshold(int threshold) {
         setAttribute(ENDPOINT_MOTION_THRESHOLD, new StringType(threshold));
         if (threshold == 0) {
-            motionDetected(false, FFMPEG_MOTION_ALARM);
+            motionDetected(false, Events.MotionAlarm);
         }
     }
 

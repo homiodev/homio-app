@@ -4,6 +4,7 @@ import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -128,8 +129,8 @@ public class EntityContextHardwareImpl implements EntityContextHardware {
     }
 
     @Getter
-    @RequiredArgsConstructor
-    private static class ProcessStatImpl implements ProcessStat {
+    @AllArgsConstructor
+    public static class ProcessStatImpl implements ProcessStat {
 
         private final double cpuUsage;
         private final double memUsage;

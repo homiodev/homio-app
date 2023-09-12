@@ -1,15 +1,26 @@
 package org.homio.addon.camera.onvif.impl;
 
+import static org.homio.addon.camera.VideoConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT;
+import static org.homio.addon.camera.VideoConstants.CHANNEL_EXTERNAL_ALARM_INPUT;
+import static org.homio.addon.camera.VideoConstants.CHANNEL_TEXT_OVERLAY;
+import static org.homio.addon.camera.VideoConstants.CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_EXTERNAL_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_FIELD_DETECTION_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LINE_CROSSING_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_MOTION_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_PIR_ALARM;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.log4j.Log4j2;
+import org.homio.addon.camera.VideoConstants.Events;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.onvif.util.Helper;
-import org.homio.addon.camera.onvif.util.IpCameraBindingConstants;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.addon.camera.ui.UIVideoActionGetter;
@@ -47,31 +58,31 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
                 if (content.contains("<EventNotificationAlert version=\"")) {
                     if (content.contains("hannelID>" + nvrChannel + "</")) {// some camera use c or <dynChannelID>
                         if (content.contains("<eventType>linedetection</eventType>")) {
-                            service.motionDetected(true, IpCameraBindingConstants.CHANNEL_LINE_CROSSING_ALARM);
+                            service.motionDetected(true, Events.LineCrossAlarm);
                             lineCount = debounce;
                         }
                         if (content.contains("<eventType>fielddetection</eventType>")) {
-                            service.motionDetected(true, IpCameraBindingConstants.CHANNEL_FIELD_DETECTION_ALARM);
+                            service.motionDetected(true, Events.FieldDetectAlarm);
                             fieldCount = debounce;
                         }
                         if (content.contains("<eventType>VMD</eventType>")) {
-                            service.motionDetected(true, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
+                            service.motionDetected(true, Events.MotionAlarm);
                             vmdCount = debounce;
                         }
                         if (content.contains("<eventType>facedetection</eventType>")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_FACE_DETECTED, OnOffType.ON);
+                            service.motionDetected(true, Events.FaceDetect);
                             faceCount = debounce;
                         }
                         if (content.contains("<eventType>unattendedBaggage</eventType>")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_ITEM_LEFT, OnOffType.ON);
+                            service.motionDetected(true, Events.ItemLeftDetection);
                             leftCount = debounce;
                         }
                         if (content.contains("<eventType>attendedBaggage</eventType>")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_ITEM_TAKEN, OnOffType.ON);
+                            service.motionDetected(true, Events.ItemTakenDetection);
                             takenCount = debounce;
                         }
                         if (content.contains("<eventType>PIR</eventType>")) {
-                            service.motionDetected(true, IpCameraBindingConstants.CHANNEL_PIR_ALARM);
+                            service.motionDetected(true, Events.PirAlarm);
                             pirCount = debounce;
                         }
                         if (content.contains("<eventType>videoloss</eventType>\r\n<eventState>inactive</eventState>")) {
@@ -100,60 +111,60 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
                         service.storeHttpReply(
                                 "/ISAPI/System/Video/inputs/channels/" + nvrChannel + "01/motionDetection", content);
                         if (content.contains("<enabled>true</enabled>")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, OnOffType.ON);
+                            setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.ON);
                         } else if (content.contains("<enabled>false</enabled>")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, OnOffType.OFF);
+                            setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.OFF);
                         }
                     }
                     case "IOInputPort version=" -> {
                         service.storeHttpReply("/ISAPI/System/IO/inputs/" + nvrChannel, content);
                         if (content.contains("<enabled>true</enabled>")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_EXTERNAL_ALARM_INPUT, OnOffType.ON);
+                            setAttribute(ENDPOINT_ENABLE_EXTERNAL_ALARM, OnOffType.ON);
                         } else if (content.contains("<enabled>false</enabled>")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
+                            setAttribute(ENDPOINT_ENABLE_EXTERNAL_ALARM, OnOffType.OFF);
                         }
                         if (content.contains("<triggering>low</triggering>")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
+                            setAttribute(CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
                         } else if (content.contains("<triggering>high</triggering>")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT, OnOffType.ON);
+                            setAttribute(CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT, OnOffType.ON);
                         }
                     }
                     case "LineDetection" -> {
                         service.storeHttpReply("/ISAPI/Smart/LineDetection/" + nvrChannel + "01", content);
                         if (content.contains("<enabled>true</enabled>")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_LINE_CROSSING_ALARM, OnOffType.ON);
+                            setAttribute(ENDPOINT_ENABLE_LINE_CROSSING_ALARM, OnOffType.ON);
                         } else if (content.contains("<enabled>false</enabled>")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_LINE_CROSSING_ALARM, OnOffType.OFF);
+                            setAttribute(ENDPOINT_ENABLE_LINE_CROSSING_ALARM, OnOffType.OFF);
                         }
                     }
                     case "TextOverlay version=" -> {
                         service.storeHttpReply(
                                 "/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1", content);
                         String text = Helper.fetchXML(content, "<enabled>true</enabled>", "<displayText>");
-                        setAttribute(IpCameraBindingConstants.CHANNEL_TEXT_OVERLAY, new StringType(text));
+                        setAttribute(CHANNEL_TEXT_OVERLAY, new StringType(text));
                     }
                     case "AudioDetection version=" -> {
                         service.storeHttpReply("/ISAPI/Smart/AudioDetection/channels/" + nvrChannel + "01",
                                 content);
                         if (content.contains("<enabled>true</enabled>")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_AUDIO_ALARM, OnOffType.ON);
+                            setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.ON);
                         } else if (content.contains("<enabled>false</enabled>")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_AUDIO_ALARM, OnOffType.OFF);
+                            setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.OFF);
                         }
                     }
                     case "IOPortStatus version=" -> {
                         if (content.contains("<ioState>active</ioState>")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_EXTERNAL_ALARM_INPUT, OnOffType.ON);
+                            setAttribute(CHANNEL_EXTERNAL_ALARM_INPUT, OnOffType.ON);
                         } else if (content.contains("<ioState>inactive</ioState>")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
+                            setAttribute(CHANNEL_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
                         }
                     }
                     case "FieldDetection version=" -> {
                         service.storeHttpReply("/ISAPI/Smart/FieldDetection/" + nvrChannel + "01", content);
                         if (content.contains("<enabled>true</enabled>")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_FIELD_DETECTION_ALARM, OnOffType.ON);
+                            setAttribute(ENDPOINT_ENABLE_FIELD_DETECTION_ALARM, OnOffType.ON);
                         } else if (content.contains("<enabled>false</enabled>")) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_FIELD_DETECTION_ALARM, OnOffType.OFF);
+                            setAttribute(ENDPOINT_ENABLE_FIELD_DETECTION_ALARM, OnOffType.OFF);
                         }
                     }
                     case "ResponseStatus version=" -> {
@@ -191,9 +202,9 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
         }
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_TEXT_OVERLAY)
+    @UIVideoActionGetter(CHANNEL_TEXT_OVERLAY)
     public State getTextOverlay() {
-        return getAttribute(IpCameraBindingConstants.CHANNEL_TEXT_OVERLAY);
+        return getAttribute(CHANNEL_TEXT_OVERLAY);
     }
 
     public void hikSendXml(String httpPutURL, String xml) {
@@ -229,7 +240,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
         }
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_TEXT_OVERLAY, order = 100, icon = "fas fa-paragraph")
+    @UIVideoAction(name = CHANNEL_TEXT_OVERLAY, order = 100, icon = "fas fa-paragraph")
     public void setTextOverlay(String command) {
         log.debug("[{}]: Changing text overlay to {}", entityID, command);
         if (command.isEmpty()) {
@@ -243,37 +254,37 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
         }
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_ENABLE_EXTERNAL_ALARM_INPUT)
+    @UIVideoActionGetter(ENDPOINT_ENABLE_EXTERNAL_ALARM)
     public State getEnableExternalAlarmInput() {
-        return getAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_EXTERNAL_ALARM_INPUT);
+        return getAttribute(ENDPOINT_ENABLE_EXTERNAL_ALARM);
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_EXTERNAL_ALARM_INPUT, order = 250, icon = "fas fa-external-link-square-alt")
+    @UIVideoAction(name = ENDPOINT_ENABLE_EXTERNAL_ALARM, order = 250, icon = "fas fa-external-link-square-alt")
     public void setEnableExternalAlarmInput(boolean on) {
         log.debug("[{}]: Changing enabled state of the external input 1 to {}", entityID, on);
         hikChangeSetting("/ISAPI/System/IO/inputs/" + nvrChannel, "enabled", "<enabled>" + on + "</enabled>");
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT)
+    @UIVideoActionGetter(CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT)
     public State getTriggerExternalAlarmInput() {
-        return getAttribute(IpCameraBindingConstants.CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT);
+        return getAttribute(CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT);
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT, order = 300, icon = "fas fa-external-link-alt")
+    @UIVideoAction(name = CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT, order = 300, icon = "fas fa-external-link-alt")
     public void setTriggerExternalAlarmInput(boolean on) {
         log.debug("[{}]: Changing triggering state of the external input 1 to {}", entityID, on);
         hikChangeSetting("/ISAPI/System/IO/inputs/" + nvrChannel, "triggering",
                 "<triggering>" + (on ? "high" : "low") + "</triggering>");
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_PIR_ALARM, order = 120, icon = "fas fa-compress-alt")
+    @UIVideoAction(name = ENDPOINT_ENABLE_PIR_ALARM, order = 120, icon = "fas fa-compress-alt")
     public void enablePirAlarm(boolean on) {
         hikChangeSetting("/ISAPI/WLAlarm/PIR", "enabled", "<enabled>" + on + "</enabled>");
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_ENABLE_LINE_CROSSING_ALARM)
+    @UIVideoActionGetter(ENDPOINT_ENABLE_LINE_CROSSING_ALARM)
     public State getEnableLineCrossingAlarm() {
-        return getAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_LINE_CROSSING_ALARM);
+        return getAttribute(ENDPOINT_ENABLE_LINE_CROSSING_ALARM);
     }
 
     @Override
@@ -281,30 +292,30 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
         hikChangeSetting("/ISAPI/WLAlarm/PIR", "enabled", "<enabled>" + (threshold > 0) + "</enabled>");
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_LINE_CROSSING_ALARM, order = 150, icon = "fas fa-grip-lines-vertical")
+    @UIVideoAction(name = ENDPOINT_ENABLE_LINE_CROSSING_ALARM, order = 150, icon = "fas fa-grip-lines-vertical")
     public void setEnableLineCrossingAlarm(boolean on) {
         hikChangeSetting("/ISAPI/Smart/LineDetection/" + nvrChannel + "01", "enabled",
                 "<enabled>" + on + "</enabled>");
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, order = 14, icon = "fas fa-running")
+    @UIVideoAction(name = ENDPOINT_ENABLE_MOTION_ALARM, order = 14, icon = "fas fa-running")
     public void enableMotionAlarm(boolean on) {
         hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "01/motionDetection",
                 "enabled", "<enabled>" + on + "</enabled>");
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_ENABLE_FIELD_DETECTION_ALARM)
+    @UIVideoActionGetter(ENDPOINT_ENABLE_FIELD_DETECTION_ALARM)
     public State getEnableFieldDetectionAlarm() {
-        return getAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_FIELD_DETECTION_ALARM);
+        return getAttribute(ENDPOINT_ENABLE_FIELD_DETECTION_ALARM);
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_FIELD_DETECTION_ALARM, order = 140, icon = "fas fa-shield-alt")
+    @UIVideoAction(name = ENDPOINT_ENABLE_FIELD_DETECTION_ALARM, order = 140, icon = "fas fa-shield-alt")
     public void setEnableFieldDetectionAlarm(boolean on) {
         hikChangeSetting("/ISAPI/Smart/FieldDetection/" + nvrChannel + "01", "enabled",
                 "<enabled>" + on + "</enabled>");
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT, order = 45, icon = "fas fa-bell")
+    @UIVideoAction(name = CHANNEL_ACTIVATE_ALARM_OUTPUT, order = 45, icon = "fas fa-bell")
     public void activateAlarmOutput(boolean on) {
         hikSendXml("/ISAPI/System/IO/outputs/" + nvrChannel + "/trigger",
                 "<IOPortData version=\"1.0\" xmlns=\"http://www.hikvision.com/ver10/XMLSchema\">\r\n    <outputState>" +
@@ -316,48 +327,48 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
         if (lineCount > 1) {
             lineCount--;
         } else if (lineCount == 1) {
-            setAttribute(IpCameraBindingConstants.CHANNEL_LINE_CROSSING_ALARM, OnOffType.OFF);
+            service.motionDetected(false, Events.LineCrossAlarm);
             lineCount--;
         }
         if (vmdCount > 1) {
             vmdCount--;
         } else if (vmdCount == 1) {
-            setAttribute(IpCameraBindingConstants.CHANNEL_MOTION_ALARM, OnOffType.OFF);
+            service.motionDetected(false, Events.MotionAlarm);
             vmdCount--;
         }
         if (leftCount > 1) {
             leftCount--;
         } else if (leftCount == 1) {
-            setAttribute(IpCameraBindingConstants.CHANNEL_ITEM_LEFT, OnOffType.OFF);
+            service.motionDetected(false, Events.ItemLeftDetection);
             leftCount--;
         }
         if (takenCount > 1) {
             takenCount--;
         } else if (takenCount == 1) {
-            setAttribute(IpCameraBindingConstants.CHANNEL_ITEM_TAKEN, OnOffType.OFF);
+            service.motionDetected(false, Events.ItemTakenDetection);
             takenCount--;
         }
         if (faceCount > 1) {
             faceCount--;
         } else if (faceCount == 1) {
-            setAttribute(IpCameraBindingConstants.CHANNEL_FACE_DETECTED, OnOffType.OFF);
+            service.motionDetected(false, Events.FaceDetect);
             faceCount--;
         }
         if (pirCount > 1) {
             pirCount--;
         } else if (pirCount == 1) {
-            setAttribute(IpCameraBindingConstants.CHANNEL_PIR_ALARM, OnOffType.OFF);
+            service.motionDetected(false, Events.PirAlarm);
             pirCount--;
         }
         if (fieldCount > 1) {
             fieldCount--;
         } else if (fieldCount == 1) {
-            setAttribute(IpCameraBindingConstants.CHANNEL_FIELD_DETECTION_ALARM, OnOffType.OFF);
+            service.motionDetected(false, Events.FieldDetectAlarm);
             fieldCount--;
         }
         if (fieldCount == 0 && pirCount == 0 && faceCount == 0 && takenCount == 0 && leftCount == 0 && vmdCount == 0
                 && lineCount == 0) {
-            service.motionDetected(false, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
+            service.motionDetected(false, Events.MotionAlarm);
         }
     }
 

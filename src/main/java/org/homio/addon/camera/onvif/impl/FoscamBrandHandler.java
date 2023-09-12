@@ -8,7 +8,6 @@ import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.util.Helper;
-import org.homio.addon.camera.onvif.util.IpCameraBindingConstants;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.addon.camera.ui.UIVideoActionGetter;
@@ -50,27 +49,26 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
             ////////////// Motion Alarm //////////////
             if (content.contains("<motionDetectAlarm>")) {
                 if (content.contains("<motionDetectAlarm>0</motionDetectAlarm>")) {
-                    setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, OnOffType.OFF);
+                    setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.OFF);
                 } else if (content.contains("<motionDetectAlarm>1</motionDetectAlarm>")) { // Enabled but no alarm
-                    setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, OnOffType.ON);
-                    service.motionDetected(false, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
+                    setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.ON);
+                    service.motionDetected(false, Events.MotionAlarm);
                 } else if (content.contains("<motionDetectAlarm>2</motionDetectAlarm>")) {// Enabled, alarm on
-                    setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, OnOffType.ON);
-                    service.motionDetected(true, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
+                    setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.ON);
+                    service.motionDetected(true, Events.MotionAlarm);
                 }
             }
 
             ////////////// Sound Alarm //////////////
             if (content.contains("<soundAlarm>0</soundAlarm>")) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_AUDIO_ALARM, OnOffType.OFF);
-                setAttribute(IpCameraBindingConstants.CHANNEL_AUDIO_ALARM, OnOffType.OFF);
+                setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.OFF);
             }
             if (content.contains("<soundAlarm>1</soundAlarm>")) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_AUDIO_ALARM, OnOffType.ON);
+                setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.ON);
                 service.audioDetected(false);
             }
             if (content.contains("<soundAlarm>2</soundAlarm>")) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_AUDIO_ALARM, OnOffType.ON);
+                setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.ON);
                 service.audioDetected(true);
             }
 
@@ -170,12 +168,12 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
         }
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM)
+    @UIVideoActionGetter(ENDPOINT_ENABLE_MOTION_ALARM)
     public State getEnableMotionAlarm() {
-        return getAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM);
+        return getAttribute(ENDPOINT_ENABLE_MOTION_ALARM);
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, order = 14, icon = "fas fa-running")
+    @UIVideoAction(name = ENDPOINT_ENABLE_MOTION_ALARM, order = 14, icon = "fas fa-running")
     public void setEnableMotionAlarm(boolean on) {
         if (on) {
             if (getEntity().getCustomMotionAlarmUrl().isEmpty()) {

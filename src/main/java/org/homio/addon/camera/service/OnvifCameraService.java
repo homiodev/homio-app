@@ -1,5 +1,15 @@
 package org.homio.addon.camera.service;
 
+import static org.homio.addon.camera.VideoConstants.CHANNEL_GOTO_PRESET;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_PAN;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_SCENE_CHANGE_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_STORAGE_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_TAMPER_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_TILT;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_TOO_BLURRY_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_TOO_BRIGHT_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_TOO_DARK_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ZOOM;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -29,22 +39,26 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import java.awt.Dimension;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiPredicate;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.homio.addon.camera.CameraEntrypoint;
+import org.homio.addon.camera.VideoConstants.Events;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoPlaybackStorage;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
@@ -53,7 +67,6 @@ import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
 import org.homio.addon.camera.onvif.impl.UnknownBrandHandler;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
-import org.homio.addon.camera.onvif.util.IpCameraBindingConstants;
 import org.homio.addon.camera.onvif.util.MyNettyAuthHandler;
 import org.homio.addon.camera.service.util.CommonCameraHandler;
 import org.homio.addon.camera.service.util.VideoUtils;
@@ -76,6 +89,7 @@ import org.homio.api.util.HardwareUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.onvif.ver10.schema.Profile;
+import org.onvif.ver10.schema.VideoResolution;
 
 @Log4j2
 public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, OnvifCameraService> {
@@ -109,43 +123,43 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         onvifDeviceState.setUnreachableHandler(message -> this.disposeAndSetStatus(Status.OFFLINE, message));
 
         onvifDeviceState.getEventDevices().subscribe("RuleEngine/CellMotionDetector/Motion",
-            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), IpCameraBindingConstants.CHANNEL_CELL_MOTION_ALARM));
+            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), Events.CellMotionAlarm));
         onvifDeviceState.getEventDevices().subscribe("VideoSource/MotionAlarm",
-            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), IpCameraBindingConstants.CHANNEL_MOTION_ALARM));
+            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), Events.MotionAlarm));
         onvifDeviceState.getEventDevices().subscribe("AudioAnalytics/Audio/DetectedSound",
             (dataName, dataValue) -> audioDetected(dataValue.equals("true")));
         onvifDeviceState.getEventDevices().subscribe("RuleEngine/FieldDetector/ObjectsInside",
-            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), IpCameraBindingConstants.CHANNEL_FIELD_DETECTION_ALARM));
+            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), Events.FieldDetectAlarm));
         onvifDeviceState.getEventDevices().subscribe("RuleEngine/LineDetector/Crossed",
-            (dataName, dataValue) -> motionDetected(dataName.equals("ObjectId"), IpCameraBindingConstants.CHANNEL_LINE_CROSSING_ALARM));
+            (dataName, dataValue) -> motionDetected(dataName.equals("ObjectId"), Events.LineCrossAlarm));
         onvifDeviceState.getEventDevices().subscribe("RuleEngine/TamperDetector/Tamper",
-            (dataName, dataValue) -> setAttribute(IpCameraBindingConstants.CHANNEL_TAMPER_ALARM, OnOffType.of(dataValue.equals("true"))));
+            (dataName, dataValue) -> setAttribute(ENDPOINT_TAMPER_ALARM, OnOffType.of(dataValue.equals("true"))));
         onvifDeviceState.getEventDevices().subscribe("Device/HardwareFailure/StorageFailure",
-            (dataName, dataValue) -> setAttribute(IpCameraBindingConstants.CHANNEL_STORAGE_ALARM, OnOffType.of(dataValue.equals("true"))));
+            (dataName, dataValue) -> setAttribute(ENDPOINT_STORAGE_ALARM, OnOffType.of(dataValue.equals("true"))));
 
         onvifDeviceState.getEventDevices().subscribe(
             "VideoSource/ImageTooDark/AnalyticsService",
             "VideoSource/ImageTooDark/ImagingService",
             "VideoSource/ImageTooDark/RecordingService",
-            (dataName, dataValue) -> setAttribute(IpCameraBindingConstants.CHANNEL_TOO_DARK_ALARM, OnOffType.of(dataValue.equals("true"))));
+            (dataName, dataValue) -> setAttribute(ENDPOINT_TOO_DARK_ALARM, OnOffType.of(dataValue.equals("true"))));
 
         onvifDeviceState.getEventDevices().subscribe(
             "VideoSource/GlobalSceneChange/AnalyticsService",
             "VideoSource/GlobalSceneChange/ImagingService",
             "VideoSource/GlobalSceneChange/RecordingService",
-            (dataName, dataValue) -> setAttribute(IpCameraBindingConstants.CHANNEL_SCENE_CHANGE_ALARM, OnOffType.of(dataValue.equals("true"))));
+            (dataName, dataValue) -> setAttribute(ENDPOINT_SCENE_CHANGE_ALARM, OnOffType.of(dataValue.equals("true"))));
 
         onvifDeviceState.getEventDevices().subscribe(
             "VideoSource/ImageTooBright/AnalyticsService",
             "VideoSource/ImageTooBright/ImagingService",
             "VideoSource/ImageTooBright/RecordingService",
-            (dataName, dataValue) -> setAttribute(IpCameraBindingConstants.CHANNEL_TOO_BRIGHT_ALARM, OnOffType.of(dataValue.equals("true"))));
+            (dataName, dataValue) -> setAttribute(ENDPOINT_TOO_BRIGHT_ALARM, OnOffType.of(dataValue.equals("true"))));
 
         onvifDeviceState.getEventDevices().subscribe(
             "VideoSource/ImageTooBlurry/AnalyticsService",
             "VideoSource/ImageTooBlurry/ImagingService",
             "VideoSource/ImageTooBlurry/RecordingService",
-            (dataName, dataValue) -> setAttribute(IpCameraBindingConstants.CHANNEL_TOO_BLURRY_ALARM, OnOffType.of(dataValue.equals("true"))));
+            (dataName, dataValue) -> setAttribute(ENDPOINT_TOO_BLURRY_ALARM, OnOffType.of(dataValue.equals("true"))));
 
         if (entity.getCameraType() != null && getCameraBrands(entityContext).containsKey(entity.getCameraType())) {
             CameraBrandHandlerDescription cameraBrandHandlerDescription = getCameraBrands(entityContext).get(entity.getCameraType());
@@ -243,9 +257,9 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                     // HIK Alarm stream needs > 9sec idle to stop stream closing
                     socketChannel.pipeline().addLast(new IdleStateHandler(18, 0, 0));
                     socketChannel.pipeline().addLast(new HttpClientCodec());
-                    socketChannel.pipeline().addLast(IpCameraBindingConstants.AUTH_HANDLER,
+                    socketChannel.pipeline().addLast(MyNettyAuthHandler.AUTH_HANDLER,
                         new MyNettyAuthHandler(entity, OnvifCameraService.this));
-                    socketChannel.pipeline().addLast(IpCameraBindingConstants.COMMON_HANDLER, new CommonCameraHandler(OnvifCameraService.this));
+                    socketChannel.pipeline().addLast(CommonCameraHandler.COMMON_HANDLER, new CommonCameraHandler(OnvifCameraService.this));
 
                     socketChannel.pipeline().addLast(brandHandler.getClass().getSimpleName(), brandHandler.asBootstrapHandler());
                 }
@@ -291,9 +305,9 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                                  entity.getIp(), port, httpRequestURL);
                              channelTrackingMap.put(httpRequestURL, new ChannelTracking(ch, httpRequestURL));
 
-                             CommonCameraHandler commonHandler = (CommonCameraHandler) ch.pipeline().get(IpCameraBindingConstants.COMMON_HANDLER);
+                             CommonCameraHandler commonHandler = (CommonCameraHandler) ch.pipeline().get(CommonCameraHandler.COMMON_HANDLER);
                              commonHandler.setRequestUrl(httpRequestURLFull);
-                             MyNettyAuthHandler authHandler = (MyNettyAuthHandler) ch.pipeline().get(IpCameraBindingConstants.AUTH_HANDLER);
+                             MyNettyAuthHandler authHandler = (MyNettyAuthHandler) ch.pipeline().get(MyNettyAuthHandler.AUTH_HANDLER);
                              authHandler.setURL(httpMethod, httpRequestURL);
 
                              brandHandler.handleSetURL(ch.pipeline(), httpRequestURL);
@@ -312,23 +326,32 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         }
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_PAN, order = 3, icon = "fas fa-expand-arrows-alt", type = VideoActionType.slider)
+    @UIVideoAction(name = ENDPOINT_PAN, order = 3, icon = "fas fa-expand-arrows-alt", type = VideoActionType.slider)
     @UICameraActionConditional(SupportPTZCondition.class)
     @UICameraDimmerButton(name = "LEFT", icon = "fas fa-caret-left")
     @UICameraDimmerButton(name = "OFF", icon = "fas fa-power-off")
     @UICameraDimmerButton(name = "RIGHT", icon = "fas fa-caret-right")
     public void setPan(String command) {
+        Profile profile = getProfile();
         if ("LEFT".equals(command) || "RIGHT".equals(command)) {
             if ("LEFT".equals(command)) {
-                onvifDeviceState.getPtzDevices().moveLeft(entity.isPtzContinuous());
+                onvifDeviceState.getPtzDevices().moveLeft(entity.isPtzContinuous(), profile);
             } else {
-                onvifDeviceState.getPtzDevices().moveRight(entity.isPtzContinuous());
+                onvifDeviceState.getPtzDevices().moveRight(entity.isPtzContinuous(), profile);
             }
         } else if ("OFF".equals(command)) {
-            onvifDeviceState.getPtzDevices().stopMove();
+            onvifDeviceState.getPtzDevices().stopMove(profile);
         } else {
-            onvifDeviceState.getPtzDevices().setAbsolutePan(Float.parseFloat(command));
+            onvifDeviceState.getPtzDevices().setAbsolutePan(Float.parseFloat(command), profile);
         }
+    }
+
+    private Profile getProfile() {
+        List<Profile> profiles = onvifDeviceState.getProfiles();
+        if (profiles.isEmpty()) {
+            throw new IllegalStateException("No onvif profiles found");
+        }
+        return profiles.get(0);
     }
 
     public String returnValueFromString(String rawString, String searchedString) {
@@ -347,68 +370,70 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return ""; // Did not find the String we were searching for
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_PAN)
+    @UIVideoActionGetter(ENDPOINT_PAN)
     public DecimalType getPan() {
         return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentPanPercentage()));
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_TILT, order = 5, icon = "fas fa-sort", type = VideoActionType.slider)
+    @UIVideoAction(name = ENDPOINT_TILT, order = 5, icon = "fas fa-sort", type = VideoActionType.slider)
     @UICameraActionConditional(SupportPTZCondition.class)
     @UICameraDimmerButton(name = "UP", icon = "fas fa-caret-up")
     @UICameraDimmerButton(name = "OFF", icon = "fas fa-power-off")
     @UICameraDimmerButton(name = "DOWN", icon = "fas fa-caret-down")
     public void setTilt(String command) {
+        Profile profile = getProfile();
         if ("UP".equals(command) || "DOWN".equals(command)) {
             if ("UP".equals(command)) {
-                onvifDeviceState.getPtzDevices().moveUp(entity.isPtzContinuous());
+                onvifDeviceState.getPtzDevices().moveUp(entity.isPtzContinuous(), profile);
             } else {
-                onvifDeviceState.getPtzDevices().moveDown(entity.isPtzContinuous());
+                onvifDeviceState.getPtzDevices().moveDown(entity.isPtzContinuous(), profile);
             }
         } else if ("OFF".equals(command)) {
-            onvifDeviceState.getPtzDevices().stopMove();
+            onvifDeviceState.getPtzDevices().stopMove(profile);
         } else {
-            onvifDeviceState.getPtzDevices().setAbsoluteTilt(Float.parseFloat(command));
+            onvifDeviceState.getPtzDevices().setAbsoluteTilt(Float.parseFloat(command), profile);
         }
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_TILT)
+    @UIVideoActionGetter(ENDPOINT_TILT)
     public DecimalType getTilt() {
         return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentTiltPercentage()));
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ZOOM, order = 7, icon = "fas fa-search-plus", type = VideoActionType.slider)
+    @UIVideoAction(name = ENDPOINT_ZOOM, order = 7, icon = "fas fa-search-plus", type = VideoActionType.slider)
     @UICameraActionConditional(SupportPTZCondition.class)
     @UICameraDimmerButton(name = "IN", icon = "fas fa-search-plus")
     @UICameraDimmerButton(name = "OFF", icon = "fas fa-power-off")
     @UICameraDimmerButton(name = "OUT", icon = "fas fa-search-minus")
     public void setZoom(String command) {
+        Profile profile = getProfile();
         if ("IN".equals(command) || "OUT".equals(command)) {
             if ("IN".equals(command)) {
-                onvifDeviceState.getPtzDevices().moveIn(entity.isPtzContinuous());
+                onvifDeviceState.getPtzDevices().moveIn(entity.isPtzContinuous(), profile);
             } else {
-                onvifDeviceState.getPtzDevices().moveOut(entity.isPtzContinuous());
+                onvifDeviceState.getPtzDevices().moveOut(entity.isPtzContinuous(), profile);
             }
         } else if ("OFF".equals(command)) {
-            onvifDeviceState.getPtzDevices().stopMove();
+            onvifDeviceState.getPtzDevices().stopMove(profile);
         }
-        onvifDeviceState.getPtzDevices().setAbsoluteZoom(Float.valueOf(command));
+        onvifDeviceState.getPtzDevices().setAbsoluteZoom(Float.parseFloat(command), profile);
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_ZOOM)
+    @UIVideoActionGetter(ENDPOINT_ZOOM)
     public DecimalType getZoom() {
         return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentZoomPercentage()));
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_GOTO_PRESET)
+    @UIVideoActionGetter(CHANNEL_GOTO_PRESET)
     public DecimalType getGotoPreset() {
         return new DecimalType(0);
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_GOTO_PRESET, order = 30, icon = "fas fa-location-arrow")
+    @UIVideoAction(name = CHANNEL_GOTO_PRESET, order = 30, icon = "fas fa-location-arrow")
     @UIVideoActionMetadata(min = 1, max = 25, selectReplacer = "Preset %0  ")
     @UICameraActionConditional(SupportPTZCondition.class)
     public void gotoPreset(int preset) {
-        onvifDeviceState.getPtzDevices().gotoPreset(preset);
+        onvifDeviceState.getPtzDevices().gotoPreset(preset, getProfile());
     }
 
     public boolean streamIsStopped(String url) {
@@ -551,11 +576,36 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     @Override
     protected void pollCameraConnection() throws Exception {
-        onvifDeviceState.initFully(entity.getOnvifMediaProfile(), brandHandler.isSupportOnvifEvents());
+        onvifDeviceState.initFully(brandHandler.isSupportOnvifEvents());
         setAttribute("PROFILES", new ObjectType(onvifDeviceState.getProfiles()));
         for (Profile profile : onvifDeviceState.getProfiles()) {
-            urls.setRtspUri(onvifDeviceState.getMediaDevices().getRTSPStreamUri(profile.getName()), profile.getName());
-            urls.setSnapshotUri(onvifDeviceState.getMediaDevices().getSnapshotUri(profile.getName()), profile.getName());
+            urls.setRtspUri(onvifDeviceState.getMediaDevices().getRTSPStreamUri(profile.getToken()), profile.getName());
+            urls.setSnapshotUri(onvifDeviceState.getMediaDevices().getSnapshotUri(profile.getToken()), profile.getName());
+        }
+        List<Dimension> resolutions = onvifDeviceState
+            .getProfiles().stream()
+            .map(profile -> {
+                VideoResolution resolution = profile.getVideoEncoderConfiguration().getResolution();
+                return new Dimension(resolution.getWidth(), resolution.getHeight());
+            })
+            .toList();
+        if (!resolutions.isEmpty()) {
+            entityContext.updateDelayed(entity, e -> {
+                if (entity.getStreamResolutions().isEmpty()) {
+                    e.setStreamResolutions(resolutions.stream()
+                                                      .sorted(Comparator.comparingInt(o -> o.width + o.height))
+                                                      .map(r -> String.format("%dx%d", r.width, r.height))
+                                                      .collect(Collectors.joining("~~~")));
+                }
+                if (entity.getHlsLowResolution().isEmpty()) {
+                    Dimension dim = resolutions.stream().min(Comparator.comparingInt(dim2 -> dim2.width * dim2.height)).get();
+                    e.setHlsLowResolution(String.format("%dx%d", dim.width, dim.height));
+                }
+                if (entity.getHlsHighResolution().isEmpty()) {
+                    Dimension dim = resolutions.stream().max(Comparator.comparingInt(dim2 -> dim2.width * dim2.height)).get();
+                    e.setHlsHighResolution(String.format("%dx%d", dim.width, dim.height));
+                }
+            });
         }
         // we need reinitialize ffmpeg because rtsp urls has been changed
         recreateFFmpeg();
@@ -628,7 +678,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                 progressBar.progress(20, "Ping done");
                 entity.setInfo(onvifDeviceState, false);
                 entityContext.save(entity);
-                entityContext.ui().sendSuccessMessage("Onvif camera: " + this + " authenticated successfully");
+                entityContext.ui().sendSuccessMessage("Onvif camera: " + getEntity() + " authenticated successfully");
             } catch (Exception ex) {
                 entityContext.ui().sendErrorMessage("Camera fault: %s".formatted(ex.getMessage()));
             } finally {
