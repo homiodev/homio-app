@@ -173,7 +173,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     protected long videoStreamParametersHashCode;
 
-    protected Instant lastSnapshotRequest = Instant.now();
+    private Instant lastSnapshotRequest = Instant.now();
     protected @Getter Instant currentSnapshotTime = Instant.now();
 
     protected @Setter boolean streamingAutoFps = false;
@@ -598,6 +598,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         if (FFMPEG.check(ffmpegMainReStream, FFMPEG::getIsAlive, false)) {
             return;
         }
+        takeSnapshotAsync();
         if (!pingCamera()) {
             cameraCommunicationError(
                 "Connection Timeout: Check your IP and PORT are correct and the camera can be reached.");
@@ -605,6 +606,11 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     public void takeSnapshotAsync() {
+        lastSnapshotRequest = Instant.now();
+        FFMPEG.run(ffmpegSnapshot, FFMPEG::startConverting);
+    }
+
+    protected void takeSnapshotAsyncInternal() {
         FFMPEG.run(ffmpegSnapshot, FFMPEG::startConverting);
     }
 

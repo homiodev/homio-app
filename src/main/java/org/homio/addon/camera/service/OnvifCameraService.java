@@ -457,8 +457,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     @Override
-    public void takeSnapshotAsync() {
-        lastSnapshotRequest = Instant.now();
+    protected void takeSnapshotAsyncInternal() {
         String snapshotUri = urls.getSnapshotUri();
         if ("ffmpeg".equals(snapshotUri)) {
             super.takeSnapshotAsync();
@@ -580,7 +579,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     protected void pollCameraConnection() throws Exception {
         onvifDeviceState.initFully();
         if (brandHandler.isSupportOnvifEvents()) {
-            String subscribeUrl = "%s:%s/rest/camera/%s".formatted(onvifDeviceState.getIp(), SERVER_PORT, onvifDeviceState.getEntityID());
+            String subscribeUrl = "%s:%s/rest/media/video/%s".formatted(onvifDeviceState.getIp(), SERVER_PORT, entityID);
             onvifDeviceState.getEventDevices().initFully(subscribeUrl);
         }
         setAttribute("PROFILES", new ObjectType(onvifDeviceState.getProfiles()));

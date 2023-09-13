@@ -72,6 +72,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import javax.security.auth.login.LoginException;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -715,19 +716,23 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         handleSwitch(ability, ENDPOINT_ENABLE_AUDIO_ALARM, "alarmAudio", "GetAudioAlarmV20", "SetAudioAlarmV20", "Audio");
     }
 
-    private void sendCameraRequest(String cmd, JsonNode param, boolean resend, Consumer<Root> handler, Consumer<String> errorHandler) {
+    private void sendCameraRequest(String cmd, JsonNode param, boolean resend, Consumer<Root> handler, Consumer<Exception> errorHandler) {
         HttpRequest httpRequest = Curl.createPostRequest(getAuthUrl("cmd=" + cmd, true),
-            new ReolinkCmd(1, cmd, param));
+            Set.of(new ReolinkCmd(0, cmd, param)));
         Curl.sendAsync(httpRequest, Root[].class, (roots, status) -> {
-            if (roots[0].getError() != null && roots[0].getError().rspCode == -6) {
-                if (resend) {
-                    errorHandler.accept(roots[0].getError().detail);
-                } else {
+            Root root = roots.length == 0 ? null : roots[0];
+            try {
+                testForErrors(root);
+                handler.accept(root);
+            } catch (LoginException le) {
+                if (!resend) { // already sent twice
                     this.tokenExpiration = 0;
                     sendCameraRequest(cmd, param, true, handler, errorHandler);
+                } else {
+                    errorHandler.accept(le);
                 }
-            } else {
-                handler.accept(roots[0]);
+            } catch (Exception ex) {
+                errorHandler.accept(ex);
             }
         });
     }
@@ -798,8 +803,9 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
             return null;
         }
         Root[] roots = new ObjectMapper().readValue(exchange.getBody(), Root[].class);
-        // re-login if require
-        if (roots[0].getError() != null && roots[0].getError().rspCode == -6) {
+        try {
+            testForErrors(roots.length == 0 ? null : roots[0]);
+        } catch (LoginException le) {
             this.tokenExpiration = 0;
             return firePost(url, requireAuth, commands);
         }
@@ -911,25 +917,32 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     private void sendCameraPushRequest(String cmd, JsonNode param) {
         sendCameraRequest(cmd, param, root -> {
             try {
-                if (root == null) {
-                    throw new IllegalStateException("Unknown error");
-                }
-                if (root.error != null) {
-                    throw new IllegalStateException(root.error.toString());
-                }
-                if (root.value == null) {
-                    throw new IllegalStateException("Unknown error");
-                }
-                int rspCode = root.value.path("rspCode").asInt();
-                if (rspCode != 200) {
-                    throw new IllegalStateException("rspCode: " + rspCode);
-                }
+                testForErrors(root);
                 getEntityContext().ui().sendSuccessMessage("Reolink set " + cmd + " applied successfully");
             } catch (Exception ex) {
                 log.error("[{}]: Cmd: {}. Error: {}", entityID, cmd, ex.getMessage());
                 getEntityContext().ui().sendErrorMessage("Error while updating reolink param. " + ex.getMessage());
             }
         });
+    }
+
+    private static void testForErrors(Root root) throws LoginException {
+        if (root == null) {
+            throw new IllegalStateException("Unknown error");
+        }
+        if (root.error != null) {
+            if (root.error.rspCode == -6) {
+                throw new LoginException();
+            }
+            throw new IllegalStateException(root.error.toString());
+        }
+        if (root.value == null) {
+            throw new IllegalStateException("Unknown error");
+        }
+        int rspCode = root.value.path("rspCode").asInt();
+        if (rspCode != 200 && rspCode != 0) {
+            throw new IllegalStateException("rspCode: " + rspCode);
+        }
     }
 
     private void sendCameraRequest(String cmd, JsonNode param, Consumer<Root> handler) {
