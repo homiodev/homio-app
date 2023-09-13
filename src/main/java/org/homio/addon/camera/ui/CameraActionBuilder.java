@@ -1,20 +1,29 @@
 package org.homio.addon.camera.ui;
 
+import static org.springframework.objenesis.instantiator.util.ClassUtils.newInstance;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.service.VideoDeviceEndpoint;
+import org.homio.addon.camera.ui.UICameraActionConditional.ActionConditional;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.OptionModel.KeyValueEnum;
 import org.homio.api.state.JsonType;
 import org.homio.api.state.State;
 import org.homio.api.ui.UIActionHandler;
-import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.v1.UIEntityItemBuilder;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
@@ -24,21 +33,11 @@ import org.homio.api.ui.field.action.v1.item.UISliderItemBuilder;
 import org.homio.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
 import org.homio.api.ui.field.action.v1.layout.UILayoutBuilder;
 import org.homio.api.ui.field.action.v1.layout.dialog.UIStickyDialogItemBuilder;
+import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.function.BiPredicate;
-import java.util.function.Function;
-
-import static org.springframework.objenesis.instantiator.util.ClassUtils.newInstance;
 
 @Log4j2
 public class CameraActionBuilder {
@@ -61,7 +60,7 @@ public class CameraActionBuilder {
         for (Method method : actions) {
             if (handledMethods.add(method.getName())) {
                 ActionContext context = actionContextGetter.apply(method);
-                if (!context.condition.test(brandHandler.getService(), method)) {
+                if (!context.condition.match(brandHandler.getService(), method, context.name)) {
                     continue;
                 }
 
@@ -253,7 +252,7 @@ public class CameraActionBuilder {
         private final @NotNull String name;
         private final int order;
         private final @NotNull Icon icon;
-        private BiPredicate<OnvifCameraService, Method> condition;
+        private ActionConditional condition;
 
         private final @Nullable String subGroup;
         private final @Nullable String subGroupIcon;
@@ -286,7 +285,7 @@ public class CameraActionBuilder {
                 this.name = videoAction.value();
 
                 if (condition == null) {
-                    condition = (s, m) -> s.getEndpoints().containsKey(this.name);
+                    condition = (s, m, e) -> s.getEndpoints().containsKey(e);
                 }
                 VideoDeviceEndpoint endpoint = cameraService.getEndpoints().get(this.name);
                 this.order = endpoint == null ? -1 : endpoint.getOrder();
@@ -295,7 +294,7 @@ public class CameraActionBuilder {
             }
 
             if (condition == null) {
-                condition = (s, m) -> true;
+                condition = (s, m, e) -> true;
             }
         }
     }

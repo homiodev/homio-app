@@ -17,6 +17,7 @@ public class VideoUrls {
     private @NotNull ProfileUrls defaultProfile = new ProfileUrls();
 
     private final Map<String, ProfileUrls> urls = new ConcurrentHashMap<>();
+    private @Nullable @Setter Function<String, String> uriConverter;
 
     public @NotNull String getMjpegUri() {
         return getOrDefaultUri(profile -> profile.mjpegUri);
@@ -89,11 +90,11 @@ public class VideoUrls {
     }
 
     private @NotNull String getOrDefaultUri(Function<ProfileUrls, String> uriGetter) {
-        String defaultUri = uriGetter.apply(defaultProfile);
-        if (defaultUri.equals("ffmpeg") && !urls.isEmpty()) {
-            return uriGetter.apply(urls.values().iterator().next());
+        String uri = uriGetter.apply(defaultProfile);
+        if (uri.equals("ffmpeg") && !urls.isEmpty()) {
+            uri = uriGetter.apply(urls.values().iterator().next());
         }
-        return defaultUri;
+        return uri.equals("ffmpeg") || uriConverter == null ? uri : uriConverter.apply(uri);
     }
 
     @Getter

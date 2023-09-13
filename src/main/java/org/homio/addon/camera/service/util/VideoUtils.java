@@ -1,7 +1,11 @@
 package org.homio.addon.camera.service.util;
 
+import static org.springframework.http.HttpHeaders.WWW_AUTHENTICATE;
+
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.Builder;
@@ -21,6 +25,15 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.http.Header;
+import org.apache.http.auth.AuthenticationException;
+import org.apache.http.auth.MalformedChallengeException;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.impl.auth.DigestScheme;
+import org.apache.http.message.BasicHeader;
+import org.apache.http.message.BasicHttpRequest;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.api.exception.ServerException;
 import org.jetbrains.annotations.NotNull;
@@ -41,7 +54,18 @@ public class VideoUtils {
         }
         HttpResponse<InputStream> response = HttpClient.newHttpClient().send(request.build(), BodyHandlers.ofInputStream());
         if (response.statusCode() == 401) {
-            authHandler = buildAuthHandler(response, user, password, snapshotUri);
+            String authenticate = response.headers().firstValue(WWW_AUTHENTICATE).orElse(null);
+            if(StringUtils.isNotEmpty(authenticate)) {
+                authHandler = (requestBuilder, user1, password1) -> {
+                    DigestScheme md5Auth = new DigestScheme();
+                    md5Auth.processChallenge(new BasicHeader(WWW_AUTHENTICATE, authenticate));
+                    Header solution = md5Auth.authenticate(
+                        new UsernamePasswordCredentials(user1, password1),
+                        new BasicHttpRequest("GET", new URL(snapshotUri).getPath()), new HttpClientContext());
+                    requestBuilder.header(solution.getName(), solution.getValue());
+                };
+            }
+            //authHandler = buildAuthHandler(response, user, password, snapshotUri);
             if (authHandler != null) {
                 imageAuthHandler.put(snapshotUri, authHandler);
                 authHandler.run(request, user, password);
@@ -121,7 +145,7 @@ public class VideoUtils {
 
     private interface AuthHandler {
 
-        void run(Builder requestBuilder, @Nullable String user, @Nullable String password);
+        void run(Builder requestBuilder, @Nullable String user, @Nullable String password) throws Exception;
     }
 
     public static String calcMD5Hash(String toHash) {

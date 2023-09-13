@@ -72,7 +72,7 @@ public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
     }
 
     @Override
-    public @Nullable String getSnapshotUri(boolean live) {
+    public @Nullable String getSnapshotUri() {
         return "/bha-api/image.cgi";
     }
 

@@ -241,7 +241,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
     }
 
     @Override
-    public @Nullable String getSnapshotUri(boolean live) {
+    public @Nullable String getSnapshotUri() {
         return "/mjpegstream.cgi?-chn=12";
     }
 

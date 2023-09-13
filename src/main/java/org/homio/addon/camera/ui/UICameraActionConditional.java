@@ -13,5 +13,9 @@ import java.util.function.BiPredicate;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface UICameraActionConditional {
 
-    Class<? extends BiPredicate<OnvifCameraService, Method>> value();
+    Class<? extends ActionConditional> value();
+
+    interface ActionConditional {
+        boolean match(OnvifCameraService service, Method method, String endpoint);
+    }
 }

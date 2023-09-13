@@ -10,6 +10,7 @@ import static org.homio.addon.camera.VideoConstants.ENDPOINT_TOO_BLURRY_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_TOO_BRIGHT_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_TOO_DARK_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ZOOM;
+import static org.homio.api.EntityContextSetting.SERVER_PORT;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -43,6 +44,7 @@ import java.awt.Dimension;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -50,7 +52,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -77,6 +78,7 @@ import org.homio.addon.camera.ui.UIVideoActionGetter;
 import org.homio.addon.camera.ui.UIVideoActionMetadata;
 import org.homio.addon.camera.ui.VideoActionType;
 import org.homio.api.EntityContext;
+import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
@@ -455,9 +457,14 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     @Override
-    protected void requestSnapshotByUri() {
-        // use brandHandler.getSnapshotUri because Reolink uses &token=XXX as auth
-        mainEventLoopGroup.schedule(() -> sendHttpGET(brandHandler.getSnapshotUri(true)), 0, TimeUnit.MILLISECONDS);
+    public void takeSnapshotAsync() {
+        lastSnapshotRequest = Instant.now();
+        String snapshotUri = urls.getSnapshotUri();
+        if ("ffmpeg".equals(snapshotUri)) {
+            super.takeSnapshotAsync();
+        } else {
+            mainEventLoopGroup.schedule(() -> sendHttpGET(snapshotUri), 0, TimeUnit.MILLISECONDS);
+        }
     }
 
     @Override
@@ -467,7 +474,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
             super.takeSnapshotSync(profile, output);
         } else {
             if (snapshotUri.startsWith("/")) {
-                snapshotUri = "http://%s:%s%s".formatted(getEntity().getIp(), getEntity().getRestPort(), brandHandler.getSnapshotUri(true));
+                snapshotUri = "http://%s:%s%s".formatted(getEntity().getIp(), getEntity().getRestPort(), snapshotUri);
             }
             VideoUtils.downloadImage(snapshotUri, entity.getUser(), entity.getPassword().asString(), output);
         }
@@ -511,11 +518,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     @Override
     protected void assembleAdditionalVideoActions(UIInputBuilder uiInputBuilder) {
-        uiInputBuilder.addSelectableButton("VIDEO.FETCH_DATA_FROM_CAMERA", (entityContext, params) -> {
-            brandHandler.fetchDataFromCamera();
-            entityContext.ui().updateItem(entity);
-            return ActionResponseModel.success();
-        }).setIcon(new Icon("fas fa-cloud-arrow-down"));
         brandHandler.assembleActions(uiInputBuilder);
     }
 
@@ -551,7 +553,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     protected void postInitializeCamera() {
         onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(),
             entity.getUser(), entity.getPassword().asString());
-        urls.setSnapshotUri(brandHandler.getSnapshotUri(false));
+        urls.setSnapshotUri(brandHandler.getSnapshotUri());
         urls.setMjpegUri(brandHandler.getMjpegUri());
         brandHandler.postInitializeCamera(entityContext);
     }
@@ -576,7 +578,11 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     @Override
     protected void pollCameraConnection() throws Exception {
-        onvifDeviceState.initFully(brandHandler.isSupportOnvifEvents());
+        onvifDeviceState.initFully();
+        if (brandHandler.isSupportOnvifEvents()) {
+            String subscribeUrl = "%s:%s/rest/camera/%s".formatted(onvifDeviceState.getIp(), SERVER_PORT, onvifDeviceState.getEntityID());
+            onvifDeviceState.getEventDevices().initFully(subscribeUrl);
+        }
         setAttribute("PROFILES", new ObjectType(onvifDeviceState.getProfiles()));
         for (Profile profile : onvifDeviceState.getProfiles()) {
             urls.setRtspUri(onvifDeviceState.getMediaDevices().getRTSPStreamUri(profile.getToken()), profile.getName());
@@ -687,11 +693,11 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         });
     }
 
-    public static class SupportPTZCondition implements BiPredicate<OnvifCameraService, Method> {
+    public static class SupportPTZCondition implements UICameraActionConditional.ActionConditional {
 
         @Override
-        public boolean test(OnvifCameraService o, Method method) {
-            return o.onvifDeviceState.getPtzDevices().supportPTZ();
+        public boolean match(OnvifCameraService service, Method method, String endpoint) {
+            return service.onvifDeviceState.getPtzDevices().supportPTZ();
         }
     }
 

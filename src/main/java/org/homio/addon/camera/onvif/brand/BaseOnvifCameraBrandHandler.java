@@ -77,7 +77,7 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler i
         CameraActionBuilder.assembleActions(this, uiInputBuilder);
     }
 
-    public @Nullable String getSnapshotUri(boolean live) {
+    public @Nullable String getSnapshotUri() {
         return null;
     }
 
@@ -85,12 +85,7 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler i
         return null;
     }
 
-    public void onCameraConnected() {
-        fetchDataFromCamera();
-    }
-
-    public void fetchDataFromCamera() {
-    }
+    public abstract void onCameraConnected();
 
     protected void setAttribute(@NotNull String key, @NotNull State state) {
         service.setAttribute(key, state);

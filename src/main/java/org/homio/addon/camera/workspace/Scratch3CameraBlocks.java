@@ -340,8 +340,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
     private enum CameraProfileReportCommands implements KeyValueEnum {
         Snapshot("Snapshot", (workspaceBlock, scratch, cameraProfile) -> {
             BaseVideoService<?, ?> service = cameraProfile.entity.getService();
-            service.assertOnline();
-            return service.recordImageSync(cameraProfile.profile);
+            return new RawType(service.getSnapshot(), MimeTypeUtils.IMAGE_JPEG_VALUE, "snapshot.jpg");
         }),
         LastPlayback("Last playback", (workspaceBlock, scratch, cameraProfile) -> {
             BaseVideoEntity<?, ?> entity = cameraProfile.entity;

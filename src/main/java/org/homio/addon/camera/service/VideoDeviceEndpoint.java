@@ -25,6 +25,7 @@ public class VideoDeviceEndpoint extends BaseDeviceEndpoint<BaseVideoEntity> {
             @NotNull String endpointEntityID,
             float min, float max, boolean writable) {
         this(writable, device, endpointEntityID, EndpointType.number, min, max, null);
+        setValue(DecimalType.ZERO, false);
     }
 
     public VideoDeviceEndpoint(
@@ -40,6 +41,7 @@ public class VideoDeviceEndpoint extends BaseDeviceEndpoint<BaseVideoEntity> {
             EndpointType endpointType,
             boolean writable) {
         this(writable, device, endpointEntityID, endpointType, null, null, null);
+        this.setValue(OnOffType.OFF, false);
     }
 
     private VideoDeviceEndpoint(

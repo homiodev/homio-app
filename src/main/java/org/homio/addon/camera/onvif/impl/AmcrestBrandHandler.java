@@ -233,7 +233,7 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
     }
 
     @Override
-    public @Nullable String getSnapshotUri(boolean live) {
+    public @Nullable String getSnapshotUri() {
         return "/cgi-bin/snapshot.cgi?channel=" + nvrChannel;
     }
 

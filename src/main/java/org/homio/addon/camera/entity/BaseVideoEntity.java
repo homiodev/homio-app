@@ -35,7 +35,6 @@ import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.log.HasEntitySourceLog;
 import org.homio.api.entity.types.MediaEntity;
 import org.homio.api.exception.NotFoundException;
-import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.FileContentType;
 import org.homio.api.model.FileModel;
@@ -363,13 +362,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         return "http://%s:%s/rest/media/video/%s/%s".formatted(MACHINE_IP_ADDRESS, SERVER_PORT, getEntityID(), path);
     }
 
-    protected void fireUpdateSnapshot(EntityContext entityContext, JSONObject params) {
-        if (!isStart()) {
-            throw new ServerException("ERROR.NOT_STARTED", getTitle());
-        }
-        getService().scheduleRequestSnapshot();
-    }
-
     @Override
     public void afterDelete() {
         Path path = CommonUtils.getMediaPath().resolve(getFolderName()).resolve(getEntityID());
@@ -415,8 +407,10 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         @Override
         public ActionResponseModel handleAction(EntityContext entityContext, JSONObject params) {
             BaseVideoEntity<?, ?> entity = entityContext.getEntityRequire(params.getString("entityID"));
-            entity.fireUpdateSnapshot(entityContext, params);
-            return null;
+            BaseVideoService<?, ?> service = entity.getService();
+            service.assertOnline();
+            service.takeSnapshotAsync();
+            return ActionResponseModel.fired();
         }
     }
 
@@ -426,7 +420,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         public ActionResponseModel handleAction(EntityContext entityContext, JSONObject params) {
             BaseVideoEntity<?, ?> entity = entityContext.getEntityRequire(params.getString("entityID"));
             entity.getService().assertOnline();
-            byte[] image = entity.getService().recordImageSync(null).byteArrayValue();
+            byte[] image = entity.getService().getSnapshot();
             String encodedValue = "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(image);
             FileModel snapshot = new FileModel("Snapshot", encodedValue, FileContentType.image);
             return ActionResponseModel.showFile(snapshot);

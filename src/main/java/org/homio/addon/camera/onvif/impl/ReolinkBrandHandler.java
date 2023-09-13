@@ -17,6 +17,7 @@ import static org.homio.addon.camera.VideoConstants.ENDPOINT_DATETIME_POSITION;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_DATETIME_SHOW;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_DAY_NIGHT;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_DRC;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_EXPOSURE;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_HDD;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_HUE;
@@ -69,7 +70,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.AllArgsConstructor;
@@ -94,6 +94,8 @@ import org.homio.addon.camera.ui.UIVideoActionMetadata;
 import org.homio.addon.camera.ui.UIVideoEndpointAction;
 import org.homio.api.EntityContext;
 import org.homio.api.exception.ServerException;
+import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.state.DecimalType;
@@ -101,6 +103,7 @@ import org.homio.api.state.JsonType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
+import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.api.util.CommonUtils;
@@ -133,6 +136,16 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     public ReolinkBrandHandler(OnvifCameraService service) {
         super(service);
         this.channelParam = OBJECT_MAPPER.valueToTree(new ChannelParam());
+    }
+
+    @Override
+    public void assembleActions(UIInputBuilder uiInputBuilder) {
+        uiInputBuilder.addSelectableButton("VIDEO.FETCH_DATA_FROM_CAMERA", (entityContext, params) -> {
+            fetchDataFromCamera();
+            entityContext.ui().updateItem(service.getEntity());
+            return ActionResponseModel.success();
+        }).setIcon(new Icon("fas fa-cloud-arrow-down"));
+        super.assembleActions(uiInputBuilder);
     }
 
     @Override
@@ -275,11 +288,8 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     @Override
     public Consumer<Boolean> getIRLedHandler() {
         return on -> {
-            if (firePostGetCode(ReolinkCommand.SetIrLights,
-                new ReolinkCmd(0, "SetIrLights", OBJECT_MAPPER.valueToTree(new SetIrLightsRequest(on))))) {
-                setAttribute(ENDPOINT_AUTO_LED, OnOffType.of(on));
-                getEntityContext().ui().sendSuccessMessage("Reolink set IR light applied successfully");
-            }
+            sendCameraPushRequest("SetIrLights", OBJECT_MAPPER.createObjectNode().set("IrLights",
+                OBJECT_MAPPER.createObjectNode().put("state", on ? "Auto" : "Off")));
         };
     }
 
@@ -604,42 +614,32 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     @Override
-    public @Nullable String getSnapshotUri(boolean live) {
-        /*if (live) {
-            loginIfRequire();
-            return "/cgi-bin/api.cgi?cmd=Snap&channel=%s&rs=homio&token=%s".formatted(nvrChannel, token);
-        }
-        return "/cgi-bin/api.cgi?cmd=Snap&channel=%s&rs=homio".formatted(nvrChannel);*/
-        return null;
+    public @Nullable String getSnapshotUri() {
+        return "/cgi-bin/api.cgi?cmd=Snap&channel=%s&rs=homio".formatted(nvrChannel);
     }
 
     @Override
     public void postInitializeCamera(EntityContext entityContext) {
-        AtomicReference<HttpRequest> request = new AtomicReference<>(createHttpPostRequest());
-        service.addLowRequest(() -> {
-            Curl.sendAsync(request.get(), Root[].class, (roots, status) -> {
-                if (roots[0].getError() != null && roots[0].getError().rspCode == -6) {
-                    // fire update url with new token
-                    this.tokenExpiration = 0;
-                    request.set(createHttpPostRequest());
-                } else {
-                    JsonNode performance = roots[0].value.path("Performance");
-                    if (performance.has("cpuUsed")) {
-                        service.getEndpoints().get(ENDPOINT_CPU_LOADING).setValue(new DecimalType(performance.get("cpuUsed").asInt()), true);
-                    }
-                    if (performance.has("codecRate")) {
-                        service.getEndpoints().get(ENDPOINT_BANDWIDTH).setValue(new DecimalType(performance.get("codecRate").asInt()), true);
-                    }
-                }
-            });
+        service.urls.setUriConverter(uri -> {
+            if (uri.startsWith("/cgi-bin")) {
+                loginIfRequire();
+                return "%s&token=%s".formatted(uri, token);
+            }
+            return uri;
         });
+
+        service.addLowRequest(() ->
+            sendCameraRequest("GetPerformance", OBJECT_MAPPER.createObjectNode(), root -> {
+                JsonNode performance = root.value.path("Performance");
+                if (performance.has("cpuUsed")) {
+                    service.getEndpoints().get(ENDPOINT_CPU_LOADING).setValue(new DecimalType(performance.get("cpuUsed").asInt()), true);
+                }
+                if (performance.has("codecRate")) {
+                    service.getEndpoints().get(ENDPOINT_BANDWIDTH).setValue(new DecimalType(performance.get("codecRate").asInt()), true);
+                }
+            }));
     }
 
-    private HttpRequest createHttpPostRequest() {
-        return Curl.createPostRequest(getAuthUrl("cmd=GetPerformance", true), "[{cmd: \"GetPerformance\", action: 0, param: {}}]");
-    }
-
-    @Override
     public void fetchDataFromCamera() {
         loginIfRequire();
 
@@ -679,6 +679,11 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         }
     }
 
+    @Override
+    public void onCameraConnected() {
+        fetchDataFromCamera();
+    }
+
     private boolean customHandle(Root objectNode, String cmd) {
         return switch (cmd) {
             case "GetIrLights" -> {
@@ -707,10 +712,24 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     private void handleGetAbilityCommand(Root objectNode) {
         JsonNode ability = objectNode.value.get("Ability");
-        int permit = ability.path("alarmAudio").path("permit").asInt(0);
-        if (permit > 0) {
-            throw new IllegalStateException("Not tested yet");
-        }
+        handleSwitch(ability, ENDPOINT_ENABLE_AUDIO_ALARM, "alarmAudio", "GetAudioAlarmV20", "SetAudioAlarmV20", "Audio");
+    }
+
+    private void sendCameraRequest(String cmd, JsonNode param, boolean resend, Consumer<Root> handler, Consumer<String> errorHandler) {
+        HttpRequest httpRequest = Curl.createPostRequest(getAuthUrl("cmd=" + cmd, true),
+            new ReolinkCmd(1, cmd, param));
+        Curl.sendAsync(httpRequest, Root[].class, (roots, status) -> {
+            if (roots[0].getError() != null && roots[0].getError().rspCode == -6) {
+                if (resend) {
+                    errorHandler.accept(roots[0].getError().detail);
+                } else {
+                    this.tokenExpiration = 0;
+                    sendCameraRequest(cmd, param, true, handler, errorHandler);
+                }
+            } else {
+                handler.accept(roots[0]);
+            }
+        });
     }
 
     private void handleGetDevInfoCommand(Root objectNode) {
@@ -875,6 +894,50 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         SetOsd, SetIsp, SetEnc, SetIrLights
     }
 
+    private void handleSwitch(JsonNode ability, String endpointKey, String abilityKey, String getKey, String setKey, String valueKey) {
+        int permit = ability.path(abilityKey).path("permit").asInt(0);
+        if (permit > 0) {
+            VideoDeviceEndpoint endpoint = service.addEndpointSwitch(endpointKey, state -> {
+                sendCameraPushRequest(setKey, OBJECT_MAPPER.createObjectNode().set(valueKey,
+                    OBJECT_MAPPER.createObjectNode().put("enable", 1)));
+            }, true);
+            sendCameraRequest(getKey, channelParam, root -> {
+                boolean value = root.value.path(valueKey).path("enable").asBoolean(false);
+                endpoint.setValue(OnOffType.of(value), true);
+            });
+        }
+    }
+
+    private void sendCameraPushRequest(String cmd, JsonNode param) {
+        sendCameraRequest(cmd, param, root -> {
+            try {
+                if (root == null) {
+                    throw new IllegalStateException("Unknown error");
+                }
+                if (root.error != null) {
+                    throw new IllegalStateException(root.error.toString());
+                }
+                if (root.value == null) {
+                    throw new IllegalStateException("Unknown error");
+                }
+                int rspCode = root.value.path("rspCode").asInt();
+                if (rspCode != 200) {
+                    throw new IllegalStateException("rspCode: " + rspCode);
+                }
+                getEntityContext().ui().sendSuccessMessage("Reolink set " + cmd + " applied successfully");
+            } catch (Exception ex) {
+                log.error("[{}]: Cmd: {}. Error: {}", entityID, cmd, ex.getMessage());
+                getEntityContext().ui().sendErrorMessage("Error while updating reolink param. " + ex.getMessage());
+            }
+        });
+    }
+
+    private void sendCameraRequest(String cmd, JsonNode param, Consumer<Root> handler) {
+        sendCameraRequest(cmd, param, false, handler, error -> {
+            log.error("[{}]: Cmd request: {}. Error response from camera: {}", entityID, cmd, error);
+        });
+    }
+
     @Getter
     @AllArgsConstructor
     private static class LoginRequest {
@@ -991,24 +1054,6 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         void handle(JsonNode config, EndpointConfiguration c, ReolinkBrandHandler handler);
     }
 
-    @Getter
-    public static class SetIrLightsRequest {
-
-        @SuppressWarnings("WriteOnlyObject")
-        @JsonProperty("IrLights")
-        private final IrLights irLights = new IrLights();
-
-        public SetIrLightsRequest(Boolean on) {
-            irLights.state = on ? "Auto" : "Off";
-        }
-
-        @Getter
-        public static class IrLights {
-
-            private String state;
-        }
-    }
-
     private class SelectResolution implements DynamicOptionLoader {
 
         @Override
@@ -1084,6 +1129,8 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         @Getter
         @Setter
         @ToString
+        @NoArgsConstructor
+        @AllArgsConstructor
         public static class Error {
 
             private String detail;

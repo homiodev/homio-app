@@ -42,7 +42,6 @@ import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
-import org.apache.poi.ss.formula.functions.Even;
 import org.homio.addon.camera.CameraController;
 import org.homio.addon.camera.CameraController.OpenStreamsContainer;
 import org.homio.addon.camera.ConfigurationException;
@@ -72,7 +71,6 @@ import org.homio.api.service.EntityService;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.JsonType;
 import org.homio.api.state.OnOffType;
-import org.homio.api.state.RawType;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
 import org.homio.api.ui.UI;
@@ -83,7 +81,6 @@ import org.homio.api.util.FlowMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.util.MimeTypeUtils;
 
 @SuppressWarnings({"unused"})
 @Log4j2
@@ -219,7 +216,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     protected void pollCameraConnection() throws Exception {
         keepMjpegRunning();
-        recordImageSync(null);
+        takeSnapshotAsync();
         bringCameraOnline();
     }
 
@@ -366,15 +363,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         CommonUtils.deletePath(ffmpegImageOutputPath);
     }
 
-    public void scheduleRequestSnapshot() {
-        lastSnapshotRequest = Instant.now();
-        if ("ffmpeg".equals(urls.getSnapshotUri())) {
-            FFMPEG.run(ffmpegSnapshot, FFMPEG::startConverting);
-        } else {
-            requestSnapshotByUri();
-        }
-    }
-
     @UIVideoActionGetter(ENDPOINT_AUDIO_THRESHOLD)
     public DecimalType getAudioAlarmThreshold() {
         return new DecimalType(entity.getAudioThreshold());
@@ -429,24 +417,10 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         entityContext.ui().sendErrorMessage("FFMPEG error: ''" + entityID + ". " + error);
     }
 
-    @SneakyThrows
-    public final RawType recordImageSync(String profile) {
-        Path output = getFfmpegImageOutputPath().resolve("tmp.jpg");
-        takeSnapshotSync(profile, output);
-        latestSnapshot = Files.readAllBytes(output);
-        updateLastSeen();
-        return new RawType(latestSnapshot, MimeTypeUtils.IMAGE_JPEG_VALUE, "snapshot.jpg");
-    }
-
     public void assertOnline() {
         if (!entity.getStatus().isOnline()) {
             throw new ServerException("W.ERROR.VIDEO_OFFLINE");
         }
-    }
-
-    @SneakyThrows
-    protected void takeSnapshotSync(@Nullable String profile, @NotNull Path output) {
-        fireFfmpegSync(profile, output, "", entity.getSnapshotOutOptions(), 20);
     }
 
     @UIVideoEndpointAction(ENDPOINT_AUDIO_THRESHOLD)
@@ -534,12 +508,10 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
                 (byte) 0xff, (byte) 0xcc, 0x00, 0x06, 0x00, 0x10, 0x10, 0x05, (byte) 0xff, (byte) 0xda, 0x00, 0x08,
                 0x01, 0x01, 0x00, 0x00, 0x3f, 0x00, (byte) 0xd2, (byte) 0xcf, 0x20, (byte) 0xff, (byte) 0xd9};
         }
-        // Most cameras will return a 503 busy error if snapshot is faster than 1 second
         long lastUpdatedMs = Duration.between(lastSnapshotRequest, Instant.now()).toMillis();
 
-        if (!ffmpegSnapshot.isRunning()
-            && lastUpdatedMs >= Duration.ofSeconds(60).toMillis()) {
-            scheduleRequestSnapshot();
+        if (!ffmpegSnapshot.isRunning() && lastUpdatedMs >= Duration.ofSeconds(30).toMillis()) {
+            takeSnapshotAsync();
         }
         lockCurrentSnapshot.lock();
         try {
@@ -632,8 +604,12 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         }
     }
 
-    protected void requestSnapshotByUri() {
-        throw new IllegalStateException("Target service must override this method if snapshotUri not empty");
+    public void takeSnapshotAsync() {
+        FFMPEG.run(ffmpegSnapshot, FFMPEG::startConverting);
+    }
+
+    protected void takeSnapshotSync(@Nullable String profile, @NotNull Path output) {
+        fireFfmpegSync(profile, output, "", entity.getSnapshotOutOptions(), 20);
     }
 
     public String getTinyUrl(String httpRequestURL) {
