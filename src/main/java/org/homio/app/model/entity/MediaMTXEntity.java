@@ -284,22 +284,18 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
         private final @Getter String description;
 
         public StreamEndpoint(JsonNode node, MediaMTXEntity entity) {
-            super("MTX");
-            this.endpointEntityID = node.get("name").asText();
-            this.entityContext = entity.getEntityContext();
-            this.device = entity;
-            this.endpointType = EndpointType.string;
-            this.icon = createIcon(node.get("source").get("type").asText());
+            super(createIcon(node.get("source").get("type").asText()), "MTX",
+                entity.getEntityContext(), entity, node.get("name").asText(), false, EndpointType.string);
+
             boolean ready = node.get("ready").asBoolean();
             if (!ready) {
-                this.icon.setColor(Color.RED);
+                getIcon().setColor(Color.RED);
             }
-            this.value = new DecimalType(node.get("readers").size());
-            this.writable = false;
+            setValue(new DecimalType(node.get("readers").size()), false);
             this.description = node.get("conf").get("source").asText();
         }
 
-        private Icon createIcon(String sourceType) {
+        private static Icon createIcon(String sourceType) {
             return switch (sourceType) {
                 case "srtSource" -> new Icon("fas fa-disease", "#6259B8");
                 case "hlsSource" -> new Icon("fas fa-square-rss", "#A62D79");
@@ -314,7 +310,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
 
         @Override
         public @NotNull String getName(boolean shortFormat) {
-            return "/" + endpointEntityID;
+            return "/" + getEndpointEntityID();
         }
     }
 }

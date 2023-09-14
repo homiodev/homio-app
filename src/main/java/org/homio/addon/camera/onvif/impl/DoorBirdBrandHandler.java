@@ -18,7 +18,6 @@ import org.jetbrains.annotations.Nullable;
 /**
  * responsible for handling commands, which are sent to one of the channels.
  */
-@Log4j2
 @CameraBrandHandler("DoorBird")
 public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
 

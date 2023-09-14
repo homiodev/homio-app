@@ -26,7 +26,6 @@ import static org.homio.addon.camera.VideoConstants.Events.MotionAlarm;
 /**
  * responsible for handling commands, which are sent to one of the channels.
  */
-@Log4j2
 @CameraBrandHandler("Amcrest")
 public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements BrandCameraHasAudioAlarm,
         BrandCameraHasMotionAlarm {

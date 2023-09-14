@@ -64,6 +64,7 @@ import org.homio.api.exception.ServerException;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
+import org.homio.api.model.UpdatableValue;
 import org.homio.api.model.device.ConfigDeviceDefinition;
 import org.homio.api.model.device.ConfigDeviceDefinitionService;
 import org.homio.api.model.endpoint.DeviceEndpoint.EndpointType;
@@ -166,7 +167,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     protected @Nullable ThreadContext<Void> cameraConnectionJob;
 
     // actions holder
-    protected @Nullable UIInputBuilder uiInputBuilder;
+    protected @NotNull UpdatableValue<UIInputBuilder> uiInputBuilder = UpdatableValue.deferred("cam-actions", UIInputBuilder.class);
 
     protected final String gifOutOptions = "-r 2 -filter_complex scale=-2:360:flags=lanczos,setpts=0.5*PTS,split[o1][o2];[o1]palettegen[p];[o2]fifo[o3];"
         + "[o3][p]paletteuse";
@@ -340,12 +341,13 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         return false;
     }
 
+    // assemble camera actions and cache every minute
     public UIInputBuilder assembleActions() {
-        if (this.uiInputBuilder == null) {
-            this.uiInputBuilder = entityContext.ui().inputBuilder();
-            assembleAdditionalVideoActions(uiInputBuilder);
-        }
-        return uiInputBuilder;
+        return uiInputBuilder.getFreshValue(Duration.ofSeconds(60), () -> {
+            UIInputBuilder builder = entityContext.ui().inputBuilder();
+            assembleAdditionalVideoActions(builder);
+            return builder;
+        });
     }
 
     @Override
@@ -605,9 +607,9 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         }
     }
 
-    public void takeSnapshotAsync() {
+    public final void takeSnapshotAsync() {
         lastSnapshotRequest = Instant.now();
-        FFMPEG.run(ffmpegSnapshot, FFMPEG::startConverting);
+        takeSnapshotAsyncInternal();
     }
 
     protected void takeSnapshotAsyncInternal() {
@@ -685,7 +687,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     private void addPrimaryEndpoint() {
         endpoints.computeIfAbsent(ENDPOINT_DEVICE_STATUS, key -> {
             Set<String> range = Status.set(ONLINE, ERROR, OFFLINE, REQUIRE_AUTH, UNKNOWN, INITIALIZE);
-            VideoDeviceEndpoint videoEndpoint = new VideoDeviceEndpoint(entity, key, range, false) {
+            VideoDeviceEndpoint videoEndpoint = new VideoDeviceEndpoint(entity, getEntityContext(), key, range, false) {
                 @Override
                 public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
                     Status status = Status.valueOf(getValue().stringValue());
@@ -698,7 +700,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         });
 
         endpoints.computeIfAbsent(ENDPOINT_LAST_SEEN, key -> {
-            VideoDeviceEndpoint videoEndpoint = new VideoDeviceEndpoint(entity, key, EndpointType.number, false) {
+            VideoDeviceEndpoint videoEndpoint = new VideoDeviceEndpoint(entity, getEntityContext(), key, EndpointType.number, false) {
 
                 @Override
                 public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
@@ -710,15 +712,18 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         });
 
         endpoints.computeIfAbsent(ENDPOINT_MOTION_THRESHOLD, key ->
-            new VideoDeviceEndpoint(entity, key, 0F, 100F, true));
+            new VideoDeviceEndpoint(entity, getEntityContext(), key, 0F, 100F, true));
 
         if (entity.isHasAudioStream()) {
             endpoints.computeIfAbsent(ENDPOINT_AUDIO_THRESHOLD, key ->
-                new VideoDeviceEndpoint(entity, key, 0F, 100F, true));
+                new VideoDeviceEndpoint(entity, getEntityContext(), key, 0F, 100F, true));
         }
     }
 
-    public VideoDeviceEndpoint addEndpoint(String endpointId, Function<String, VideoDeviceEndpoint> handler, Consumer<State> updateHandler) {
+    public VideoDeviceEndpoint addEndpoint(
+        @NotNull String endpointId,
+        @NotNull Function<String, VideoDeviceEndpoint> handler,
+        @NotNull Consumer<State> updateHandler) {
         return endpoints.computeIfAbsent(endpointId, key -> {
             VideoDeviceEndpoint endpoint = handler.apply(key);
             endpoint.setUpdateHandler(updateHandler);
@@ -726,16 +731,43 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         });
     }
 
-    public VideoDeviceEndpoint addEndpointSwitch(String endpointId, Consumer<State> updateHandler, boolean writable) {
-        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, EndpointType.bool, writable), updateHandler);
+    public VideoDeviceEndpoint addEndpointSwitch(
+        @NotNull String endpointId,
+        @NotNull Consumer<State> updateHandler,
+        boolean writable) {
+        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, getEntityContext(), key, EndpointType.bool, writable), updateHandler);
+    }
+
+    public VideoDeviceEndpoint addEndpointTrigger(
+        @NotNull String endpointId,
+        @NotNull Icon buttonIcon,
+        @Nullable String text,
+        @Nullable String confirmMessage,
+        @Nullable String confirmDialogColor,
+        @NotNull Consumer<State> updateHandler) {
+        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, getEntityContext(),
+            key, EndpointType.trigger, true) {
+            @Override
+            public UIInputBuilder createTriggerActionBuilder(@NotNull UIInputBuilder uiInputBuilder) {
+                uiInputBuilder.addButton(getEntityID(), buttonIcon, (entityContext, params) -> {
+                                  updateHandler.accept(null);
+                                  return null;
+                              })
+                              .setText(StringUtils.trimToEmpty(text))
+                              .setConfirmMessage(confirmMessage)
+                              .setConfirmMessageDialogColor(confirmDialogColor)
+                              .setDisabled(!getDevice().getStatus().isOnline());
+                return uiInputBuilder;
+            }
+        }, updateHandler);
     }
 
     public VideoDeviceEndpoint addEndpointEnum(String endpointId, Set<String> range, Consumer<State> updateHandler) {
-        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, range, true), updateHandler);
+        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, getEntityContext(), key, range, true), updateHandler);
     }
 
     public VideoDeviceEndpoint addEndpointSlider(String endpointId, int min, int max, Consumer<State> updateHandler, boolean writable) {
-        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, (float) min, (float) max, writable), updateHandler);
+        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, getEntityContext(), key, (float) min, (float) max, writable), updateHandler);
     }
 
     public synchronized @NotNull FFMPEG getOrCreateFfmpegHls(@NotNull StreamHLS.Resolution resolution) {

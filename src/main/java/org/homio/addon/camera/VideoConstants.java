@@ -51,6 +51,7 @@ public class VideoConstants {
 
     public static final String ENDPOINT_HDD = "hdd";
 
+    public static final String ENDPOINT_REBOOT = "reboot";
     public static final String ENDPOINT_ENABLE_AUDIO_ALARM = "enable_audio_alarm";
     public static final String ENDPOINT_ENABLE_MOTION_ALARM = "enable_motion_alarm";
     public static final String ENDPOINT_ENABLE_FIELD_DETECTION_ALARM = "enable_field_alarm";

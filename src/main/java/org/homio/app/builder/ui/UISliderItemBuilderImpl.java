@@ -13,14 +13,13 @@ public class UISliderItemBuilderImpl extends UIBaseEntityItemBuilderImpl<UISlide
 
     private final Float min;
     private final Float max;
-    @Setter
-    private Float step;
-    @Setter
-    private boolean required;
-    @Setter
-    private SliderType sliderType;
-    @Setter
-    private boolean hideThumbLabel;
+
+    private @Setter Float step;
+    private @Setter boolean required;
+    private @Setter SliderType sliderType;
+    private @Setter boolean hideThumbLabel;
+    private @Setter String thumbLabel;
+    private @Setter Float defaultValue;
 
     public UISliderItemBuilderImpl(String entityID, int order, UIActionHandler actionHandler, float value, Float min, Float max) {
         super(UIItemType.Slider, entityID, order, actionHandler);

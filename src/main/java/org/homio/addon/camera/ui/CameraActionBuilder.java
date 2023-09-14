@@ -290,7 +290,7 @@ public class CameraActionBuilder {
                 VideoDeviceEndpoint endpoint = cameraService.getEndpoints().get(this.name);
                 this.order = endpoint == null ? -1 : endpoint.getOrder();
                 this.icon = endpoint == null ? new Icon() : endpoint.getIcon();
-                this.group = endpoint == null ? null : "VIDEO." + endpoint.getGroup().toUpperCase();
+                this.group = endpoint == null ? null : "GROUP_" + endpoint.getGroup().toUpperCase();
             }
 
             if (condition == null) {

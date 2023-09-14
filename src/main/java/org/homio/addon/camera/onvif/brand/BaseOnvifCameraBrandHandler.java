@@ -1,14 +1,25 @@
 package org.homio.addon.camera.onvif.brand;
 
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.ReferenceCountUtil;
+import java.nio.charset.StandardCharsets;
 import lombok.Getter;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoActionsContext;
 import org.homio.addon.camera.handler.BaseBrandCameraHandler;
@@ -21,12 +32,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.http.MediaType;
 
-import java.nio.charset.StandardCharsets;
-
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
-
 public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler implements VideoActionsContext, BaseBrandCameraHandler {
+
+    protected Logger log = LogManager.getLogger();
 
     protected final int nvrChannel;
     protected final String username;
@@ -48,6 +56,9 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler i
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        if (msg != null && !msg.toString().isEmpty()) {
+            log.debug("[{}]: Camera response: {}", entityID, msg);
+        }
         ReferenceCountUtil.release(msg);
     }
 

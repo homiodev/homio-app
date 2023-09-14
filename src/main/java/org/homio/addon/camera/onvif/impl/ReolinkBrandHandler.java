@@ -4,7 +4,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_3DNR;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ANTI_FLICKER;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LED;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_BANDWIDTH;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_BGCOLOR;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_BLACK_LIGHT;
@@ -25,6 +25,7 @@ import static org.homio.addon.camera.VideoConstants.ENDPOINT_IMAGE_MIRROR;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_IMAGE_ROTATE;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_NAME_POSITION;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_NAME_SHOW;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_REBOOT;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_RECORD_AUDIO;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_RED_GAIN;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_SATURATION;
@@ -60,7 +61,6 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -71,6 +71,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import javax.security.auth.login.LoginException;
 import lombok.AllArgsConstructor;
@@ -81,7 +82,6 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.ToString;
 import lombok.experimental.Accessors;
-import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoPlaybackStorage;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
@@ -89,24 +89,20 @@ import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.impl.ReolinkBrandHandler.SearchRequest.Search;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.service.VideoDeviceEndpoint;
-import org.homio.addon.camera.ui.UICameraSelectionAttributeValues;
 import org.homio.addon.camera.ui.UIVideoActionGetter;
-import org.homio.addon.camera.ui.UIVideoActionMetadata;
 import org.homio.addon.camera.ui.UIVideoEndpointAction;
 import org.homio.api.EntityContext;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
-import org.homio.api.model.OptionModel;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.JsonType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
+import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
-import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.JsonUtils;
 import org.homio.hquery.Curl;
@@ -120,7 +116,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.client.RestTemplate;
 
-@Log4j2
 @CameraBrandHandler("Reolink")
 public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     BrandCameraHasMotionAlarm, VideoPlaybackStorage {
@@ -181,21 +176,37 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         addConfig(new EndpointConfiguration(ENDPOINT_SATURATION, ConfigType.number, "Image", "saturation"));
         addConfig(new EndpointConfiguration(ENDPOINT_SHARPEN, ConfigType.number, "Image", "sharpen"));
 
-        addConfig(new EndpointConfiguration(ENDPOINT_RECORD_AUDIO, ConfigType.bool, "Isp", "nr3d"));
-        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_MAIN_RESOLUTION, ConfigType.select, "Enc", "mainStream/size"));
-        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_MAIN_BITRATE, ConfigType.select, "Enc", "mainStream/bitRate"));
-        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_MAIN_FRAMERATE, ConfigType.select, "Enc", "mainStream/frameRate"));
-        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_MAIN_H264_PROFILE, ConfigType.select, "Enc", "mainStream/profile"));
+        addConfig(new EndpointConfiguration(ENDPOINT_RECORD_AUDIO, ConfigType.bool, "Isp", "mainStream/audio"));
+        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_MAIN_RESOLUTION, ConfigType.select, "Enc", "mainStream/size")
+            .setRangeConverter(jsonNode -> createStreamSizeRange(jsonNode, "mainStream")));
+        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_MAIN_BITRATE, ConfigType.select, "Enc", "mainStream/bitRate")
+            .setRangeConverter(jsonNode -> jsonNode.get(0)));
+        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_MAIN_FRAMERATE, ConfigType.select, "Enc", "mainStream/frameRate")
+            .setRangeConverter(jsonNode -> jsonNode.get(0)));
+        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_MAIN_H264_PROFILE, ConfigType.select, "Enc", "mainStream/profile")
+            .setRangeConverter(jsonNode -> jsonNode.get(0)));
 
-        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_SECONDARY_RESOLUTION, ConfigType.select, "Enc", "mainStream/size"));
-        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_SECONDARY_BITRATE, ConfigType.select, "Enc", "mainStream/bitRate"));
-        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_SECONDARY_FRAMERATE, ConfigType.select, "Enc", "mainStream/frameRate"));
-        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_SECONDARY_H264_PROFILE, ConfigType.select, "Enc", "mainStream/profile"));
+        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_SECONDARY_RESOLUTION, ConfigType.select, "Enc", "subStream/size")
+            .setRangeConverter(jsonNode -> createStreamSizeRange(jsonNode, "subStream")));
+        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_SECONDARY_BITRATE, ConfigType.select, "Enc", "subStream/bitRate")
+            .setRangeConverter(jsonNode -> jsonNode.get(0)));
+        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_SECONDARY_FRAMERATE, ConfigType.select, "Enc", "subStream/frameRate")
+            .setRangeConverter(jsonNode -> jsonNode.get(0)));
+        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_SECONDARY_H264_PROFILE, ConfigType.select, "Enc", "subStream/profile")
+            .setRangeConverter(jsonNode -> jsonNode.get(0)));
 
         addConfig(new EndpointConfiguration(ENDPOINT_CPU_LOADING, ConfigType.number, "Performance", "cpuUsed")
             .setWritable(false));
         addConfig(new EndpointConfiguration(ENDPOINT_BANDWIDTH, ConfigType.number, "Performance", "codecRate")
             .setWritable(false));
+    }
+
+    private static JsonNode createStreamSizeRange(JsonNode jsonNode, String path) {
+        ArrayNode sizes = OBJECT_MAPPER.createArrayNode();
+        for (JsonNode node : jsonNode) {
+            sizes.add(JsonUtils.getJsonPath(node, path + "/size").asText());
+        }
+        return OBJECT_MAPPER.createObjectNode().set(path, OBJECT_MAPPER.createObjectNode().set("size", sizes));
     }
 
     private static void addConfig(EndpointConfiguration configuration) {
@@ -281,337 +292,26 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         return playbackFiles;
     }
 
-    @UIVideoEndpointAction(ENDPOINT_AUTO_LED)
-    public void setAutoLed(boolean on) {
+    @UIVideoEndpointAction(ENDPOINT_ENABLE_LED)
+    public void setEnableLed(boolean on) {
         getIRLedHandler().accept(on);
     }
 
     @Override
     public Consumer<Boolean> getIRLedHandler() {
-        return on -> {
+        return on ->
             sendCameraPushRequest("SetIrLights", OBJECT_MAPPER.createObjectNode().set("IrLights",
                 OBJECT_MAPPER.createObjectNode().put("state", on ? "Auto" : "Off")));
-        };
     }
 
     @Override
     public Supplier<Boolean> getIrLedValueHandler() {
-        return () -> Optional.ofNullable(getAttribute(ENDPOINT_AUTO_LED)).map(State::boolValue).orElse(false);
+        return () -> Optional.ofNullable(getAttribute(ENDPOINT_ENABLE_LED)).map(State::boolValue).orElse(false);
     }
 
-    @UIVideoActionGetter(ENDPOINT_AUTO_LED)
-    public State isAutoLed() {
-        return getAttribute(ENDPOINT_AUTO_LED);
-    }
-
-    @UIVideoActionGetter(ENDPOINT_NAME_POSITION)
-    public State getNamePosition() {
-        return getOSDPosition("osdChannel");
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_NAME_POSITION)
-    @UICameraSelectionAttributeValues(value = "OsdRange", path = "osdChannel/pos", prependValues = {"", "Hide"})
-    public void setNamePosition(String position) {
-        setSetting(ENDPOINT_NAME_POSITION, osd -> {
-            if ("".equals(position)) {
-                osd.set(false, "osdChannel/enable");
-            } else {
-                osd.set(true, "osdChannel/enable");
-                osd.set(position, "osdChannel/pos");
-            }
-        });
-    }
-
-    @UIVideoActionGetter(ENDPOINT_DATETIME_POSITION)
-    public State getDateTimePosition() {
-        return getOSDPosition("osdTime");
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_DATETIME_POSITION)
-    @UICameraSelectionAttributeValues(value = "OsdRange", path = "osdTime/pos", prependValues = {"", "Hide"})
-    public void setDateTimePosition(String position) {
-        setSetting(ENDPOINT_DATETIME_POSITION, osd -> {
-            if ("".equals(position)) {
-                osd.set(false, "osdTime/enable");
-            } else {
-                osd.set(true, "osdTime/enable");
-                osd.set(position, "osdTime/pos");
-            }
-        });
-    }
-
-    @UIVideoActionGetter(ENDPOINT_WATERMARK_SHOW)
-    public State getShowWatermark() {
-        JsonType osd = (JsonType) getAttribute("Osd");
-        return osd == null ? null : OnOffType.of(osd.getJsonNode().path("watermark").asInt() == 1);
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_WATERMARK_SHOW)
-    public void setShowWatermark(boolean on) {
-        setSetting(ENDPOINT_WATERMARK_SHOW, osd -> osd.set(boolToInt(on), "watermark"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_DATETIME_SHOW)
-    public State getShowName() {
-        JsonType osd = (JsonType) getAttribute("Osd");
-        return osd == null ? null : OnOffType.of(osd.getJsonNode().path("osdChannel").path("enable").asInt() == 1);
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_NAME_SHOW)
-    public void setShowName(boolean on) {
-        setSetting(ENDPOINT_NAME_SHOW, osd -> osd.set(boolToInt(on), "osdChannel/enable"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_DATETIME_SHOW)
-    public State getShowDateTime() {
-        JsonType osd = (JsonType) getAttribute("Osd");
-        return osd == null ? null : OnOffType.of(osd.getJsonNode().path("osdTime").path("enable").asInt() == 1);
-    }
-
-    @UIVideoActionGetter(ENDPOINT_IMAGE_ROTATE)
-    public State getRotateImage() {
-        JsonType isp = (JsonType) getAttribute("Isp");
-        return isp == null ? null : OnOffType.of(isp.getJsonNode().path("rotation").asInt() == 1);
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_IMAGE_ROTATE)
-    public void setRotateImage(boolean on) {
-        setSetting(ENDPOINT_IMAGE_ROTATE, isp -> isp.set(boolToInt(on), "rotation"));
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_DATETIME_SHOW)
-    public void setShowDateTime(boolean on) {
-        setSetting(ENDPOINT_DATETIME_SHOW, osd -> osd.set(boolToInt(on), "osdTime/enable"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_IMAGE_MIRROR)
-    public State getMirrorImage() {
-        JsonType isp = (JsonType) getAttribute("Isp");
-        return isp == null ? null : OnOffType.of(isp.getJsonNode().path("mirroring").asInt() == 1);
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_IMAGE_MIRROR)
-    public void setMirrorImage(boolean on) {
-        setSetting(ENDPOINT_IMAGE_MIRROR, isp -> isp.set(boolToInt(on), "mirroring"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_ANTI_FLICKER)
-    public State getAntiFlicker() {
-        JsonType isp = (JsonType) getAttribute("Isp");
-        return isp == null ? null : new StringType(isp.get("antiFlicker").asText());
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_ANTI_FLICKER)
-    @UICameraSelectionAttributeValues(value = "IspRange", path = "antiFlicker")
-    public void setAntiFlicker(String value) {
-        setSetting(ENDPOINT_ANTI_FLICKER, isp -> isp.set(value, "antiFlicker"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_EXPOSURE)
-    public State getExposure() {
-        JsonType isp = (JsonType) getAttribute("Isp");
-        return isp == null ? null : new StringType(isp.get("exposure").asText());
-    }
-
-    @UIVideoActionGetter(ENDPOINT_DAY_NIGHT)
-    public State getDayNight() {
-        JsonType isp = (JsonType) getAttribute("Isp");
-        return isp == null ? null : new StringType(isp.getJsonNode().path("dayNight").asText());
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_DAY_NIGHT)
-    @UICameraSelectionAttributeValues(value = "IspRange", path = "dayNight")
-    public void setDayNight(String value) {
-        setSetting(ENDPOINT_DAY_NIGHT, isp -> isp.set(value, "dayNight"));
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_EXPOSURE)
-    @UICameraSelectionAttributeValues(value = "IspRange", path = "exposure")
-    public void setExposure(String value) {
-        setSetting(ENDPOINT_EXPOSURE, isp -> isp.set(value, "exposure"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_WHITE_BALANCE)
-    public State getWhiteBalance() {
-        JsonType isp = (JsonType) getAttribute("Isp");
-        return isp == null ? null : new StringType(isp.getJsonNode().path("whiteBalance").asText());
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_WHITE_BALANCE)
-    @UICameraSelectionAttributeValues(value = "IspRange", path = "whiteBalance")
-    public void setWhiteBalance(String value) {
-        setSetting(ENDPOINT_WHITE_BALANCE, isp -> isp.set(value, "whiteBalance"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_RED_GAIN)
-    public State getRedGain() {
-        JsonType isp = (JsonType) getAttribute("Isp");
-        return isp == null ? null : new DecimalType(isp.getJsonNode().path("redGain").asInt());
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_RED_GAIN)
-    public void setRedGain(String value) {
-        setSetting(ENDPOINT_RED_GAIN, isp -> isp.set(value, "redGain"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_DRC)
-    public State getDrc() {
-        JsonType isp = (JsonType) getAttribute("Isp");
-        return isp == null ? null : new DecimalType(isp.getJsonNode().path("redGain").asInt());
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_DRC)
-    public void setDrc(String value) {
-        setSetting(ENDPOINT_DRC, isp -> isp.set(value, "drc"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_BLUE_GAIN)
-    public State getBlueGain() {
-        JsonType isp = (JsonType) getAttribute("Isp");
-        return isp == null ? null : new DecimalType(isp.getJsonNode().path("blueGain").asInt());
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_BLUE_GAIN)
-    public void setBlueGain(String value) {
-        setSetting(ENDPOINT_BLUE_GAIN, isp -> isp.set(value, "blueGain"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_BLC)
-    public State getBlc() {
-        JsonType isp = (JsonType) getAttribute("Isp");
-        return isp == null ? null : new DecimalType(isp.getJsonNode().path("blc").asInt());
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_BLC)
-    public void setBlc(String value) {
-        setSetting(ENDPOINT_BLC, isp -> isp.set(value, "blc"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_3DNR)
-    public State get3DNR() {
-        JsonType isp = (JsonType) getAttribute("Isp");
-        return isp == null ? null : OnOffType.of(isp.getJsonNode().path("nr3d").asInt() == 1);
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_3DNR)
-    public void set3DNR(boolean on) {
-        setSetting(ENDPOINT_3DNR, isp -> isp.set(boolToInt(on), "nr3d"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_RECORD_AUDIO)
-    public State getRecAudio() {
-        JsonType enc = (JsonType) getAttribute("Enc");
-        return enc == null ? null : OnOffType.of(enc.getJsonNode().path("audio").asInt() == 1);
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_RECORD_AUDIO)
-    @UIVideoActionMetadata(subGroup = "VIDEO.mainStream", subGroupIcon = "fas fa-dice-six")
-    public void setRecAudio(boolean on) {
-        setSetting(ENDPOINT_RECORD_AUDIO, enc -> enc.set(boolToInt(on), "audio"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_STREAM_MAIN_RESOLUTION)
-    public State getStreamMainResolution() {
-        JsonType enc = (JsonType) getAttribute("Enc");
-        return enc == null ? null : new StringType(enc.get("mainStream/size").asText());
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_STREAM_MAIN_RESOLUTION)
-    @UIVideoActionMetadata(subGroup = "VIDEO.mainStream", subGroupIcon = "fas fa-dice-six")
-    @UIFieldDynamicSelection(value = SelectResolution.class, staticParameters = {"mainStream"})
-    public void setStreamMainResolution(String value) {
-        setSetting(ENDPOINT_STREAM_MAIN_RESOLUTION, enc -> enc.set(value, "mainStream/size"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_STREAM_MAIN_BITRATE)
-    public State getStreamMainBitRate() {
-        JsonType enc = (JsonType) getAttribute("Enc");
-        return enc == null ? null : new StringType(enc.get("mainStream/bitRate").asText());
-    }
-
-    @UIVideoEndpointAction(value = ENDPOINT_STREAM_MAIN_BITRATE)
-    @UIVideoActionMetadata(subGroup = "VIDEO.mainStream", subGroupIcon = "fas fa-dice-six")
-    @UIFieldDynamicSelection(value = SelectStreamValue.class, staticParameters = {"mainStream", "bitRate"})
-    public void setStreamMainBitRate(String value) {
-        setSetting(ENDPOINT_STREAM_MAIN_BITRATE, enc -> enc.set(value, "mainStream/bitRate"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_STREAM_MAIN_FRAMERATE)
-    public State getStreamMainFrameRate() {
-        JsonType enc = (JsonType) getAttribute("Enc");
-        return enc == null ? null : new StringType(enc.get("mainStream/frameRate").asText());
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_STREAM_MAIN_FRAMERATE)
-    @UIVideoActionMetadata(subGroup = "VIDEO.mainStream", subGroupIcon = "fas fa-dice-six")
-    @UIFieldDynamicSelection(value = SelectStreamValue.class, staticParameters = {"mainStream", "frameRate"})
-    public void setStreamMainFrameRate(String value) {
-        setSetting(ENDPOINT_STREAM_MAIN_FRAMERATE, enc -> enc.set(value, "mainStream/frameRate"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_STREAM_MAIN_H264_PROFILE)
-    public State getStreamMainH264Profile() {
-        JsonType enc = (JsonType) getAttribute("Enc");
-        return enc == null ? null : new StringType(enc.get("mainStream/profile").asText());
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_STREAM_MAIN_H264_PROFILE)
-    @UIVideoActionMetadata(subGroup = "VIDEO.mainStream", subGroupIcon = "fas fa-dice-six")
-    @UIFieldDynamicSelection(value = SelectStreamValue.class, staticParameters = {"mainStream", "profile"})
-    public void setStreamMainH264Profile(String value) {
-        setSetting(ENDPOINT_STREAM_MAIN_H264_PROFILE, enc -> enc.set(value, "mainStream/profile"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_STREAM_SECONDARY_RESOLUTION)
-    public State getStreamSecondaryResolution() {
-        JsonType enc = (JsonType) getAttribute("Enc");
-        return enc == null ? null : new StringType(enc.get("subStream/size").asText());
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_STREAM_SECONDARY_RESOLUTION)
-    @UIVideoActionMetadata(subGroup = "VIDEO.subStream", subGroupIcon = "fas fa-dice-six")
-    @UIFieldDynamicSelection(value = SelectResolution.class, staticParameters = {"subStream"})
-    public void setStreamSecondaryResolution(String value) {
-        setSetting(ENDPOINT_STREAM_SECONDARY_RESOLUTION, enc -> enc.set(value, "subStream/size"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_STREAM_SECONDARY_BITRATE)
-    public State getStreamSecondaryBitRate() {
-        JsonType enc = (JsonType) getAttribute("Enc");
-        return enc == null ? null : new StringType(enc.get("subStream/bitRate").asText());
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_STREAM_SECONDARY_BITRATE)
-    @UIVideoActionMetadata(subGroup = "VIDEO.subStream", subGroupIcon = "fas fa-dice-six")
-    @UIFieldDynamicSelection(value = SelectStreamValue.class, staticParameters = {"subStream", "bitRate"})
-    public void setStreamSecondaryBitRate(String value) {
-        setSetting(ENDPOINT_STREAM_SECONDARY_BITRATE, enc -> enc.set(value, "subStream/bitRate"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_STREAM_SECONDARY_FRAMERATE)
-    public State getStreamSecondaryFrameRate() {
-        JsonType enc = (JsonType) getAttribute("Enc");
-        return enc == null ? null : new StringType(enc.get("subStream/frameRate").asText());
-    }
-
-    @UIVideoEndpointAction(ENDPOINT_STREAM_SECONDARY_FRAMERATE)
-    @UIVideoActionMetadata(subGroup = "VIDEO.subStream", subGroupIcon = "fas fa-dice-six")
-    @UIFieldDynamicSelection(value = SelectStreamValue.class, staticParameters = {"subStream", "frameRate"})
-    public void setStreamSecondaryFrameRate(String value) {
-        setSetting(ENDPOINT_STREAM_SECONDARY_FRAMERATE, enc -> enc.set(value, "subStream/frameRate"));
-    }
-
-    @UIVideoActionGetter(ENDPOINT_STREAM_SECONDARY_H264_PROFILE)
-    public State getStreamSecondaryH264Profile() {
-        JsonType enc = (JsonType) getAttribute("Enc");
-        return enc == null ? null : new StringType(enc.get("subStream/profile").asText());
-    }
-
-    @UIVideoEndpointAction(value = ENDPOINT_STREAM_SECONDARY_H264_PROFILE)
-    @UIVideoActionMetadata(subGroup = "VIDEO.subStream", subGroupIcon = "fas fa-dice-six")
-    @UIFieldDynamicSelection(value = SelectStreamValue.class, staticParameters = {"subStream", "profile"})
-    public void setStreamSecondaryH264Profile(String value) {
-        setSetting(ENDPOINT_STREAM_SECONDARY_H264_PROFILE, isp -> isp.set(value, "subStream/profile"));
+    @UIVideoActionGetter(ENDPOINT_ENABLE_LED)
+    public State isEnableLed() {
+        return getAttribute(ENDPOINT_ENABLE_LED);
     }
 
     @Override
@@ -662,17 +362,24 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
                 String group = cmd.substring("Get".length());
                 JsonNode targetNode = objectNode.value.get(group);
                 setAttribute(group, new JsonType(targetNode));
-                if (objectNode.range != null && objectNode.range.has(group)) {
+                /*if (objectNode.range != null && objectNode.range.has(group)) {
                     setAttribute(group + "Range", new JsonType(objectNode.range.path(group)));
                 }
+                if (objectNode.initial != null && objectNode.initial.has(group)) {
+                    setAttribute(group + "Initial", new JsonType(objectNode.range.path(group)));
+                }*/
                 if (objectNode.range == null) {
                     objectNode.range = OBJECT_MAPPER.createObjectNode();
                 }
+                if (objectNode.initial == null) {
+                    objectNode.initial = OBJECT_MAPPER.createObjectNode();
+                }
                 if (!customHandle(objectNode, cmd)) {
-                    JsonNode configNode = objectNode.range.path(group);
+                    JsonNode rangeNode = objectNode.range.path(group);
+                    JsonNode initialNode = objectNode.initial.path(group);
                     configurations.values().stream().filter(c -> c.group.equals(group)).forEach(config -> {
                         if (JsonUtils.hasJsonPath(targetNode, config.key)) {
-                            config.type.handler.handle(configNode, config, this);
+                            config.type.handler.handle(rangeNode, initialNode, config, this);
                         }
                     });
                 }
@@ -714,6 +421,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     private void handleGetAbilityCommand(Root objectNode) {
         JsonNode ability = objectNode.value.get("Ability");
         handleSwitch(ability, ENDPOINT_ENABLE_AUDIO_ALARM, "alarmAudio", "GetAudioAlarmV20", "SetAudioAlarmV20", "Audio");
+        handleTrigger(ability, ENDPOINT_REBOOT, "reboot", new Icon("fas fa-power-off", Color.RED), "Reboot");
     }
 
     private void sendCameraRequest(String cmd, JsonNode param, boolean resend, Consumer<Root> handler, Consumer<Exception> errorHandler) {
@@ -754,7 +462,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         JsonNode hddInfo = objectNode.value.withArray("HddInfo").path(0);
         setAttribute(ENDPOINT_HDD, new JsonType(hddInfo));
         service.addEndpoint(ENDPOINT_HDD, key -> {
-            VideoDeviceEndpoint endpoint = new VideoDeviceEndpoint(getEntity(), key, DeviceEndpoint.EndpointType.string, false);
+            VideoDeviceEndpoint endpoint = new VideoDeviceEndpoint(getEntity(), getEntityContext(), key, DeviceEndpoint.EndpointType.string, false);
             String text = hddInfo.get("size").asText() + "/" + hddInfo.get("capacity").asText();
             endpoint.setValue(new StringType(text), true);
             return endpoint;
@@ -776,9 +484,9 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     private void handleGetIrLightCommand(Root objectNode) {
-        setAttribute(ENDPOINT_AUTO_LED, OnOffType.of("auto".equals(objectNode.value.get("IrLights").get("state").asText())));
-        service.addEndpointSwitch(ENDPOINT_AUTO_LED, state -> setAutoLed(state.boolValue()), true)
-               .setValue(isAutoLed(), true);
+        setAttribute(ENDPOINT_ENABLE_LED, OnOffType.of("auto".equals(objectNode.value.get("IrLights").get("state").asText())));
+        service.addEndpointSwitch(ENDPOINT_ENABLE_LED, state -> setEnableLed(state.boolValue()), true)
+               .setValue(isEnableLed(), true);
     }
 
     @Override
@@ -824,15 +532,6 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     }
 
-    @Nullable
-    private State getOSDPosition(String path) {
-        JsonType osd = (JsonType) getAttribute("Osd");
-        if (osd == null) {
-            return null;
-        }
-        return new StringType(osd.getJsonNode().path(path).path("pos").asText("---"));
-    }
-
     private void loginIfRequire() {
         if (this.tokenExpiration - System.currentTimeMillis() < 60000) {
             OnvifCameraEntity entity = getEntity();
@@ -859,7 +558,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         return false;
     }
 
-    private void setSetting(String endpointID, Consumer<JsonType> updateHandler) {
+    /*private void setSetting(String endpointID, Consumer<JsonType> updateHandler) {
         EndpointConfiguration configuration = configurations.get(endpointID);
         JsonType setting = (JsonType) getAttribute(configuration.group);
         if (setting == null) {
@@ -874,7 +573,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
             new ReolinkCmd(0, command.name(), request))) {
             getEntityContext().ui().sendSuccessMessage("Reolink '" + configuration.key + "' changed  successfully");
         }
-    }
+    }*/
 
     private void setSetting(String endpointID, State state) {
         EndpointConfiguration configuration = configurations.get(endpointID);
@@ -903,14 +602,21 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     private void handleSwitch(JsonNode ability, String endpointKey, String abilityKey, String getKey, String setKey, String valueKey) {
         int permit = ability.path(abilityKey).path("permit").asInt(0);
         if (permit > 0) {
-            VideoDeviceEndpoint endpoint = service.addEndpointSwitch(endpointKey, state -> {
+            VideoDeviceEndpoint endpoint = service.addEndpointSwitch(endpointKey, state ->
                 sendCameraPushRequest(setKey, OBJECT_MAPPER.createObjectNode().set(valueKey,
-                    OBJECT_MAPPER.createObjectNode().put("enable", 1)));
-            }, true);
+                    OBJECT_MAPPER.createObjectNode().put("enable", 1))), true);
             sendCameraRequest(getKey, channelParam, root -> {
                 boolean value = root.value.path(valueKey).path("enable").asBoolean(false);
                 endpoint.setValue(OnOffType.of(value), true);
             });
+        }
+    }
+
+    private void handleTrigger(JsonNode ability, String endpointKey, String abilityKey, Icon icon, String cmd) {
+        int permit = ability.path(abilityKey).path("permit").asInt(0);
+        if (permit > 0) {
+            service.addEndpointTrigger(endpointKey, icon, null, "W.CONFIRM." + cmd.toUpperCase(), Color.ERROR_DIALOG, state ->
+                sendCameraPushRequest(cmd, OBJECT_MAPPER.createObjectNode()));
         }
     }
 
@@ -946,9 +652,8 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     private void sendCameraRequest(String cmd, JsonNode param, Consumer<Root> handler) {
-        sendCameraRequest(cmd, param, false, handler, error -> {
-            log.error("[{}]: Cmd request: {}. Error response from camera: {}", entityID, cmd, error);
-        });
+        sendCameraRequest(cmd, param, false, handler, error ->
+            log.error("[{}]: Cmd request: {}. Error response from camera: {}", entityID, cmd, error));
     }
 
     @Getter
@@ -1030,18 +735,24 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @RequiredArgsConstructor
     private enum ConfigType {
-        number((config, c, handler) -> {
+        number((rangeNode, initialNode, c, handler) -> {
             Consumer<State> setter = state -> handler.setSetting(c.endpointId, state);
             Supplier<State> getter = () -> {
                 JsonType group = (JsonType) handler.getAttribute(c.group);
                 return group == null ? null : new DecimalType(group.getJsonNode().path(c.key).asInt());
             };
-            JsonNode numConfigPath = JsonUtils.getJsonPath(config, c.key);
+            JsonNode numConfigPath = JsonUtils.getJsonPath(rangeNode, c.key);
             int min = numConfigPath.path("min").asInt();
             int max = numConfigPath.path("max").asInt();
-            handler.service.addEndpointSlider(c.endpointId, min, max, setter, c.writable).setValue(getter.get(), true);
+            VideoDeviceEndpoint endpoint = handler.service.addEndpointSlider(c.endpointId, min, max, setter, c.writable);
+            endpoint.setValue(getter.get(), true);
+            JsonNode initPath = JsonUtils.getJsonPath(initialNode, c.key);
+            if (!initPath.isMissingNode()) {
+                float defaultValue = initPath.floatValue();
+                endpoint.setDefaultValue(defaultValue);
+            }
         }),
-        bool((config, c, handler) -> {
+        bool((rangeNode, initialNode, c, handler) -> {
             Consumer<State> setter = state -> handler.setSetting(c.endpointId, state);
             Supplier<State> getter = () -> {
                 JsonType group = (JsonType) handler.getAttribute(c.group);
@@ -1049,56 +760,34 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
             };
             handler.service.addEndpointSwitch(c.endpointId, setter, c.writable).setValue(getter.get(), true);
         }),
-        select((config, c, handler) -> {
+        select((rangeNode, initialNode, c, handler) -> {
             Set<String> range = new LinkedHashSet<>();
-            JsonUtils.getJsonPath(config, c.key).forEach(jsonNode -> range.add(jsonNode.asText()));
+            if (c.rangeConverter != null) {
+                rangeNode = c.rangeConverter.apply(rangeNode);
+            }
+            JsonUtils.getJsonPath(rangeNode, c.key).forEach(jsonNode -> range.add(jsonNode.asText()));
             Consumer<State> setter = state -> handler.setSetting(c.endpointId, state);
             Supplier<State> getter = () -> {
                 JsonType group = (JsonType) handler.getAttribute(c.group);
                 return group == null ? null : new StringType(JsonUtils.getJsonPath(group.getJsonNode(), c.key).asText());
             };
-            handler.service.addEndpointEnum(c.endpointId, range, setter).setValue(getter.get(), true);
+            VideoDeviceEndpoint endpoint = handler.service.addEndpointEnum(c.endpointId, range, setter);
+            endpoint.setValue(getter.get(), true);
+            JsonNode initPath = JsonUtils.getJsonPath(initialNode, c.key);
+            if (!initPath.isMissingNode()) {
+                String defaultValue = initPath.toString();
+                if (defaultValue.startsWith("\"") && defaultValue.endsWith("\"")) {
+                    defaultValue = defaultValue.substring(1, defaultValue.length() - 1);
+                }
+                endpoint.setDefaultValue(defaultValue);
+            }
         });
         private final ConfigTypeHandler handler;
     }
 
     private interface ConfigTypeHandler {
 
-        void handle(JsonNode config, EndpointConfiguration c, ReolinkBrandHandler handler);
-    }
-
-    private class SelectResolution implements DynamicOptionLoader {
-
-        @Override
-        public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
-            List<OptionModel> result = new ArrayList<>();
-            JsonType encRange = (JsonType) ReolinkBrandHandler.this.getAttribute("EncRange");
-            if (encRange != null && encRange.getJsonNode().isArray()) {
-                for (JsonNode jsonNode : encRange.getJsonNode()) {
-                    result.add(OptionModel.key(jsonNode.get(parameters.getStaticParameters()[0]).get("size").asText()));
-                }
-            }
-            return result;
-        }
-    }
-
-    private class SelectStreamValue implements DynamicOptionLoader {
-
-        @Override
-        public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
-            JsonType encRange = (JsonType) ReolinkBrandHandler.this.getAttribute("EncRange");
-            JsonType enc = (JsonType) getAttribute("Enc");
-            if (enc != null && encRange != null && encRange.getJsonNode().isArray()) {
-                String size = enc.get(parameters.getStaticParameters()[0] + "/size").asText();
-                for (JsonNode jsonNode : encRange.getJsonNode()) {
-                    JsonNode streamJsonNode = jsonNode.get(parameters.getStaticParameters()[0]);
-                    if (streamJsonNode.get("size").asText().equals(size)) {
-                        return OptionModel.list(streamJsonNode.get(parameters.getStaticParameters()[1]));
-                    }
-                }
-            }
-            return Collections.emptyList();
-        }
+        void handle(JsonNode rangeNode, JsonNode initialNode, EndpointConfiguration c, ReolinkBrandHandler handler);
     }
 
     @Override
@@ -1159,8 +848,8 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         private final ConfigType type;
         private final String group;
         private final String key;
-        @Setter
-        private boolean writable = true;
+        private @Setter boolean writable = true;
+        private @Setter Function<JsonNode, JsonNode> rangeConverter;
 
         @Override
         public boolean equals(Object o) {

@@ -182,15 +182,15 @@ public abstract class UserBaseEntity extends IdentityEntity
 
     private ActionResponseModel changeEmail(EntityContext entityContext, JSONObject json) {
         assertCorrectPassword(entityContext, json);
-        setEmail(json.getString("field.email"));
-        entityContext.save(setEmail(json.getString("field.email")));
+        setEmail(json.getString("email"));
+        entityContext.save(setEmail(json.getString("email")));
         return ActionResponseModel.showSuccess("USER.ALTERED");
     }
 
     private ActionResponseModel changePassword(EntityContext entityContext, JSONObject json) {
         assertCorrectPassword(entityContext, json);
-        String newPassword = json.getString("field.newPassword");
-        if (!newPassword.equals(json.getString("field.repeatNewPassword"))) {
+        String newPassword = json.getString("newPassword");
+        if (!newPassword.equals(json.getString("repeatNewPassword"))) {
             throw new IllegalArgumentException("USER.PASSWORD_NOT_MATCH");
         }
         if (newPassword.length() < 6) {
@@ -205,7 +205,7 @@ public abstract class UserBaseEntity extends IdentityEntity
     }
 
     private void assertCorrectPassword(EntityContext entityContext, JSONObject json) {
-        if (this.getUserType() == UserType.ADMIN && !matchPassword(json.getString("field.currentPassword"), entityContext.getBean(PasswordEncoder.class))) {
+        if (this.getUserType() == UserType.ADMIN && !matchPassword(json.getString("currentPassword"), entityContext.getBean(PasswordEncoder.class))) {
             throw new IllegalArgumentException("W.ERROR.PASSWORD_NOT_MATCH");
         }
     }

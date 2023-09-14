@@ -39,7 +39,7 @@ public interface StreamMJPEG extends HasJsonData {
     @UIField(order = 2, hideInView = true, label = "frameRate")
     @UIFieldGroup("MGPEG_GROUP")
     @UIFieldTab("MJPEG")
-    @UIFieldSlider(min = 0.1, max = 4, step = 0.1, header = "frames/sec")
+    @UIFieldSlider(min = 0.1, max = 4, step = 0.1, header = "fps")
     default double getMjpegFrameRate() {
         return getJsonData("mjpeg_rate", 1);
     }

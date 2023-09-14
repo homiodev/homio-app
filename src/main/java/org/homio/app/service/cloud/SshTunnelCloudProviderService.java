@@ -132,9 +132,9 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
         NetworkHardwareRepository repository = entityContext.getBean(NetworkHardwareRepository.class);
         RestTemplate restTemplate = new RestTemplate();
         LoginBody loginBody = new LoginBody(
-                params.get("field.email").asText(),
-                params.get("field.password").asText(),
-                params.get("field.passphrase").asText(),
+                params.get("email").asText(),
+                params.get("password").asText(),
+                params.get("passphrase").asText(),
                 repository.getIPAddress(),
                 true);
         String url = entity.getSyncUrl();
@@ -190,9 +190,9 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
                 dialogModel -> {
                     dialogModel.disableKeepOnUi();
                     List<ActionInputParameter> inputs = new ArrayList<>();
-                    inputs.add(ActionInputParameter.text("field.email", entityContext.getUserRequire().getEmail()));
-                    inputs.add(ActionInputParameter.text("field.password", ""));
-                    inputs.add(ActionInputParameter.text("field.passphrase", ""));
+                    inputs.add(ActionInputParameter.text("email", entityContext.getUserRequire().getEmail()));
+                    inputs.add(ActionInputParameter.text("password", ""));
+                    inputs.add(ActionInputParameter.text("passphrase", ""));
                     dialogModel.submitButton("Login", button -> {
                     }).group("General", inputs);
                 });

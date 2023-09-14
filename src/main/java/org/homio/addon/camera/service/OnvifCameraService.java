@@ -579,7 +579,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     protected void pollCameraConnection() throws Exception {
         onvifDeviceState.initFully();
         if (brandHandler.isSupportOnvifEvents()) {
-            String subscribeUrl = "%s:%s/rest/media/video/%s".formatted(onvifDeviceState.getIp(), SERVER_PORT, entityID);
+            String subscribeUrl = "%s:%s/rest/media/video/%s/OnvifEvent".formatted(onvifDeviceState.getIp(), SERVER_PORT, entityID);
             onvifDeviceState.getEventDevices().initFully(subscribeUrl);
         }
         setAttribute("PROFILES", new ObjectType(onvifDeviceState.getProfiles()));
@@ -660,8 +660,8 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                 dialogModel.disableKeepOnUi();
                 dialogModel.appearance(new Icon("fas fa-camera"), null);
                 List<ActionInputParameter> inputs = new ArrayList<>();
-                inputs.add(ActionInputParameter.text("field.user", entity.getUser()));
-                inputs.add(ActionInputParameter.text("field.password", entity.getPassword().asString()));
+                inputs.add(ActionInputParameter.text("user", entity.getUser()));
+                inputs.add(ActionInputParameter.text("password", entity.getPassword().asString()));
 
                 dialogModel.submitButton("CONTEXT.ACTION.AUTHENTICATE", button ->
                     button.setIcon("fas fa-sign-in-alt")
@@ -674,8 +674,8 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         entityContext.bgp().runWithProgress("camera-auth").execute(progressBar -> {
             progressBar.progress(10, "Authenticate...");
             try {
-                String user = params.get("field.user").asText();
-                String password = params.get("field.password").asText();
+                String user = params.get("user").asText();
+                String password = params.get("password").asText();
                 OnvifCameraEntity entity = entityContext.getEntityRequire(getEntityID());
                 OnvifDeviceState onvifDeviceState = new OnvifDeviceState(getEntityID());
                 onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(), user, password);

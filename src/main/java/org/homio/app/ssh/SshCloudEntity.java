@@ -293,9 +293,9 @@ public class SshCloudEntity extends IdentityEntity implements
     }
 
     /*@UIContextMenuAction(value = "CLOUD_SYNC", icon = "fas fa-right-to-bracket", iconColor = Color.RED, inputs = {
-        @UIActionInput(name = "field.email", type = Type.text),
-        @UIActionInput(name = "field.password", type = Type.text),
-        @UIActionInput(name = "field.passphrase", type = Type.text)
+        @UIActionInput(name = "email", type = Type.text),
+        @UIActionInput(name = "password", type = Type.text),
+        @UIActionInput(name = "passphrase", type = Type.text)
     })
     public ActionResponseModel sync(EntityContext entityContext, ObjectNode params) {
         val service = entityContext.getBean(SshTunnelCloudProviderService.class);

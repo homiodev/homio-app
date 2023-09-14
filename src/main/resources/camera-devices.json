@@ -10,17 +10,33 @@
   ],
   "endpoints": [
     {
+      "name": "cpu_load",
+      "quota": 100,
+      "order": 5,
+      "unit": "%",
+      "icon": "fa-microchip",
+      "iconColor": "#A65535"
+    },
+    {
+      "name": "bandwidth",
+      "quota": 100,
+      "order": 6,
+      "unit": "kbps",
+      "icon": "fa-wifi",
+      "iconColor": "#A65535"
+    },
+    {
       "name": "enable_led",
       "quota": 10,
       "order": 10,
-      "icon": "fas fa-lightbulb",
+      "icon": "fa-lightbulb",
       "iconColor": "#7C2D9C"
     },
     {
       "name": "auto_led",
       "quota": 10,
       "order": 20,
-      "icon": "fas fa-lightbulb",
+      "icon": "fa-moon",
       "iconColor": "#7C2D9C"
     },
     {
@@ -50,22 +66,6 @@
       "order": 60,
       "icon": "fa-globe",
       "iconColor": "#42B52D"
-    },
-    {
-      "name": "cpu_load",
-      "quota": 100,
-      "order": 100,
-      "unit": "%",
-      "icon": "fa-microchip",
-      "iconColor": "#A65535"
-    },
-    {
-      "name": "bandwidth",
-      "quota": 100,
-      "order": 110,
-      "unit": "kbps",
-      "icon": "fa-wifi",
-      "iconColor": "#A65535"
     },
     {
       "name": "bgcolor",
@@ -488,6 +488,12 @@
       "order": 520,
       "icon": "fa-lock",
       "iconColor": "#8035A6"
+    },
+    {
+      "name": "reboot",
+      "order": 530,
+      "icon": "fa-repeat",
+      "iconColor": "#AD1C1C"
     }
   ]
 }

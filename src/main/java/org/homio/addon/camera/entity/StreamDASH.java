@@ -33,10 +33,10 @@ public interface StreamDASH extends HasJsonData {
         setJsonData("dash_vc", value);
     }
 
-    @UIField(order = 4, hideInView = true, label = "bitrate")
+    @UIField(order = 4, hideInView = true, label = "bitRate")
     @UIFieldGroup("DASH_GROUP")
     @UIFieldTab("DASH")
-    @UIFieldSlider(min = 512, max = 4000)
+    @UIFieldSlider(min = 512, max = 4000, header = "kbs")
     default int getDashBitRate() {
         return getJsonData("dash_vc", 2000);
     }

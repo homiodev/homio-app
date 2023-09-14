@@ -2,6 +2,7 @@
   "TITLE": {
     "DEVICES_STAT": "Online {{ONLINE}} of {{TOTAL}} devices"
   },
+  "OPTION_DEFAULT": " (Default)",
   "MAIN_TAB_NAME": "Default tab",
   "PACKAGE_UPDATE_QUESTION": "Are you sure update {{NAME}}-{{VERSION}} package?",
   "SERVER_STARTED": "Started: {{VALUE}}. Uptime: {{TIME}}",

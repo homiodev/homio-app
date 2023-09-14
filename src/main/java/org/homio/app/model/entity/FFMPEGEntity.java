@@ -189,19 +189,19 @@ public class FFMPEGEntity extends MediaEntity implements
 
         @SneakyThrows
         public FfmpegInstanceEndpoint(FFMPEGImpl ffmpeg, FFMPEGEntity entity) {
-            super("FFMPEG");
-            this.endpointEntityID = ffmpeg.getDescription();
-            this.entityContext = entity.getEntityContext();
-            this.device = entity;
-            this.endpointType = EndpointType.string;
-            this.icon = new Icon(ffmpeg.getFormat().getIcon(), ffmpeg.getFormat().getColor());
-            this.writable = false;
+            super(new Icon(ffmpeg.getFormat().getIcon(), ffmpeg.getFormat().getColor()),
+                "FFMPEG",
+                entity.getEntityContext(),
+                entity,
+                ffmpeg.getDescription(),
+                false,
+                EndpointType.string);
             this.description = ffmpeg.getCmd();
             if (ffmpeg.getIsAlive()) {
                 ProcessStat stat = ffmpeg.getProcessStat(this::updateUI);
-                this.value = new StringType("Cpu(%.2f%%), Mem(%.2f%%)".formatted(stat.getCpuUsage(), stat.getMemUsage()));
+                setValue(new StringType("Cpu(%.2f%%), Mem(%.2f%%)".formatted(stat.getCpuUsage(), stat.getMemUsage())), false);
             } else {
-                this.value = new StringType("Dead");
+                setValue(new StringType("Dead"), false);
             }
         }
     }

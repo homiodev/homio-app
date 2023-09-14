@@ -191,7 +191,7 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     }
 
     @UIField(order = 155, hideInView = true)
-    @UIFieldGroup(value = "PTZ", order = 300, borderColor = "#960055")
+    @UIFieldGroup("ONVIF")
     public boolean isPtzContinuous() {
         return getJsonData("ptzContinuous", false);
     }

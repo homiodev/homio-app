@@ -56,10 +56,10 @@ public interface StreamHLS extends HasJsonData {
         setJsonData("hls_vc", value);
     }
 
-    @UIField(order = 4, hideInView = true, label = "bitrate")
+    @UIField(order = 4, hideInView = true, label = "bitRate")
     @UIFieldGroup("HLS_GROUP")
     @UIFieldTab("HLS")
-    @UIFieldSlider(min = 512, max = 4000)
+    @UIFieldSlider(min = 512, max = 4000, header = "kbs")
     default int getHlsBitRate() {
         return getJsonData("hls_vc", 2000);
     }

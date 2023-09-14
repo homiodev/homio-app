@@ -26,7 +26,6 @@ import static org.homio.addon.camera.VideoConstants.*;
 /**
  * responsible for handling commands, which are sent to one of the channels.
  */
-@Log4j2
 @CameraBrandHandler("Foscam")
 public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements BrandCameraHasAudioAlarm, BrandCameraHasMotionAlarm {
 

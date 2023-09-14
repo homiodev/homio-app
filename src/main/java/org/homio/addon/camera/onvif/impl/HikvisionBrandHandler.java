@@ -34,7 +34,6 @@ import org.springframework.http.MediaType;
 /**
  * responsible for handling commands, which are sent to one of the channels.
  */
-@Log4j2
 @CameraBrandHandler("Hikvision")
 public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implements BrandCameraHasMotionAlarm {
 
