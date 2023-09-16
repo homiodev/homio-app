@@ -44,7 +44,6 @@ import java.awt.Dimension;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -78,7 +77,6 @@ import org.homio.addon.camera.ui.UIVideoActionGetter;
 import org.homio.addon.camera.ui.UIVideoActionMetadata;
 import org.homio.addon.camera.ui.VideoActionType;
 import org.homio.api.EntityContext;
-import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
@@ -179,6 +177,10 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
             }
         }
         return cameraBrands;
+    }
+
+    public boolean isSupportPtz() {
+        return onvifDeviceState.getPtzDevices().supportPTZ();
     }
 
     @Override
@@ -696,7 +698,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
         @Override
         public boolean match(OnvifCameraService service, Method method, String endpoint) {
-            return service.onvifDeviceState.getPtzDevices().supportPTZ();
+            return service.isSupportPtz();
         }
     }
 

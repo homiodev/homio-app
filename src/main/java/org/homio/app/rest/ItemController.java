@@ -71,6 +71,7 @@ import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.UIFilterOptions;
 import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
+import org.homio.api.ui.field.action.HasDynamicUIFields;
 import org.homio.api.ui.field.action.UIActionButton;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.UIContextMenuUploadAction;
@@ -90,6 +91,7 @@ import org.homio.app.model.UIHideEntityIfFieldNotNull;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.repository.AbstractRepository;
+import org.homio.app.rest.UIFieldBuilderImpl.FieldBuilderImpl;
 import org.homio.app.setting.system.SystemClearCacheButtonSetting;
 import org.homio.app.setting.system.SystemShowEntityCreateTimeSetting;
 import org.homio.app.setting.system.SystemShowEntityUpdateTimeSetting;
@@ -246,9 +248,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 throw new IllegalArgumentException("Unable to find class for entity: " + entityID);
             }
             classEntity = CommonUtils.newInstance(aClass);
-            if (classEntity == null) {
-                throw new IllegalArgumentException("Unable find class: " + entityID);
-            }
         }
         Class<?> entityClass = classEntity.getClass();
         if (isNotEmpty(optionsRequest.getFieldFetchType())) {
@@ -521,16 +520,28 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         return items;
     }
 
-    @PostMapping("/actions")
-    public Map<String, Collection<UIInputEntity>> getActions(@RequestBody List<String> entityIDs) {
-        Map<String, Collection<UIInputEntity>> contextActions = new HashMap<>();
+    /**
+     * Fetch dynamic data for every entity on UI. Calls every on every refresh page
+     *
+     * @param entityIDs - list of entities on ui
+     * @return - Map(entityID - data)
+     */
+    @PostMapping("/dynamicData")
+    public Map<String, EntityDynamicData> getActions(@RequestBody List<String> entityIDs) {
+        Map<String, EntityDynamicData> contextActions = new HashMap<>();
         for (String entityID : entityIDs) {
             BaseEntity entity = entityContext.getEntityRequire(entityID);
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             if (entity instanceof HasDynamicContextMenuActions) {
                 ((HasDynamicContextMenuActions) entity).assembleActions(uiInputBuilder);
             }
-            contextActions.put(entity.getEntityID(), uiInputBuilder.buildAll());
+            EntityDynamicData data = new EntityDynamicData(uiInputBuilder.buildAll());
+            if (entity instanceof HasDynamicUIFields df) {
+                UIFieldBuilderImpl builder = new UIFieldBuilderImpl();
+                df.assembleUIFields(builder);
+                data.setDynamicFields(builder.getFields().values().stream().map(FieldBuilderImpl::build).toList());
+            }
+            contextActions.put(entity.getEntityID(), data);
         }
         return contextActions;
     }
@@ -935,5 +946,14 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
         private String entityID;
         private JSONObject metadata;
+    }
+
+    @Getter
+    @Setter
+    @RequiredArgsConstructor
+    public static class EntityDynamicData {
+
+        private @NotNull final Collection<UIInputEntity> actions;
+        private @Nullable List<EntityUIMetaData> dynamicFields;
     }
 }

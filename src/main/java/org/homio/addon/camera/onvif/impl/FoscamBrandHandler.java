@@ -1,8 +1,18 @@
 package org.homio.addon.camera.onvif.impl;
 
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LED;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_MOTION_ALARM;
+import static org.homio.addon.camera.VideoConstants.Events;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
-import lombok.extern.log4j.Log4j2;
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import lombok.NoArgsConstructor;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
@@ -17,15 +27,10 @@ import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
-import static org.homio.addon.camera.VideoConstants.*;
-
 /**
  * responsible for handling commands, which are sent to one of the channels.
  */
+@NoArgsConstructor
 @CameraBrandHandler("Foscam")
 public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements BrandCameraHasAudioAlarm, BrandCameraHasMotionAlarm {
 
@@ -125,7 +130,7 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
     @UIVideoAction(name = ENDPOINT_AUTO_LED, order = 60, icon = "fas fa-lightbulb")
     public void autoLED(boolean on) {
         if (on) {
-            setAttribute(ENDPOINT_ENABLE_LED, null/*UnDefType.UNDEF*/);
+            setAttribute(ENDPOINT_ENABLE_LED, OnOffType.OFF/*UnDefType.UNDEF*/);
             service.sendHttpGET(CG + "setInfraLedConfig&mode=0&usr=" + username + "&pwd=" + password);
         } else {
             service.sendHttpGET(CG + "setInfraLedConfig&mode=1&usr=" + username + "&pwd=" + password);

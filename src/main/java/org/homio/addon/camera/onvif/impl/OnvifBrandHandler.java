@@ -1,13 +1,13 @@
 package org.homio.addon.camera.onvif.impl;
 
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.ReferenceCountUtil;
+import lombok.NoArgsConstructor;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.service.OnvifCameraService;
 
 /**
  * responsible for handling commands for generic onvif thing types.
  */
+@NoArgsConstructor
 @CameraBrandHandler("Onvif")
 public class OnvifBrandHandler extends BaseOnvifCameraBrandHandler {
 

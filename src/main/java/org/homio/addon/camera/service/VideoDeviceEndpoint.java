@@ -2,6 +2,7 @@ package org.homio.addon.camera.service;
 
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import lombok.Setter;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.api.EntityContext;
@@ -20,6 +21,7 @@ public class VideoDeviceEndpoint extends BaseDeviceEndpoint<BaseVideoEntity<?, ?
     private @Nullable
     @Setter Consumer<State> updateHandler;
     private final boolean dbValueStorable;
+    private @Setter @NotNull Function<State, State> valueConverter = state -> state;
 
     public VideoDeviceEndpoint(
         @NotNull BaseVideoEntity<?, ?> device,
@@ -121,5 +123,9 @@ public class VideoDeviceEndpoint extends BaseDeviceEndpoint<BaseVideoEntity<?, ?
         updateHandler.accept(getValue());
         getDevice().getService().updateLastSeen();
         return null;
+    }
+
+    public void setValue(@Nullable State value, boolean externalUpdate) {
+        super.setValue(valueConverter.apply(value), externalUpdate);
     }
 }

@@ -7,7 +7,7 @@ import static org.homio.addon.camera.VideoConstants.CHANNEL_EXTERNAL_LIGHT;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
-import lombok.extern.log4j.Log4j2;
+import lombok.NoArgsConstructor;
 import org.homio.addon.camera.VideoConstants.Events;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.service.OnvifCameraService;
@@ -18,6 +18,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * responsible for handling commands, which are sent to one of the channels.
  */
+@NoArgsConstructor
 @CameraBrandHandler("DoorBird")
 public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
 

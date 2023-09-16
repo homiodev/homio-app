@@ -15,7 +15,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.ReferenceCountUtil;
-import lombok.extern.log4j.Log4j2;
+import lombok.NoArgsConstructor;
 import org.homio.addon.camera.VideoConstants.Events;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
@@ -34,6 +34,7 @@ import org.springframework.http.MediaType;
 /**
  * responsible for handling commands, which are sent to one of the channels.
  */
+@NoArgsConstructor
 @CameraBrandHandler("Hikvision")
 public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implements BrandCameraHasMotionAlarm {
 

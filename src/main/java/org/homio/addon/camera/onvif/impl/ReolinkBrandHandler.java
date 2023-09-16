@@ -4,7 +4,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_3DNR;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ANTI_FLICKER;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LED;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_BANDWIDTH;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_BGCOLOR;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_BLACK_LIGHT;
@@ -48,7 +48,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.netty.channel.ChannelPipeline;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -56,6 +55,7 @@ import java.net.http.HttpRequest;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -95,6 +95,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
+import org.homio.api.model.UpdatableValue;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.JsonType;
@@ -102,10 +103,12 @@ import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
 import org.homio.api.ui.UI.Color;
+import org.homio.api.ui.field.action.HasDynamicUIFields;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.JsonUtils;
 import org.homio.hquery.Curl;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpMethod;
@@ -116,22 +119,33 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.client.RestTemplate;
 
+@NoArgsConstructor
 @CameraBrandHandler("Reolink")
 public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     BrandCameraHasMotionAlarm, VideoPlaybackStorage {
 
+    private static final JsonNode channelParam = OBJECT_MAPPER.createObjectNode().put("channel", 0);
+
+    // TODO: for remove
+    private static final RestTemplate restTemplate = new RestTemplate();
+
     private static final Map<String, EndpointConfiguration> configurations = new HashMap<>();
 
-    private final RestTemplate restTemplate = new RestTemplate();
-    private final JsonNode channelParam;
     private long tokenExpiration;
     private String token;
-    @SuppressWarnings({"FieldCanBeLocal", "unused"})
-    private String requestUrl;
+    // just detect if need update data
+    private final UpdatableValue<String> cameraApiData = UpdatableValue.deferred("data", String.class);
+    private final UpdatableValue<Boolean> fetchCameraPerformance = UpdatableValue.wrap(true, "reolink_fp");
 
     public ReolinkBrandHandler(OnvifCameraService service) {
         super(service);
-        this.channelParam = OBJECT_MAPPER.valueToTree(new ChannelParam());
+        fetchCameraPerformance.update(service.getEntity().getJsonData("reolink_fp", true));
+    }
+
+    @Override
+    public void assembleUIFields(@NotNull HasDynamicUIFields.UIFieldBuilder uiFieldBuilder) {
+        uiFieldBuilder.addSwitch(500, fetchCameraPerformance)
+                      .inlineEdit(true).group("REOLINK", 100, "#2A86BF");
     }
 
     @Override
@@ -292,8 +306,8 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         return playbackFiles;
     }
 
-    @UIVideoEndpointAction(ENDPOINT_ENABLE_LED)
-    public void setEnableLed(boolean on) {
+    @UIVideoEndpointAction(ENDPOINT_AUTO_LED)
+    public void setAutoLed(boolean on) {
         getIRLedHandler().accept(on);
     }
 
@@ -306,12 +320,12 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @Override
     public Supplier<Boolean> getIrLedValueHandler() {
-        return () -> Optional.ofNullable(getAttribute(ENDPOINT_ENABLE_LED)).map(State::boolValue).orElse(false);
+        return () -> Optional.ofNullable(getAttribute(ENDPOINT_AUTO_LED)).map(State::boolValue).orElse(false);
     }
 
-    @UIVideoActionGetter(ENDPOINT_ENABLE_LED)
-    public State isEnableLed() {
-        return getAttribute(ENDPOINT_ENABLE_LED);
+    @UIVideoActionGetter(ENDPOINT_AUTO_LED)
+    public State isAutoLed() {
+        return getAttribute(ENDPOINT_AUTO_LED);
     }
 
     @Override
@@ -329,16 +343,28 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
             return uri;
         });
 
-        service.addLowRequest(() ->
-            sendCameraRequest("GetPerformance", OBJECT_MAPPER.createObjectNode(), root -> {
-                JsonNode performance = root.value.path("Performance");
-                if (performance.has("cpuUsed")) {
-                    service.getEndpoints().get(ENDPOINT_CPU_LOADING).setValue(new DecimalType(performance.get("cpuUsed").asInt()), true);
-                }
-                if (performance.has("codecRate")) {
-                    service.getEndpoints().get(ENDPOINT_BANDWIDTH).setValue(new DecimalType(performance.get("codecRate").asInt()), true);
-                }
-            }));
+        service.addLowRequest(() -> {
+            // fire fetch all info from camera every minute
+            cameraApiData.getFreshValue(Duration.ofSeconds(60), () -> {
+                fetchDataFromCamera();
+                entityContext.ui().updateItem(getEntity());
+                return "";
+            });
+            // fetch camera performance every 6 seconds
+            if (fetchCameraPerformance.getValue()) {
+                sendCameraRequest("GetPerformance", OBJECT_MAPPER.createObjectNode(), root -> {
+                    JsonNode performance = root.value.path("Performance");
+                    if (performance.has("cpuUsed")) {
+                        service.getEndpoints().get(ENDPOINT_CPU_LOADING)
+                               .setValue(new DecimalType(performance.get("cpuUsed").asInt()), true);
+                    }
+                    if (performance.has("codecRate")) {
+                        service.getEndpoints().get(ENDPOINT_BANDWIDTH)
+                               .setValue(new DecimalType(performance.get("codecRate").asInt()), true);
+                    }
+                });
+            }
+        });
     }
 
     public void fetchDataFromCamera() {
@@ -362,9 +388,10 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
                 String group = cmd.substring("Get".length());
                 JsonNode targetNode = objectNode.value.get(group);
                 setAttribute(group, new JsonType(targetNode));
-                /*if (objectNode.range != null && objectNode.range.has(group)) {
+                if (objectNode.range != null && objectNode.range.has(group)) {
                     setAttribute(group + "Range", new JsonType(objectNode.range.path(group)));
                 }
+                /*
                 if (objectNode.initial != null && objectNode.initial.has(group)) {
                     setAttribute(group + "Initial", new JsonType(objectNode.range.path(group)));
                 }*/
@@ -459,15 +486,16 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     private void handleGetHddInfoCommand(Root objectNode) {
-        JsonNode hddInfo = objectNode.value.withArray("HddInfo").path(0);
-        setAttribute(ENDPOINT_HDD, new JsonType(hddInfo));
         service.addEndpoint(ENDPOINT_HDD, key -> {
             VideoDeviceEndpoint endpoint = new VideoDeviceEndpoint(getEntity(), getEntityContext(), key, DeviceEndpoint.EndpointType.string, false);
-            String text = hddInfo.get("size").asText() + "/" + hddInfo.get("capacity").asText();
-            endpoint.setValue(new StringType(text), true);
+            endpoint.setValueConverter(state -> {
+                JsonNode hddInfo = ((JsonType) state).getJsonNode();
+                return new StringType(hddInfo.get("size").asText() + "/" + hddInfo.get("capacity").asText());
+            });
             return endpoint;
         }, state -> {
         });
+        setAttribute(ENDPOINT_HDD, new JsonType(objectNode.value.withArray("HddInfo").path(0)));
     }
 
     private void handleGetLocalLinkCommand(Root objectNode) {
@@ -484,9 +512,9 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     private void handleGetIrLightCommand(Root objectNode) {
-        setAttribute(ENDPOINT_ENABLE_LED, OnOffType.of("auto".equals(objectNode.value.get("IrLights").get("state").asText())));
-        service.addEndpointSwitch(ENDPOINT_ENABLE_LED, state -> setEnableLed(state.boolValue()), true)
-               .setValue(isEnableLed(), true);
+        setAttribute(ENDPOINT_AUTO_LED, OnOffType.of("auto".equals(objectNode.value.get("IrLights").get("state").asText())));
+        service.addEndpointSwitch(ENDPOINT_AUTO_LED, state -> setAutoLed(state.boolValue()), true)
+               .setValue(isAutoLed(), true);
     }
 
     @Override
@@ -673,12 +701,6 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     @Getter
-    public static class ChannelParam {
-
-        private final int channel = 0;
-    }
-
-    @Getter
     @RequiredArgsConstructor
     public static class ReolinkCmd {
 
@@ -756,7 +778,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
             Consumer<State> setter = state -> handler.setSetting(c.endpointId, state);
             Supplier<State> getter = () -> {
                 JsonType group = (JsonType) handler.getAttribute(c.group);
-                return group == null ? null : OnOffType.of(group.getJsonNode().path(c.key).asInt() == 1);
+                return group == null ? null : OnOffType.of(JsonUtils.getJsonPath(group.getJsonNode(), c.key).asInt() == 1);
             };
             handler.service.addEndpointSwitch(c.endpointId, setter, c.writable).setValue(getter.get(), true);
         }),
@@ -788,11 +810,6 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     private interface ConfigTypeHandler {
 
         void handle(JsonNode rangeNode, JsonNode initialNode, EndpointConfiguration c, ReolinkBrandHandler handler);
-    }
-
-    @Override
-    public void handleSetURL(ChannelPipeline pipeline, String httpRequestURL) {
-        requestUrl = httpRequestURL;
     }
 
     @Getter

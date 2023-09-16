@@ -15,7 +15,7 @@ import io.netty.util.ReferenceCountUtil;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import lombok.extern.log4j.Log4j2;
+import lombok.NoArgsConstructor;
 import org.homio.addon.camera.VideoConstants.Events;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
@@ -32,6 +32,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * responsible for handling commands, which are sent to one of the channels.
  */
+@NoArgsConstructor
 @CameraBrandHandler("Instar")
 public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements BrandCameraHasAudioAlarm {
 

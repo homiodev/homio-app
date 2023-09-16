@@ -43,7 +43,6 @@ import org.homio.api.entity.validation.MaxItems;
 import org.homio.api.entity.validation.UIFieldValidationSize;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
-import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
@@ -52,7 +51,6 @@ import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldCodeEditor;
 import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldExpand;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIconPicker;
 import org.homio.api.ui.field.UIFieldIgnore;
@@ -62,7 +60,6 @@ import org.homio.api.ui.field.UIFieldKeyValue;
 import org.homio.api.ui.field.UIFieldLayout;
 import org.homio.api.ui.field.UIFieldLinkToEntity;
 import org.homio.api.ui.field.UIFieldNumber;
-import org.homio.api.ui.field.UIFieldOrder;
 import org.homio.api.ui.field.UIFieldPort;
 import org.homio.api.ui.field.UIFieldPosition;
 import org.homio.api.ui.field.UIFieldProgress;
@@ -184,8 +181,9 @@ public class UIFieldUtils {
             return Collections.emptyList();
         }
         Object instance = CommonUtils.newInstance(entityClassByType);
-        if (instance == null) {
-            throw new NotFoundException("Unable to find empty constructor for class: " + entityClassByType.getName());
+        if (instance instanceof BaseEntity be) {
+            be.setEntityID("FETCH_UI_FIELD_SPECIFICATIONS");
+            be.setEntityContext(entityContext);
         }
         List<EntityUIMetaData> result = fillEntityUIMetadataList(instance, entityUIMetaDataSet, entityContext, false, null);
         if (instance instanceof ConfigureFieldsService configurator) {
@@ -405,9 +403,7 @@ public class UIFieldUtils {
             if (fieldGroup.order() > 0) {
                 jsonTypeMetadata.put("groupOrder", fieldGroup.order());
             }
-            if (StringUtils.isNotEmpty(fieldGroup.borderColor())) {
-                jsonTypeMetadata.put("borderColor", fieldGroup.borderColor());
-            }
+            putIfNonEmpty(jsonTypeMetadata, "borderColor", fieldGroup.borderColor());
         }
 
         putIfTrue(jsonTypeMetadata, "reloadOnUpdate", fieldContext.isAnnotationPresent(UIEditReloadWidget.class));
@@ -532,9 +528,6 @@ public class UIFieldUtils {
             putIfNonEmpty(jsonTypeMetadata, "iec_condition", fieldInlineEditConfirm.showCondition());
         }
 
-        var fieldExpand = fieldContext.getDeclaredAnnotation(UIFieldExpand.class);
-        putIfTrue(jsonTypeMetadata, "expand", fieldExpand != null && type.isAssignableFrom(List.class));
-
         var fieldTab = fieldContext.getDeclaredAnnotation(UIFieldTab.class);
         if (fieldTab != null) {
             jsonTypeMetadata.put("tab", fieldTab.value());
@@ -557,9 +550,7 @@ public class UIFieldUtils {
                 selectValueOnEmpty.putPOJO("icon", new Icon(selectConfig.selectOnEmptyIcon(), selectConfig.selectOnEmptyColor()));
                 select.set("selectValueOnEmpty", selectValueOnEmpty);
             }
-            if (StringUtils.isNotEmpty(selectConfig.selectNoValue())) {
-                select.put("optionsNotFound", selectConfig.selectNoValue());
-            }
+            putIfNonEmpty(select, "optionsNotFound", selectConfig.selectNoValue());
         }
 
         if (String.class.getSimpleName().equals(entityUIMetaData.getType())) {
@@ -692,13 +683,11 @@ public class UIFieldUtils {
 
         entityUIMetaData.setShowInContextMenu(nullIfFalse(field.showInContextMenu() && entityUIMetaData.getType().equals(Boolean.class.getSimpleName())));
 
-        if (jsonTypeMetadata.size() != 0) {
+        if (!jsonTypeMetadata.isEmpty()) {
             entityUIMetaData.setTypeMetaData(jsonTypeMetadata.toString());
         }
         entityUIMetaData.setOrder(field.order());
-        if (fieldContext.isAnnotationPresent(UIFieldOrder.class)) {
-            entityUIMetaData.setOrder(fieldContext.getDeclaredAnnotation(UIFieldOrder.class).value());
-        }
+
         entityUIMetaData.setRequired(nullIfFalse(field.required()));
 
         if (BaseEntity.class.isAssignableFrom(type) && type.getDeclaredAnnotation(UISidebarMenu.class) != null) {
@@ -790,7 +779,7 @@ public class UIFieldUtils {
         }
     }
 
-    private static void putIfNonEmpty(ObjectNode metadata, String key, String value) {
+    public static void putIfNonEmpty(ObjectNode metadata, String key, String value) {
         if (StringUtils.isNotEmpty(value)) {
             metadata.put(key, value);
         }
@@ -830,7 +819,7 @@ public class UIFieldUtils {
         }
     }
 
-    private static Boolean nullIfFalse(boolean value) {
+    public static Boolean nullIfFalse(boolean value) {
         return value ? true : null;
     }
 

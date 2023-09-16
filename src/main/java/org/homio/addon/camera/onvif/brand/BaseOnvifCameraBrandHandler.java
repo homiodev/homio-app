@@ -17,7 +17,9 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.ReferenceCountUtil;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
@@ -26,22 +28,29 @@ import org.homio.addon.camera.handler.BaseBrandCameraHandler;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.ui.CameraActionBuilder;
 import org.homio.api.EntityContext;
+import org.homio.api.model.UpdatableValue;
 import org.homio.api.state.State;
+import org.homio.api.ui.field.action.HasDynamicUIFields;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.http.MediaType;
 
-public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler implements VideoActionsContext, BaseBrandCameraHandler {
+@NoArgsConstructor
+public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler
+    implements
+    VideoActionsContext,
+    BaseBrandCameraHandler,
+    HasDynamicUIFields {
 
-    protected Logger log = LogManager.getLogger();
+    protected final Logger log = LogManager.getLogger();
 
-    protected final int nvrChannel;
-    protected final String username;
-    protected final String password;
-    protected final String ip;
-    protected final String entityID;
-    protected final @Getter OnvifCameraService service;
+    protected int nvrChannel;
+    protected String username;
+    protected String password;
+    protected String ip;
+    protected String entityID;
+    protected @Getter OnvifCameraService service;
 
     public BaseOnvifCameraBrandHandler(OnvifCameraService service) {
         this.service = service;
@@ -97,6 +106,11 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler i
     }
 
     public abstract void onCameraConnected();
+
+    @Override
+    public void assembleUIFields(@NotNull UIFieldBuilder uiFieldBuilder) {
+
+    }
 
     protected void setAttribute(@NotNull String key, @NotNull State state) {
         service.setAttribute(key, state);

@@ -21,6 +21,7 @@ import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
+import org.homio.api.model.UpdatableValue;
 import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
@@ -28,10 +29,12 @@ import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldPort;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
+import org.homio.api.ui.field.action.HasDynamicUIFields;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIEntityItemBuilder;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.color.UIFieldColorStatusMatch;
+import org.homio.api.ui.field.condition.UIFieldDisableEditOnCondition;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.api.util.SecureString;
@@ -46,7 +49,8 @@ import org.onvif.ver10.device.wsdl.GetDeviceInformationResponse;
 @Getter
 @Entity
 public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifCameraService>
-        implements HasDynamicContextMenuActions, VideoPlaybackStorage, HasEntityLog {
+    implements HasDynamicContextMenuActions, VideoPlaybackStorage, HasEntityLog,
+    HasDynamicUIFields {
 
     @UIField(order = 20)
     @UIFieldDynamicSelection(SelectCameraBrand.class)
@@ -185,6 +189,11 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         return super.getError();
     }
 
+    @Override
+    public void assembleUIFields(@NotNull UIFieldBuilder uiFieldBuilder) {
+        getService().getBrandHandler().assembleUIFields(uiFieldBuilder);
+    }
+
     @JsonIgnore
     private boolean isRequireAuth() {
         return getIeeeAddress() == null;
@@ -192,8 +201,13 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
 
     @UIField(order = 155, hideInView = true)
     @UIFieldGroup("ONVIF")
+    @UIFieldDisableEditOnCondition("return !context.get('supportPtz')")
     public boolean isPtzContinuous() {
         return getJsonData("ptzContinuous", false);
+    }
+
+    public boolean isSupportPtz() {
+        return optService().map(OnvifCameraService::isSupportPtz).orElse(false);
     }
 
     public void setPtzContinuous(boolean value) {

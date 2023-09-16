@@ -24,7 +24,7 @@ import io.netty.util.ReferenceCountUtil;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import lombok.extern.log4j.Log4j2;
+import lombok.NoArgsConstructor;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
@@ -40,6 +40,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * responsible for handling commands, which are sent to one of the channels.
  */
+@NoArgsConstructor
 @CameraBrandHandler("Dahua")
 public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements BrandCameraHasAudioAlarm, BrandCameraHasMotionAlarm {
 
@@ -167,7 +168,7 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
     @UIVideoAction(name = ENDPOINT_AUTO_LED, order = 60, icon = "fas fa-lightbulb")
     public void autoLED(boolean on) {
         if (on) {
-            setAttribute(ENDPOINT_ENABLE_LED, null/*UnDefType.UNDEF*/);
+            setAttribute(ENDPOINT_ENABLE_LED, OnOffType.OFF/*UnDefType.UNDEF*/);
             service.sendHttpGET(CM + "setConfig&Lighting[0][0].Mode=Auto");
         }
     }
