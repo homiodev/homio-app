@@ -70,6 +70,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -164,17 +165,31 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     static {
+        // Exposure
         addConfig(new EndpointConfiguration(ENDPOINT_EXPOSURE, ConfigType.select, "Isp", "exposure"));
+
+        // BlackLight
+        addConfig(new EndpointConfiguration(ENDPOINT_BLACK_LIGHT, ConfigType.select, "Isp", "backLight")
+            .setUpdateListener((state, handler) -> {
+                String value = state.toString();
+                boolean changed = handler.setEndpointVisible(ENDPOINT_BLC, "BackLightControl".equals(value));
+                if (handler.setEndpointVisible(ENDPOINT_DRC, "DynamicRangeControl".equals(value))) {
+                    changed = true;
+                }
+                if (changed) {
+                    handler.getEntityContext().ui().updateItem(handler.getEntity());
+                }
+            }));
+        addConfig(new EndpointConfiguration(ENDPOINT_BLC, ConfigType.number, "Isp", "blc"));
+        addConfig(new EndpointConfiguration(ENDPOINT_DRC, ConfigType.number, "Isp", "drc"));
+
         addConfig(new EndpointConfiguration(ENDPOINT_DAY_NIGHT, ConfigType.select, "Isp", "dayNight"));
-        addConfig(new EndpointConfiguration(ENDPOINT_BLACK_LIGHT, ConfigType.select, "Isp", "backLight"));
         addConfig(new EndpointConfiguration(ENDPOINT_WHITE_BALANCE, ConfigType.select, "Isp", "whiteBalance"));
-        addConfig(new EndpointConfiguration(ENDPOINT_ANTI_FLICKER, ConfigType.select, "Isp", "backLight"));
+        addConfig(new EndpointConfiguration(ENDPOINT_ANTI_FLICKER, ConfigType.select, "Isp", "antiFlicker"));
         addConfig(new EndpointConfiguration(ENDPOINT_IMAGE_ROTATE, ConfigType.bool, "Isp", "rotation"));
         addConfig(new EndpointConfiguration(ENDPOINT_3DNR, ConfigType.bool, "Isp", "nr3d"));
         addConfig(new EndpointConfiguration(ENDPOINT_IMAGE_MIRROR, ConfigType.bool, "Isp", "mirroring"));
-        addConfig(new EndpointConfiguration(ENDPOINT_DRC, ConfigType.number, "Isp", "drc"));
         addConfig(new EndpointConfiguration(ENDPOINT_BLUE_GAIN, ConfigType.number, "Isp", "blueGain"));
-        addConfig(new EndpointConfiguration(ENDPOINT_BLC, ConfigType.number, "Isp", "blc"));
         addConfig(new EndpointConfiguration(ENDPOINT_RED_GAIN, ConfigType.number, "Isp", "redGain"));
 
         addConfig(new EndpointConfiguration(ENDPOINT_BGCOLOR, ConfigType.bool, "Osd", "bgcolor"));
@@ -406,9 +421,21 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
                     JsonNode initialNode = objectNode.initial.path(group);
                     configurations.values().stream().filter(c -> c.group.equals(group)).forEach(config -> {
                         if (JsonUtils.hasJsonPath(targetNode, config.key)) {
-                            config.type.handler.handle(rangeNode, initialNode, config, this);
+                            VideoDeviceEndpoint endpoint = config.type.handler.handle(rangeNode, initialNode, config, this);
+                            if (config.updateListener != null) {
+                                endpoint.addChangeListener("reflect", state -> config.updateListener.accept(state, this));
+                            }
                         }
                     });
+                }
+            }
+            // Fire update listeners for all endpoints to be able to show/hide another endpoints
+            for (EndpointConfiguration configuration : configurations.values()) {
+                if (configuration.updateListener != null) {
+                    VideoDeviceEndpoint endpoint = getEndpoint(configuration.endpointId).orElse(null);
+                    if (endpoint != null) {
+                        configuration.updateListener.accept(endpoint.getValue(), this);
+                    }
                 }
             }
         }
@@ -773,6 +800,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
                 float defaultValue = initPath.floatValue();
                 endpoint.setDefaultValue(defaultValue);
             }
+            return endpoint;
         }),
         bool((rangeNode, initialNode, c, handler) -> {
             Consumer<State> setter = state -> handler.setSetting(c.endpointId, state);
@@ -780,7 +808,9 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
                 JsonType group = (JsonType) handler.getAttribute(c.group);
                 return group == null ? null : OnOffType.of(JsonUtils.getJsonPath(group.getJsonNode(), c.key).asInt() == 1);
             };
-            handler.service.addEndpointSwitch(c.endpointId, setter, c.writable).setValue(getter.get(), true);
+            VideoDeviceEndpoint endpoint = handler.service.addEndpointSwitch(c.endpointId, setter, c.writable);
+            endpoint.setValue(getter.get(), true);
+            return endpoint;
         }),
         select((rangeNode, initialNode, c, handler) -> {
             Set<String> range = new LinkedHashSet<>();
@@ -803,13 +833,14 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
                 }
                 endpoint.setDefaultValue(defaultValue);
             }
+            return endpoint;
         });
         private final ConfigTypeHandler handler;
     }
 
     private interface ConfigTypeHandler {
 
-        void handle(JsonNode rangeNode, JsonNode initialNode, EndpointConfiguration c, ReolinkBrandHandler handler);
+        VideoDeviceEndpoint handle(JsonNode rangeNode, JsonNode initialNode, EndpointConfiguration c, ReolinkBrandHandler handler);
     }
 
     @Getter
@@ -867,6 +898,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         private final String key;
         private @Setter boolean writable = true;
         private @Setter Function<JsonNode, JsonNode> rangeConverter;
+        private @Setter BiConsumer<State, BaseOnvifCameraBrandHandler> updateListener;
 
         @Override
         public boolean equals(Object o) {

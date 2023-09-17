@@ -91,9 +91,16 @@
     {
       "name": "blc",
       "stateless": true,
-      "order": 230,
+      "order": 221,
       "icon": "fa-star-half-stroke",
       "iconColor": "#56AB26"
+    },
+    {
+      "name": "drc",
+      "stateless": true,
+      "order": 222,
+      "icon": "fa-plug-circle-bolt",
+      "iconColor": "#A69A2D"
     },
     {
       "name": "blue_gain",
@@ -101,13 +108,6 @@
       "order": 240,
       "icon": "fa-dice-six",
       "iconColor": "#27608C"
-    },
-    {
-      "name": "drc",
-      "stateless": true,
-      "order": 250,
-      "icon": "fa-plug-circle-bolt",
-      "iconColor": "#A69A2D"
     },
     {
       "name": "exposure",

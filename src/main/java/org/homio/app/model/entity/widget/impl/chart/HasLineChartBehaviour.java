@@ -79,7 +79,7 @@ public interface HasLineChartBehaviour extends
     @UIFieldSlider(min = 0, max = 4, step = 0.2)
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default double getPointRadius() {
-        return getJsonData("prad", 0D);
+        return getJsonData("prad", 0.0);
     }
 
     default void setPointRadius(double value) {

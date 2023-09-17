@@ -282,10 +282,12 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     public static class StreamEndpoint extends BaseDeviceEndpoint<MediaMTXEntity> {
 
         private final @Getter String description;
+        private final JsonNode node;
 
         public StreamEndpoint(JsonNode node, MediaMTXEntity entity) {
             super(createIcon(node.get("source").get("type").asText()), "MTX",
-                entity.getEntityContext(), entity, node.get("name").asText(), false, EndpointType.string);
+                entity.getEntityContext(), entity, node.get("name").asText(), false, EndpointType.trigger);
+            this.node = node;
 
             boolean ready = node.get("ready").asBoolean();
             if (!ready) {
@@ -293,6 +295,14 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
             }
             setValue(new DecimalType(node.get("readers").size()), false);
             this.description = node.get("conf").get("source").asText();
+        }
+
+        @Override
+        public UIInputBuilder createTriggerActionBuilder(@NotNull UIInputBuilder uiInputBuilder) {
+            uiInputBuilder.addButton(getEntityID(), null, (entityContext, params) ->
+                              ActionResponseModel.showJson("TITLE.MEDIA_MTX_NODE_INFO", node))
+                          .setText(getValue().toString());
+            return uiInputBuilder;
         }
 
         private static Icon createIcon(String sourceType) {

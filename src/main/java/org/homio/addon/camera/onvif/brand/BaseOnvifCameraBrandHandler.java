@@ -17,7 +17,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.ReferenceCountUtil;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
+import java.util.Optional;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.apache.logging.log4j.LogManager;
@@ -26,9 +26,9 @@ import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoActionsContext;
 import org.homio.addon.camera.handler.BaseBrandCameraHandler;
 import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.addon.camera.service.VideoDeviceEndpoint;
 import org.homio.addon.camera.ui.CameraActionBuilder;
 import org.homio.api.EntityContext;
-import org.homio.api.model.UpdatableValue;
 import org.homio.api.state.State;
 import org.homio.api.ui.field.action.HasDynamicUIFields;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
@@ -169,5 +169,23 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler
     @Override
     public ChannelHandler asBootstrapHandler() {
         return this;
+    }
+
+    public Optional<VideoDeviceEndpoint> getEndpoint(String endpointID) {
+        return Optional.ofNullable(service.getEndpoints().get(endpointID));
+    }
+
+    public VideoDeviceEndpoint getEndpointRequire(String endpointID) {
+        return Optional.ofNullable(service.getEndpoints().get(endpointID))
+                       .orElseThrow(() -> new IllegalStateException("Unable to find camera endpoint: " + endpointID));
+    }
+
+    public boolean setEndpointVisible(String endpointID, boolean visible) {
+        VideoDeviceEndpoint endpoint = getEndpointRequire(endpointID);
+        if (endpoint.isVisible() != visible) {
+            endpoint.setVisible(visible);
+            return true;
+        }
+        return false;
     }
 }

@@ -43,12 +43,9 @@ import org.homio.api.model.device.ConfigDeviceDefinition;
 import org.homio.api.model.device.ConfigDeviceDefinitionService;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.service.EntityService;
-import org.homio.api.state.State;
 import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.UIActionHandler;
-import org.homio.api.ui.field.MonacoLanguage;
 import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldCodeEditor;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldType;
@@ -215,12 +212,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         return ActionResponseModel.fired();
     }
 
-    @UIField(order = 200, hideInEdit = true)
-    @UIFieldCodeEditor(editorType = MonacoLanguage.Json, autoFormat = true)
-    public Map<String, State> getAttributes() {
-        return optService().map(BaseVideoService::getAttributes).orElse(null);
-    }
-
     public UIInputBuilder assembleActions() {
         return optService().map(BaseVideoService::assembleActions).orElse(null);
     }
@@ -307,6 +298,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     @JsonIgnore
     public List<OptionModel> getVideoSources() {
         List<OptionModel> videoSources = new ArrayList<>();
+        boolean mediaMTXReady = getEntityContext().media().getMediaMTXInfo(getEntityID()).isReady();
         assembleStream("hls", "Hls streams(.m3u8)", m3u8 -> {
             m3u8.addChild(of("video.m3u8", "HLS [default]"));
             if (!getHlsLowResolution().isEmpty()) {
@@ -314,6 +306,9 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
             }
             if (!getHlsHighResolution().isEmpty()) {
                 m3u8.addChild(of("video_high.m3u8", "HLS [%s]".formatted(getHlsHighResolution())));
+            }
+            if (mediaMTXReady) {
+                m3u8.addChild(OptionModel.of("mediamtx/index.m3u8", "MediaMTX HLS"));
             }
             appendAdditionHLSStreams(m3u8);
         }, videoSources);
@@ -327,6 +322,9 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
             appendAdditionMjpegDashStreams(dash);
         }, videoSources);
         assembleStream("webrtc", "WebRTC", webrtc -> {
+            if (mediaMTXReady) {
+                webrtc.addChild(OptionModel.of("mediamtx/video.webrtc", "MediaMTX WebRTC"));
+            }
             appendAdditionWebRTCStreams(webrtc);
         }, videoSources);
 
@@ -438,6 +436,11 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
             getTitle(),
             getIeeeAddress(),
             defaultIfEmpty(getPlace(), "W.ERROR.PLACE_NOT_SET"));
+    }
+
+    @UIContextMenuAction(value = "SET_CLOUD_PRIMARY", icon = "fas fa-star", iconColor = Color.PRIMARY_COLOR)
+    public ActionResponseModel setPrimary(EntityContext entityContext) {
+        return ActionResponseModel.showJson("Info", getService().getAttributes());
     }
 
     @Override

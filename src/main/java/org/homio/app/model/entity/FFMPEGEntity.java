@@ -108,10 +108,9 @@ public class FFMPEGEntity extends MediaEntity implements
     }
 
     @Override
-    @JsonIgnore
     @UIFieldIgnore
     public @NotNull Status getStatus() {
-        return super.getStatus();
+        return Status.ONLINE;
     }
 
     @Override

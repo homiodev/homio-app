@@ -1,5 +1,6 @@
 package org.homio.addon.camera.service;
 
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.addon.camera.VideoConstants.CHANNEL_GOTO_PRESET;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_PAN;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_SCENE_CHANGE_ALARM;
@@ -77,6 +78,7 @@ import org.homio.addon.camera.ui.UIVideoActionGetter;
 import org.homio.addon.camera.ui.UIVideoActionMetadata;
 import org.homio.addon.camera.ui.VideoActionType;
 import org.homio.api.EntityContext;
+import org.homio.api.EntityContextMedia.MediaMTXSource;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
@@ -616,6 +618,13 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         }
         // we need reinitialize ffmpeg because rtsp urls has been changed
         recreateFFmpeg();
+
+        // register rtsp url in MediaMTX
+        String rtspUri = urls.getRtspUri();
+        if (rtspUri.startsWith("rtsp://") && !rtspUri.contains("@") && isNotEmpty(entity.getUser())) {
+            rtspUri = "rtsp://" + entity.getUser() + ":" + entity.getPassword().asString() + "@" + rtspUri.substring("rtsp://".length());
+        }
+        entityContext.media().registerMediaMTXSource(getEntityID(), new MediaMTXSource(rtspUri));
 
         super.pollCameraConnection();
     }

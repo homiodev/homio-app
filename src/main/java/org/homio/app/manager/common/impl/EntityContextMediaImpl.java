@@ -1,6 +1,5 @@
 package org.homio.app.manager.common.impl;
 
-import java.util.Map;
 import java.util.Set;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +38,11 @@ public class EntityContextMediaImpl implements EntityContextMedia  {
     @Override
     public void unRegisterMediaMTXSource(@NotNull String path) {
         MediaMTXEntity.ensureEntityExists(entityContext).getService().removeSource(path);
+    }
+
+    @Override
+    public @NotNull MediaMTXInfo getMediaMTXInfo(@NotNull String path) {
+        return MediaMTXEntity.ensureEntityExists(entityContext).getService().getMediaMTXInfo(path);
     }
 
     @Override

@@ -22,12 +22,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextBGP;
 import org.homio.api.EntityContextBGP.ProcessContext;
+import org.homio.api.EntityContextMedia.MediaMTXInfo;
 import org.homio.api.EntityContextMedia.MediaMTXSource;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.HasEntityIdentifier;
@@ -154,6 +156,15 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
                 }
             });
         }
+    }
+
+    public MediaMTXInfo getMediaMTXInfo(String path) {
+        for (JsonNode node : getApiList().get("items")) {
+            if (node.get("name").asText().equals(path)) {
+                return new MediaMTXInfoImpl(path, true, node.get("ready").asBoolean());
+            }
+        }
+        return new MediaMTXInfoImpl(path, false, false);
     }
 
     @Override
@@ -298,5 +309,14 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
                 successRegistered.put(path, source);
             }
         });
+    }
+
+    @Getter
+    @RequiredArgsConstructor
+    private static class MediaMTXInfoImpl implements MediaMTXInfo {
+
+        private final String path;
+        private final boolean exists;
+        private final boolean ready;
     }
 }
