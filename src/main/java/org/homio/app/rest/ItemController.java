@@ -261,8 +261,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             return options;
         }
 
-        return UIFieldSelectionUtil.loadOptions(classEntity, entityContext, fieldName, null, optionsRequest.getSelectType(), optionsRequest.getDeps(),
-            optionsRequest.getParam0());
+        return UIFieldSelectionUtil.loadOptions(classEntity, entityContext, fieldName, null, optionsRequest.getSelectType(), optionsRequest.getDeps());
     }
 
     @GetMapping("/options")
@@ -674,7 +673,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         if (dynamicParameterFields == null) {
             throw new IllegalStateException("SelectedEntity getDynamicParameterFields returned null");
         }
-        return UIFieldSelectionUtil.loadOptions(dynamicParameterFields, entityContext, fieldName, selectedClassEntity, null, null, null);
+        return UIFieldSelectionUtil.loadOptions(dynamicParameterFields, entityContext, fieldName, selectedClassEntity, null, null);
     }
 
     @SneakyThrows
@@ -916,7 +915,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
         private String fieldFetchType;
         private String selectType;
-        private String param0; // for lazy loading
         private Map<String, String> deps;
     }
 

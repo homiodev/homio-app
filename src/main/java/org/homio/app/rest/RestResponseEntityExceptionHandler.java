@@ -83,6 +83,9 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
         if (ex instanceof NullPointerException) {
             msg += ". src: " + ex.getStackTrace()[0].toString();
         }
+        if (ex instanceof ServerException) {
+            entityContext.ui().sendErrorMessage(ex);
+        }
         log.error("Error <{}>", msg, ex);
         Objects.requireNonNull(((ServletWebRequest) request).getResponse())
                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);

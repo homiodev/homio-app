@@ -6,6 +6,7 @@ import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.io.FilenameUtils;
 import org.homio.api.fs.FileSystemProvider;
+import org.homio.api.util.DataSourceUtil;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 import org.homio.app.rest.MediaController;
 import org.homio.app.service.FileSystemService;
@@ -20,7 +21,7 @@ public class FSWidgetVideoSourceResolver implements WidgetVideoSourceResolver {
 
     @Override
     public VideoEntityResponse resolveDataSource(WidgetVideoSeriesEntity item) {
-        String dataSource = item.getValueDataSource();
+        String dataSource = DataSourceUtil.getSelection(item.getValueDataSource()).getValue();
         if (dataSource.startsWith("file://")) {
             String sourcePathAndFS = dataSource.substring("file://".length());
 
@@ -34,9 +35,9 @@ public class FSWidgetVideoSourceResolver implements WidgetVideoSourceResolver {
                 String videoType = getVideoType(resource);
                 if (SUPPORTED_FORMATS.matcher(extension).matches()) {
                     String fsSource = MediaController.createVideoPlayLink(fileSystem, resource, videoType, extension);
-                    return new VideoEntityResponse(dataSource, fsSource, videoType);
+                    return new VideoEntityResponse(item.getValueDataSource(), dataSource, fsSource, videoType);
                 } else {
-                    return new VideoEntityResponse(dataSource, "", videoType)
+                    return new VideoEntityResponse(item.getValueDataSource(), dataSource, "", videoType)
                         .setError(extension + " format not supported yet");
                 }
             }

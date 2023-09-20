@@ -20,6 +20,7 @@ public interface WidgetVideoSourceResolver {
     @RequiredArgsConstructor
     class VideoEntityResponse {
 
+        private final @NotNull String valueDataSource;
         private final @NotNull String dataSource;
         private final @NotNull String source;
         private final @NotNull String type;

@@ -14,6 +14,8 @@ import com.sshtools.common.publickey.SshPrivateKeyFileFactory;
 import jakarta.persistence.Entity;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
+import org.hibernate.resource.beans.container.internal.NoSuchBeanException;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.IdentityEntity;
@@ -32,7 +34,6 @@ import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.selection.UIFieldBeanSelection;
 import org.homio.api.util.DataSourceUtil;
-import org.homio.api.util.DataSourceUtil.DataSourceContext;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.service.cloud.CloudService;
 import org.homio.app.service.cloud.SshTunnelCloudProviderService;
@@ -50,7 +51,7 @@ public class SshCloudEntity extends IdentityEntity implements
         if (entity == null) {
             entity = new SshCloudEntity()
                     .setHostname("homio.org")
-                    .setProvider(DataSourceUtil.buildBeanSource(SshTunnelCloudProviderService.class))
+                    .setProvider(StringUtils.uncapitalize(SshTunnelCloudProviderService.class.getSimpleName()))
                     .setSyncUrl("https://homio.org/server/sync")
                     .setPort(2222)
                     .setPrimary(true);
@@ -183,9 +184,12 @@ public class SshCloudEntity extends IdentityEntity implements
     @Override
     public CloudProviderService<SshCloudEntity> getCloudProviderService(@NotNull EntityContext entityContext) {
         try {
-            DataSourceContext sourceContext = DataSourceUtil.getSource(entityContext, getProvider());
-            CloudProviderService service = (CloudProviderService) sourceContext.getSource();
-            return service == null ? entityContext.getBean(SshTunnelCloudProviderService.class) : service;
+            try {
+                return entityContext.getBean(DataSourceUtil.getSelection(getProvider()).getValue(), CloudProviderService.class);
+            } catch (NoSuchBeanException ne) {
+                log.warn("Unable to find ssh cloud provider: {}", getProvider());
+                return entityContext.getBean(SshTunnelCloudProviderService.class);
+            }
         } catch (Exception ex) {
             log.error("Unable to fetch provider for entity: {}", this);
         }

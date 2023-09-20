@@ -1,12 +1,45 @@
 package org.homio.app.rest;
 
+import static jakarta.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
+import static java.lang.String.format;
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.homio.app.rest.widget.EvaluateDatesAndValues.convertValuesToFloat;
+
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import jakarta.validation.Valid;
-import lombok.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.Stack;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import lombok.val;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.homio.addon.z2m.model.Z2MLocalCoordinatorEntity;
@@ -30,7 +63,7 @@ import org.homio.api.storage.SourceHistoryItem;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.DataSourceUtil;
-import org.homio.api.util.DataSourceUtil.DataSourceContext;
+import org.homio.api.util.DataSourceUtil.SelectionSource;
 import org.homio.api.util.Lang;
 import org.homio.app.config.cacheControl.CacheControl;
 import org.homio.app.config.cacheControl.CachePolicy;
@@ -58,31 +91,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
-import java.nio.channels.WritableByteChannel;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import static jakarta.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
-import static java.lang.String.format;
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.homio.app.rest.widget.EvaluateDatesAndValues.convertValuesToFloat;
 
 @Log4j2
 @RestController
@@ -154,18 +171,21 @@ public class UtilsController {
 
     @PostMapping("/source/history/info")
     public SourceHistory getSourceHistory(@RequestBody SourceHistoryRequest request) {
-        DataSourceContext context = DataSourceUtil.getSource(entityContext, request.dataSource);
+        SelectionSource selection = DataSourceUtil.getSelection(request.dataSource);
+        HasGetStatusValue source = selection.getValue(entityContext);
         val historyRequest = new GetStatusValueRequest(entityContext, request.dynamicParameters);
-        return ((HasGetStatusValue) context.getSource()).getSourceHistory(historyRequest);
+        return source.getSourceHistory(historyRequest);
     }
 
     @PostMapping("/source/chart")
     public WidgetChartsController.TimeSeriesChartData<ChartDataset> getSourceChart(@RequestBody SourceHistoryChartRequest request) {
-        DataSourceContext context = DataSourceUtil.getSource(entityContext, request.dataSource);
+        SelectionSource selection = DataSourceUtil.getSelection(request.dataSource);
+        BaseEntity source = selection.getValue(entityContext);
+
         WidgetChartsController.TimeSeriesChartData<ChartDataset> chartData = new TimeSeriesChartData<>();
-        if (context.getSource() instanceof HasTimeValueSeries) {
+        if (source instanceof HasTimeValueSeries) {
             PeriodRequest periodRequest = new PeriodRequest(entityContext, null, null).setParameters(request.getDynamicParameters());
-            val timeSeries = ((HasTimeValueSeries) context.getSource()).getMultipleTimeValueSeries(periodRequest);
+            val timeSeries = ((HasTimeValueSeries) source).getMultipleTimeValueSeries(periodRequest);
             List<Object[]> rawValues = timeSeries.values().iterator().next();
 
             if (!timeSeries.isEmpty()) {
@@ -189,10 +209,11 @@ public class UtilsController {
 
     @PostMapping("/source/history/items")
     public List<SourceHistoryItem> getSourceHistoryItems(@RequestBody SourceHistoryRequest request) {
-        DataSourceContext context = DataSourceUtil.getSource(entityContext, request.dataSource);
+        SelectionSource selection = DataSourceUtil.getSelection(request.dataSource);
+        HasGetStatusValue source = selection.getValue(entityContext);
+
         val historyRequest = new GetStatusValueRequest(entityContext, request.dynamicParameters);
-        return ((HasGetStatusValue) context.getSource()).getSourceHistoryItems(historyRequest,
-                request.getFrom(), request.getCount());
+        return source.getSourceHistoryItems(historyRequest, request.getFrom(), request.getCount());
     }
 
     @GetMapping("/frame/{entityID}")

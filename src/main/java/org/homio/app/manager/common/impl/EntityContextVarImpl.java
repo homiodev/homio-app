@@ -23,8 +23,6 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextVar;
 import org.homio.api.entity.widget.AggregationType;
-import org.homio.api.entity.widget.ability.HasGetStatusValue;
-import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.Icon;
 import org.homio.api.state.DecimalType;
@@ -277,8 +275,6 @@ public class EntityContextVarImpl implements EntityContextVar {
         }
         items.add(group.getEntityID());
         items.add(variable.getEntityID());
-        items.add((forSet ? HasSetStatusValue.class : HasGetStatusValue.class).getSimpleName());
-        items.add("entityByClass");
 
         return String.join("~~~", items);
     }
@@ -525,6 +521,13 @@ public class EntityContextVarImpl implements EntityContextVar {
         @Override
         public @NotNull VariableMetaBuilder setUnit(String value) {
             entity.setUnit(value);
+            return this;
+        }
+
+        @Override
+        public @NotNull VariableMetaBuilder setNumberRange(float min, float max) {
+            entity.setMin(min);
+            entity.setMax(max);
             return this;
         }
 

@@ -1,47 +1,36 @@
 package org.homio.app.manager.common.impl;
 
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
-import org.homio.api.EntityContextBGP;
 import org.homio.api.EntityContextSetting;
 import org.homio.api.EntityContextSetting.MemSetterHandler;
 import org.homio.api.EntityContextStorage;
-import org.homio.api.EntityContextVar.VariableType;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.model.HasEntityIdentifier;
-import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.storage.DataStorageEntity;
 import org.homio.api.storage.DataStorageService;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.service.mem.InMemoryDB;
-import org.homio.app.setting.system.SystemCPUFetchValueIntervalSetting;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.time.Duration;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-
-import static org.homio.hquery.hardware.other.MachineHardwareRepository.osBean;
 
 @Log4j2
 @RequiredArgsConstructor
 public class EntityContextStorageImpl implements EntityContextStorage {
 
     public static final Map<String, EntityMemoryData> ENTITY_MEMORY_MAP = new ConcurrentHashMap<>();
-    public static final long TOTAL_MEMORY = osBean.getTotalMemorySize();
-    // constructor parameters
+
     @Getter
     private final EntityContextImpl entityContext;
-    private EntityContextBGP.ThreadContext<Void> hardwareCpuScheduler;
 
     {
         EntityContextSetting.MEM_HANDLER.set(new MemSetterHandler() {
@@ -56,10 +45,6 @@ public class EntityContextStorageImpl implements EntityContextStorage {
                 return data.VALUE_MAP.getOrDefault(key, defaultValue);
             }
         });
-    }
-
-    public void init() {
-        initSystemCpuListening();
     }
 
     public void remove(String entityID) {
@@ -108,43 +93,6 @@ public class EntityContextStorageImpl implements EntityContextStorage {
                         .log(level, "[{}]: Set {} '{}' status: {}. Msg: {}", entity.getEntityID(), entity, title, status, message);
             }
         }
-    }
-
-    @SneakyThrows
-    private void initSystemCpuListening() {
-        entityContext.var().createGroup("hardware", "Hardware", true, new Icon("fas fa-microchip",
-                "#31BDB6"), "sys.hardware");
-
-        String cpuUsageID = entityContext.var().createVariable("hardware", "sys_cpu_load", "sys.cpu_load",
-                VariableType.Float, builder ->
-                        builder.setDescription("sys.cpu_load_description").setReadOnly(true).setUnit("%").setColor("#7B37B0"));
-
-        String javaCpuUsageID = entityContext.var().createVariable("hardware", "java_cpu_load", "sys.java_cpu_load",
-                VariableType.Float, builder ->
-                        builder.setDescription("sys.java_cpu_load_description").setReadOnly(true).setUnit("%").setColor("#B03780"));
-
-        String memID = entityContext.var().createVariable("hardware", "sys_mem_load", "sys.mem_load",
-                VariableType.Float, builder ->
-                        builder.setDescription("sys.mem_load_description").setReadOnly(true).setUnit("%").setColor("#939C35"));
-
-        entityContext.setting().listenValueAndGet(SystemCPUFetchValueIntervalSetting.class,
-                "hardware-cpu",
-                timeout -> {
-                    if (this.hardwareCpuScheduler != null) {
-                        this.hardwareCpuScheduler.cancel();
-                    }
-                    this.hardwareCpuScheduler = entityContext.bgp().builder("hardware-cpu").interval(Duration.ofSeconds(timeout)).execute(
-                            () -> {
-                                entityContext.var().set(cpuUsageID, round100((float) (osBean.getCpuLoad() * 100F)));
-                                entityContext.var().set(javaCpuUsageID, round100((float) (osBean.getProcessCpuLoad() * 100F)));
-                                float memPercent = (TOTAL_MEMORY - osBean.getFreeMemorySize()) / (float) TOTAL_MEMORY * 100F;
-                                entityContext.var().set(memID, round100(memPercent));
-                            });
-                });
-    }
-
-    private float round100(float input) {
-        return Math.round(input * 100.0) / 100.0F;
     }
 
     private static class EntityMemoryData {

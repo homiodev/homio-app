@@ -27,7 +27,7 @@ public class VideoDeviceEndpoint extends BaseDeviceEndpoint<BaseVideoEntity<?, ?
         @NotNull BaseVideoEntity<?, ?> device,
         @NotNull EntityContext entityContext,
         @NotNull String endpointEntityID,
-        float min, float max, boolean writable) {
+        Float min, Float max, boolean writable) {
         this(writable, device, entityContext, endpointEntityID, EndpointType.number, min, max, null, false);
         setValue(DecimalType.ZERO, false);
     }

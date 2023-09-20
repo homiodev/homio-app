@@ -1,8 +1,6 @@
 package org.homio.app.utils;
 
-import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.utils.UIFieldUtils.buildDynamicParameterMetadata;
@@ -22,7 +20,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -39,7 +36,6 @@ import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
-import org.homio.api.entity.widget.ability.HasAggregateValueFromSeries;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.entity.widget.ability.SelectDataSourceDescription;
@@ -74,7 +70,7 @@ public final class UIFieldSelectionUtil {
         Stream.of(SelectHandler.values()).map(h -> h.selectClass).collect(Collectors.toList());
 
     public static List<OptionModel> loadOptions(Object classEntity, EntityContext entityContext, String fieldName, Object classEntityForDynamicOptionLoader,
-        String selectType, Map<String, String> deps, String param0) {
+        String selectType, Map<String, String> deps) {
 
         Method method = findMethodByName(classEntity.getClass(), fieldName, SELECT_ANNOTATIONS);
         if (method == null) {
@@ -83,12 +79,12 @@ public final class UIFieldSelectionUtil {
         }
         List<OptionModel> options = null;
         if (method != null) {
-            options = loadOptions(method, entityContext, method.getReturnType(), classEntity, classEntityForDynamicOptionLoader, selectType, deps, param0);
+            options = loadOptions(method, entityContext, method.getReturnType(), classEntity, classEntityForDynamicOptionLoader, selectType, deps);
         }
         if (options == null) {
             Field field = FieldUtils.getField(classEntity.getClass(), fieldName, true);
             if (field != null) {
-                options = loadOptions(field, entityContext, field.getType(), classEntity, classEntityForDynamicOptionLoader, selectType, deps, param0);
+                options = loadOptions(field, entityContext, field.getType(), classEntity, classEntityForDynamicOptionLoader, selectType, deps);
             }
         }
 
@@ -206,7 +202,6 @@ public final class UIFieldSelectionUtil {
 
             ObjectNode parameters = OBJECT_MAPPER.createObjectNode();
             parameters.set("fileSystemIds", OBJECT_MAPPER.valueToTree(fileSelection.fileSystemIds()));
-            parameters.put("prefix", fileSelection.prefix());
             parameters.put("rootPath", fileSelection.rootPath());
             parameters.put("ASD", fileSelection.allowSelectDirs());
             parameters.put("AMS", fileSelection.allowMultiSelect());
@@ -220,7 +215,7 @@ public final class UIFieldSelectionUtil {
 
     private static Icon evaluateIcon(String icon, String color, ObjectNode jsonTypeMetadata) {
         if(jsonTypeMetadata.has("selectConfig")) {
-            JsonNode iconNode = jsonTypeMetadata.get("selectConfig").get("icon");
+            JsonNode iconNode = jsonTypeMetadata.get("selectConfig").path("icon");
             if(StringUtils.isEmpty(icon)) {
                 icon = iconNode.asText();
             }
@@ -232,10 +227,9 @@ public final class UIFieldSelectionUtil {
     }
 
     private static List<OptionModel> loadOptions(AccessibleObject field, EntityContext entityContext, Class<?> targetClass, Object classEntity,
-        Object classEntityForDynamicOptionLoader, String selectType, Map<String, String> deps, String param0) {
+        Object classEntityForDynamicOptionLoader, String selectType, Map<String, String> deps) {
 
-        LoadOptionsParameters param = new LoadOptionsParameters(field, entityContext, targetClass, classEntity, classEntityForDynamicOptionLoader, deps,
-            param0);
+        LoadOptionsParameters param = new LoadOptionsParameters(field, entityContext, targetClass, classEntity, classEntityForDynamicOptionLoader, deps);
         // fetch all options according to all selectType
         List<OptionModel> options = new ArrayList<>();
         boolean handled = selectType != null && assembleOptionsBySelectType(field, selectType, param, options);
@@ -318,7 +312,7 @@ public final class UIFieldSelectionUtil {
 
     @SneakyThrows
     public static Collection<OptionModel> getAllOptions(EntityContextImpl entityContext) {
-        LoadOptionsParameters param = new LoadOptionsParameters(null, entityContext, Object.class, new Object(), null, null, null);
+        LoadOptionsParameters param = new LoadOptionsParameters(null, entityContext, Object.class, new Object(), null, null);
         List<OptionModel> options = new ArrayList<>();
         assembleOptionsForEntityByClassSelection(param, options, HasGetStatusValue.class);
         return filterAndGroupingOptions(options);
@@ -331,10 +325,6 @@ public final class UIFieldSelectionUtil {
         DynamicOptionLoader dynamicOptionLoader = null;
         if (DynamicOptionLoader.class.isAssignableFrom(targetClass)) {
             dynamicOptionLoader = (DynamicOptionLoader) CommonUtils.newInstance(targetClass);
-            if (dynamicOptionLoader == null) {
-                throw new RuntimeException(
-                    "Unable to instantiate DynamicOptionLoader class: " + targetClass.getName() + ". Does class has public modifier and no args constructor?");
-            }
         }
         if (dynamicOptionLoader != null) {
             BaseEntity baseEntity = classEntityForDynamicOptionLoader instanceof BaseEntity ? (BaseEntity) classEntityForDynamicOptionLoader : null;
@@ -374,8 +364,6 @@ public final class UIFieldSelectionUtil {
 
     public static void updateSelectedOptionModel(Object target, Object requestedEntity, Class<?> sourceClassType, OptionModel optionModel,
         String selectHandler) {
-        optionModel.json(jsonObject ->
-            jsonObject.put("REQ_TARGET", sourceClassType.getSimpleName() + "~~~" + selectHandler));
         setDescription(target, sourceClassType, optionModel);
 
         SelectionParent item = new SelectionParent();
@@ -432,32 +420,18 @@ public final class UIFieldSelectionUtil {
         }
     }
 
-    /**
-     * Search for all OptionModels and find same key. Remove 'HasGetStatusValue if HasAggregateValueFromSeries exists
-     */
     private static void filterResultOptions(OptionModel parent, Collection<OptionModel> options) {
         Map<String, List<OptionModel>> groupByKeyModels = options.stream().collect(groupingBy(OptionModel::getKey));
-        for (Map.Entry<String, List<OptionModel>> entry : groupByKeyModels.entrySet()) {
-            if (entry.getValue().size() > 1) {
-                Set<String> reqTarget = entry
-                    .getValue().stream()
-                    .map(v -> {
-                        ObjectNode json = v.getJson();
-                        return json == null ? "" : json.path("REQ_TARGET").asText("").split("~~~")[0];
-                    }).collect(toSet());
-                if (reqTarget.contains(HasAggregateValueFromSeries.class.getSimpleName())) {
-                    entry.getValue().removeIf(e -> requireNonNull(e.getJson()).get("REQ_TARGET").asText()
-                                                                              .startsWith(HasGetStatusValue.class.getSimpleName()));
-                }
-            }
-        }
         for (OptionModel optionModel : options) {
             if (optionModel.getChildren() != null) {
                 filterResultOptions(optionModel, optionModel.getChildren());
             }
         }
-        parent.getChildren().clear();
-        parent.getChildren().addAll(groupByKeyModels.values().stream().flatMap(Collection::stream).toList());
+        List<OptionModel> children = parent.getChildren();
+        if (children != null) {
+            children.clear();
+            children.addAll(groupByKeyModels.values().stream().flatMap(Collection::stream).toList());
+        }
     }
 
     private static Method findMethodByName(Class<?> clz, String name, List<? extends Class<? extends Annotation>> annotationClasses) {
@@ -557,7 +531,6 @@ public final class UIFieldSelectionUtil {
         private Object classEntityForDynamicOptionLoader;
         private Object classEntity;
         private Map<String, String> deps;
-        private String param0;
     }
 
     @Setter

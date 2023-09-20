@@ -198,7 +198,7 @@ public class WorkspaceGroup extends BaseEntity
         result = 31 * result + (groupId != null ? groupId.hashCode() : 0);
         result = 31 * result + (icon != null ? icon.hashCode() : 0);
         result = 31 * result + (iconColor != null ? iconColor.hashCode() : 0);
-        result = 31 * result + jsonData.hashCode();
+        result = 31 * result + jsonData.toString().hashCode();
         return result;
     }
 
@@ -341,4 +341,6 @@ public class WorkspaceGroup extends BaseEntity
     public static String generateValue(Object val, WorkspaceVariable variable) {
         return val == null ? "-" : val + StringUtils.trimToEmpty(variable.getUnit());
     }
+
+
 }

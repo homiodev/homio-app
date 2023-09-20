@@ -14,6 +14,8 @@
       "quota": 100,
       "order": 5,
       "unit": "%",
+      "min": 0,
+      "max": 100,
       "icon": "fa-microchip",
       "iconColor": "#A65535"
     },
@@ -21,6 +23,8 @@
       "name": "bandwidth",
       "quota": 100,
       "order": 6,
+      "min": 0,
+      "max": 20000,
       "unit": "kbps",
       "icon": "fa-wifi",
       "iconColor": "#A65535"
@@ -43,6 +47,8 @@
       "name": "audio_threshold",
       "quota": 10,
       "order": 30,
+      "min": 0,
+      "max": 100,
       "icon": "fa-music",
       "iconColor": "#95A346"
     },
@@ -50,6 +56,8 @@
       "name": "motion_threshold",
       "quota": 10,
       "order": 40,
+      "min": 0,
+      "max": 100,
       "icon": "fa-person-running",
       "iconColor": "#299974"
     },

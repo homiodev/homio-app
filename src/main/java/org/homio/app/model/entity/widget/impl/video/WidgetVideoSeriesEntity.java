@@ -32,7 +32,7 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
     @Override
     @UIField(order = 14, required = true, label = "widget.video_dataSource")
     @UIFieldDynamicSelection(value = VideoSeriesDataSourceDynamicOptionLoader.class, icon = "fas fa-film", iconColor = "#7899D0")
-    @UIFieldTreeNodeSelection(pattern = ".*(\\.png|\\.jpg|\\.webm|\\.ogv|\\.flv|\\.avi|\\.mpd|\\.mp4|\\.m3u8)", iconColor = "#14A669", prefix = "file://")
+    @UIFieldTreeNodeSelection(pattern = ".*(\\.png|\\.jpg|\\.webm|\\.ogv|\\.flv|\\.avi|\\.mpd|\\.mp4|\\.m3u8)", iconColor = "#14A669")
     @UIFieldIgnoreParent
     public String getValueDataSource() {
         return HasSingleValueDataSource.super.getValueDataSource();
@@ -45,7 +45,7 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
     @UIField(order = 40)
     @UIFieldGroup("VALUE")
     @UIFieldDynamicSelection(value = VideoPosterDataSourceDynamicOptionLoader.class, icon = "fas fa-image", iconColor = "#5E8FAD")
-    @UIFieldTreeNodeSelection(pattern = ".*(\\.jpg|\\.png)", iconColor = "#14A669", prefix = "file://")
+    @UIFieldTreeNodeSelection(pattern = ".*(\\.jpg|\\.png)", iconColor = "#14A669")
     public String getPosterDataSource() {
         return getJsonData("poster");
     }

@@ -38,6 +38,7 @@ import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.util.DataSourceUtil;
+import org.homio.api.util.DataSourceUtil.SelectionSource;
 import org.homio.api.util.Lang;
 import org.homio.api.widget.WidgetBaseTemplate;
 import org.homio.api.widget.WidgetJSBaseTemplate;
@@ -115,16 +116,16 @@ public class WidgetController {
     public Map<String, Object> getSources(@Valid @RequestBody Sources request) {
         Map<String, Object> result = new HashMap<>();
         for (String source : request.sources) {
-            DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSource(entityContext, source);
-            if (dsContext.getSource() instanceof HasGetStatusValue) {
-                val valueRequest = new HasGetStatusValue.GetStatusValueRequest(entityContext, null);
-                result.put(source, ((HasGetStatusValue) dsContext.getSource()).getStatusValue(valueRequest));
-                timeSeriesUtil.addListenValueIfRequire(true, "dashboard",
-                        dsContext.getSource(), null, null, source,
-                        object -> ((HasGetStatusValue) dsContext.getSource()).getStatusValue(valueRequest));
-            } else {
+            SelectionSource selection = DataSourceUtil.getSelection(source);
+            BaseEntity entity = selection.getValue(entityContext);
+            if (!(entity instanceof HasGetStatusValue)) {
                 throw new IllegalArgumentException("Unable to get value from non source entity");
             }
+            val valueRequest = new HasGetStatusValue.GetStatusValueRequest(entityContext, null);
+            result.put(source, ((HasGetStatusValue) entity).getStatusValue(valueRequest));
+            timeSeriesUtil.addListenValueIfRequire(true, "dashboard",
+                entity, null, null, source,
+                object -> ((HasGetStatusValue) entity).getStatusValue(valueRequest));
         }
         return result;
     }
@@ -190,11 +191,15 @@ public class WidgetController {
 
     private static void handlePoster(WidgetVideoSeriesEntity item, VideoEntityResponse response) {
         if (StringUtils.isNotEmpty(item.getPosterDataSource())) {
-            response.setPoster(item.getPosterDataSource());
-            if (item.getPosterDataSource().startsWith("file://")) {
-                response.setPoster("$DEVICE_URL/rest/media/image/%s"
-                    .formatted(item.getPosterDataSource().substring("file://".length())));
+            SelectionSource poster = DataSourceUtil.getSelection(item.getPosterDataSource());
+            String posterUrl = poster.getValue();
+            if (StringUtils.isNotEmpty(posterUrl)) {
+                String type = poster.getMetadata().path("type").asText();
+                if ("file".equals(type)) {
+                    posterUrl = "$DEVICE_URL/rest/media/image/%s".formatted(posterUrl);
+                }
             }
+            response.setPoster(posterUrl);
         }
     }
 
@@ -232,8 +237,7 @@ public class WidgetController {
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void updateValue(@RequestBody SingleValueRequest<Object> request) {
         HasSetSingleValueDataSource source = getEntity(request.entityID);
-        DataSourceUtil.setValue(entityContext, source.getSetValueDataSource(),
-                source.getDynamicParameterFields("value"), request.value);
+        setValue(request.value, source.getSetValueDataSource(), source.getDynamicParameterFields("value"));
     }
 
     @PostMapping("/slider/values")
@@ -250,8 +254,7 @@ public class WidgetController {
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void handleSlider(@RequestBody SingleValueRequest<Number> request) {
         WidgetSliderSeriesEntity series = getSeriesEntity(request);
-        DataSourceUtil.setValue(entityContext, series.getSetValueDataSource(), series.getSetValueDynamicParameterFields(),
-                request.value);
+        setValue(request.value, series.getSetValueDataSource(), series.getSetValueDynamicParameterFields());
     }
 
     @PostMapping("/toggle/values")
@@ -267,9 +270,8 @@ public class WidgetController {
     @PostMapping("/display/update")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void handleButtonClick(@RequestBody SingleValueRequest<String> request) {
-        WidgetDisplayEntity entity = getEntity(request.entityID);
-        DataSourceUtil.setValue(entityContext, entity.getSetValueDataSource(), entity.getSetValueDynamicParameterFields(),
-                request.value);
+        WidgetDisplayEntity source = getEntity(request.entityID);
+        setValue(request.value, source.getSetValueDataSource(), source.getSetValueDynamicParameterFields());
     }
 
     @PostMapping("/colors/value")
@@ -299,18 +301,18 @@ public class WidgetController {
     public void updateColorsValue(@RequestBody ColorValueRequest request) {
         WidgetColorEntity entity = entityContext.getEntityRequire(request.entityID);
         switch (request.type) {
-            case colorTemp -> DataSourceUtil.setValue(entityContext,
+            case colorTemp -> setValue(request.value,
                     entity.getColorTemperatureSetValueDataSource(),
-                    entity.getDynamicParameterFields("colorTemp"), request.value);
-            case color -> DataSourceUtil.setValue(entityContext,
+                    entity.getDynamicParameterFields("colorTemp"));
+            case color -> setValue(request.value,
                     entity.getColorSetValueDataSource(),
-                    entity.getDynamicParameterFields("color"), request.value);
-            case onOff -> DataSourceUtil.setValue(entityContext,
+                    entity.getDynamicParameterFields("color"));
+            case onOff -> setValue(request.value,
                     entity.getOnOffSetValueDataSource(),
-                    entity.getDynamicParameterFields("onOff"), request.value);
-            case brightness -> DataSourceUtil.setValue(entityContext,
+                    entity.getDynamicParameterFields("onOff"));
+            case brightness -> setValue(request.value,
                     entity.getBrightnessSetValueDataSource(),
-                    entity.getDynamicParameterFields("brightness"), request.value);
+                    entity.getDynamicParameterFields("brightness"));
         }
     }
 
@@ -318,8 +320,10 @@ public class WidgetController {
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void updateToggleValue(@RequestBody SingleValueRequest<Boolean> request) {
         WidgetToggleSeriesEntity series = getSeriesEntity(request);
-        DataSourceUtil.setValue(entityContext, series.getSetValueDataSource(), series.getSetValueDynamicParameterFields(),
-                request.value ? series.getPushToggleOnValue() : series.getPushToggleOffValue());
+        setValue(
+            request.value ? series.getPushToggleOnValue() : series.getPushToggleOffValue(),
+            series.getSetValueDataSource(),
+            series.getSetValueDynamicParameterFields());
     }
 
     @GetMapping("/{entityID}")
@@ -541,6 +545,15 @@ public class WidgetController {
         return (T) entity;
     }
 
+    private void setValue(Object value, String dataSource, JSONObject dynamicParameters) {
+        SelectionSource selection = DataSourceUtil.getSelection(dataSource);
+        BaseEntity entity = selection.getValue(entityContext);
+        ((HasSetStatusValue) entity).setStatusValue(new HasSetStatusValue.SetStatusValueRequest(
+            entityContext,
+            dynamicParameters,
+            value));
+    }
+
     @Getter
     @Setter
     private static class WidgetFMPrevSnapshot {
@@ -610,7 +623,6 @@ public class WidgetController {
 
     @Setter
     private static class Sources {
-
         private String[] sources;
     }
 }

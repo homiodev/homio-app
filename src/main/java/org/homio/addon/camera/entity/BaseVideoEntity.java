@@ -30,6 +30,7 @@ import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.service.BaseVideoService;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
+import org.homio.api.EntityContextMedia.FFMPEGFormat;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.log.HasEntitySourceLog;
@@ -38,6 +39,7 @@ import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.FileContentType;
 import org.homio.api.model.FileModel;
+import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.device.ConfigDeviceDefinition;
 import org.homio.api.model.device.ConfigDeviceDefinitionService;
@@ -80,7 +82,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     @UIField(order = 6, hideOnEmpty = true, hideInEdit = true, color = Color.RED)
     @UIFieldGroup("GENERAL")
     public String getPingErrorCount() {
-        int count = getService().getCommunicationError();
+        int count = optService().map(s -> s.getCommunicationError()).orElse(0);
         return count == 0 ? null : String.valueOf(count);
     }
 
@@ -88,13 +90,15 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     @UIFieldGroup("GENERAL")
     public String getRunningCommands() {
         List<String> commands = new ArrayList<>();
-        for (FFMPEG ffmpeg : getService().getFfmpegCommands()) {
-            if (ffmpeg != null && ffmpeg.isRunning()) {
-                String color = ffmpeg.getIsAlive() ? ffmpeg.getFormat().getColor() : "#9C9C9C";
-                commands.add(RUN_CMD.formatted(color, color, ffmpeg.getDescription()));
+        optService().ifPresent(service -> {
+            for (FFMPEG ffmpeg : service.getFfmpegCommands()) {
+                if (ffmpeg != null && ffmpeg.isRunning()) {
+                    String color = ffmpeg.getIsAlive() ? ffmpeg.getFormat().getColor() : "#9C9C9C";
+                    commands.add(RUN_CMD.formatted(color, color, ffmpeg.getDescription()));
+                }
             }
-        }
-        assembleExtraRunningCommands(commands);
+            assembleExtraRunningCommands(commands);
+        });
         if (commands.isEmpty()) {
             return null;
         }
@@ -300,30 +304,42 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         List<OptionModel> videoSources = new ArrayList<>();
         boolean mediaMTXReady = getEntityContext().media().getMediaMTXInfo(getEntityID()).isReady();
         assembleStream("hls", "Hls streams(.m3u8)", m3u8 -> {
-            m3u8.addChild(of("video.m3u8", "HLS [default]"));
+            m3u8.setIcon(new Icon(FFMPEGFormat.HLS.getIcon()));
+            m3u8.addChild(of("video.m3u8", "HLS [default]")
+                .setIcon(FFMPEGFormat.HLS.getIconModel()));
             if (!getHlsLowResolution().isEmpty()) {
-                m3u8.addChild(of("video_low.m3u8", "HLS [%s]".formatted(getHlsLowResolution())));
+                m3u8.addChild(of("video_low.m3u8", "HLS [%s]".formatted(getHlsLowResolution()))
+                    .setIcon(FFMPEGFormat.HLS.getIconModel()));
             }
             if (!getHlsHighResolution().isEmpty()) {
-                m3u8.addChild(of("video_high.m3u8", "HLS [%s]".formatted(getHlsHighResolution())));
+                m3u8.addChild(of("video_high.m3u8", "HLS [%s]".formatted(getHlsHighResolution()))
+                    .setIcon(FFMPEGFormat.HLS.getIconModel()));
+                ;
             }
             if (mediaMTXReady) {
-                m3u8.addChild(OptionModel.of("mediamtx/index.m3u8", "MediaMTX HLS"));
+                m3u8.addChild(OptionModel.of("mediamtx/index.m3u8", "MediaMTX HLS")
+                                         .setIcon(FFMPEGFormat.HLS.getIconModel()));
             }
             appendAdditionHLSStreams(m3u8);
         }, videoSources);
         assembleStream("mjpeg", "Mjpeg streams(.jpg)", mjpeg -> {
-            mjpeg.addChild(of("video.mjpeg", "Mjpeg(.mjpeg)"));
+            mjpeg.setIcon(new Icon(FFMPEGFormat.MJPEG.getIcon()));
+            mjpeg.addChild(of("video.mjpeg", "Mjpeg(.mjpeg)")
+                .setIcon(FFMPEGFormat.MJPEG.getIconModel()));
             //videoSources.add(of("autofps.mjpeg", "MJPEG(autofps) stream"));
             appendAdditionMjpegStreams(mjpeg);
         }, videoSources);
         assembleStream("dash", "Mjpeg dash(.mpd)", dash -> {
-            dash.addChild(of("video.mpd", "Mpeg-dash(.mpd)"));
+            dash.setIcon(new Icon(FFMPEGFormat.DASH.getIcon()));
+            dash.addChild(of("video.mpd", "Mpeg-dash(.mpd)")
+                .setIcon(FFMPEGFormat.DASH.getIconModel()));
             appendAdditionMjpegDashStreams(dash);
         }, videoSources);
         assembleStream("webrtc", "WebRTC", webrtc -> {
             if (mediaMTXReady) {
-                webrtc.addChild(OptionModel.of("mediamtx/video.webrtc", "MediaMTX WebRTC"));
+                webrtc.setIcon(new Icon("fab fa-stumbleupon-circle"));
+                webrtc.addChild(OptionModel.of("mediamtx/video.webrtc", "MediaMTX WebRTC")
+                                           .setIcon(new Icon("fab fa-stumbleupon-circle", "#22725A")));
             }
             appendAdditionWebRTCStreams(webrtc);
         }, videoSources);

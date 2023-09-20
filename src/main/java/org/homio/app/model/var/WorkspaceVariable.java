@@ -30,9 +30,7 @@ import org.homio.api.EntityContextVar.VariableType;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
-import org.homio.api.entity.widget.AggregationType;
 import org.homio.api.entity.widget.PeriodRequest;
-import org.homio.api.entity.widget.ability.HasAggregateValueFromSeries;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.entity.widget.ability.HasTimeValueSeries;
@@ -51,6 +49,7 @@ import org.homio.api.ui.field.inline.UIFieldInlineEntityEditWidth;
 import org.homio.api.ui.field.inline.UIFieldInlineEntityWidth;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent.SelectionParent;
+import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection.SelectionConfiguration;
 import org.homio.app.manager.common.impl.EntityContextVarImpl;
 import org.homio.app.manager.common.impl.EntityContextVarImpl.VariableMetaBuilderImpl;
 import org.homio.app.repository.VariableBackupRepository;
@@ -70,11 +69,11 @@ import org.json.JSONObject;
 @NoArgsConstructor
 public class WorkspaceVariable extends BaseEntity
         implements HasJsonData,
-        HasAggregateValueFromSeries,
         UIFieldSelectionParent.SelectionParent,
         HasTimeValueSeries,
         HasGetStatusValue,
-        HasSetStatusValue {
+    HasSetStatusValue,
+    SelectionConfiguration {
 
     public static final String PREFIX = "var_";
 
@@ -189,17 +188,6 @@ public class WorkspaceVariable extends BaseEntity
     }
 
     @Override
-    public @Nullable Object getAggregateValueFromSeries(@NotNull PeriodRequest request, @NotNull AggregationType aggregationType, boolean exactNumber) {
-        return ((EntityContextVarImpl) request.getEntityContext().var())
-                .aggregate(variableId, request.getFromTime(), request.getToTime(), aggregationType, exactNumber);
-    }
-
-    @Override
-    public String getAggregateValueDescription() {
-        return description;
-    }
-
-    @Override
     public void addUpdateValueListener(EntityContext entityContext, String key, JSONObject dynamicParameters, Consumer<Object> listener) {
         entityContext.event().addEventListener(variableId, key, listener);
     }
@@ -234,6 +222,22 @@ public class WorkspaceVariable extends BaseEntity
             return workspaceGroup.getParent();
         }
         return null;
+    }
+
+    public @Nullable Float getMin() {
+        return getJsonData().has("min") ? getJsonData().getFloat("min") : null;
+    }
+
+    public void setMin(@Nullable Float min) {
+        setJsonData("min", min);
+    }
+
+    public @Nullable Float getMax() {
+        return getJsonData().has("max") ? getJsonData().getFloat("max") : null;
+    }
+
+    public void setMax(@Nullable Float max) {
+        setJsonData("max", max);
     }
 
     @Override
@@ -276,6 +280,14 @@ public class WorkspaceVariable extends BaseEntity
                 "Writable:" + !readOnly)));
         if (unit != null) {
             sourceHistory.getAttributes().add("Unit: " + unit);
+        }
+        Float min = getMin();
+        Float max = getMax();
+        if (min != null) {
+            sourceHistory.getAttributes().add("Min: " + min);
+        }
+        if (max != null) {
+            sourceHistory.getAttributes().add("Max: " + max);
         }
         sourceHistory.getAttributes().addAll(getAttributes());
 
@@ -364,7 +376,12 @@ public class WorkspaceVariable extends BaseEntity
         result = 31 * result + (icon != null ? icon.hashCode() : 0);
         result = 31 * result + (iconColor != null ? iconColor.hashCode() : 0);
         result = 31 * result + (unit != null ? unit.hashCode() : 0);
-        result = 31 * result + jsonData.hashCode();
+        result = 31 * result + jsonData.toString().hashCode();
         return result;
+    }
+
+    @Override
+    public @NotNull Icon selectionIcon() {
+        return new Icon(icon, iconColor);
     }
 }

@@ -540,8 +540,7 @@ public class UIFieldUtils {
 
         UIFieldSelectConfig selectConfig = fieldContext.getDeclaredAnnotation(UIFieldSelectConfig.class);
         if (selectConfig != null) {
-            ObjectNode select = OBJECT_MAPPER.createObjectNode();
-            jsonTypeMetadata.putPOJO("selectConfig", select);
+            ObjectNode select = getSelectConfig(jsonTypeMetadata);
             select.put("addEmptySelection", selectConfig.addEmptySelection());
             select.putPOJO("icon", new Icon(selectConfig.icon(), selectConfig.iconColor()));
             if (isNotEmpty(selectConfig.selectOnEmptyLabel())) {
@@ -701,6 +700,14 @@ public class UIFieldUtils {
         entityUIMetaDataList.add(entityUIMetaData);
     }
 
+    private static ObjectNode getSelectConfig(ObjectNode jsonTypeMetadata) {
+        if(!jsonTypeMetadata.has("selectConfig")) {
+            ObjectNode select = OBJECT_MAPPER.createObjectNode();
+            jsonTypeMetadata.set("selectConfig", select);
+        }
+        return (ObjectNode) jsonTypeMetadata.get("selectConfig");
+    }
+
     private static void detectFieldType(Object instance, UIFieldContext fieldContext, EntityUIMetaData entityUIMetaData, Type genericType, Class<?> type,
         UIField field, ObjectNode jsonTypeMetadata) {
         if (field.type().equals(UIFieldType.AutoDetect)) {
@@ -747,7 +754,7 @@ public class UIFieldUtils {
             || isMatch(fieldContext, UIFieldTreeNodeSelection.class, UIFieldTreeNodeSelection::rawInput)
             || isMatch(fieldContext, UIFieldDynamicSelection.class, UIFieldDynamicSelection::rawInput)
             || getSelectAnnotationCount(fieldContext) > 1) {
-            fieldType = UIFieldType.SelectBoxAdvanced;
+            getSelectConfig(jsonTypeMetadata).put("rawInput", true);
         }
 
         entityUIMetaData.setType(fieldType.name());

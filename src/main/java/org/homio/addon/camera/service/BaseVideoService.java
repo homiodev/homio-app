@@ -766,8 +766,8 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, getEntityContext(), key, range, true), updateHandler);
     }
 
-    public VideoDeviceEndpoint addEndpointSlider(String endpointId, int min, int max, Consumer<State> updateHandler, boolean writable) {
-        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, getEntityContext(), key, (float) min, (float) max, writable), updateHandler);
+    public VideoDeviceEndpoint addEndpointSlider(String endpointId, Float min, Float max, Consumer<State> updateHandler, boolean writable) {
+        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, getEntityContext(), key, min, max, writable), updateHandler);
     }
 
     public synchronized @NotNull FFMPEG getOrCreateFfmpegHls(@NotNull StreamHLS.Resolution resolution) {

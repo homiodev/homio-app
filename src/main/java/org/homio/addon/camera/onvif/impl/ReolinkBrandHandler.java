@@ -791,8 +791,8 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
                 return group == null ? null : new DecimalType(group.getJsonNode().path(c.key).asInt());
             };
             JsonNode numConfigPath = JsonUtils.getJsonPath(rangeNode, c.key);
-            int min = numConfigPath.path("min").asInt();
-            int max = numConfigPath.path("max").asInt();
+            Float min = numConfigPath.has("min") ? (float)numConfigPath.path("min").asInt() : null;
+            Float max = numConfigPath.has("max") ? (float)numConfigPath.path("max").asInt() : null;
             VideoDeviceEndpoint endpoint = handler.service.addEndpointSlider(c.endpointId, min, max, setter, c.writable);
             endpoint.setValue(getter.get(), true);
             JsonNode initPath = JsonUtils.getJsonPath(initialNode, c.key);

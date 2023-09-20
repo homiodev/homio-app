@@ -1,9 +1,21 @@
 package org.homio.app.rest.widget;
 
+import static org.apache.commons.lang3.StringUtils.defaultString;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.homio.api.entity.widget.AggregationType;
+import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.widget.PeriodRequest;
-import org.homio.api.entity.widget.ability.HasAggregateValueFromSeries;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasGetStatusValue.GetStatusValueRequest;
 import org.homio.api.entity.widget.ability.HasTimeValueSeries;
@@ -11,11 +23,11 @@ import org.homio.api.entity.widget.ability.HasUpdateValueListener;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.homio.api.util.DataSourceUtil;
+import org.homio.api.util.DataSourceUtil.SelectionSource;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod.TimeRange;
-import org.homio.app.model.entity.widget.attributes.HasSingleValueAggregatedDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
@@ -23,15 +35,6 @@ import org.homio.app.service.mem.InMemoryDB;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
-
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static org.apache.commons.lang3.StringUtils.defaultString;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 @RequiredArgsConstructor
 public class TimeSeriesUtil {
@@ -48,11 +51,11 @@ public class TimeSeriesUtil {
         TimeRange timeRange = timePeriod.snapshot();
 
         for (T item : series) {
-            DataSourceUtil.DataSourceContext sourceDS = DataSourceUtil.getSource(entityContext, item.getChartDataSource());
-            Object source = sourceDS.getSource();
+            SelectionSource selection = DataSourceUtil.getSelection(item.getChartDataSource());
+            BaseEntity source = selection.getValue(entityContext);
             if (source instanceof HasTimeValueSeries) {
                 Set<TimeSeriesContext<T>> timeSeries = buildTimeSeriesFromDataSource(timeRange, item, (HasTimeValueSeries) source);
-                timeSeriesValuesList.add(new TimeSeriesValues<>(timeSeries, sourceDS.getSource()));
+                timeSeriesValuesList.add(new TimeSeriesValues<>(timeSeries, source));
             }
         }
 
@@ -112,19 +115,13 @@ public class TimeSeriesUtil {
             return null;
         }
         String seriesEntityId = entity.getEntityID();
-        DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSource(entityContext, valueDataSource);
-        Object source = dsContext.getSource();
+        SelectionSource selection = DataSourceUtil.getSelection(valueDataSource);
+        Object source = selection.getValue(entityContext);
         if (source == null) {
             return null;
         }
 
-        Object value;
-        if (source instanceof HasGetStatusValue) {
-            value = getValueFromGetStatusValue(entity, resultConverter, seriesEntityId, dynamicParameters, source, valueDataSource);
-        } else {
-            value = getValueFromHasAggregationValue(entity, resultConverter, seriesEntityId, dynamicParameters, source, valueDataSource,
-                    AggregationType.Last, null);
-        }
+        Object value = getValueFromGetStatusValue(entity, resultConverter, seriesEntityId, dynamicParameters, source, valueDataSource);
         return resultConverter.apply(value);
     }
 
@@ -132,32 +129,14 @@ public class TimeSeriesUtil {
     getSingleValue(@NotNull T entity, @NotNull DS dataSource, @NotNull Function<Object, R> resultConverter) {
         String seriesEntityId = ((HasEntityIdentifier) dataSource).getEntityID();
         JSONObject dynamicParameters = dataSource.getValueDynamicParameterFields();
-        DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSource(entityContext, dataSource.getValueDataSource());
-        Object source = dsContext.getSource();
+        SelectionSource selection = DataSourceUtil.getSelection(dataSource.getValueDataSource());
+        BaseEntity source = selection.getValue(entityContext);
         if (source == null) {
             return (R) "W.ERROR.BAD_SOURCE";
         }
         String dataSourceEntityID = dataSource.getValueDataSource();
 
-        Object value;
-        AggregationType aggregationType = getAggregationType(dataSource);
-
-        if (aggregationType == AggregationType.None) {
-            if (source instanceof HasGetStatusValue) {
-                value = getValueFromGetStatusValue(entity, resultConverter, seriesEntityId, dynamicParameters, source, dataSourceEntityID);
-            } else {
-                value = getValueFromHasAggregationValue(entity, resultConverter, seriesEntityId, dynamicParameters, source, dataSourceEntityID,
-                        AggregationType.Last, null);
-            }
-        } else {
-            if (!(source instanceof HasAggregateValueFromSeries)) {
-                throw new IllegalStateException("Unable to calculate value for: " + entity.getEntityID() +
-                        "Entity has to implement HasAggregateValueFromSeries");
-            }
-            value = getValueFromHasAggregationValue(entity, resultConverter, seriesEntityId, dynamicParameters, source,
-                    dataSourceEntityID, aggregationType, TimeUnit.MINUTES.toMillis(((HasSingleValueAggregatedDataSource) dataSource)
-                            .getValueAggregationPeriod()));
-        }
+        Object value = getValueFromGetStatusValue(entity, resultConverter, seriesEntityId, dynamicParameters, source, dataSourceEntityID);
 
         return resultConverter.apply(value);
     }
@@ -208,35 +187,13 @@ public class TimeSeriesUtil {
         return result;
     }
 
-    private <DS extends HasSingleValueDataSource> AggregationType getAggregationType(@NotNull DS dataSource) {
-        return dataSource instanceof HasSingleValueAggregatedDataSource ? ((HasSingleValueAggregatedDataSource) dataSource).getValueAggregationType() :
-                AggregationType.None;
-    }
-
-    @Nullable
-    private <T extends WidgetBaseEntity<T>, R> Object getValueFromHasAggregationValue(@NotNull T entity,
-                                                                                      @NotNull Function<Object, R> resultConverter,
-                                                                                      String seriesEntityId, JSONObject dynamicParameters, Object source, String dataSourceEntityID,
-                                                                                      AggregationType aggregationType, @Nullable Long diffMilliseconds) {
-        Object value;
-        PeriodRequest periodRequest = new PeriodRequest(entityContext, diffMilliseconds).setParameters(dynamicParameters);
-        value = ((HasAggregateValueFromSeries) source).getAggregateValueFromSeries(periodRequest, aggregationType, false);
-
-        if (entity instanceof HasSourceServerUpdates) {
-            addListenValueIfRequire(((HasSourceServerUpdates) entity).getListenSourceUpdates(), entity.getEntityID(),
-                    source, dynamicParameters, seriesEntityId,
-                    dataSourceEntityID,
-                    object -> {
-                        PeriodRequest request = new PeriodRequest(entityContext, diffMilliseconds).setParameters(dynamicParameters);
-                        return resultConverter.apply(((HasAggregateValueFromSeries) source).getAggregateValueFromSeries(request, aggregationType, false));
-                    });
-        }
-        return value;
-    }
-
-    private <T extends WidgetBaseEntity<T>, R> Object getValueFromGetStatusValue(@NotNull T entity,
-                                                                                 @NotNull Function<Object, R> resultConverter,
-                                                                                 String seriesEntityId, JSONObject dynamicParameters, Object source, String dataSourceEntityID) {
+    private <T extends WidgetBaseEntity<T>, R> Object getValueFromGetStatusValue(
+        @NotNull T entity,
+        @NotNull Function<Object, R> resultConverter,
+        String seriesEntityId,
+        JSONObject dynamicParameters,
+        Object source,
+        String dataSourceEntityID) {
 
         Object value;
         HasGetStatusValue.GetStatusValueRequest valueRequest = new HasGetStatusValue.GetStatusValueRequest(entityContext, dynamicParameters);

@@ -2,6 +2,8 @@ package org.homio.app.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
@@ -10,17 +12,22 @@ import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
+import org.homio.api.service.EntityService;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
+import org.homio.app.service.LocalBoardService;
 import org.homio.app.service.LocalFileSystemProvider;
+import org.homio.app.service.video.MediaMTXService;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.jetbrains.annotations.Nullable;
 
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
@@ -28,7 +35,8 @@ import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 @Log4j2
 @UISidebarChildren(icon = "", color = "", allowCreateItem = false)
 public class LocalBoardEntity extends MicroControllerBaseEntity
-        implements BaseFileSystemEntity<LocalBoardEntity, LocalFileSystemProvider> {
+        implements EntityService<LocalBoardService, LocalBoardEntity>,
+    BaseFileSystemEntity<LocalBoardEntity, LocalFileSystemProvider> {
 
     @Override
     public String getDefaultName() {
@@ -38,6 +46,12 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
     @UIField(order = 200)
     public @NotNull String getFileSystemRoot() {
         return getJsonDataRequire("fs_root", CommonUtils.getRootPath().toString());
+    }
+
+    @UIField(order = 250, inlineEdit = true)
+    @UIFieldSlider(min = 1, max = 60)
+    public int getCpuFetchInterval() {
+        return getJsonData("cpu_interval", 10);
     }
 
     public void setFileSystemRoot(String value) {
@@ -97,6 +111,21 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
     }
 
     @Override
+    public long getEntityServiceHashCode() {
+        return getJsonDataHashCode("cpu_interval", "fs_root");
+    }
+
+    @Override
+    public @NotNull Class<LocalBoardService> getEntityServiceItemClass() {
+        return LocalBoardService.class;
+    }
+
+    @Override
+    public @Nullable LocalBoardService createService(@NotNull EntityContext entityContext) {
+        return new LocalBoardService(entityContext, this);
+    }
+
+    @Override
     protected @NotNull String getDevicePrefix() {
         return "board";
     }
@@ -106,13 +135,19 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
         return true;
     }
 
-    public static void ensureDeviceExists(EntityContext entityContext) {
-        if (entityContext.getEntity(LocalBoardEntity.class, PRIMARY_DEVICE) == null) {
+    public void setCpuFetchInterval(@Min(0) @Max(60) int value) {
+        setJsonData("cpu_interval", value);
+    }
+
+    public static LocalBoardEntity ensureDeviceExists(EntityContext entityContext) {
+        LocalBoardEntity entity = entityContext.getEntity(LocalBoardEntity.class, PRIMARY_DEVICE);
+        if (entity == null) {
             log.info("Save default compute board device");
-            LocalBoardEntity entity = new LocalBoardEntity();
+            entity = new LocalBoardEntity();
             entity.setEntityID(PRIMARY_DEVICE);
-            entityContext.save(entity);
+            entity = entityContext.save(entity);
         }
+        return entity;
     }
 
     @Override

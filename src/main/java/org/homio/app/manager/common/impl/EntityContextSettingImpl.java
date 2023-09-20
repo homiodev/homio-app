@@ -23,8 +23,11 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContextSetting;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.HasJsonData;
 import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPlugin;
 import org.homio.api.setting.SettingPluginOptions;
@@ -108,7 +111,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     }
 
     /**
-     * This is post processor that convert raw/saved/default values by using string<->string converter
+     * This is post processor that convert raw/saved/default values by using string - string converter
      */
     public <T> void setSettingRawConverterValue(Class<? extends SettingPlugin<T>> settingPluginClazz, Function<String, String> handler) {
         settingValuePostProcessors.put(settingPluginClazz.getName(), handler);
@@ -160,6 +163,12 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         if (httpRequestSettingListeners.containsKey(settingClass.getName())) {
             httpRequestSettingListeners.get(settingClass.getName()).remove(key);
         }
+    }
+
+    @Override
+    public <T extends BaseEntity & HasJsonData, P> void listenEntityValueAndGet(@NotNull T entity, @NotNull String key, @Nullable String jsonKey,
+        @NotNull Class<P> typeClass, @NotNull ThrowingConsumer<P, Exception> listener) {
+        throw new NotImplementedException("Not implemented yet");
     }
 
     @Override

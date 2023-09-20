@@ -6,8 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.api.EntityContext;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.util.DataSourceUtil;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -18,14 +18,14 @@ public class CameraServiceVideoSourceResolver implements WidgetVideoSourceResolv
 
     @Override
     public VideoEntityResponse resolveDataSource(WidgetVideoSeriesEntity item) {
-        String ds = item.getValueDataSource();
+        String ds = DataSourceUtil.getSelection(item.getValueDataSource()).getValue();
         String[] keys = ds.split("~~~");
         String entityID = keys[0];
         BaseVideoEntity<?, ?> baseVideoStreamEntity = entityContext.getEntity(entityID);
         if (baseVideoStreamEntity != null && keys.length >= 2) {
             String videoIdentifier = keys[keys.length - 1];
             String url = getUrl(videoIdentifier, entityID);
-            VideoEntityResponse response = new VideoEntityResponse(ds, url, getVideoType(url));
+            VideoEntityResponse response = new VideoEntityResponse(item.getValueDataSource(), ds, url, getVideoType(url));
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             baseVideoStreamEntity.assembleActions(uiInputBuilder);
             response.setActions(uiInputBuilder.buildAll());

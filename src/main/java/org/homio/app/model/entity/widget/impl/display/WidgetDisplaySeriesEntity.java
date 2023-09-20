@@ -10,7 +10,7 @@ import org.homio.app.model.entity.widget.attributes.*;
 
 @Entity
 public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayEntity>
-        implements HasSingleValueAggregatedDataSource, HasIcon, HasValueTemplate,
+        implements HasSingleValueDataSource, HasIcon, HasValueTemplate,
         HasName, HasStyle, HasValueConverter {
 
     @UIField(order = 1, isRevert = true)

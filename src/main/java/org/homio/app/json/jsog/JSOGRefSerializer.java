@@ -7,11 +7,6 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 
 import java.io.IOException;
 
-/**
- * Knows how to take a JSOGRef and print it as @id or @ref as appropriate.
- *
- * @author Jeff Schnitzer <jeff@infohazard.org>
- */
 public class JSOGRefSerializer extends JsonSerializer<JSOGRef> {
 
     @Override

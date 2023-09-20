@@ -284,8 +284,6 @@ public class EntityContextImpl implements EntityContext {
                 ui().handleResponse(new BeansItemsDiscovery(ItemDiscoverySupport.class).handleAction(this, null)));
         setting().listenValue(ScanVideoStreamSourcesSetting.class, "scan-video-sources", () ->
                 ui().handleResponse(new BeansItemsDiscovery(VideoStreamScanner.class).handleAction(this, null)));
-
-        this.entityContextStorageImpl.init();
     }
 
     @Override

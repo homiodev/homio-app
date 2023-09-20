@@ -145,7 +145,7 @@ public class ConsoleController implements ContextRefreshed {
                     baseEntities.stream().filter(e -> e.getEntityID().equals(entityID)).findAny().orElseThrow(
                         () -> NotFoundException.entityNotFound(entityID));
             return UIFieldSelectionUtil.loadOptions(
-                    identifier, entityContext, fieldName, null, null, null, null);
+                    identifier, entityContext, fieldName, null, null, null);
         }
         return null;
     }

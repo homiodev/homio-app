@@ -1,6 +1,7 @@
 package org.homio.app.manager.common.impl;
 
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.homio.app.service.LocalBoardService.TOTAL_MEMORY;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
@@ -116,7 +117,7 @@ public class EntityContextHardwareImpl implements EntityContextHardware {
             double cpu = jsonNode.path("CPU").asDouble(0D);
             double pc = 0;
             if (ws > 0) {
-                pc = ((double) ws / EntityContextStorageImpl.TOTAL_MEMORY) * 100;
+                pc = ((double) ws / TOTAL_MEMORY) * 100;
             }
             return new ProcessStatImpl(cpu, pc, ws);
         } else {

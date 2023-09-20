@@ -14,8 +14,6 @@ import static org.springframework.http.HttpHeaders.EXPIRES;
 
 /**
  * Provides a cache control handler interceptor to assign cache-control headers to HTTP responses.
- *
- * @author Scott Rossillo
  */
 public class CacheControlHandlerInterceptor implements HandlerInterceptor {
 

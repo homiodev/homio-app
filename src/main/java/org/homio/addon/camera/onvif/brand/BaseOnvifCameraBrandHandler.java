@@ -182,8 +182,8 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler
 
     public boolean setEndpointVisible(String endpointID, boolean visible) {
         VideoDeviceEndpoint endpoint = getEndpointRequire(endpointID);
-        if (endpoint.isVisible() != visible) {
-            endpoint.setVisible(visible);
+        if (endpoint.isVisibleEndpoint() != visible) {
+            endpoint.setVisibleEndpoint(visible);
             return true;
         }
         return false;

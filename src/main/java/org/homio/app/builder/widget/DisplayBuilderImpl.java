@@ -1,23 +1,31 @@
 package org.homio.app.builder.widget;
 
+import static java.lang.String.format;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.EntityContextWidget;
 import org.homio.api.EntityContextWidget.DisplayWidgetBuilder;
 import org.homio.api.EntityContextWidget.DisplayWidgetSeriesBuilder;
-import org.homio.api.entity.widget.AggregationType;
-import org.homio.app.builder.widget.hasBuilder.*;
+import org.homio.app.builder.widget.hasBuilder.HasActionOnClickBuilder;
+import org.homio.app.builder.widget.hasBuilder.HasChartDataSourceBuilder;
+import org.homio.app.builder.widget.hasBuilder.HasChartTimePeriodBuilder;
+import org.homio.app.builder.widget.hasBuilder.HasHorizontalLineBuilder;
+import org.homio.app.builder.widget.hasBuilder.HasIconColorThresholdBuilder;
+import org.homio.app.builder.widget.hasBuilder.HasLineChartBehaviourBuilder;
+import org.homio.app.builder.widget.hasBuilder.HasMinMaxChartValueBuilder;
+import org.homio.app.builder.widget.hasBuilder.HasNameBuilder;
+import org.homio.app.builder.widget.hasBuilder.HasPaddingBuilder;
+import org.homio.app.builder.widget.hasBuilder.HasValueConverterBuilder;
+import org.homio.app.builder.widget.hasBuilder.HasValueTemplateBuilder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplaySeriesEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
-
-import static java.lang.String.format;
 
 public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuilder, WidgetDisplayEntity>
         implements DisplayWidgetBuilder,
@@ -38,49 +46,49 @@ public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuild
     }
 
     @Override
-    public DisplayWidgetBuilder setValueToPushConfirmMessage(String value) {
+    public @NotNull DisplayWidgetBuilder setValueToPushConfirmMessage(String value) {
         widget.setValueToPushConfirmMessage(value);
         return this;
     }
 
     @Override
-    public DisplayWidgetBuilder setValueToPushSource(@Nullable String value) {
+    public @NotNull DisplayWidgetBuilder setValueToPushSource(@Nullable String value) {
         widget.setSetValueDataSource(value);
         return this;
     }
 
     @Override
-    public DisplayWidgetBuilder setListenSourceUpdates(@Nullable Boolean value) {
+    public @NotNull DisplayWidgetBuilder setListenSourceUpdates(@Nullable Boolean value) {
         widget.setListenSourceUpdates(value);
         return this;
     }
 
     @Override
-    public DisplayWidgetBuilder setShowLastUpdateTimer(@Nullable Boolean value) {
+    public @NotNull DisplayWidgetBuilder setShowLastUpdateTimer(@Nullable Boolean value) {
         widget.setShowLastUpdateTimer(value);
         return this;
     }
 
     @Override
-    public DisplayWidgetBuilder setChartHeight(int value) {
+    public @NotNull DisplayWidgetBuilder setChartHeight(int value) {
         widget.setChartHeight(value);
         return this;
     }
 
     @Override
-    public DisplayWidgetBuilder setBarBorderWidth(int top, int right, int bottom, int left) {
+    public @NotNull DisplayWidgetBuilder setBarBorderWidth(int top, int right, int bottom, int left) {
         widget.setBarBorderWidth(format("{\"top\": %s, \"right\": %s, \"bottom\": %s, \"left\": %s}", top, right, bottom, left));
         return this;
     }
 
     @Override
-    public DisplayWidgetBuilder setChartType(@NotNull EntityContextWidget.ChartType value) {
+    public @NotNull DisplayWidgetBuilder setChartType(@NotNull EntityContextWidget.ChartType value) {
         widget.setChartType(value);
         return this;
     }
 
     @Override
-    public DisplayWidgetBuilder addSeries(@Nullable String name, @NotNull Consumer<DisplayWidgetSeriesBuilder> builder) {
+    public @NotNull DisplayWidgetBuilder addSeries(@Nullable String name, @NotNull Consumer<DisplayWidgetSeriesBuilder> builder) {
         WidgetDisplaySeriesEntity entity = new WidgetDisplaySeriesEntity();
         entity.setName(name);
         series.add(entity);
@@ -90,61 +98,61 @@ public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuild
     }
 
     @Override
-    public DisplayWidgetBuilder setSingleLinePos(@Nullable Integer value) {
+    public @NotNull DisplayWidgetBuilder setSingleLinePos(@Nullable Integer value) {
         widget.setSingleLinePos(value);
         return this;
     }
 
     @Override
-    public DisplayWidgetBuilder setSingleLineColor(@Nullable String value) {
+    public @NotNull DisplayWidgetBuilder setSingleLineColor(@Nullable String value) {
         widget.setSingleLineColor(value);
         return this;
     }
 
     @Override
-    public DisplayWidgetBuilder setSingleLineWidth(@Nullable Integer value) {
+    public @NotNull DisplayWidgetBuilder setSingleLineWidth(@Nullable Integer value) {
         widget.setSingleLineWidth(value);
         return this;
     }
 
     @Override
-    public DisplayWidgetBuilder setShowDynamicLine(@Nullable Boolean value) {
+    public @NotNull DisplayWidgetBuilder setShowDynamicLine(@Nullable Boolean value) {
         widget.setShowDynamicLine(value);
         return this;
     }
 
     @Override
-    public DisplayWidgetBuilder setDynamicLineColor(@Nullable String value) {
+    public @NotNull DisplayWidgetBuilder setDynamicLineColor(@Nullable String value) {
         widget.setDynamicLineColor(value);
         return this;
     }
 
     @Override
-    public DisplayWidgetBuilder setDynamicLineWidth(@Nullable Integer value) {
+    public @NotNull DisplayWidgetBuilder setDynamicLineWidth(@Nullable Integer value) {
         widget.setDynamicLineWidth(value);
         return this;
     }
 
     @Override
-    public DisplayWidgetBuilder setPointBorderColor(String value) {
+    public @NotNull DisplayWidgetBuilder setPointBorderColor(String value) {
         widget.setPointBorderColor(value);
         return this;
     }
 
     @Override
-    public DisplayWidgetBuilder setShowChartFullScreenButton(boolean value) {
+    public @NotNull DisplayWidgetBuilder setShowChartFullScreenButton(boolean value) {
         widget.setShowChartFullScreenButton(value);
         return this;
     }
 
     @Override
-    public DisplayWidgetBuilder setFetchDataFromServerInterval(int value) {
+    public @NotNull DisplayWidgetBuilder setFetchDataFromServerInterval(int value) {
         widget.setFetchDataFromServerInterval(value);
         return this;
     }
 
     @Override
-    public DisplayWidgetBuilder setLayout(@Nullable String value) {
+    public @NotNull DisplayWidgetBuilder setLayout(@Nullable String value) {
         widget.setLayout(value);
         return this;
     }
@@ -160,20 +168,8 @@ class DisplaySeriesBuilderImpl implements DisplayWidgetSeriesBuilder,
     private final WidgetDisplaySeriesEntity series;
 
     @Override
-    public DisplayWidgetSeriesBuilder setValueDataSource(String value) {
+    public @NotNull DisplayWidgetSeriesBuilder setValueDataSource(String value) {
         series.setValueDataSource(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetSeriesBuilder setValueAggregationType(AggregationType value) {
-        series.setValueAggregationType(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetSeriesBuilder setValueAggregationPeriod(int value) {
-        series.setValueAggregationPeriod(value);
         return this;
     }
 
@@ -183,7 +179,7 @@ class DisplaySeriesBuilderImpl implements DisplayWidgetSeriesBuilder,
     }
 
     @Override
-    public DisplayWidgetSeriesBuilder setStyle(String... styles) {
+    public @NotNull DisplayWidgetSeriesBuilder setStyle(String... styles) {
         series.setStyle(String.join("~~~", styles));
         return this;
     }
