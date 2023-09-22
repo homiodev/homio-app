@@ -314,6 +314,15 @@ public class WorkspaceGroup extends BaseEntity
             this.color = childrenGroup.getIconColor();
         }
 
+        public static WorkspaceVariableEntity updatableEntity(WorkspaceVariable variable, EntityContextImpl entityContext) {
+            WorkspaceVariableEntity entity = new WorkspaceVariableEntity();
+            Object val = entityContext.var().get(variable.getVariableId());
+            entity.entityID = variable.getEntityID();
+            entity.value = generateValue(val, variable);
+            entity.usedQuota = variable.getUsedQuota();
+            return entity;
+        }
+
         public WorkspaceVariableEntity(WorkspaceVariable variable, EntityContextImpl entityContext) {
             this.entityID = variable.getEntityID();
 

@@ -3,22 +3,30 @@ package org.homio.app.manager.common.impl;
 import static java.lang.String.format;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 
+import com.fathzer.soft.javaluator.DoubleEvaluator;
+import com.fathzer.soft.javaluator.Operator;
+import com.fathzer.soft.javaluator.Parameters;
 import com.pivovarit.function.ThrowingConsumer;
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextVar;
@@ -31,8 +39,11 @@ import org.homio.api.storage.DataStorageService;
 import org.homio.api.storage.SourceHistory;
 import org.homio.api.storage.SourceHistoryItem;
 import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.impl.javaluator.DynamicVariableSet;
+import org.homio.app.manager.common.impl.javaluator.ObjectEvaluator;
 import org.homio.app.model.var.VariableBackup;
 import org.homio.app.model.var.WorkspaceGroup;
+import org.homio.app.model.var.WorkspaceGroup.WorkspaceVariableEntity;
 import org.homio.app.model.var.WorkspaceVariable;
 import org.homio.app.model.var.WorkspaceVariableMessage;
 import org.homio.app.repository.VariableBackupRepository;
@@ -43,6 +54,7 @@ import org.jetbrains.annotations.Nullable;
 @RequiredArgsConstructor
 public class EntityContextVarImpl implements EntityContextVar {
 
+    public static final Map<String, TransformVariableContext> transformVariableContextMap = new ConcurrentHashMap<>();
     public static final Map<String, VariableContext> globalVarStorageMap = new ConcurrentHashMap<>();
     @Getter
     private final EntityContextImpl entityContext;
@@ -56,6 +68,12 @@ public class EntityContextVarImpl implements EntityContextVar {
     public void onContextCreated() {
         createBroadcastGroup(entityContext);
 
+        String transVarId = entityContext.var().createTransformVariable("hardware", "tttttttttttest", "Test",
+            VariableType.Float, variableMetaBuilder -> {
+                variableMetaBuilder.setSourceVariables(Set.of("var_sys_cpu_load", "var_java_cpu_load"))
+                                   .setTransformCode("function() { return var1 + var2; }");
+            });
+
         for (WorkspaceVariable workspaceVariable : entityContext.findAll(WorkspaceVariable.class)) {
             getOrCreateContext(workspaceVariable.getVariableId());
         }
@@ -66,6 +84,8 @@ public class EntityContextVarImpl implements EntityContextVar {
             VariableContext context = getOrCreateContext(variable.getVariableId());
             context.groupVariable = variable;
             context.storageService.updateQuota((long) variable.getQuota());
+            Optional.ofNullable(transformVariableContextMap.get(variable.getVariableId()))
+                    .ifPresent(TransformVariableContext::updated);
         });
         entityContext.event().addEntityRemovedListener(WorkspaceVariable.class, "var-delete",
                 workspaceVariable -> {
@@ -74,6 +94,8 @@ public class EntityContextVarImpl implements EntityContextVar {
                     if (context.groupVariable.isBackup()) {
                         variableBackupRepository.delete(context.groupVariable.getVariableId());
                     }
+                    Optional.ofNullable(transformVariableContextMap.get(workspaceVariable.getVariableId()))
+                            .ifPresent(TransformVariableContext::dispose);
                 });
 
         entityContext.bgp().builder("var-backup").intervalWithDelay(Duration.ofSeconds(60))
@@ -119,19 +141,18 @@ public class EntityContextVarImpl implements EntityContextVar {
     }
 
     @Override
-    public void set(@NotNull String variableId, @Nullable Object value, @NotNull Consumer<Object> convertedValue) throws IllegalArgumentException {
-        set(variableId, value, convertedValue, false);
+    public Object set(@NotNull String variableId, @Nullable Object value) throws IllegalArgumentException {
+        if (value == null) {
+            return null;
+        }
+        return set(getOrCreateContext(variableId), value, false);
     }
 
-    @SneakyThrows
-    public void set(@NotNull String variableId, @Nullable Object value, Consumer<Object> convertedValue, boolean logIfNoLinked)
-            throws IllegalArgumentException {
-        if (value == null) {
-            convertedValue.accept(null);
-            return;
-        }
+    public Object set(String variableId, Object value, boolean logIfNoLinked) {
+        return set(getOrCreateContext(variableId), value, logIfNoLinked);
+    }
 
-        VariableContext context = getOrCreateContext(variableId);
+    private Object set(VariableContext context, Object value, boolean logIfNoLinked) {
         value = context.valueConverter.apply(value);
         WorkspaceGroup workspaceGroup = context.groupVariable.getWorkspaceGroup();
         if (validateValueBeforeSave(value, context)) {
@@ -139,30 +160,31 @@ public class EntityContextVarImpl implements EntityContextVar {
                     context.groupVariable.getName(), workspaceGroup.getGroupId(), context.groupVariable.getRestriction().name());
             throw new IllegalArgumentException(error);
         }
-        convertedValue.accept(value);
         context.storageService.save(new WorkspaceVariableMessage(value));
         entityContext.event().fireEvent(context.groupVariable.getVariableId(), value);
         entityContext.event().fireEvent(context.groupVariable.getEntityID(), value);
 
         // Fire update 'value' on UI
-        // Update only value. Skip updating usedQuota field because not so important
+        WorkspaceVariableEntity updatedEntity = WorkspaceVariableEntity.updatableEntity(context.groupVariable, entityContext);
         if (workspaceGroup.getParent() == null) {
             entityContext.ui().updateInnerSetItem(workspaceGroup, "workspaceVariableEntities",
-                    context.groupVariable.getEntityID(), "value", WorkspaceGroup.generateValue(value, context.groupVariable));
+                context.groupVariable.getEntityID(), context.groupVariable.getEntityID(),
+                updatedEntity);
         } else {
             entityContext.ui().updateInnerSetItem(workspaceGroup.getParent(), "workspaceVariableEntities",
-                    context.groupVariable.getEntityID(), "value", WorkspaceGroup.generateValue(value, context.groupVariable));
+                context.groupVariable.getEntityID(), context.groupVariable.getEntityID(), updatedEntity);
         }
 
         if (context.linkListener != null) {
             try {
                 context.linkListener.accept(value);
             } catch (Exception ex) {
-                log.error("Unable to handle variable {} link handler. {}", variableId, getErrorMessage(ex));
+                log.error("Unable to handle variable {} link handler. {}", context.groupVariable.getVariableId(), getErrorMessage(ex));
             }
         } else if (logIfNoLinked) {
             log.warn("Updated variable: {} has no linked handler", context.groupVariable.getTitle());
         }
+        return value;
     }
 
     @Override
@@ -324,6 +346,36 @@ public class EntityContextVarImpl implements EntityContextVar {
             @NotNull String variableName,
             @NotNull VariableType variableType,
             @Nullable Consumer<VariableMetaBuilder> builder) {
+        WorkspaceVariable entity = getOrCreateVariable(groupId, variableId);
+        if (entity.tryUpdateVariable(variableId, variableName, (variable) -> {
+            if (builder != null) {
+                builder.accept(new VariableMetaBuilderImpl(variable));
+            }
+        }, variableType)) {
+            entityContext.save(entity);
+        }
+        return entity.getVariableId();
+    }
+
+    @Override
+    public @NotNull String createTransformVariable(
+        @NotNull String groupId,
+        @Nullable String variableId,
+        @NotNull String variableName,
+        @NotNull VariableType variableType,
+        @Nullable Consumer<TransformVariableMetaBuilder> builder) {
+        WorkspaceVariable entity = getOrCreateVariable(groupId, variableId);
+        if (entity.tryUpdateVariable(variableId, variableName, (variable) -> {
+            if (builder != null) {
+                builder.accept(new VariableMetaBuilderImpl(variable));
+            }
+        }, variableType)) {
+            entityContext.save(entity);
+        }
+        return entity.getVariableId();
+    }
+
+    private WorkspaceVariable getOrCreateVariable(@NotNull String groupId, @Nullable String variableId) {
         WorkspaceVariable entity = variableId == null ? null : entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
 
         if (entity == null) {
@@ -333,10 +385,7 @@ public class EntityContextVarImpl implements EntityContextVar {
             }
             entity = new WorkspaceVariable(groupEntity);
         }
-        if (entity.tryUpdateVariable(variableId, variableName, builder, variableType)) {
-            entityContext.save(entity);
-        }
-        return entity.getVariableId();
+        return entity;
     }
 
     private VariableContext getOrCreateContext(String varId) {
@@ -353,11 +402,19 @@ public class EntityContextVarImpl implements EntityContextVar {
                     }
                     context = createContext(entity);
                 }
+                createViewVariables(context, variableId);
             } finally {
                 createContextLock.unlock();
             }
         }
         return context;
+    }
+
+    private void createViewVariables(VariableContext context, String variableId) {
+        if (context.groupVariable.isTransformVariable()) {
+            transformVariableContextMap.computeIfAbsent(variableId,
+                key -> new TransformVariableContext(context));
+        }
     }
 
     private VariableContext createContext(WorkspaceVariable variable) {
@@ -470,7 +527,7 @@ public class EntityContextVarImpl implements EntityContextVar {
     }
 
     @RequiredArgsConstructor
-    private static class VariableContext {
+    public static class VariableContext {
 
         public long lastBackupTimestamp = System.currentTimeMillis();
         private final DataStorageService<WorkspaceVariableMessage> storageService;
@@ -486,53 +543,68 @@ public class EntityContextVarImpl implements EntityContextVar {
         }
     }
 
-    public record VariableMetaBuilderImpl(WorkspaceVariable entity) implements VariableMetaBuilder {
+    @RequiredArgsConstructor
+    public static class VariableMetaBuilderImpl implements VariableMetaBuilder, TransformVariableMetaBuilder {
+
+        private final WorkspaceVariable entity;
 
         @Override
-        public @NotNull VariableMetaBuilder setQuota(int value) {
+        public @NotNull VariableMetaBuilderImpl setQuota(int value) {
             entity.setQuota(value);
             return this;
         }
 
         @Override
-        public @NotNull VariableMetaBuilder setReadOnly(boolean value) {
-            entity.setReadOnly(value);
+        public @NotNull VariableMetaBuilder setWritable(boolean value) {
+            entity.setReadOnly(!value);
             return this;
         }
 
         @Override
-        public @NotNull VariableMetaBuilder setColor(String value) {
+        public @NotNull VariableMetaBuilderImpl setSourceVariables(@NotNull Set<String> sources) {
+            entity.setJsonDataList("sources", sources);
+            return this;
+        }
+
+        @Override
+        public @NotNull VariableMetaBuilderImpl setTransformCode(@NotNull String code) {
+            entity.setJsonData("transform", code);
+            return this;
+        }
+
+        @Override
+        public @NotNull VariableMetaBuilderImpl setColor(String value) {
             entity.setColor(value);
             return this;
         }
 
         @Override
-        public @NotNull VariableMetaBuilder setPersistent(boolean value) {
+        public @NotNull VariableMetaBuilderImpl setPersistent(boolean value) {
             entity.setBackup(value);
             return this;
         }
 
         @Override
-        public @NotNull VariableMetaBuilder setDescription(String value) {
+        public @NotNull VariableMetaBuilderImpl setDescription(String value) {
             entity.setDescription(value);
             return this;
         }
 
         @Override
-        public @NotNull VariableMetaBuilder setUnit(String value) {
+        public @NotNull VariableMetaBuilderImpl setUnit(String value) {
             entity.setUnit(value);
             return this;
         }
 
         @Override
-        public @NotNull VariableMetaBuilder setNumberRange(float min, float max) {
+        public @NotNull VariableMetaBuilderImpl setNumberRange(float min, float max) {
             entity.setMin(min);
             entity.setMax(max);
             return this;
         }
 
         @Override
-        public @NotNull VariableMetaBuilder setIcon(@Nullable Icon value) {
+        public @NotNull VariableMetaBuilderImpl setIcon(@Nullable Icon value) {
             if (value != null) {
                 entity.setIcon(value.getIcon());
                 entity.setIconColor(value.getColor());
@@ -541,15 +613,101 @@ public class EntityContextVarImpl implements EntityContextVar {
         }
 
         @Override
-        public @NotNull VariableMetaBuilder setAttributes(List<String> attributes) {
+        public @NotNull VariableMetaBuilderImpl setAttributes(List<String> attributes) {
             entity.setAttributes(attributes);
             return this;
         }
 
         @Override
-        public @NotNull VariableMetaBuilder setValues(Set<String> values) {
+        public @NotNull VariableMetaBuilderImpl setValues(Set<String> values) {
             entity.setJsonData("options", String.join("~~~", values));
             return this;
+        }
+    }
+
+    private class TransformVariableContext {
+
+        private final VariableContext context;
+        private final DynamicVariableSet variables;
+        private String transform;
+        private List<String> sources;
+
+        public TransformVariableContext(VariableContext context) {
+            this.context = context;
+            this.updated();
+            variables = new DynamicVariableSet(sources, EntityContextVarImpl.this);
+            for (String source : sources) {
+                entityContext.event().addEventListener(source, context.groupVariable.getVariableId(), o -> {
+                    this.recalculate();
+                });
+            }
+        }
+
+        public void updated() {
+            transform = context.groupVariable.getJsonData("transform");
+            sources = context.groupVariable.getJsonDataList("sources");
+        }
+
+        private void recalculate() {
+            try {
+                Double result = (Double) new ExtendedDoubleEvaluator(EntityContextVarImpl.this)
+                    .evaluate("VAR0 + asum('VAR1', PT24H)", variables);
+                set(context, result, false);
+            } catch (Exception ex) {
+                log.warn("Unable to evaluate variable expression: {}", transform);
+            }
+        }
+
+        public void dispose() {
+            for (String source : context.groupVariable.getJsonDataList("sources")) {
+                entityContext.event().removeEventListener(context.groupVariable.getVariableId(), source);
+            }
+        }
+
+
+        private static class ExtendedDoubleEvaluator extends ObjectEvaluator {
+
+            private static final Map<String, BiFunction<Iterator<Object>, EntityContextVarImpl, Double>> functions = new HashMap<>();
+            private static final Parameters params = DoubleEvaluator.getDefaultParameters();
+            private final EntityContextVarImpl var;
+
+            static {
+                for (AggregationType aggregationType : AggregationType.values()) {
+                    if (aggregationType != AggregationType.None) {
+                        com.fathzer.soft.javaluator.Function SUM = new com.fathzer.soft.javaluator.Function(aggregationType.name(), 2);
+                        functions.put(aggregationType.name(), (arguments, varContext) -> {
+                            Object value = varContext.aggregate(arguments.next().toString(), getFrom((Double) arguments.next()), null, AggregationType.Sum,
+                                true);
+                            return value == null ? 0 : ((Number) value).doubleValue();
+                        });
+                        params.add(SUM);
+                    }
+                }
+            }
+
+            private static Long getFrom(Double seconds) {
+                LocalDateTime currentTime = LocalDateTime.now();
+                return currentTime.minusSeconds(seconds.longValue()).toInstant(ZoneOffset.UTC).toEpochMilli();
+            }
+
+            public ExtendedDoubleEvaluator(EntityContextVarImpl var) {
+                super(params);
+                this.var = var;
+            }
+
+            @Override
+            protected Object evaluate(com.fathzer.soft.javaluator.Function function, Iterator<Object> arguments, Object evaluationContext) {
+                BiFunction<Iterator<Object>, EntityContextVarImpl, Double> funcHandler = functions.get(function.getName());
+                if (funcHandler != null) {
+                    return funcHandler.apply(arguments, var);
+                }
+                return super.evaluate(function, arguments, evaluationContext);
+            }
+
+            @Override
+            protected Object evaluate(Operator operator, Iterator<Object> operands, Object evaluationContext) {
+                return super.evaluate(operator, operands, evaluationContext);
+            }
         }
     }
 }

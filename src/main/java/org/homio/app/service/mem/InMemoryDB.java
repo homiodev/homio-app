@@ -1,14 +1,40 @@
 package org.homio.app.service.mem;
 
+import static com.mongodb.client.model.Sorts.ascending;
+import static com.mongodb.client.model.Sorts.descending;
+import static org.bson.codecs.configuration.CodecRegistries.fromCodecs;
+import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
+import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
+
 import com.mongodb.MongoClientSettings;
 import com.mongodb.ServerAddress;
-import com.mongodb.client.*;
+import com.mongodb.client.FindIterable;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
+import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Accumulators;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Projections;
 import de.bwaldvogel.mongo.MongoServer;
 import de.bwaldvogel.mongo.backend.memory.MemoryBackend;
+import java.net.InetSocketAddress;
+import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Spliterators;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 import lombok.RequiredArgsConstructor;
 import org.bson.BsonType;
 import org.bson.Document;
@@ -22,19 +48,6 @@ import org.homio.api.storage.SortBy;
 import org.homio.api.storage.SourceHistoryItem;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.net.InetSocketAddress;
-import java.text.NumberFormat;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-
-import static com.mongodb.client.model.Sorts.ascending;
-import static com.mongodb.client.model.Sorts.descending;
-import static org.bson.codecs.configuration.CodecRegistries.*;
 
 public final class InMemoryDB {
 
@@ -154,6 +167,7 @@ public final class InMemoryDB {
         private @Nullable Long quota;
         // delta is 10% of quota but not more than 1000
         private int delta;
+        private T last;
 
         @Override
         public List<SourceHistoryItem> getSourceHistoryItems(@Nullable String field, @Nullable String value, int from, int count) {
@@ -167,6 +181,7 @@ public final class InMemoryDB {
 
         @Override
         public void save(@NotNull List<T> entities) {
+            last = null;
             collection.insertMany(entities);
             postInsertQuotaHandler();
         }
@@ -174,36 +189,12 @@ public final class InMemoryDB {
         @Override
         public T save(@NotNull T entity) {
             collection.insertOne(entity);
+            last = entity;
             for (Consumer<T> listener : saveListeners.values()) {
                 listener.accept(entity);
             }
             postInsertQuotaHandler();
             return entity;
-        }
-
-        private void postInsertQuotaHandler() {
-            if (quota != null) {
-                estimateUsed.incrementAndGet();
-
-                if (estimateUsed.get() > quota) {
-                    synchronized (this) {
-                        estimateUsed.set(count()); // calc precise amount of saved documents
-
-                        if (estimateUsed.get() > quota) {
-                            List<Long> itemsToRemove;
-                            try (MongoCursor<Document> cursor = collection.aggregate(Arrays.asList(
-                                    Aggregates.sort(ascending(CREATED)),
-                                    Aggregates.limit(delta),
-                                    Aggregates.project(Projections.include("_id")),
-                                    Aggregates.group("ids", Accumulators.addToSet("ids", "$_id"))
-                            ), Document.class).cursor()) {
-                                itemsToRemove = (List<Long>) cursor.next().get("ids", List.class);
-                            }
-                            updateUsed(-collection.deleteMany(Filters.in("_id", itemsToRemove)).getDeletedCount());
-                        }
-                    }
-                }
-            }
         }
 
         @Override
@@ -216,11 +207,13 @@ public final class InMemoryDB {
 
         @Override
         public long deleteBy(@NotNull String field, @NotNull Object value) {
+            last = null;
             return -updateUsed(-collection.deleteMany(Filters.eq(field, value)).getDeletedCount());
         }
 
         @Override
         public long deleteAll() {
+            last = null;
             return -updateUsed(-collection.deleteMany(new Document()).getDeletedCount());
         }
 
@@ -233,9 +226,12 @@ public final class InMemoryDB {
 
         @Override
         public T getLatest() {
-            try (MongoCursor<T> cursor = queryWithSort(new Document(), SortBy.sortDesc(CREATED), 1, null)) {
-                return cursor.tryNext();
+            if (last == null) {
+                try (MongoCursor<T> cursor = queryWithSort(new Document(), SortBy.sortDesc(CREATED), 1, null)) {
+                    last = cursor.tryNext();
+                }
             }
+            return last;
         }
 
         @Override
@@ -345,15 +341,40 @@ public final class InMemoryDB {
             }
         }
 
-        private Bson joinFilters(List<Bson> filterList) {
-            return filterList.isEmpty() ? new Document() :
-                    filterList.size() == 1 ? filterList.iterator().next() : Filters.and(filterList);
-        }
-
         @Override
         public @NotNull InMemoryDBDataService<T> addSaveListener(@NotNull String discriminator, @NotNull Consumer<T> listener) {
             this.saveListeners.put(discriminator, listener);
             return this;
+        }
+
+        private Bson joinFilters(List<Bson> filterList) {
+            return filterList.isEmpty() ? new Document() :
+                filterList.size() == 1 ? filterList.iterator().next() : Filters.and(filterList);
+        }
+
+        private void postInsertQuotaHandler() {
+            if (quota != null) {
+                estimateUsed.incrementAndGet();
+
+                if (estimateUsed.get() > quota) {
+                    synchronized (this) {
+                        estimateUsed.set(count()); // calc precise amount of saved documents
+
+                        if (estimateUsed.get() > quota) {
+                            List<Long> itemsToRemove;
+                            try (MongoCursor<Document> cursor = collection.aggregate(Arrays.asList(
+                                Aggregates.sort(ascending(CREATED)),
+                                Aggregates.limit(delta),
+                                Aggregates.project(Projections.include("_id")),
+                                Aggregates.group("ids", Accumulators.addToSet("ids", "$_id"))
+                            ), Document.class).cursor()) {
+                                itemsToRemove = (List<Long>) cursor.next().get("ids", List.class);
+                            }
+                            updateUsed(-collection.deleteMany(Filters.in("_id", itemsToRemove)).getDeletedCount());
+                        }
+                    }
+                }
+            }
         }
 
         private Bson buildCreatedFilter(Long from, Long to) {

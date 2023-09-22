@@ -25,7 +25,6 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextVar;
-import org.homio.api.EntityContextVar.VariableMetaBuilder;
 import org.homio.api.EntityContextVar.VariableType;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
@@ -51,7 +50,6 @@ import org.homio.api.ui.field.selection.UIFieldSelectionParent;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent.SelectionParent;
 import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection.SelectionConfiguration;
 import org.homio.app.manager.common.impl.EntityContextVarImpl;
-import org.homio.app.manager.common.impl.EntityContextVarImpl.VariableMetaBuilderImpl;
 import org.homio.app.repository.VariableBackupRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -100,7 +98,7 @@ public class WorkspaceVariable extends BaseEntity
     @UIField(order = 25, hideInEdit = true)
     @UIFieldGroup("QUOTA")
     @UIFieldInlineEntityWidth(15)
-    private boolean readOnly = false;
+    private boolean readOnly = true;
 
     @UIField(order = 30)
     @UIFieldInlineEntityWidth(15)
@@ -302,8 +300,7 @@ public class WorkspaceVariable extends BaseEntity
     @Override
     public void setStatusValue(SetStatusValueRequest request) {
         ((EntityContextVarImpl) request.getEntityContext().var())
-                .set(variableId, request.getValue(), ignore -> {
-                }, true);
+            .set(variableId, request.getValue(), true);
     }
 
     @Override
@@ -341,10 +338,10 @@ public class WorkspaceVariable extends BaseEntity
     }
 
     public boolean tryUpdateVariable(
-            String variableId,
-            String variableName,
-            Consumer<VariableMetaBuilder> builder,
-            VariableType variableType) {
+        @Nullable String variableId,
+        @NotNull String variableName,
+        @NotNull Consumer<WorkspaceVariable> builder,
+        @NotNull VariableType variableType) {
         long entityHashCode = getEntityHashCode();
         String varId = Objects.toString(variableId, String.valueOf(System.currentTimeMillis()));
         this.setName(variableName);
@@ -352,9 +349,7 @@ public class WorkspaceVariable extends BaseEntity
         this.setEntityID(varId);
         this.variableId = varId;
         this.restriction = variableType;
-        if (builder != null) {
-            builder.accept(new VariableMetaBuilderImpl(this));
-        }
+        builder.accept(this);
         return entityHashCode != getEntityHashCode();
     }
 
@@ -383,5 +378,9 @@ public class WorkspaceVariable extends BaseEntity
     @Override
     public @NotNull Icon selectionIcon() {
         return new Icon(icon, iconColor);
+    }
+
+    public boolean isTransformVariable() {
+        return getJsonData().has("transform");
     }
 }
