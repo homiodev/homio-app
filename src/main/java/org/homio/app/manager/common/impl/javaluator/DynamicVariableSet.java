@@ -4,6 +4,7 @@ import com.fathzer.soft.javaluator.StaticVariableSet;
 import java.time.Duration;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.homio.api.exception.ServerException;
 import org.homio.app.manager.common.impl.EntityContextVarImpl;
 
 @RequiredArgsConstructor
@@ -20,11 +21,13 @@ public class DynamicVariableSet extends StaticVariableSet<Object> {
         }
         if (variableName.startsWith("VAR")) {
             int index = Integer.parseInt(variableName.substring("VAR".length()));
+            assertVarExists(index);
             Number number = (Number) var.get(sources.get(index));
             value = number == null ? 0D : number.doubleValue();
             set(variableName, value);
         } else if (variableName.startsWith("'VAR")) {
             int index = Integer.parseInt(variableName.substring("'VAR".length(), variableName.length() - 1));
+            assertVarExists(index);
             return sources.get(index);
         }
         // string case
@@ -35,5 +38,11 @@ public class DynamicVariableSet extends StaticVariableSet<Object> {
             return (double) Duration.parse(variableName).getSeconds();
         }
         return value;
+    }
+
+    private void assertVarExists(int index) {
+        if (sources.size() <= index) {
+            throw new ServerException("Unable to find 'VAR%s'".formatted(index));
+        }
     }
 }

@@ -76,6 +76,78 @@
       "iconColor": "#42B52D"
     },
     {
+      "name": "motion_alarm",
+      "order": 100,
+      "icon": "fa-bell",
+      "iconColor": "#387BE0"
+    },
+    {
+      "name": "field_detect_alarm",
+      "order": 110,
+      "icon": "fa-flag",
+      "iconColor": "#387BE0"
+    },
+    {
+      "name": "line_cross_alarm",
+      "order": 120,
+      "icon": "fab fa-spotify",
+      "iconColor": "#387BE0"
+    },
+    {
+      "name": "pir_alarm",
+      "order": 130,
+      "icon": "fa-flag-checkered",
+      "iconColor": "#387BE0"
+    },
+    {
+      "name": "cell_alarm",
+      "order": 140,
+      "icon": "fa-table-cells-large",
+      "iconColor": "#387BE0"
+    },
+    {
+      "name": "item_taken_alarm",
+      "order": 150,
+      "icon": "fa-code-pull-request",
+      "iconColor": "#387BE0"
+    },
+    {
+      "name": "item_left_alarm",
+      "order": 110,
+      "icon": "fa-code-merge",
+      "iconColor": "#387BE0"
+    },
+    {
+      "name": "car_alarm",
+      "order": 170,
+      "icon": "fa-car-on",
+      "iconColor": "#387BE0"
+    },
+    {
+      "name": "human_alarm",
+      "order": 180,
+      "icon": "fa-person",
+      "iconColor": "#387BE0"
+    },
+    {
+      "name": "face_detect_alarm",
+      "order": 190,
+      "icon": "fa-face-smile",
+      "iconColor": "#387BE0"
+    },
+    {
+      "name": "external_alarm",
+      "order": 193,
+      "icon": "fa-voicemail",
+      "iconColor": "#387BE0"
+    },
+    {
+      "name": "audio_alarm",
+      "order": 197,
+      "icon": "fa-volume-high",
+      "iconColor": "#387BE0"
+    },
+    {
       "name": "bgcolor",
       "stateless": true,
       "order": 200,

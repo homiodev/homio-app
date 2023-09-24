@@ -1,5 +1,6 @@
 package org.homio.app.auth;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,6 +42,9 @@ public class JwtTokenFilter extends OncePerRequestFilter {
                 }
             }
             chain.doFilter(request, response);
+        } catch (ExpiredJwtException ex) {
+            SecurityContextHolder.clearContext();
+            response.sendError(420, ex.getMessage());
         } catch (BadCredentialsException ex) {
             SecurityContextHolder.clearContext();
             response.sendError(419, ex.getMessage());

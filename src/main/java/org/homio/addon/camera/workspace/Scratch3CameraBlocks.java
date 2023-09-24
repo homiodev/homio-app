@@ -1,5 +1,6 @@
 package org.homio.addon.camera.workspace;
 
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.ExternalMotionAlarm;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
 
 import dev.failsafe.Failsafe;
@@ -18,7 +19,7 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.homio.addon.camera.CameraEntrypoint;
-import org.homio.addon.camera.VideoConstants.Events;
+import org.homio.addon.camera.VideoConstants.AlarmEvents;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoPlaybackStorage;
@@ -277,7 +278,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
             entity.getService().audioDetected(onOffType.boolValue())),
 
         MotionAlarm("Motion alarm", (entity, onOffType, workspaceBlock) ->
-            entity.getService().motionDetected(onOffType.boolValue(), Events.ExternalMotionAlarm));
+            entity.getService().motionDetected(onOffType.boolValue(), ExternalMotionAlarm));
 
         @Getter
         private final String value;
@@ -301,7 +302,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
 
         MotionAlarm("Motion alarm", (entity, onOffType, workspaceBlock, next) -> {
             BroadcastLock motionAlarm =
-                workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock, Events.MotionAlarm + ":" + entity.getEntityID());
+                workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock, AlarmEvents.MotionAlarm + ":" + entity.getEntityID());
             workspaceBlock.subscribeToLock(motionAlarm, state -> ((OnOffType) state).boolValue() == onOffType.boolValue(),
                     next::handle);
         });

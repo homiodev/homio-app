@@ -2,6 +2,8 @@ package org.homio.addon.camera.service;
 
 import static java.lang.String.join;
 import static org.homio.addon.camera.CameraController.camerasOpenStreams;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.AudioAlarm;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.MotionAlarm;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
 import static org.homio.addon.camera.entity.StreamMJPEG.mp4OutOptions;
@@ -45,7 +47,7 @@ import org.apache.logging.log4j.Logger;
 import org.homio.addon.camera.CameraController;
 import org.homio.addon.camera.CameraController.OpenStreamsContainer;
 import org.homio.addon.camera.ConfigurationException;
-import org.homio.addon.camera.VideoConstants.Events;
+import org.homio.addon.camera.VideoConstants;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.addon.camera.entity.StreamHLS;
 import org.homio.addon.camera.entity.VideoActionsContext;
@@ -384,19 +386,21 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         entityContext.event().fireEventIfNotSame(key + ":" + entityID, state);
     }
 
-    public void motionDetected(boolean on, @NotNull Events event) {
-        setAttribute(event.name(), OnOffType.of(on));
+    public void motionDetected(boolean on, @NotNull VideoConstants.AlarmEvents event) {
+        addEndpointOptional(event);
+        setAttribute(event.getEndpoint(), OnOffType.of(on));
         motionDetected = on;
     }
 
     @Override
     public void motionDetected(boolean on) {
-        motionDetected(on, Events.MotionAlarm);
+        motionDetected(on, MotionAlarm);
     }
 
     @Override
     public void audioDetected(boolean on) {
-        setAttribute(Events.AudioAlarm.name(), OnOffType.of(on));
+        addEndpointOptional(AudioAlarm);
+        setAttribute(AudioAlarm.name(), OnOffType.of(on));
     }
 
     public void processSnapshot(byte[] incomingSnapshot) {
@@ -526,7 +530,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     protected void setMotionAlarmThreshold(int threshold) {
         setAttribute(ENDPOINT_MOTION_THRESHOLD, new StringType(threshold));
         if (threshold == 0) {
-            motionDetected(false, Events.MotionAlarm);
+            motionDetected(false, MotionAlarm);
         }
     }
 
@@ -794,6 +798,13 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             ffmpegMainReStream = createHandler.get();
         }
         return ffmpegMainReStream;
+    }
+
+    private void addEndpointOptional(@NotNull VideoConstants.AlarmEvents event) {
+        if (!endpoints.containsKey(event.getEndpoint())) {
+            addEndpointSwitch(event.getEndpoint(), state -> {
+            }, false);
+        }
     }
 
     public Logger getLog() {

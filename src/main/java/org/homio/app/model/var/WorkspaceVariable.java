@@ -107,15 +107,15 @@ public class WorkspaceVariable extends BaseEntity
     @Column(unique = true, nullable = false)
     private String variableId;
 
-    @UIFieldInlineEntityWidth(15)
-    private String color;
-
     private String icon;
+
+    @UIFieldInlineEntityWidth(15)
     private String iconColor;
+
     private String unit;
 
     @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, targetEntity = WorkspaceGroup.class)
     private WorkspaceGroup workspaceGroup;
 
     @Getter
@@ -141,7 +141,7 @@ public class WorkspaceVariable extends BaseEntity
 
     @Override
     @UIField(order = 10, required = true)
-    @UIFieldColorRef("color")
+    @UIFieldColorRef("iconColor")
     @UIFieldInlineEntityEditWidth(35)
     @UIFieldDisableEditOnCondition("return context.getParent('locked')")
     public String getName() {
@@ -367,7 +367,6 @@ public class WorkspaceVariable extends BaseEntity
         result = 31 * result + (readOnly ? 1 : 0);
         result = 31 * result + (backup ? 1 : 0);
         result = 31 * result + (variableId != null ? variableId.hashCode() : 0);
-        result = 31 * result + (color != null ? color.hashCode() : 0);
         result = 31 * result + (icon != null ? icon.hashCode() : 0);
         result = 31 * result + (iconColor != null ? iconColor.hashCode() : 0);
         result = 31 * result + (unit != null ? unit.hashCode() : 0);
@@ -380,7 +379,36 @@ public class WorkspaceVariable extends BaseEntity
         return new Icon(icon, iconColor);
     }
 
-    public boolean isTransformVariable() {
-        return getJsonData().has("transform");
+    public List<String> getSources() {
+        return getJsonDataList("sources");
+    }
+
+    public void setSources(List<String> sources) {
+        setJsonDataList("sources", sources);
+    }
+
+    public String getCode() {
+        return getJsonData("code");
+    }
+
+    public void setCode(String code) {
+        setJsonData("code", code);
+    }
+
+    public @NotNull VarType getVarType() {
+        return getJsonDataEnum("vt", VarType.standard);
+    }
+
+    public void setVarType(VarType type) {
+        setJsonDataEnum("vt", type == VarType.standard ? null : type);
+    }
+
+    public enum VarType {
+        standard, transform
+    }
+
+    @Override
+    public void afterUpdate() {
+        super.afterUpdate();
     }
 }

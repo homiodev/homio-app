@@ -314,7 +314,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
                 case "rtspSource" -> new Icon("fas fa-blog", "#399AAA");
                 case "webRTCSource" -> new Icon("fas fa-globe", "#A71ABD");
                 case "udpSource" -> new Icon("fas fa-kip-sign", "#3AB2BA");
-                default -> new Icon("fas fa-fw fa-film", "#767873");
+                default -> new Icon("fas fa-film", "#767873");
             };
         }
 

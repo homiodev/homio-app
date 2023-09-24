@@ -61,19 +61,6 @@ public class WorkspaceController {
         return workspaceEntity.getContent();
     }
 
-    @SneakyThrows
-    @GetMapping("/variable/values")
-    public List<OptionModel> getWorkspaceVariableValues() {
-        List<OptionModel> options = new ArrayList<>();
-        List<WorkspaceVariable> entities = entityContext.findAll(WorkspaceVariable.class)
-                .stream()
-                .filter(s -> !s.getWorkspaceGroup().getGroupId().equals("broadcasts"))
-                .collect(Collectors.toList());
-        UIFieldSelectionUtil.assembleItemsToOptions(options, WorkspaceVariable.class,
-                entities, entityContext, null);
-        return UIFieldSelectionUtil.groupingOptions(UIFieldSelectionUtil.filterOptions(options));
-    }
-
     @GetMapping("/variable")
     public String getWorkspaceVariables() {
         JSONObject result = new JSONObject();
@@ -91,29 +78,8 @@ public class WorkspaceController {
         JSONObject variables = new JSONObject();
         result.put("variables", variables);
         variables.put("example", new JSONArray().put("example").put(0));
-        /*for (WorkspaceGroup workspaceGroup : groups.values()) {
-            groupVariables.put(workspaceGroup.getGroupId(), new JSONArray().put(workspaceGroup.getName()).put(new JSONArray()).put(new JSONArray()));
-
-            for (WorkspaceVariable variable : workspaceGroup.getWorkspaceVariables()) {
-                JSONArray variables = groupVariables.getJSONArray(variable.getWorkspaceGroup().getGroupId()).getJSONArray(2);
-
-                String title = format("%s   [%s]", variable.getTitle(),
-                    variable.getWorkspaceGroup().getTitle());
-
-                variables.put(new JSONObject()
-                    .put("name", title)
-                    .put("type", "group_variables_group")
-                    .put("id_", variable.getEntityID())
-                    .put("restriction", variable.getRestriction()));
-            }
-        }*/
 
         return result.toString();
-    }
-
-    @GetMapping("/variable/{type}")
-    public List<OptionModel> getWorkspaceVariables(@PathVariable("type") String type) {
-        return OptionModel.entityList(entityContext.findAllByPrefix(type));
     }
 
     @SneakyThrows

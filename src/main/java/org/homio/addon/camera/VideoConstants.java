@@ -1,5 +1,8 @@
 package org.homio.addon.camera;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
 public class VideoConstants {
 
     public static final String CM = "/cgi-bin/configManager.cgi?action=";
@@ -70,30 +73,47 @@ public class VideoConstants {
     public static final String ENDPOINT_TILT = "tilt";
     public static final String ENDPOINT_ZOOM = "zoom";
 
-    public static final String CHANNEL_ACTIVATE_ALARM_OUTPUT = "activate_alarm_output";
-    public static final String CHANNEL_ACTIVATE_ALARM_OUTPUT2 = "activate_alarm_output2";
-    public static final String CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT = "trigger_external_alarm_input";
-    public static final String CHANNEL_EXTERNAL_ALARM_INPUT = "external_alarm_input";
-    public static final String CHANNEL_EXTERNAL_ALARM_INPUT2 = "external_alarm_input2";
+    public static final String ENDPOINT_ACTIVATE_ALARM_OUTPUT = "activate_alarm_output";
+    public static final String ENDPOINT_ACTIVATE_ALARM_OUTPUT2 = "activate_alarm_output2";
+    public static final String ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT = "trigger_external_alarm_input";
+    public static final String ENDPOINT_EXTERNAL_ALARM_INPUT = "external_alarm_input";
+    public static final String ENDPOINT_EXTERNAL_ALARM_INPUT2 = "external_alarm_input2";
 
-    public static final String CHANNEL_TEXT_OVERLAY = "text_overlay";
-    public static final String CHANNEL_EXTERNAL_LIGHT = "external_light";
-    public static final String CHANNEL_DOORBELL = "door_bell";
-    public static final String CHANNEL_GOTO_PRESET = "goto_preset";
-    public static final String CHANNEL_ENABLE_PRIVACY_MODE = "enable_privacy_mode";
+    public static final String ENDPOINT_TEXT_OVERLAY = "text_overlay";
+    public static final String ENDPOINT_EXTERNAL_LIGHT = "external_light";
+    public static final String ENDPOINT_DOORBELL = "door_bell";
+    public static final String ENDPOINT_GOTO_PRESET = "goto_preset";
+    public static final String ENDPOINT_ENABLE_PRIVACY_MODE = "enable_privacy_mode";
 
-    public enum Events {
-        MotionAlarm,
-        FieldDetectAlarm,
-        LineCrossAlarm,
-        PirAlarm,
-        CellMotionAlarm,
-        ItemTakenDetection,
-        ItemLeftDetection,
-        CarAlarm,
-        HumanAlarm,
-        FaceDetect,
-        ExternalMotionAlarm,
-        AudioAlarm
+    public static final String ENDPOINT_MOTION_ALARM = "motion_alarm";
+    public static final String ENDPOINT_FIELD_DETECTION_ALARM = "field_detect_alarm";
+    public static final String ENDPOINT_LINE_CROSSING_ALARM = "line_cross_alarm";
+    public static final String ENDPOINT_PIR_ALARM = "pir_alarm";
+    public static final String ENDPOINT_CELL_MOTION_ALARM = "cell_alarm";
+    public static final String ENDPOINT_ITEM_TAKEN_ALARM = "item_taken_alarm";
+    public static final String ENDPOINT_ITEM_LEFT_ALARM = "item_left_alarm";
+    public static final String ENDPOINT_CAR_ALARM = "car_alarm";
+    public static final String ENDPOINT_HUMAN_ALARM = "human_alarm";
+    public static final String ENDPOINT_FACE_DETECT = "face_detect_alarm";
+    public static final String ENDPOINT_EXTERNAL_ALARM = "external_alarm";
+    public static final String ENDPOINT_AUDIO_ALARM = "audio_alarm";
+
+    @RequiredArgsConstructor
+    public enum AlarmEvents {
+        MotionAlarm(ENDPOINT_MOTION_ALARM),
+        FieldDetectAlarm(ENDPOINT_FIELD_DETECTION_ALARM),
+        LineCrossAlarm(ENDPOINT_LINE_CROSSING_ALARM),
+        PirAlarm(ENDPOINT_PIR_ALARM),
+        CellMotionAlarm(ENDPOINT_CELL_MOTION_ALARM),
+        ItemTakenDetection(ENDPOINT_ITEM_TAKEN_ALARM),
+        ItemLeftDetection(ENDPOINT_ITEM_LEFT_ALARM),
+        CarAlarm(ENDPOINT_CAR_ALARM),
+        HumanAlarm(ENDPOINT_HUMAN_ALARM),
+        FaceDetect(ENDPOINT_FACE_DETECT),
+        ExternalMotionAlarm(ENDPOINT_EXTERNAL_ALARM),
+        AudioAlarm(ENDPOINT_AUDIO_ALARM);
+
+        @Getter
+        private final String endpoint;
     }
 }

@@ -1,11 +1,19 @@
 package org.homio.addon.camera.onvif.impl;
 
-import static org.homio.addon.camera.VideoConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT;
-import static org.homio.addon.camera.VideoConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT2;
-import static org.homio.addon.camera.VideoConstants.CHANNEL_ENABLE_PRIVACY_MODE;
-import static org.homio.addon.camera.VideoConstants.CHANNEL_EXTERNAL_ALARM_INPUT;
-import static org.homio.addon.camera.VideoConstants.CHANNEL_EXTERNAL_ALARM_INPUT2;
-import static org.homio.addon.camera.VideoConstants.CHANNEL_TEXT_OVERLAY;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.CarAlarm;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.FaceDetect;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.FieldDetectAlarm;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.HumanAlarm;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.ItemLeftDetection;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.ItemTakenDetection;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.LineCrossAlarm;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.MotionAlarm;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT2;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_PRIVACY_MODE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_EXTERNAL_ALARM_INPUT;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_EXTERNAL_ALARM_INPUT2;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_TEXT_OVERLAY;
 import static org.homio.addon.camera.VideoConstants.CM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
@@ -17,7 +25,7 @@ import static org.homio.addon.camera.VideoConstants.ENDPOINT_PARKING_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_SCENE_CHANGE_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_TOO_BLURRY_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_TOO_DARK_ALARM;
-import static org.homio.addon.camera.VideoConstants.Events;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
@@ -91,31 +99,31 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
             }
             // Privacy Mode on/off
             if (content.contains("table.LeLensMask[0].Enable=true")) {
-                setAttribute(CHANNEL_ENABLE_PRIVACY_MODE, OnOffType.ON);
+                setAttribute(ENDPOINT_ENABLE_PRIVACY_MODE, OnOffType.ON);
             } else if (content.contains("table.LeLensMask[0].Enable=false")) {
-                setAttribute(CHANNEL_ENABLE_PRIVACY_MODE, OnOffType.OFF);
+                setAttribute(ENDPOINT_ENABLE_PRIVACY_MODE, OnOffType.OFF);
             }
         } finally {
             ReferenceCountUtil.release(msg);
         }
     }
 
-    @UIVideoActionGetter(CHANNEL_ENABLE_PRIVACY_MODE)
+    @UIVideoActionGetter(ENDPOINT_ENABLE_PRIVACY_MODE)
     public State getEnablePrivacyMode() {
-        return getAttribute(CHANNEL_ENABLE_PRIVACY_MODE);
+        return getAttribute(ENDPOINT_ENABLE_PRIVACY_MODE);
     }
 
-    @UIVideoAction(name = CHANNEL_ENABLE_PRIVACY_MODE, order = 70, icon = "fas fa-user-secret")
+    @UIVideoAction(name = ENDPOINT_ENABLE_PRIVACY_MODE, order = 70, icon = "fas fa-user-secret")
     public void setEnablePrivacyMode(boolean on) {
         service.sendHttpGET(CM + "setConfig&LeLensMask[0].Enable=" + on);
     }
 
-    @UIVideoAction(name = CHANNEL_ACTIVATE_ALARM_OUTPUT2, order = 47, icon = "fas fa-bell")
+    @UIVideoAction(name = ENDPOINT_ACTIVATE_ALARM_OUTPUT2, order = 47, icon = "fas fa-bell")
     public void activateAlarmOutput2(boolean on) {
         service.sendHttpGET(CM + "setConfig&AlarmOut[1].Mode=" + boolToInt(on));
     }
 
-    @UIVideoAction(name = CHANNEL_ACTIVATE_ALARM_OUTPUT, order = 45, icon = "fas fa-bell")
+    @UIVideoAction(name = ENDPOINT_ACTIVATE_ALARM_OUTPUT, order = 45, icon = "fas fa-bell")
     public void activateAlarmOutput(boolean on) {
         service.sendHttpGET(CM + "setConfig&AlarmOut[1].Mode=" + boolToInt(on));
     }
@@ -199,7 +207,7 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
         return () -> Optional.ofNullable(getAttribute(ENDPOINT_ENABLE_LED)).map(State::boolValue).orElse(false);
     }
 
-    @UIVideoAction(name = CHANNEL_TEXT_OVERLAY, order = 100, icon = "fas fa-paragraph")
+    @UIVideoAction(name = ENDPOINT_TEXT_OVERLAY, order = 100, icon = "fas fa-paragraph")
     public void textOverlay(String value) {
         String text = Helper.encodeSpecialChars(value);
         if (text.isEmpty()) {
@@ -253,44 +261,44 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
             switch (code) {
                 case "VideoMotion" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, Events.MotionAlarm);
+                        service.motionDetected(true, MotionAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, Events.MotionAlarm);
+                        service.motionDetected(false, MotionAlarm);
                     }
                 }
                 case "TakenAwayDetection" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, Events.ItemTakenDetection);
+                        service.motionDetected(true, ItemTakenDetection);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, Events.ItemTakenDetection);
+                        service.motionDetected(false, ItemTakenDetection);
                     }
                 }
                 case "LeftDetection" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, Events.ItemLeftDetection);
+                        service.motionDetected(true, ItemLeftDetection);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, Events.ItemLeftDetection);
+                        service.motionDetected(false, ItemLeftDetection);
                     }
                 }
                 case "SmartMotionVehicle" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, Events.CarAlarm);
+                        service.motionDetected(true, CarAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, Events.CarAlarm);
+                        service.motionDetected(false, CarAlarm);
                     }
                 }
                 case "SmartMotionHuman" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, Events.HumanAlarm);
+                        service.motionDetected(true, HumanAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, Events.HumanAlarm);
+                        service.motionDetected(false, HumanAlarm);
                     }
                 }
                 case "CrossLineDetection" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, Events.LineCrossAlarm);
+                        service.motionDetected(true, LineCrossAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, Events.LineCrossAlarm);
+                        service.motionDetected(false, LineCrossAlarm);
                     }
                 }
                 case "AudioMutation" -> {
@@ -302,9 +310,9 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
                 }
                 case "FaceDetection" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, Events.FaceDetect);
+                        service.motionDetected(true, FaceDetect);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, Events.FaceDetect);
+                        service.motionDetected(false, FaceDetect);
                     }
                 }
                 case "ParkingDetection" -> {
@@ -316,9 +324,9 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
                 }
                 case "CrossRegionDetection" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, Events.FieldDetectAlarm);
+                        service.motionDetected(true, FieldDetectAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, Events.FieldDetectAlarm);
+                        service.motionDetected(false, FieldDetectAlarm);
                     }
                 }
                 case "VideoLoss", "VideoBlind" -> {
@@ -345,21 +353,21 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
                 case "AlarmLocal" -> {
                     if (action.equals("Start")) {
                         if (content.contains("index=0")) {
-                            setAttribute(CHANNEL_EXTERNAL_ALARM_INPUT, OnOffType.ON);
+                            setAttribute(ENDPOINT_EXTERNAL_ALARM_INPUT, OnOffType.ON);
                         } else {
-                            setAttribute(CHANNEL_EXTERNAL_ALARM_INPUT2, OnOffType.ON);
+                            setAttribute(ENDPOINT_EXTERNAL_ALARM_INPUT2, OnOffType.ON);
                         }
                     } else if (action.equals("Stop")) {
                         if (content.contains("index=0")) {
-                            setAttribute(CHANNEL_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
+                            setAttribute(ENDPOINT_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
                         } else {
-                            setAttribute(CHANNEL_EXTERNAL_ALARM_INPUT2, OnOffType.OFF);
+                            setAttribute(ENDPOINT_EXTERNAL_ALARM_INPUT2, OnOffType.OFF);
                         }
                     }
                 }
-                case "LensMaskOpen" -> setAttribute(CHANNEL_ENABLE_PRIVACY_MODE, OnOffType.ON);
+                case "LensMaskOpen" -> setAttribute(ENDPOINT_ENABLE_PRIVACY_MODE, OnOffType.ON);
                 case "LensMaskClose" ->
-                        setAttribute(CHANNEL_ENABLE_PRIVACY_MODE, OnOffType.OFF);
+                        setAttribute(ENDPOINT_ENABLE_PRIVACY_MODE, OnOffType.OFF);
                 case "TimeChange", "NTPAdjustTime", "StorageChange", "Reboot", "NewFile", "VideoMotionInfo", "RtspSessionDisconnect", "LeFunctionStatusSync", "RecordDelete" -> {
                 }
                 default -> log.debug("[{}]: Unrecognised Dahua event, Code={}, action={}", entityID, code, action);

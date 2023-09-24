@@ -1,7 +1,6 @@
 package org.homio.app.model.entity.widget;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -40,7 +39,7 @@ public abstract class WidgetSeriesEntity<T extends WidgetBaseEntityAndSeries>
     protected abstract String getSeriesPrefix();
 
     @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY, targetEntity= WidgetBaseEntityAndSeries.class)
+    @ManyToOne(fetch = FetchType.LAZY, targetEntity = WidgetBaseEntityAndSeries.class)
     private T widgetEntity;
 
     @Column(length = 65535)

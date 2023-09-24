@@ -1,22 +1,29 @@
 package org.homio.addon.camera.onvif.impl;
 
-import static org.homio.addon.camera.VideoConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT;
-import static org.homio.addon.camera.VideoConstants.CHANNEL_EXTERNAL_ALARM_INPUT;
-import static org.homio.addon.camera.VideoConstants.CHANNEL_TEXT_OVERLAY;
-import static org.homio.addon.camera.VideoConstants.CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.FaceDetect;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.FieldDetectAlarm;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.ItemLeftDetection;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.ItemTakenDetection;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.LineCrossAlarm;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.MotionAlarm;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.PirAlarm;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_EXTERNAL_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_FIELD_DETECTION_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LINE_CROSSING_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_MOTION_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_PIR_ALARM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_EXTERNAL_ALARM_INPUT;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_TEXT_OVERLAY;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.ReferenceCountUtil;
 import lombok.NoArgsConstructor;
-import org.homio.addon.camera.VideoConstants.Events;
+import org.homio.addon.camera.VideoConstants.AlarmEvents;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
@@ -58,31 +65,31 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
                 if (content.contains("<EventNotificationAlert version=\"")) {
                     if (content.contains("hannelID>" + nvrChannel + "</")) {// some camera use c or <dynChannelID>
                         if (content.contains("<eventType>linedetection</eventType>")) {
-                            service.motionDetected(true, Events.LineCrossAlarm);
+                            service.motionDetected(true, LineCrossAlarm);
                             lineCount = debounce;
                         }
                         if (content.contains("<eventType>fielddetection</eventType>")) {
-                            service.motionDetected(true, Events.FieldDetectAlarm);
+                            service.motionDetected(true, FieldDetectAlarm);
                             fieldCount = debounce;
                         }
                         if (content.contains("<eventType>VMD</eventType>")) {
-                            service.motionDetected(true, Events.MotionAlarm);
+                            service.motionDetected(true, MotionAlarm);
                             vmdCount = debounce;
                         }
                         if (content.contains("<eventType>facedetection</eventType>")) {
-                            service.motionDetected(true, Events.FaceDetect);
+                            service.motionDetected(true, FaceDetect);
                             faceCount = debounce;
                         }
                         if (content.contains("<eventType>unattendedBaggage</eventType>")) {
-                            service.motionDetected(true, Events.ItemLeftDetection);
+                            service.motionDetected(true, ItemLeftDetection);
                             leftCount = debounce;
                         }
                         if (content.contains("<eventType>attendedBaggage</eventType>")) {
-                            service.motionDetected(true, Events.ItemTakenDetection);
+                            service.motionDetected(true, ItemTakenDetection);
                             takenCount = debounce;
                         }
                         if (content.contains("<eventType>PIR</eventType>")) {
-                            service.motionDetected(true, Events.PirAlarm);
+                            service.motionDetected(true, PirAlarm);
                             pirCount = debounce;
                         }
                         if (content.contains("<eventType>videoloss</eventType>\r\n<eventState>inactive</eventState>")) {
@@ -124,9 +131,9 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
                             setAttribute(ENDPOINT_ENABLE_EXTERNAL_ALARM, OnOffType.OFF);
                         }
                         if (content.contains("<triggering>low</triggering>")) {
-                            setAttribute(CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
+                            setAttribute(ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
                         } else if (content.contains("<triggering>high</triggering>")) {
-                            setAttribute(CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT, OnOffType.ON);
+                            setAttribute(ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT, OnOffType.ON);
                         }
                     }
                     case "LineDetection" -> {
@@ -141,7 +148,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
                         service.storeHttpReply(
                                 "/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1", content);
                         String text = Helper.fetchXML(content, "<enabled>true</enabled>", "<displayText>");
-                        setAttribute(CHANNEL_TEXT_OVERLAY, new StringType(text));
+                        setAttribute(ENDPOINT_TEXT_OVERLAY, new StringType(text));
                     }
                     case "AudioDetection version=" -> {
                         service.storeHttpReply("/ISAPI/Smart/AudioDetection/channels/" + nvrChannel + "01",
@@ -154,9 +161,9 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
                     }
                     case "IOPortStatus version=" -> {
                         if (content.contains("<ioState>active</ioState>")) {
-                            setAttribute(CHANNEL_EXTERNAL_ALARM_INPUT, OnOffType.ON);
+                            setAttribute(ENDPOINT_EXTERNAL_ALARM_INPUT, OnOffType.ON);
                         } else if (content.contains("<ioState>inactive</ioState>")) {
-                            setAttribute(CHANNEL_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
+                            setAttribute(ENDPOINT_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
                         }
                     }
                     case "FieldDetection version=" -> {
@@ -202,9 +209,9 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
         }
     }
 
-    @UIVideoActionGetter(CHANNEL_TEXT_OVERLAY)
+    @UIVideoActionGetter(ENDPOINT_TEXT_OVERLAY)
     public State getTextOverlay() {
-        return getAttribute(CHANNEL_TEXT_OVERLAY);
+        return getAttribute(ENDPOINT_TEXT_OVERLAY);
     }
 
     public void hikSendXml(String httpPutURL, String xml) {
@@ -240,7 +247,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
         }
     }
 
-    @UIVideoAction(name = CHANNEL_TEXT_OVERLAY, order = 100, icon = "fas fa-paragraph")
+    @UIVideoAction(name = ENDPOINT_TEXT_OVERLAY, order = 100, icon = "fas fa-paragraph")
     public void setTextOverlay(String command) {
         log.debug("[{}]: Changing text overlay to {}", entityID, command);
         if (command.isEmpty()) {
@@ -265,12 +272,12 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
         hikChangeSetting("/ISAPI/System/IO/inputs/" + nvrChannel, "enabled", "<enabled>" + on + "</enabled>");
     }
 
-    @UIVideoActionGetter(CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT)
+    @UIVideoActionGetter(ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT)
     public State getTriggerExternalAlarmInput() {
-        return getAttribute(CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT);
+        return getAttribute(ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT);
     }
 
-    @UIVideoAction(name = CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT, order = 300, icon = "fas fa-external-link-alt")
+    @UIVideoAction(name = ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT, order = 300, icon = "fas fa-external-link-alt")
     public void setTriggerExternalAlarmInput(boolean on) {
         log.debug("[{}]: Changing triggering state of the external input 1 to {}", entityID, on);
         hikChangeSetting("/ISAPI/System/IO/inputs/" + nvrChannel, "triggering",
@@ -315,7 +322,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
                 "<enabled>" + on + "</enabled>");
     }
 
-    @UIVideoAction(name = CHANNEL_ACTIVATE_ALARM_OUTPUT, order = 45, icon = "fas fa-bell")
+    @UIVideoAction(name = ENDPOINT_ACTIVATE_ALARM_OUTPUT, order = 45, icon = "fas fa-bell")
     public void activateAlarmOutput(boolean on) {
         hikSendXml("/ISAPI/System/IO/outputs/" + nvrChannel + "/trigger",
                 "<IOPortData version=\"1.0\" xmlns=\"http://www.hikvision.com/ver10/XMLSchema\">\r\n    <outputState>" +
@@ -327,48 +334,48 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
         if (lineCount > 1) {
             lineCount--;
         } else if (lineCount == 1) {
-            service.motionDetected(false, Events.LineCrossAlarm);
+            service.motionDetected(false, LineCrossAlarm);
             lineCount--;
         }
         if (vmdCount > 1) {
             vmdCount--;
         } else if (vmdCount == 1) {
-            service.motionDetected(false, Events.MotionAlarm);
+            service.motionDetected(false, MotionAlarm);
             vmdCount--;
         }
         if (leftCount > 1) {
             leftCount--;
         } else if (leftCount == 1) {
-            service.motionDetected(false, Events.ItemLeftDetection);
+            service.motionDetected(false, ItemLeftDetection);
             leftCount--;
         }
         if (takenCount > 1) {
             takenCount--;
         } else if (takenCount == 1) {
-            service.motionDetected(false, Events.ItemTakenDetection);
+            service.motionDetected(false, ItemTakenDetection);
             takenCount--;
         }
         if (faceCount > 1) {
             faceCount--;
         } else if (faceCount == 1) {
-            service.motionDetected(false, Events.FaceDetect);
+            service.motionDetected(false, FaceDetect);
             faceCount--;
         }
         if (pirCount > 1) {
             pirCount--;
         } else if (pirCount == 1) {
-            service.motionDetected(false, Events.PirAlarm);
+            service.motionDetected(false, PirAlarm);
             pirCount--;
         }
         if (fieldCount > 1) {
             fieldCount--;
         } else if (fieldCount == 1) {
-            service.motionDetected(false, Events.FieldDetectAlarm);
+            service.motionDetected(false, FieldDetectAlarm);
             fieldCount--;
         }
         if (fieldCount == 0 && pirCount == 0 && faceCount == 0 && takenCount == 0 && leftCount == 0 && vmdCount == 0
                 && lineCount == 0) {
-            service.motionDetected(false, Events.MotionAlarm);
+            service.motionDetected(false, MotionAlarm);
         }
     }
 

@@ -27,6 +27,7 @@ import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.Icon;
 import org.homio.api.model.JSON;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
@@ -52,6 +53,7 @@ import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.UIFieldClickToEdit;
 import org.homio.app.model.UIHideEntityIfFieldNotNull;
+import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.repository.VariableBackupRepository;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
@@ -91,13 +93,14 @@ public class WorkspaceGroup extends BaseEntity
 
     @Getter
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "workspaceGroup")
-    @UIField(order = 30)
-    @UIFieldInlineEditEntities(
+    //@UIField(order = 30)
+    /*@UIFieldInlineEditEntities(
             bg = "#1E5E611F",
             addRowLabel = "TITLE.CREATE_VAR",
             noContentTitle = "W.ERROR.NO_VARIABLES",
             removeRowCondition = "return !context.get('locked')",
-            addRowCondition = "return !context.get('locked')")
+            addRowCondition = "return !context.get('locked')")*/
+    @JsonIgnore
     private Set<WorkspaceVariable> workspaceVariables;
 
     @ManyToOne(fetch = FetchType.EAGER)
@@ -327,7 +330,7 @@ public class WorkspaceGroup extends BaseEntity
             this.entityID = variable.getEntityID();
 
             name = new JSONObject()
-                    .put("color", variable.getColor())
+                .put("color", variable.getIconColor())
                     .put("name", variable.getName())
                     .put("description", variable.getDescription())
                     .put("listeners", entityContext.event().getEntityUpdateListeners().getCount(variable.getEntityID()))
@@ -335,7 +338,10 @@ public class WorkspaceGroup extends BaseEntity
                     .put("source", entityContext.var().buildDataSource(variable, false))
                     .put("readOnly", variable.isReadOnly());
             if (variable.isBackup()) {
-                name.put("backupCount", entityContext.var().backupCount(variable.getVariableId()));
+                name.put("backupCount", entityContext.var().backupCount(variable));
+            }
+            if (variable.getIcon() != null) {
+                name.put("icon", new Icon(variable.getIcon(), variable.getIconColor()));
             }
             this.restriction = variable.getRestriction().name().toLowerCase();
             Object val = entityContext.var().get(variable.getVariableId());

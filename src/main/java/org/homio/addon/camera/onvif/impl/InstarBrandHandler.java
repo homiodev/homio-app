@@ -1,6 +1,8 @@
 package org.homio.addon.camera.onvif.impl;
 
-import static org.homio.addon.camera.VideoConstants.CHANNEL_TEXT_OVERLAY;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.MotionAlarm;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.PirAlarm;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_TEXT_OVERLAY;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
@@ -16,7 +18,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.NoArgsConstructor;
-import org.homio.addon.camera.VideoConstants.Events;
+import org.homio.addon.camera.VideoConstants.AlarmEvents;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
 import org.homio.addon.camera.onvif.util.Helper;
@@ -64,11 +66,11 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
                 }
                 case "/param.cgi?cmd=getoverlayattr&-region=1" -> {// Text Overlays
                     if (content.contains("var show_1=\"0\"")) {
-                        setAttribute(CHANNEL_TEXT_OVERLAY, StringType.EMPTY);
+                        setAttribute(ENDPOINT_TEXT_OVERLAY, StringType.EMPTY);
                     } else {
                         value1 = Helper.searchString(content, "var name_1=\"");
                         if (!value1.isEmpty()) {
-                            setAttribute(CHANNEL_TEXT_OVERLAY, new StringType(value1));
+                            setAttribute(ENDPOINT_TEXT_OVERLAY, new StringType(value1));
                         }
                     }
                 }
@@ -98,7 +100,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
                         setAttribute(ENDPOINT_ENABLE_PIR_ALARM, OnOffType.OFF);
                     }
                     // Reset the Alarm, need to find better place to put this.
-                    service.motionDetected(false, Events.PirAlarm);
+                    service.motionDetected(false, PirAlarm);
                 }
                 case "/param.cgi?cmd=getioattr" -> {// External Alarm Input
                     if (content.contains("var io_enable=\"1\"")) {
@@ -150,7 +152,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
             "&-name=4");
     }
 
-    @UIVideoAction(name = CHANNEL_TEXT_OVERLAY, order = 100, icon = "fas fa-paragraph")
+    @UIVideoAction(name = ENDPOINT_TEXT_OVERLAY, order = 100, icon = "fas fa-paragraph")
     public void textOverlay(String value) {
         String text = Helper.encodeSpecialChars(value);
         if (text.isEmpty()) {
@@ -195,20 +197,20 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
         log.debug("[{}]: Alarm has been triggered:{}", entityID, alarm);
         switch (alarm) {
             case "/instar?&active=1", "/instar?&active=2", "/instar?&active=3", "/instar?&active=4" ->
-                service.motionDetected(true, Events.MotionAlarm);
+                service.motionDetected(true, MotionAlarm);
             case "/instar?&active=5" ->// PIR
-                service.motionDetected(true, Events.PirAlarm);
+                service.motionDetected(true, PirAlarm);
             case "/instar?&active=6" ->// Audio Alarm
                 service.audioDetected(true);
             case "/instar?&active=7", "/instar?&active=8", "/instar?&active=9", "/instar?&active=10" ->// Motion Area 4
-                service.motionDetected(true, Events.MotionAlarm);
+                service.motionDetected(true, MotionAlarm);
         }
     }
 
     @Override
     public void pollCameraRunnable() {
-        service.motionDetected(false, Events.MotionAlarm);
-        service.motionDetected(false, Events.PirAlarm);
+        service.motionDetected(false, MotionAlarm);
+        service.motionDetected(false, PirAlarm);
         service.audioDetected(false);
     }
 

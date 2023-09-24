@@ -1,9 +1,9 @@
 package org.homio.addon.camera.onvif.impl;
 
-import static org.homio.addon.camera.VideoConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT;
-import static org.homio.addon.camera.VideoConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT2;
-import static org.homio.addon.camera.VideoConstants.CHANNEL_ENABLE_PRIVACY_MODE;
-import static org.homio.addon.camera.VideoConstants.CHANNEL_TEXT_OVERLAY;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT2;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_PRIVACY_MODE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_TEXT_OVERLAY;
 import static org.homio.addon.camera.VideoConstants.CM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
@@ -11,7 +11,7 @@ import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LED;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LINE_CROSSING_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_MOTION_ALARM;
-import static org.homio.addon.camera.VideoConstants.Events.MotionAlarm;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.MotionAlarm;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -47,7 +47,7 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
         super(service);
     }
 
-    @UIVideoAction(name = CHANNEL_TEXT_OVERLAY, order = 100, icon = "fas fa-paragraph")
+    @UIVideoAction(name = ENDPOINT_TEXT_OVERLAY, order = 100, icon = "fas fa-paragraph")
     public void textOverlay(String value) {
         String text = Helper.encodeSpecialChars(value);
         if (text.isEmpty()) {
@@ -142,7 +142,7 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
         }
     }
 
-    @UIVideoAction(name = CHANNEL_ACTIVATE_ALARM_OUTPUT, order = 45, icon = "fas fa-bell")
+    @UIVideoAction(name = ENDPOINT_ACTIVATE_ALARM_OUTPUT, order = 45, icon = "fas fa-bell")
     public void activateAlarmOutput(boolean on) {
         if (on) {
             service.sendHttpGET(CM + "setConfig&AlarmOut[0].Mode=1");
@@ -151,7 +151,7 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
         }
     }
 
-    @UIVideoAction(name = CHANNEL_ACTIVATE_ALARM_OUTPUT2, order = 47, icon = "fas fa-bell")
+    @UIVideoAction(name = ENDPOINT_ACTIVATE_ALARM_OUTPUT2, order = 47, icon = "fas fa-bell")
     public void activateAlarmOutput2(boolean on) {
         if (on) {
             service.sendHttpGET(CM + "setConfig&AlarmOut[1].Mode=1");
@@ -160,12 +160,12 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
         }
     }
 
-    @UIVideoActionGetter(CHANNEL_ENABLE_PRIVACY_MODE)
+    @UIVideoActionGetter(ENDPOINT_ENABLE_PRIVACY_MODE)
     public State getEnablePrivacyMode() {
-        return getAttribute(CHANNEL_ENABLE_PRIVACY_MODE);
+        return getAttribute(ENDPOINT_ENABLE_PRIVACY_MODE);
     }
 
-    @UIVideoAction(name = CHANNEL_ENABLE_PRIVACY_MODE, order = 70, icon = "fas fa-user-secret")
+    @UIVideoAction(name = ENDPOINT_ENABLE_PRIVACY_MODE, order = 70, icon = "fas fa-user-secret")
     public void setEnablePrivacyMode(boolean on) {
         service.sendHttpGET(CM + "setConfig&LeLensMask[0].Enable=" + on);
     }
@@ -211,10 +211,10 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
             }
             // Privacy Mode on/off
             if (content.contains("Code=LensMaskOpen;") || content.contains("table.LeLensMask[0].Enable=true")) {
-                setAttribute(CHANNEL_ENABLE_PRIVACY_MODE, OnOffType.ON);
+                setAttribute(ENDPOINT_ENABLE_PRIVACY_MODE, OnOffType.ON);
             } else if (content.contains("Code=LensMaskClose;")
                     || content.contains("table.LeLensMask[0].Enable=false")) {
-                setAttribute(CHANNEL_ENABLE_PRIVACY_MODE, OnOffType.OFF);
+                setAttribute(ENDPOINT_ENABLE_PRIVACY_MODE, OnOffType.OFF);
             }
         } finally {
             ReferenceCountUtil.release(msg);

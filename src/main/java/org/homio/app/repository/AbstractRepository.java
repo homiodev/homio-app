@@ -18,6 +18,7 @@ import org.homio.api.ui.field.UIField;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.config.TransactionManagerContext;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
+import org.homio.app.model.var.WorkspaceVariable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -131,6 +132,8 @@ public class AbstractRepository<T extends BaseEntity> {
                 // somehow cascade = CascadeType.ALL now works
                 if (entity instanceof WidgetSeriesEntity<?> wse) {
                     wse.getWidgetEntity().getSeries().remove(entity);
+                } else if (entity instanceof WorkspaceVariable wv) {
+                    wv.getWorkspaceGroup().getWorkspaceVariables().remove(entity);
                 }
                 log.warn("Entity <{}> was removed", entity);
             }

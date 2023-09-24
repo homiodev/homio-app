@@ -606,13 +606,11 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @SneakyThrows
-    @DeleteMapping("/{entityID}/field/{field}/item/{entityToRemove}")
+    @DeleteMapping("/{entityID}/series/{entityToRemove}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public BaseEntity removeFromItem(@PathVariable("entityID") String entityID, @PathVariable("field") String field,
-        @PathVariable("entityToRemove") String entityToRemove) {
-        BaseEntity entity = entityContext.getEntityRequire(entityID);
+    public BaseEntity removeFromItem(@PathVariable("entityID") String entityID, @PathVariable("entityToRemove") String entityToRemove) {
         entityContext.delete(entityToRemove);
-        return entityContext.getEntity(entity);
+        return entityContext.getEntity(entityID);
     }
 
     /*@PostMapping("/{entityID}/image")

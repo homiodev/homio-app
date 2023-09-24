@@ -291,13 +291,13 @@ public final class InMemoryDB {
             Bson bsonFilter = joinFilters(filterList);
             switch (aggregationType) {
                 case First:
-                    return aggregateMinimal(aggregateField, bsonFilter, SortBy.sortAsc(CREATED));
+                    return aggregateLimit1(aggregateField, bsonFilter, SortBy.sortAsc(CREATED));
                 case Last:
-                    return aggregateMinimal(aggregateField, bsonFilter, SortBy.sortDesc(CREATED));
+                    return aggregateLimit1(aggregateField, bsonFilter, SortBy.sortDesc(CREATED));
                 case Min:
-                    return aggregateMinimal(aggregateField, bsonFilter, SortBy.sortAsc(aggregateField));
+                    return aggregateLimit1(aggregateField, bsonFilter, SortBy.sortAsc(aggregateField));
                 case Max:
-                    return aggregateMinimal(aggregateField, bsonFilter, SortBy.sortDesc(aggregateField));
+                    return aggregateLimit1(aggregateField, bsonFilter, SortBy.sortDesc(aggregateField));
                 case Count:
                     return collection.countDocuments(bsonFilter);
             }
@@ -422,7 +422,7 @@ public final class InMemoryDB {
             return ts.cursor();
         }
 
-        private @NotNull Object aggregateMinimal(@NotNull String aggregateField, Bson filter, SortBy sort) {
+        private @NotNull Object aggregateLimit1(@NotNull String aggregateField, Bson filter, SortBy sort) {
             Document document = collection.find(filter, Document.class).sort(sort.toBson()).limit(1).first();
             return document == null ? 0 : document.get(aggregateField);
         }

@@ -35,19 +35,19 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
         this.cpuUsageID = entityContext.var().createVariable("hardware", "sys_cpu_load", "sys.cpu_load",
             VariableType.Float, builder ->
                 builder.setDescription("sys.cpu_load_description")
-                       .setIcon(new Icon("fas fa-fa-microchip", "#A65535"))
+                       .setIcon(new Icon("fas fa-microchip", "#A65535"))
                        .setNumberRange(0, 100).setUnit("%").setColor("#7B37B0"));
 
         this.javaCpuUsageID = entityContext.var().createVariable("hardware", "java_cpu_load", "sys.java_cpu_load",
             VariableType.Float, builder ->
                 builder.setDescription("sys.java_cpu_load_description")
-                       .setIcon(new Icon("fas fa-fa-microchip", "#35A680"))
+                       .setIcon(new Icon("fas fa-microchip", "#35A680"))
                        .setNumberRange(0, 100).setUnit("%").setColor("#B03780"));
 
         this.memID = entityContext.var().createVariable("hardware", "sys_mem_load", "sys.mem_load",
             VariableType.Float, builder ->
                 builder.setDescription("sys.mem_load_description")
-                       .setIcon(new Icon("fas fa-fa-memory", "#7B37B0"))
+                       .setIcon(new Icon("fas fa-memory", "#7B37B0"))
                        .setNumberRange(0, 100).setUnit("%").setColor("#939C35"));
 
         this.initialize();

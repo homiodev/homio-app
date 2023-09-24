@@ -1,11 +1,12 @@
 package org.homio.addon.camera.onvif.impl;
 
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.MotionAlarm;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LED;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_MOTION_ALARM;
-import static org.homio.addon.camera.VideoConstants.Events;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
@@ -56,10 +57,10 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
                     setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.OFF);
                 } else if (content.contains("<motionDetectAlarm>1</motionDetectAlarm>")) { // Enabled but no alarm
                     setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.ON);
-                    service.motionDetected(false, Events.MotionAlarm);
+                    service.motionDetected(false, MotionAlarm);
                 } else if (content.contains("<motionDetectAlarm>2</motionDetectAlarm>")) {// Enabled, alarm on
                     setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.ON);
-                    service.motionDetected(true, Events.MotionAlarm);
+                    service.motionDetected(true, MotionAlarm);
                 }
             }
 

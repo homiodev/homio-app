@@ -68,7 +68,7 @@ public class VideoDeviceEndpoint extends BaseDeviceEndpoint<BaseVideoEntity<?, ?
         setMax(max);
         setRange(range);
         setIcon(new Icon(
-            "fa fa-fw " + (configEndpoint == null ? "fa-camera" : configEndpoint.getIcon()),
+            "fa " + (configEndpoint == null ? "fa-camera" : configEndpoint.getIcon()),
             configEndpoint == null ? "#3894B5" : configEndpoint.getIconColor()));
 
         init(

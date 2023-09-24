@@ -40,7 +40,6 @@ import org.hibernate.event.spi.PostDeleteEvent;
 import org.hibernate.event.spi.PostInsertEvent;
 import org.hibernate.event.spi.PostUpdateEvent;
 import org.hibernate.internal.SessionFactoryImpl;
-import org.hibernate.jpa.event.spi.CallbackRegistry;
 import org.homio.api.EntityContextBGP;
 import org.homio.api.EntityContextEvent;
 import org.homio.api.entity.BaseEntity;
@@ -55,6 +54,8 @@ import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.EntityContextImpl.ItemAction;
+import org.homio.app.model.var.WorkspaceGroup;
+import org.homio.app.model.var.WorkspaceVariable;
 import org.homio.app.service.mem.InMemoryDB;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -384,6 +385,14 @@ public class EntityContextEventImpl implements EntityContextEvent {
                 baseEntity.afterUpdate();
             } else {
                 baseEntity.afterPersist();
+            }
+            // corner case if save/update WorkspaceVariable
+            if (entity instanceof WorkspaceVariable wv) {
+                WorkspaceGroup group = wv.getWorkspaceGroup();
+                if (group.getParent() != null) {
+                    group = group.getParent();
+                }
+                entity = group;
             }
             // Do not send updates to UI in case of Status.DELETED
             entityContext.sendEntityUpdateNotification(entity, persist ? ItemAction.Insert : ItemAction.Update);

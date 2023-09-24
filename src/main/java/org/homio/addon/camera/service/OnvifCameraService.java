@@ -1,7 +1,11 @@
 package org.homio.addon.camera.service;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.homio.addon.camera.VideoConstants.CHANNEL_GOTO_PRESET;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.CellMotionAlarm;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.FieldDetectAlarm;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.LineCrossAlarm;
+import static org.homio.addon.camera.VideoConstants.AlarmEvents.MotionAlarm;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_GOTO_PRESET;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_PAN;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_SCENE_CHANGE_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_STORAGE_ALARM;
@@ -59,7 +63,7 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.homio.addon.camera.CameraEntrypoint;
-import org.homio.addon.camera.VideoConstants.Events;
+import org.homio.addon.camera.VideoConstants.AlarmEvents;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoPlaybackStorage;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
@@ -125,15 +129,15 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         onvifDeviceState.setUnreachableHandler(message -> this.disposeAndSetStatus(Status.OFFLINE, message));
 
         onvifDeviceState.getEventDevices().subscribe("RuleEngine/CellMotionDetector/Motion",
-            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), Events.CellMotionAlarm));
+            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), CellMotionAlarm));
         onvifDeviceState.getEventDevices().subscribe("VideoSource/MotionAlarm",
-            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), Events.MotionAlarm));
+            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), MotionAlarm));
         onvifDeviceState.getEventDevices().subscribe("AudioAnalytics/Audio/DetectedSound",
             (dataName, dataValue) -> audioDetected(dataValue.equals("true")));
         onvifDeviceState.getEventDevices().subscribe("RuleEngine/FieldDetector/ObjectsInside",
-            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), Events.FieldDetectAlarm));
+            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), FieldDetectAlarm));
         onvifDeviceState.getEventDevices().subscribe("RuleEngine/LineDetector/Crossed",
-            (dataName, dataValue) -> motionDetected(dataName.equals("ObjectId"), Events.LineCrossAlarm));
+            (dataName, dataValue) -> motionDetected(dataName.equals("ObjectId"), LineCrossAlarm));
         onvifDeviceState.getEventDevices().subscribe("RuleEngine/TamperDetector/Tamper",
             (dataName, dataValue) -> setAttribute(ENDPOINT_TAMPER_ALARM, OnOffType.of(dataValue.equals("true"))));
         onvifDeviceState.getEventDevices().subscribe("Device/HardwareFailure/StorageFailure",
@@ -430,12 +434,12 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentZoomPercentage()));
     }
 
-    @UIVideoActionGetter(CHANNEL_GOTO_PRESET)
+    @UIVideoActionGetter(ENDPOINT_GOTO_PRESET)
     public DecimalType getGotoPreset() {
         return new DecimalType(0);
     }
 
-    @UIVideoAction(name = CHANNEL_GOTO_PRESET, order = 30, icon = "fas fa-location-arrow")
+    @UIVideoAction(name = ENDPOINT_GOTO_PRESET, order = 30, icon = "fas fa-location-arrow")
     @UIVideoActionMetadata(min = 1, max = 25, selectReplacer = "Preset %0  ")
     @UICameraActionConditional(SupportPTZCondition.class)
     public void gotoPreset(int preset) {
