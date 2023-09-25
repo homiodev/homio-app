@@ -28,7 +28,7 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
             setColor(UI.Color.random());
         }
         if (getOnValues().isEmpty()) {
-            setOnValues("true~~~1");
+            setOnValues("true%s1".formatted(LIST_DELIMITER));
         }
     }
 }

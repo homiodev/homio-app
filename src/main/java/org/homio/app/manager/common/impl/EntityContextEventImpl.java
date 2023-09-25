@@ -54,7 +54,6 @@ import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.EntityContextImpl.ItemAction;
-import org.homio.app.model.var.WorkspaceGroup;
 import org.homio.app.model.var.WorkspaceVariable;
 import org.homio.app.service.mem.InMemoryDB;
 import org.jetbrains.annotations.NotNull;
@@ -297,9 +296,9 @@ public class EntityContextEventImpl implements EntityContextEvent {
     private EntityContextEventImpl fireEvent(@NotNull String key, @Nullable Object value, boolean compareValues) {
         // fire by key and key + value type
         fireEventInternal(key, value, compareValues);
-        if (value != null && !(value instanceof String)) {
+        /*if (value != null && !(value instanceof String)) {
             fireEventInternal(key + "_" + value.getClass().getSimpleName(), value, compareValues);
-        }
+        }*/
         return this;
     }
 
@@ -388,13 +387,8 @@ public class EntityContextEventImpl implements EntityContextEvent {
             }
             // corner case if save/update WorkspaceVariable
             if (entity instanceof WorkspaceVariable wv) {
-                WorkspaceGroup group = wv.getWorkspaceGroup();
-                if (group.getParent() != null) {
-                    group = group.getParent();
-                }
-                entity = group;
+                entity = wv.getTopGroup();
             }
-            // Do not send updates to UI in case of Status.DELETED
             entityContext.sendEntityUpdateNotification(entity, persist ? ItemAction.Insert : ItemAction.Update);
         }
     }
@@ -465,7 +459,12 @@ public class EntityContextEventImpl implements EntityContextEvent {
                            context.getEntityContextStorageImpl().remove(entityID);
                        });
             }
-            context.sendEntityUpdateNotification(entity, ItemAction.Remove);
+            if (entity instanceof WorkspaceVariable wv) {
+                // fire update if variable was removed
+                context.sendEntityUpdateNotification(wv.getTopGroup(), ItemAction.Update);
+            } else {
+                context.sendEntityUpdateNotification(entity, ItemAction.Remove);
+            }
         });
 
         private final ThrowingBiConsumer<EntityContextImpl, Object, Exception> handler;

@@ -3,7 +3,11 @@ package org.homio.app.model.entity.widget.attributes;
 import org.homio.api.EntityContextWidget.VerticalAlign;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.ui.field.UIFieldType;
 import org.homio.app.model.entity.widget.UIFieldOptionColor;
 import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 import org.homio.app.model.entity.widget.UIFieldOptionVerticalAlign;
@@ -16,7 +20,7 @@ public interface HasValueTemplate extends HasJsonData {
     @UIFieldOptionVerticalAlign("value")
     @UIFieldOptionColor("value")
     default String getValueTemplate() {
-        return getJsonData("vt", "~~~");
+        return getJsonData("vt", LIST_DELIMITER);
     }
 
     default void setValueTemplate(String value) {

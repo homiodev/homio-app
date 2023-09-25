@@ -6,22 +6,18 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.EntityContextVar.VariableType;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.OptionModel;
-import org.homio.app.manager.AddonService;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.WorkspaceEntity;
 import org.homio.app.model.var.WorkspaceGroup;
 import org.homio.app.model.var.WorkspaceVariable;
 import org.homio.app.repository.device.WorkspaceRepository;
-import org.homio.app.utils.UIFieldSelectionUtil;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -41,7 +37,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkspaceController {
 
     private final EntityContextImpl entityContext;
-    private final AddonService addonService;
     private final WorkspaceService workspaceService;
     private final WorkspaceRepository workspaceRepository;
 
@@ -95,60 +90,7 @@ public class WorkspaceController {
 
     @PostMapping("/variable")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public void saveVariables(@RequestBody String json) {
-        /*JSONObject request = new JSONObject(json);
-        Map<String, WorkspaceGroup> groups = entityContext.findAll(WorkspaceGroup.class).stream().collect(Collectors.toMap(WorkspaceGroup::getGroupId, g -> g));
-
-        JSONObject broadcasts = request.getJSONObject("broadcasts");
-        WorkspaceGroup broadcastGroup = groups.remove("broadcasts");
-        if (broadcastGroup == null) {
-            EntityContextVarImpl.createBroadcastGroup(entityContext);
-            broadcastGroup = entityContext.getEntity(WorkspaceGroup.PREFIX + "broadcasts");
-        }
-        if (broadcastGroup == null) {
-            broadcastGroup = entityContext.save(new WorkspaceGroup().setGroupId("broadcasts"));
-        }
-        Set<String> existedBroadcasts = Optional.ofNullable(broadcastGroup.getWorkspaceVariables())
-                                                .orElse(Collections.emptySet())
-                                                .stream()
-                                                .map(WorkspaceVariable::getEntityID)
-                                                .collect(Collectors.toSet());
-        for (String broadcastId : broadcasts.keySet()) {
-            existedBroadcasts.remove(createOrRenameVariable(broadcastGroup, broadcastId, broadcasts.getString(broadcastId)).getEntityID());
-        }
-        // remove not existed broadcasts
-        for (String broadcastId : existedBroadcasts) {
-            log.warn("Remove broadcast: {}", broadcastId);
-            entityContext.delete(broadcastId);
-        }
-
-        JSONObject groupVariables = request.getJSONObject("group_variables");
-        Set<String> existedGroups = groups.keySet().stream().map(g -> WorkspaceGroup.PREFIX + g).collect(Collectors.toSet());
-        // save not existed groups
-        for (String groupId : groupVariables.keySet()) {
-            WorkspaceGroup workspaceGroup = createOrRenameGroup(groupId, groupVariables.getJSONArray(groupId).getString(0));
-            existedGroups.remove(workspaceGroup.getEntityID());
-            JSONArray variables = groupVariables.getJSONArray(groupId).optJSONArray(2);
-            List<String> existedVariables = workspaceGroup.getWorkspaceVariables().stream().map(BaseEntity::getEntityID).collect(Collectors.toList());
-            if (variables != null) {
-                for (int i = 0; i < variables.length(); i++) {
-                    JSONObject variable = variables.getJSONObject(i);
-                    existedVariables.remove(createOrRenameVariable(workspaceGroup, variable.getString("id_"), variable.getString("name")).getEntityID());
-                }
-            }
-
-            // remove not existed variables
-            for (String variable : existedVariables) {
-                log.warn("Remove variable: {}", variable);
-                entityContext.delete(variable);
-            }
-        }
-
-        // remove group of variables!
-        for (String existedGroup : existedGroups) {
-            log.warn("Remove variable: {}", existedGroup);
-            entityContext.delete(existedGroup);
-        }*/
+    public void saveVariables(@RequestBody String ignore) {
     }
 
     @GetMapping("/tab")
@@ -214,28 +156,6 @@ public class WorkspaceController {
             throw new IllegalArgumentException("W.ERROR.REMOVE_NON_EMPTY_TAB");
         }
         entityContext.delete(entityID);
-    }
-
-    private WorkspaceVariable createOrRenameVariable(WorkspaceGroup workspaceGroup, String variableId, String variableName) {
-        WorkspaceVariable workspaceVariable = entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
-        if (workspaceVariable == null) {
-            return entityContext.save(new WorkspaceVariable(variableId, variableName, workspaceGroup, VariableType.Any));
-        } else if (!Objects.equals(variableName, workspaceVariable.getName())) {
-            workspaceVariable.setName(variableName);
-            return entityContext.save(workspaceVariable);
-        }
-        return workspaceVariable;
-    }
-
-    private WorkspaceGroup createOrRenameGroup(String groupId, String groupName) {
-        WorkspaceGroup workspaceGroup = entityContext.getEntity(WorkspaceGroup.PREFIX + groupId);
-        if (workspaceGroup == null) {
-            return entityContext.save(new WorkspaceGroup(groupId, groupName));
-        } else if (!Objects.equals(groupName, workspaceGroup.getName())) {
-            workspaceGroup.setName(groupName);
-            return entityContext.save(workspaceGroup);
-        }
-        return workspaceGroup;
     }
 
     @Setter

@@ -393,7 +393,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         if (!isStart()) {
             return "W.ERROR.NOT_STARTED";
         }
-        String error = StringUtils.defaultString(getStatusMessage(), "");
+        String error = StringUtils.defaultString(getStatusMessage());
         if (containsIgnoreCase(error, "connection timed out")) {
             return "W.ERROR.NOT_REACHED_" + (this.isCamera() ? "CAMERA" : "VIDEO");
         }

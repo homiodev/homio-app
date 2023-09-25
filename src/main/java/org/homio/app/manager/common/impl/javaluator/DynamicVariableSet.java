@@ -3,14 +3,16 @@ package org.homio.app.manager.common.impl.javaluator;
 import com.fathzer.soft.javaluator.StaticVariableSet;
 import java.time.Duration;
 import java.util.List;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.exception.ServerException;
 import org.homio.app.manager.common.impl.EntityContextVarImpl;
+import org.jetbrains.annotations.NotNull;
 
 @RequiredArgsConstructor
 public class DynamicVariableSet extends StaticVariableSet<Object> {
 
-    private final List<String> sources;
+    private final @Getter @NotNull List<String> sources;
     private final EntityContextVarImpl var;
 
     @Override

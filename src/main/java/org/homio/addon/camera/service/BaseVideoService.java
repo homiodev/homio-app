@@ -676,9 +676,10 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             CONFIG_DEVICE_SERVICE.getDeviceIcon(devices, "fas fa-video"),
             CONFIG_DEVICE_SERVICE.getDeviceIconColor(devices, UI.Color.random())
         );
-        entityContext.var().createGroup("video", "Video", true, new Icon("fas fa-video", "#0E578F"));
-        entityContext.var().createGroup("video", entity.getGroupID(), entity.getDeviceFullName(), true,
-            icon, getGroupDescription());
+        entityContext.var().createGroup("video", "Video", builder ->
+            builder.setLocked(true).setIcon(new Icon("fas fa-video", "#0E578F")));
+        entityContext.var().createSubGroup("video", entity.getGroupID(), entity.getDeviceFullName(), builder ->
+            builder.setLocked(true).setDescription(getGroupDescription()).setIcon(icon));
     }
 
     private String getGroupDescription() {

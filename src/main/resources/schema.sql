@@ -168,6 +168,7 @@ create table if not exists workspace_variable
     restriction              varchar(32),
     unit                     varchar(32),
     variable_id              varchar(128) not null,
+    locked boolean not null,
     workspace_group_entityid varchar(128),
     primary key (entityid),
     constraint uk_ed7bugig9d8vnui1nll862fcx

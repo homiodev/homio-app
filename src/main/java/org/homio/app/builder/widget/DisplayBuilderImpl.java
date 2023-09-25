@@ -1,6 +1,7 @@
 package org.homio.app.builder.widget;
 
 import static java.lang.String.format;
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -180,7 +181,7 @@ class DisplaySeriesBuilderImpl implements DisplayWidgetSeriesBuilder,
 
     @Override
     public @NotNull DisplayWidgetSeriesBuilder setStyle(String... styles) {
-        series.setStyle(String.join("~~~", styles));
+        series.setStyle(String.join(LIST_DELIMITER, styles));
         return this;
     }
 }

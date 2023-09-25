@@ -27,6 +27,7 @@ import org.homio.api.entity.widget.PeriodRequest;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasGetStatusValue.GetStatusValueRequest;
 import org.homio.api.entity.widget.ability.HasTimeValueSeries;
+import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.storage.SourceHistory;
 import org.homio.api.storage.SourceHistoryItem;
@@ -45,7 +46,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Log4j2
@@ -95,7 +95,12 @@ public class VariableController {
         entityContext.var().createTransformVariable(group, null, request.name, VariableType.Float,
             builder -> builder
                 .setTransformCode(request.getCode())
-                .setSourceVariables(request.getSources() == null ? List.of() : request.getSources()));
+                .setSourceVariables(request.getSources() == null ? List.of() : request.getSources())
+                .setIcon(new Icon(request.getIcon(), request.getIconColor()))
+                .setDescription(request.getDescription())
+                .setPersistent(request.isBackup())
+                .setQuota(request.getQuota())
+        );
     }
 
     @PostMapping("/evaluate")
@@ -215,7 +220,12 @@ public class VariableController {
     @Setter
     public static class TransformVarRequest extends EvaluateRequest {
 
-        public String name;
+        private String name;
+        private String description;
+        private int quota;
+        private boolean backup;
+        private String icon;
+        private String iconColor;
     }
 
     @Getter

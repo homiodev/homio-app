@@ -2,6 +2,7 @@ package org.homio.app.model.var;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.homio.app.utils.UIFieldUtils.nullIfFalse;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.AttributeOverride;
@@ -29,6 +30,7 @@ import org.homio.api.entity.HasJsonData;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.JSON;
+import org.homio.api.state.DecimalType;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldColorPicker;
@@ -44,7 +46,6 @@ import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.color.UIFieldColorBgRef;
 import org.homio.api.ui.field.color.UIFieldColorRef;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
-import org.homio.api.ui.field.inline.UIFieldInlineEditEntities;
 import org.homio.api.ui.field.inline.UIFieldInlineEntities;
 import org.homio.api.ui.field.inline.UIFieldInlineEntityWidth;
 import org.homio.api.ui.field.inline.UIFieldInlineGroup;
@@ -53,7 +54,7 @@ import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.UIFieldClickToEdit;
 import org.homio.app.model.UIHideEntityIfFieldNotNull;
-import org.homio.app.model.entity.widget.WidgetSeriesEntity;
+import org.homio.app.model.var.WorkspaceVariable.VarType;
 import org.homio.app.repository.VariableBackupRepository;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
@@ -196,18 +197,15 @@ public class WorkspaceGroup extends BaseEntity
     }
 
     @Override
-    protected long getChildEntityHashCode() {
-        int result = description != null ? description.hashCode() : 0;
-        result = 31 * result + (groupId != null ? groupId.hashCode() : 0);
-        result = 31 * result + (icon != null ? icon.hashCode() : 0);
-        result = 31 * result + (iconColor != null ? iconColor.hashCode() : 0);
-        result = 31 * result + jsonData.toString().hashCode();
-        return result;
+    public boolean isDisableDelete() {
+        return locked || this.groupId.equals("broadcasts") || getJsonData("dis_del", false);
     }
 
-    @Override
-    public boolean isDisableDelete() {
-        return locked || this.groupId.equals("broadcasts");
+    public static String generateValue(Object val, WorkspaceVariable variable) {
+        if (val instanceof Number num) {
+            return new DecimalType(num).toString(2) + StringUtils.trimToEmpty(variable.getUnit());
+        }
+        return val == null ? "-" : val + StringUtils.trimToEmpty(variable.getUnit());
     }
 
     @Override
@@ -243,11 +241,15 @@ public class WorkspaceGroup extends BaseEntity
         setName(defaultIfEmpty(getName(), CommonUtils.generateUUID()));
     }
 
-    private ActionResponseModel clearBackupResponse(int deletedCount) {
-        if (deletedCount > 0) {
-            return ActionResponseModel.showSuccess("Deleted: " + deletedCount + " variables");
-        }
-        return ActionResponseModel.showWarn("W.ERROR.NO_VARIABLES_TO_DELETE");
+    @Override
+    protected long getChildEntityHashCode() {
+        int result = description != null ? description.hashCode() : 0;
+        result = 31 * result + (groupId != null ? groupId.hashCode() : 0);
+        result = 31 * result + (icon != null ? icon.hashCode() : 0);
+        result = 31 * result + (iconColor != null ? iconColor.hashCode() : 0);
+        result = 31 * result + (locked ? 1 : 0);
+        result = 31 * result + jsonData.toString().hashCode();
+        return result;
     }
 
     private int clearAll(VariableBackupRepository repository) {
@@ -266,6 +268,13 @@ public class WorkspaceGroup extends BaseEntity
         return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
                 .map(v -> repository.deleteButKeepDays(v.getVariableId(), days))
                 .mapToInt(i -> i).sum();
+    }
+
+    private ActionResponseModel clearBackupResponse(int deletedCount) {
+        if (deletedCount > 0) {
+            return ActionResponseModel.showSuccess("Deleted: " + deletedCount + " variables");
+        }
+        return ActionResponseModel.showInfo("W.ERROR.NO_VARIABLES_TO_DELETE");
     }
 
     @Getter
@@ -310,6 +319,12 @@ public class WorkspaceGroup extends BaseEntity
 
         private String nameTitle;
 
+        private Boolean disableDelete;
+
+        private String rowClass;
+
+        private Boolean backup;
+
         public WorkspaceVariableEntity(WorkspaceGroup childrenGroup) {
             this.entityID = childrenGroup.getEntityID();
             this.groupName = format("<div class=\"it-group\"><i class=\"%s\"></i>%s</div>",
@@ -346,16 +361,15 @@ public class WorkspaceGroup extends BaseEntity
             this.restriction = variable.getRestriction().name().toLowerCase();
             Object val = entityContext.var().get(variable.getVariableId());
             this.value = generateValue(val, variable);
+            this.backup = nullIfFalse(variable.isBackup());
             this.quota = variable.getQuota();
             this.usedQuota = variable.getUsedQuota();
             this.nameTitle = variable.getName();
+            this.disableDelete = Boolean.TRUE.equals(variable.isDisableDelete()) ? true : null;
+            if (variable.getVarType() != VarType.standard) {
+                this.rowClass = "var-type-%s".formatted(variable.getVarType());
+            }
         }
 
     }
-
-    public static String generateValue(Object val, WorkspaceVariable variable) {
-        return val == null ? "-" : val + StringUtils.trimToEmpty(variable.getUnit());
-    }
-
-
 }

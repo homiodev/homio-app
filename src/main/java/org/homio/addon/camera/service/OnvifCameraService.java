@@ -16,6 +16,7 @@ import static org.homio.addon.camera.VideoConstants.ENDPOINT_TOO_BRIGHT_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_TOO_DARK_ALARM;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_ZOOM;
 import static org.homio.api.EntityContextSetting.SERVER_PORT;
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -63,7 +64,6 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.homio.addon.camera.CameraEntrypoint;
-import org.homio.addon.camera.VideoConstants.AlarmEvents;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoPlaybackStorage;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
@@ -583,54 +583,22 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         useDigestAuth = false;
     }
 
-    @Override
-    protected void pollCameraConnection() throws Exception {
-        onvifDeviceState.initFully();
-        if (brandHandler.isSupportOnvifEvents()) {
-            String subscribeUrl = "%s:%s/rest/media/video/%s/OnvifEvent".formatted(onvifDeviceState.getIp(), SERVER_PORT, entityID);
-            onvifDeviceState.getEventDevices().initFully(subscribeUrl);
-        }
-        setAttribute("PROFILES", new ObjectType(onvifDeviceState.getProfiles()));
-        for (Profile profile : onvifDeviceState.getProfiles()) {
-            urls.setRtspUri(onvifDeviceState.getMediaDevices().getRTSPStreamUri(profile.getToken()), profile.getName());
-            urls.setSnapshotUri(onvifDeviceState.getMediaDevices().getSnapshotUri(profile.getToken()), profile.getName());
-        }
-        List<Dimension> resolutions = onvifDeviceState
-            .getProfiles().stream()
-            .map(profile -> {
-                VideoResolution resolution = profile.getVideoEncoderConfiguration().getResolution();
-                return new Dimension(resolution.getWidth(), resolution.getHeight());
-            })
-            .toList();
-        if (!resolutions.isEmpty()) {
-            entityContext.updateDelayed(entity, e -> {
-                if (entity.getStreamResolutions().isEmpty()) {
-                    e.setStreamResolutions(resolutions.stream()
-                                                      .sorted(Comparator.comparingInt(o -> o.width + o.height))
-                                                      .map(r -> String.format("%dx%d", r.width, r.height))
-                                                      .collect(Collectors.joining("~~~")));
-                }
-                if (entity.getHlsLowResolution().isEmpty()) {
-                    Dimension dim = resolutions.stream().min(Comparator.comparingInt(dim2 -> dim2.width * dim2.height)).get();
-                    e.setHlsLowResolution(String.format("%dx%d", dim.width, dim.height));
-                }
-                if (entity.getHlsHighResolution().isEmpty()) {
-                    Dimension dim = resolutions.stream().max(Comparator.comparingInt(dim2 -> dim2.width * dim2.height)).get();
-                    e.setHlsHighResolution(String.format("%dx%d", dim.width, dim.height));
-                }
+    public ActionResponseModel authenticate() {
+        entityContext.ui().sendDialogRequest("cam_auth", "AUTHENTICATE",
+            (responseType, pressedButton, parameters) ->
+                fireAuth(parameters),
+            dialogModel -> {
+                dialogModel.disableKeepOnUi();
+                dialogModel.appearance(new Icon("fas fa-camera"), null);
+                List<ActionInputParameter> inputs = new ArrayList<>();
+                inputs.add(ActionInputParameter.text("user", entity.getUser()));
+                inputs.add(ActionInputParameter.text("password", entity.getPassword().asString()));
+
+                dialogModel.submitButton("AUTHENTICATE", button ->
+                    button.setIcon("fas fa-sign-in-alt")
+                ).group("General", inputs);
             });
-        }
-        // we need reinitialize ffmpeg because rtsp urls has been changed
-        recreateFFmpeg();
-
-        // register rtsp url in MediaMTX
-        String rtspUri = urls.getRtspUri();
-        if (rtspUri.startsWith("rtsp://") && !rtspUri.contains("@") && isNotEmpty(entity.getUser())) {
-            rtspUri = "rtsp://" + entity.getUser() + ":" + entity.getPassword().asString() + "@" + rtspUri.substring("rtsp://".length());
-        }
-        entityContext.media().registerMediaMTXSource(getEntityID(), new MediaMTXSource(rtspUri));
-
-        super.pollCameraConnection();
+        return null;
     }
 
     @Override
@@ -667,22 +635,54 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return entity.getRestPort();
     }
 
-    public ActionResponseModel authenticate() {
-        entityContext.ui().sendDialogRequest("cam_auth", "CONTEXT.ACTION.AUTHENTICATE",
-            (responseType, pressedButton, parameters) ->
-                fireAuth(parameters),
-            dialogModel -> {
-                dialogModel.disableKeepOnUi();
-                dialogModel.appearance(new Icon("fas fa-camera"), null);
-                List<ActionInputParameter> inputs = new ArrayList<>();
-                inputs.add(ActionInputParameter.text("user", entity.getUser()));
-                inputs.add(ActionInputParameter.text("password", entity.getPassword().asString()));
-
-                dialogModel.submitButton("CONTEXT.ACTION.AUTHENTICATE", button ->
-                    button.setIcon("fas fa-sign-in-alt")
-                ).group("General", inputs);
+    @Override
+    protected void pollCameraConnection() throws Exception {
+        onvifDeviceState.initFully();
+        if (brandHandler.isSupportOnvifEvents()) {
+            String subscribeUrl = "%s:%s/rest/media/video/%s/OnvifEvent".formatted(onvifDeviceState.getIp(), SERVER_PORT, entityID);
+            onvifDeviceState.getEventDevices().initFully(subscribeUrl);
+        }
+        setAttribute("PROFILES", new ObjectType(onvifDeviceState.getProfiles()));
+        for (Profile profile : onvifDeviceState.getProfiles()) {
+            urls.setRtspUri(onvifDeviceState.getMediaDevices().getRTSPStreamUri(profile.getToken()), profile.getName());
+            urls.setSnapshotUri(onvifDeviceState.getMediaDevices().getSnapshotUri(profile.getToken()), profile.getName());
+        }
+        List<Dimension> resolutions = onvifDeviceState
+            .getProfiles().stream()
+            .map(profile -> {
+                VideoResolution resolution = profile.getVideoEncoderConfiguration().getResolution();
+                return new Dimension(resolution.getWidth(), resolution.getHeight());
+            })
+            .toList();
+        if (!resolutions.isEmpty()) {
+            entityContext.updateDelayed(entity, e -> {
+                if (entity.getStreamResolutions().isEmpty()) {
+                    e.setStreamResolutions(resolutions.stream()
+                                                      .sorted(Comparator.comparingInt(o -> o.width + o.height))
+                                                      .map(r -> String.format("%dx%d", r.width, r.height))
+                                                      .collect(Collectors.joining(LIST_DELIMITER)));
+                }
+                if (entity.getHlsLowResolution().isEmpty()) {
+                    Dimension dim = resolutions.stream().min(Comparator.comparingInt(dim2 -> dim2.width * dim2.height)).get();
+                    e.setHlsLowResolution(String.format("%dx%d", dim.width, dim.height));
+                }
+                if (entity.getHlsHighResolution().isEmpty()) {
+                    Dimension dim = resolutions.stream().max(Comparator.comparingInt(dim2 -> dim2.width * dim2.height)).get();
+                    e.setHlsHighResolution(String.format("%dx%d", dim.width, dim.height));
+                }
             });
-        return null;
+        }
+        // we need reinitialize ffmpeg because rtsp urls has been changed
+        recreateFFmpeg();
+
+        // register rtsp url in MediaMTX
+        String rtspUri = urls.getRtspUri();
+        if (rtspUri.startsWith("rtsp://") && !rtspUri.contains("@") && isNotEmpty(entity.getUser())) {
+            rtspUri = "rtsp://" + entity.getUser() + ":" + entity.getPassword().asString() + "@" + rtspUri.substring("rtsp://".length());
+        }
+        entityContext.media().registerMediaMTXSource(getEntityID(), new MediaMTXSource(rtspUri));
+
+        super.pollCameraConnection();
     }
 
     private void fireAuth(ObjectNode params) {

@@ -1,6 +1,7 @@
 package org.homio.app.rest;
 
 import static java.lang.String.format;
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
 import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
@@ -29,7 +30,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -91,6 +91,7 @@ public class MediaController {
     private final AudioService audioService;
     private final FfmpegHardwareRepository ffmpegHardwareRepository;
     private final AddonService addonService;
+    private final FileSystemController fileSystemController;
 
     private final RetryPolicy<Path> PLAYBACK_THUMBNAIL_RETRY_POLICY =
         RetryPolicy.<Path>builder()
@@ -165,9 +166,9 @@ public class MediaController {
         for (Map.Entry<String, Path> entry : filePathList.entrySet()) {
             Path filePath = entry.getValue();
             if (filePath == null || !Files.exists(filePath)) {
-                result.add(entry.getKey() + "~~~");
+                result.add(entry.getKey() + LIST_DELIMITER);
             } else {
-                result.add(entry.getKey() + "~~~data:image/jpg;base64," + Base64.getEncoder().encodeToString(Files.readAllBytes(filePath)));
+                result.add(entry.getKey() + LIST_DELIMITER + "data:image/jpg;base64," + Base64.getEncoder().encodeToString(Files.readAllBytes(filePath)));
             }
         }
 
@@ -221,11 +222,18 @@ public class MediaController {
         audioService.playRequested(streamID, resp);
     }
 
+    @SneakyThrows
     @GetMapping("/image/{entityID}")
-    public ResponseEntity<InputStreamResource> getImage(WebRequest webRequest, @PathVariable String entityID) {
+    public ResponseEntity<InputStreamResource> getImage(
+        WebRequest webRequest,
+        @PathVariable String entityID,
+        @RequestParam("fs") String fs) {
         String eTag = String.valueOf(entityID.hashCode());
         if (webRequest.checkNotModified(eTag)) {
             return null;
+        }
+        if (StringUtils.isNotEmpty(fs)) {
+            return fileSystemController.download(fs, entityID);
         }
         return toResponse(imageService.getImage(entityID), eTag);
     }

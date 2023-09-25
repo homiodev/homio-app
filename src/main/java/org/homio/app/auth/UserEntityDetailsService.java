@@ -1,5 +1,8 @@
 package org.homio.app.auth;
 
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
+
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.homio.app.model.entity.user.UserBaseEntity;
 import org.homio.app.repository.device.AllDeviceRepository;
@@ -8,8 +11,6 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
-
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -25,7 +26,7 @@ public class UserEntityDetailsService implements UserDetailsService {
         }
         Set<String> roles = user.getRoles();
         return User
-                .withUsername(user.getEntityID() + "~~~" + name)
+            .withUsername(user.getEntityID() + LIST_DELIMITER + name)
                 .password(user.getPassword().asString())
                 .authorities(roles.toArray(new String[0]))
                 .build();
@@ -33,11 +34,11 @@ public class UserEntityDetailsService implements UserDetailsService {
 
     public static String getEmail(Authentication auth) {
         UserDetails details = (UserDetails) auth.getPrincipal();
-        return details.getUsername().split("~~~")[1];
+        return details.getUsername().split(LIST_DELIMITER)[1];
     }
 
     public static String getEntityID(Authentication auth) {
         UserDetails details = (UserDetails) auth.getPrincipal();
-        return details.getUsername().split("~~~")[0];
+        return details.getUsername().split(LIST_DELIMITER)[0];
     }
 }

@@ -19,7 +19,7 @@ public class CameraServiceVideoSourceResolver implements WidgetVideoSourceResolv
     @Override
     public VideoEntityResponse resolveDataSource(WidgetVideoSeriesEntity item) {
         String ds = DataSourceUtil.getSelection(item.getValueDataSource()).getValue();
-        String[] keys = ds.split("~~~");
+        String[] keys = ds.split("-->");
         String entityID = keys[0];
         BaseVideoEntity<?, ?> baseVideoStreamEntity = entityContext.getEntity(entityID);
         if (baseVideoStreamEntity != null && keys.length >= 2) {

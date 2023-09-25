@@ -3,16 +3,22 @@ package org.homio.app.model.entity.widget.impl.video.sourceResolver;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.regex.Pattern;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public interface WidgetVideoSourceResolver {
+
+    Pattern VIDEO_FORMATS = Pattern.compile("webrtc|webm|ogv|flv|avi|mp4|ts|m3u8|mjpeg");
+    Pattern IMAGE_FORMATS = Pattern.compile("jpg|png|gif");
 
     VideoEntityResponse resolveDataSource(WidgetVideoSeriesEntity item);
 
@@ -36,26 +42,11 @@ public interface WidgetVideoSourceResolver {
             if (url.startsWith("https://vimeo")) {
                 return "video/vimeo";
             }
-            if (url.endsWith(".mp4")) {
-                return "video/mp4";
-            }
-            if (url.endsWith(".jpg")) {
-                return "image/jpg";
-            }
-            if (url.endsWith(".mjpeg")) {
-                return "video/mjpeg";
-            }
             if (url.endsWith(".ts")) {
                 return "video/MP2T";
             }
-            if (url.endsWith(".webm")) {
-                return "video/webm";
-            }
             if (url.endsWith(".ogv")) {
                 return "video/ogg";
-            }
-            if (url.endsWith(".gif")) {
-                return "image/gif";
             }
             if (url.endsWith(".m3u8")) {
                 return "application/x-mpegURL";
@@ -63,8 +54,12 @@ public interface WidgetVideoSourceResolver {
             if (url.endsWith(".mpd")) {
                 return "application/dash+xml";
             }
-            if (url.endsWith(".webrtc")) {
-                return "video/webrtc";
+            String extension = StringUtils.defaultString(FilenameUtils.getExtension(url));
+            if (FSWidgetVideoSourceResolver.IMAGE_FORMATS.matcher(extension).matches()) {
+                return "image/" + extension;
+            }
+            if (FSWidgetVideoSourceResolver.VIDEO_FORMATS.matcher(extension).matches()) {
+                return "video/" + extension;
             }
             return "video/unknown";
         }

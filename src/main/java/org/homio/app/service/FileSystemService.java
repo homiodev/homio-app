@@ -6,6 +6,7 @@ import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 import java.util.List;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.fs.FileSystemProvider;
@@ -14,6 +15,7 @@ import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.app.setting.console.ConsoleFMClearCacheButtonSetting;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 @Getter
@@ -33,7 +35,7 @@ public class FileSystemService implements ContextCreated, ContextRefreshed {
             e -> findAllFileSystems(this.entityContext));
         entityContext.setting().listenValue(ConsoleFMClearCacheButtonSetting.class, "fs-cache",
             jsonObject -> {
-                for (BaseFileSystemEntity fileSystem : fileSystems) {
+                for (BaseFileSystemEntity<?, ?> fileSystem : fileSystems) {
                     fileSystem.getFileSystem(entityContext).clearCache();
                 }
             });
@@ -51,11 +53,11 @@ public class FileSystemService implements ContextCreated, ContextRefreshed {
         return getFileSystemEntity(fs).getFileSystem(entityContext);
     }
 
-    public BaseFileSystemEntity getFileSystemEntity(String fs) {
-        if (fs.equals(LOCAL_FS)) {
+    public BaseFileSystemEntity<?, ?> getFileSystemEntity(@Nullable String fs) {
+        if (StringUtils.isEmpty(fs) || fs.equals(LOCAL_FS) || fs.equals("dvc_board_primary")) {
             fs = localFileSystem.getEntity().getEntityID();
         }
-        for (BaseFileSystemEntity fileSystem : fileSystems) {
+        for (BaseFileSystemEntity<?, ?> fileSystem : fileSystems) {
             if (fileSystem.getEntityID().equals(fs) || fileSystem.getFileSystemAlias().equals(fs)) {
                 return fileSystem;
             }

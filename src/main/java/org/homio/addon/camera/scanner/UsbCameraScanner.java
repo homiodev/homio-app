@@ -1,5 +1,13 @@
 package org.homio.addon.camera.scanner;
 
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.UsbCameraEntity;
@@ -10,14 +18,6 @@ import org.homio.api.service.scan.VideoStreamScanner;
 import org.homio.api.util.Lang;
 import org.homio.hquery.ProgressBar;
 import org.springframework.stereotype.Component;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 
 @Log4j2
 @Component
@@ -52,7 +52,7 @@ public class UsbCameraScanner implements VideoStreamScanner {
                             log.info("Confirm save usb camera: <{}>", foundUsbVideoDevice.getName());
                             UsbCameraEntity entity = new UsbCameraEntity();
                             entity.setName(foundUsbVideoDevice.getName());
-                            entity.setStreamResolutions(String.join("~~~", foundUsbVideoDevice.getResolutionSet()));
+                            entity.setStreamResolutions(String.join(LIST_DELIMITER, foundUsbVideoDevice.getResolutionSet()));
                             entity.setIeeeAddress(defaultIfEmpty(foundUsbVideoDevice.getName(), String.valueOf(System.currentTimeMillis())));
                             entityContext.save(entity);
                         });

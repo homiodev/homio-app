@@ -1,5 +1,18 @@
 package org.homio.addon.fs;
 
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
+import static org.homio.api.util.CommonUtils.getErrorMessage;
+import static org.homio.app.utils.InternalUtil.TIKA;
+import static org.springframework.http.MediaType.TEXT_PLAIN_VALUE;
+
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -25,19 +38,6 @@ import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
-
-import java.io.InputStream;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
-
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.homio.api.util.CommonUtils.getErrorMessage;
-import static org.homio.app.utils.InternalUtil.TIKA;
-import static org.springframework.http.MediaType.TEXT_PLAIN_VALUE;
 
 @Getter
 @Component
@@ -237,7 +237,7 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
     }
 
     private FileSystemItem getItemId(String key, WorkspaceBlock workspaceBlock) {
-        String[] ids = workspaceBlock.getMenuValue(key, this.fileMenu).split("~~~");
+        String[] ids = workspaceBlock.getMenuValue(key, this.fileMenu).split(LIST_DELIMITER);
         BaseFileSystemEntity entity = getEntityContext().getEntityRequire(ids[0]);
         String node = ids[1];
         int splitNameAndId = node.indexOf("://");

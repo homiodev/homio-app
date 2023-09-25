@@ -3,6 +3,7 @@ package org.homio.addon.camera.service;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
 import static org.homio.api.EntityContextMedia.FFMPEGFormat.RE;
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 
 import java.awt.Dimension;
 import java.io.InputStream;
@@ -117,7 +118,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
             try {
                 entityContext.updateDelayed(entity, e -> {
                     if (entity.getStreamResolutions().isEmpty()) {
-                        e.setStreamResolutions(String.join("~~~", input.getResolutionSet()));
+                        e.setStreamResolutions(String.join(LIST_DELIMITER, input.getResolutionSet()));
                     }
                     if (entity.getHlsLowResolution().isEmpty()) {
                         Dimension dim = Arrays.stream(input.getResolutions())

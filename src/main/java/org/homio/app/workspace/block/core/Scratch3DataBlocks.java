@@ -1,18 +1,18 @@
 package org.homio.app.workspace.block.core;
 
+import java.text.NumberFormat;
+import java.util.function.BiFunction;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.homio.api.EntityContext;
 import org.homio.api.state.State;
+import org.homio.api.util.DataSourceUtil;
 import org.homio.api.workspace.BroadcastLock;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.workspace.WorkspaceBlockImpl;
 import org.springframework.stereotype.Component;
-
-import java.text.NumberFormat;
-import java.util.function.BiFunction;
 
 @Getter
 @Component
@@ -83,8 +83,8 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     }
 
     private String getVariable(WorkspaceBlock workspaceBlock) {
-        String[] variable = workspaceBlock.getFieldId("VARIABLE").split("~~~");
-        return variable[variable.length - 1];
+        String source = workspaceBlock.getFieldId("VARIABLE");
+        return DataSourceUtil.getSelection(source).getEntityValue();
     }
 
     @RequiredArgsConstructor

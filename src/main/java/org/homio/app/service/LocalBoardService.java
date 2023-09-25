@@ -29,18 +29,20 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
 
     @Override
     protected void firstInitialize() {
-        entityContext.var().createGroup("hardware", "Hardware", true, new Icon("fas fa-microchip",
-            "#31BDB6"), "sys.hardware");
+        entityContext.var().createGroup("hardware", "Hardware", builder ->
+            builder.setLocked(true).setDescription("sys.hardware").setIcon(new Icon("fas fa-microchip", "#31BDB6")));
 
         this.cpuUsageID = entityContext.var().createVariable("hardware", "sys_cpu_load", "sys.cpu_load",
             VariableType.Float, builder ->
                 builder.setDescription("sys.cpu_load_description")
+                       .setLocked(true)
                        .setIcon(new Icon("fas fa-microchip", "#A65535"))
                        .setNumberRange(0, 100).setUnit("%").setColor("#7B37B0"));
 
         this.javaCpuUsageID = entityContext.var().createVariable("hardware", "java_cpu_load", "sys.java_cpu_load",
             VariableType.Float, builder ->
                 builder.setDescription("sys.java_cpu_load_description")
+                       .setLocked(true)
                        .setIcon(new Icon("fas fa-microchip", "#35A680"))
                        .setNumberRange(0, 100).setUnit("%").setColor("#B03780"));
 

@@ -23,6 +23,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextVar;
 import org.homio.api.EntityContextVar.VariableType;
@@ -38,14 +39,10 @@ import org.homio.api.model.JSON;
 import org.homio.api.storage.SourceHistory;
 import org.homio.api.storage.SourceHistoryItem;
 import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldProgress;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.color.UIFieldColorRef;
-import org.homio.api.ui.field.condition.UIFieldDisableEditOnCondition;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
-import org.homio.api.ui.field.inline.UIFieldInlineEntityEditWidth;
-import org.homio.api.ui.field.inline.UIFieldInlineEntityWidth;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent.SelectionParent;
 import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection.SelectionConfiguration;
@@ -76,32 +73,24 @@ public class WorkspaceVariable extends BaseEntity
     public static final String PREFIX = "var_";
 
     @UIField(order = 12, color = "#7A7A7A")
-    @UIFieldDisableEditOnCondition("return context.getParent('locked')")
+    //@UIFieldDisableEditOnCondition("return context.getParent('locked')")
     private String description;
 
     @UIField(order = 20, label = "format")
     @Enumerated(EnumType.STRING)
-    @UIFieldInlineEntityWidth(15)
-    @UIFieldInlineEntityEditWidth(10)
     @UIFieldShowOnCondition("return context.getParent('groupId') !== 'broadcasts'")
-    @UIFieldDisableEditOnCondition("return context.getParent('locked')")
     private EntityContextVar.VariableType restriction = EntityContextVar.VariableType.Any;
 
     @UIField(order = 25)
     @UIFieldSlider(min = 500, max = 100000, step = 500)
-    @UIFieldGroup(order = 10, value = "QUOTA")
-    @UIFieldInlineEntityWidth(15)
     private int quota = 1000;
     /**
      * Is it possible to write to variable from UI
      */
     @UIField(order = 25, hideInEdit = true)
-    @UIFieldGroup("QUOTA")
-    @UIFieldInlineEntityWidth(15)
     private boolean readOnly = true;
 
     @UIField(order = 30)
-    @UIFieldInlineEntityWidth(15)
     private boolean backup = false;
 
     @Column(unique = true, nullable = false)
@@ -109,7 +98,6 @@ public class WorkspaceVariable extends BaseEntity
 
     private String icon;
 
-    @UIFieldInlineEntityWidth(15)
     private String iconColor;
 
     private String unit;
@@ -123,13 +111,15 @@ public class WorkspaceVariable extends BaseEntity
     @Convert(converter = JSONConverter.class)
     private JSON jsonData = new JSON();
 
+    private boolean locked;
+
     public WorkspaceVariable(@NotNull WorkspaceGroup workspaceGroup) {
         this.workspaceGroup = workspaceGroup;
     }
 
     public WorkspaceVariable(String variableId, String variableName, WorkspaceGroup workspaceGroup, VariableType variableType) {
+        this(workspaceGroup);
         this.variableId = variableId;
-        this.workspaceGroup = workspaceGroup;
         this.restriction = variableType;
         this.setName(variableName);
         this.setEntityID(variableId);
@@ -142,16 +132,12 @@ public class WorkspaceVariable extends BaseEntity
     @Override
     @UIField(order = 10, required = true)
     @UIFieldColorRef("iconColor")
-    @UIFieldInlineEntityEditWidth(35)
-    @UIFieldDisableEditOnCondition("return context.getParent('locked')")
     public String getName() {
         return super.getName();
     }
 
     @UIField(order = 30, hideInEdit = true, disableEdit = true)
     @UIFieldProgress
-    @UIFieldGroup("QUOTA")
-    @UIFieldInlineEntityWidth(15)
     public UIFieldProgress.Progress getUsedQuota() {
         int count = 0;
         if (getEntityID() != null && getEntityContext().var().exists(getEntityID())) {
@@ -173,6 +159,11 @@ public class WorkspaceVariable extends BaseEntity
         }
         return title;
     }*/
+
+    @Override
+    public boolean isDisableDelete() {
+        return locked || getJsonData("dis_del", false);
+    }
 
     @Override
     public String getDefaultName() {
@@ -332,7 +323,7 @@ public class WorkspaceVariable extends BaseEntity
 
     public WorkspaceVariable setAttributes(List<String> attributes) {
         if (attributes != null && !attributes.isEmpty()) {
-            setJsonData("attr", String.join("~~~", attributes));
+            setJsonData("attr", String.join(LIST_DELIMITER, attributes));
         }
         return this;
     }
@@ -366,6 +357,7 @@ public class WorkspaceVariable extends BaseEntity
         result = 31 * result + quota;
         result = 31 * result + (readOnly ? 1 : 0);
         result = 31 * result + (backup ? 1 : 0);
+        result = 31 * result + (locked ? 1 : 0);
         result = 31 * result + (variableId != null ? variableId.hashCode() : 0);
         result = 31 * result + (icon != null ? icon.hashCode() : 0);
         result = 31 * result + (iconColor != null ? iconColor.hashCode() : 0);
@@ -384,6 +376,9 @@ public class WorkspaceVariable extends BaseEntity
     }
 
     public void setSources(List<String> sources) {
+        if (sources != null) {
+            sources = sources.stream().filter(StringUtils::isNotBlank).toList();
+        }
         setJsonDataList("sources", sources);
     }
 
@@ -401,6 +396,14 @@ public class WorkspaceVariable extends BaseEntity
 
     public void setVarType(VarType type) {
         setJsonDataEnum("vt", type == VarType.standard ? null : type);
+    }
+
+    @JsonIgnore
+    public WorkspaceGroup getTopGroup() {
+        if (workspaceGroup.getParent() != null) {
+            return workspaceGroup.getParent();
+        }
+        return workspaceGroup;
     }
 
     public enum VarType {

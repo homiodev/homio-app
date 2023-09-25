@@ -128,34 +128,6 @@ public final class InMemoryDB {
         return vStr.isEmpty() ? 0 : 1;
     }
 
-    /*public static void main(String[] args) throws InterruptedException {
-        long start0 = System.currentTimeMillis();
-        InMemoryDBService<Test> service = InMemoryDB.getOrCreateService(Test.class, 10000L);
-        for (int i = 0; i < 10000; i++) {
-            service.save(new Test("$SYS/data_" + i % 2, i));
-            Thread.sleep(1);
-        }
-
-        long start = System.currentTimeMillis();
-        service.getTimeSeries(1111110L, null, "topic", "$SYS/data_1");
-
-        System.out.println((System.currentTimeMillis() - start));
-        System.out.println((System.currentTimeMillis() - start0));
-    }
-
-    @Getter
-    @Setter
-    @ToString(callSuper = true)
-    @NoArgsConstructor
-    public static class Test extends InMemoryDBEntity {
-        private String topic;
-
-        public Test(String topic, Object value) {
-            super(value);
-            this.topic = topic;
-        }
-    }*/
-
     @RequiredArgsConstructor
     private static class InMemoryDBDataService<T extends DataStorageEntity> implements DataStorageService<T> {
 

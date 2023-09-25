@@ -69,7 +69,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     @Override
     public String getDescriptionImpl() {
         if (!getStatus().isOnline()) {
-            String message = StringUtils.defaultString(getStatusMessage(), "");
+            String message = StringUtils.defaultString(getStatusMessage());
             if (!message.isEmpty()) {
                 if (message.contains("Access is denied")) {
                     return "W.ERROR.MTX_ACCESS_DENIED";
@@ -195,7 +195,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     @UIField(order = 1, hideInEdit = true, color = "#C4CC23")
     @UIFieldGroup("STATUS")
     public int getConnectedStreamsCount() {
-        return getService().getApiList().path("itemCount").asInt();
+        return getService().getApiList().path("itemCount").asInt(-1);
     }
 
     @UIField(order = 30, hideInEdit = true)
@@ -273,7 +273,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     public @NotNull Map<String, ? extends DeviceEndpoint> getDeviceEndpoints() {
         Map<String, StreamEndpoint> streams = new HashMap<>();
         JsonNode list = getService().getApiList();
-        for (JsonNode node : list.get("items")) {
+        for (JsonNode node : list.path("items")) {
             streams.put(node.toString(), new StreamEndpoint(node, this));
         }
         return streams;

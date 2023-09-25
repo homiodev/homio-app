@@ -1,6 +1,15 @@
 package org.homio.app.builder.ui.layout;
 
+import static org.homio.api.ui.field.action.ActionInputParameter.NAME_PATTERN;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -14,14 +23,14 @@ import org.homio.api.ui.field.action.v1.item.UISliderItemBuilder;
 import org.homio.api.ui.field.action.v1.item.UITextInputItemBuilder;
 import org.homio.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
 import org.homio.api.ui.field.action.v1.layout.dialog.UIDialogLayoutBuilder;
-import org.homio.app.builder.ui.*;
+import org.homio.app.builder.ui.UICheckboxItemBuilderImpl;
+import org.homio.app.builder.ui.UIDialogInputEntity;
+import org.homio.app.builder.ui.UIInfoItemBuilderImpl;
+import org.homio.app.builder.ui.UIItemType;
+import org.homio.app.builder.ui.UISelectBoxItemBuilderImpl;
+import org.homio.app.builder.ui.UISliderItemBuilderImpl;
+import org.homio.app.builder.ui.UITextInputItemBuilderImpl;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.*;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
-import static org.homio.api.ui.field.action.ActionInputParameter.NAME_PATTERN;
 
 @Getter
 @Accessors(chain = true)
@@ -46,7 +55,7 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
 
     public UIDialogLayoutBuilderImpl(String entityID, Integer width) {
         this.entityID = entityID + "_dialog";
-        this.title = "CONTEXT.ACTION." + entityID;
+        this.title = entityID;
         this.width = width;
     }
 
@@ -57,7 +66,7 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
 
     @Override
     public UIDialogLayoutBuilder setTitle(@NotNull String title, Icon icon) {
-        this.title = "CONTEXT.ACTION." + title;
+        this.title = title;
         this.icon = Icon.iconOrDefault(icon, null);
         this.iconColor = Icon.colorOrDefault(icon, null);
         return this;

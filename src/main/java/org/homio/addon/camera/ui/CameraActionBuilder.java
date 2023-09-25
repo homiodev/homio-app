@@ -194,12 +194,12 @@ public class CameraActionBuilder {
         return switch (type) {
             case SelectBox -> flex.addSelectBox(context.name, handler, context.order).setSelectReplacer(context.min,
                             context.max, context.selectReplacer)
-                    .setSeparatedText("CONTEXT.ACTION." + context.name);
+                                  .setSeparatedText(context.name);
             case Slider -> flex.addSlider(context.name, 0F, (float) context.min,
                             (float) context.max, handler, UISliderItemBuilder.SliderType.Regular, context.order)
-                    .setSeparatedText("CONTEXT.ACTION." + context.name);
+                               .setSeparatedText(context.name);
             case Boolean -> flex.addCheckbox(context.name, false, handler, context.order)
-                    .setSeparatedText("CONTEXT.ACTION." + context.name);
+                                .setSeparatedText(context.name);
             case String -> flex.addInfo(context.name, context.order);
             default -> throw new RuntimeException("Unknown type: " + type);
         };

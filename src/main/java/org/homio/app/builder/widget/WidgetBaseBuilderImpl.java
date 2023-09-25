@@ -1,5 +1,9 @@
 package org.homio.app.builder.widget;
 
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
+
+import java.util.Objects;
+import java.util.function.Consumer;
 import lombok.Getter;
 import org.homio.api.EntityContextWidget.PulseBuilder;
 import org.homio.api.EntityContextWidget.ThresholdBuilder;
@@ -10,9 +14,6 @@ import org.homio.app.model.entity.widget.WidgetTabEntity;
 import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Objects;
-import java.util.function.Consumer;
 
 @Getter
 public class WidgetBaseBuilderImpl<T, W extends WidgetBaseEntity> implements WidgetBaseBuilder<T> {
@@ -39,7 +40,7 @@ public class WidgetBaseBuilderImpl<T, W extends WidgetBaseEntity> implements Wid
 
     @Override
     public @NotNull T setStyle(String... styles) {
-        widget.setStyle(String.join("~~~", styles));
+        widget.setStyle(String.join(LIST_DELIMITER, styles));
         return (T) this;
     }
 

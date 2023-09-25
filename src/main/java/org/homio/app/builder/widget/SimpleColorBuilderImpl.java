@@ -1,5 +1,7 @@
 package org.homio.app.builder.widget;
 
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
+
 import org.homio.api.EntityContextWidget.SimpleColorWidgetBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasAlignBuilder;
 import org.homio.app.manager.common.EntityContextImpl;
@@ -17,7 +19,7 @@ public class SimpleColorBuilderImpl extends WidgetBaseBuilderImpl<SimpleColorWid
 
     @Override
     public @NotNull SimpleColorWidgetBuilder setColors(String... colors) {
-        widget.setColors(String.join("~~~", colors));
+        widget.setColors(String.join(LIST_DELIMITER, colors));
         return this;
     }
 
