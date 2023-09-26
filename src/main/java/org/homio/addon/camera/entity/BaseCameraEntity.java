@@ -2,8 +2,8 @@ package org.homio.addon.camera.entity;
 
 import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUDIO_THRESHOLD;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_MOTION_THRESHOLD;
 import static org.homio.api.EntityContextSetting.SERVER_PORT;
 import static org.homio.api.model.OptionModel.of;
 import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
@@ -27,7 +27,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.CameraEntrypoint;
-import org.homio.addon.camera.service.BaseVideoService;
+import org.homio.addon.camera.service.BaseCameraService;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
@@ -66,7 +66,7 @@ import org.json.JSONObject;
 
 @SuppressWarnings("unused")
 @Log4j2
-public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseVideoService<?, S>>
+public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends BaseCameraService<?, S>>
     extends MediaEntity implements
     HasEntityLog,
     HasEntitySourceLog,
@@ -197,7 +197,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         return getJsonData("start", false);
     }
 
-    public BaseVideoEntity<?, ?> setStart(boolean start) {
+    public BaseCameraEntity<?, ?> setStart(boolean start) {
         setJsonData("start", start);
         return this;
     }
@@ -217,18 +217,18 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     public UIInputBuilder assembleActions() {
-        return optService().map(BaseVideoService::assembleActions).orElse(null);
+        return optService().map(BaseCameraService::assembleActions).orElse(null);
     }
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @UIField(order = 500, hideInEdit = true)
     @UIFieldImage
     @UIActionButton(name = "refresh", icon = "fas fa-sync",
-                    actionHandler = BaseVideoEntity.UpdateSnapshotActionHandler.class)
+                    actionHandler = BaseCameraEntity.UpdateSnapshotActionHandler.class)
     @UIActionButton(name = "get", icon = "fas fa-camera",
-                    actionHandler = BaseVideoEntity.GetSnapshotActionHandler.class)
+                    actionHandler = BaseCameraEntity.GetSnapshotActionHandler.class)
     public byte[] getSnapshot() {
-        return optService().map(BaseVideoService::getSnapshot).orElse(null);
+        return optService().map(BaseCameraService::getSnapshot).orElse(null);
     }
 
     // not all entity has username
@@ -420,8 +420,8 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
         @Override
         public ActionResponseModel handleAction(EntityContext entityContext, JSONObject params) {
-            BaseVideoEntity<?, ?> entity = entityContext.getEntityRequire(params.getString("entityID"));
-            BaseVideoService<?, ?> service = entity.getService();
+            BaseCameraEntity<?, ?> entity = entityContext.getEntityRequire(params.getString("entityID"));
+            BaseCameraService<?, ?> service = entity.getService();
             service.assertOnline();
             service.takeSnapshotAsync();
             return ActionResponseModel.fired();
@@ -432,7 +432,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
         @Override
         public ActionResponseModel handleAction(EntityContext entityContext, JSONObject params) {
-            BaseVideoEntity<?, ?> entity = entityContext.getEntityRequire(params.getString("entityID"));
+            BaseCameraEntity<?, ?> entity = entityContext.getEntityRequire(params.getString("entityID"));
             entity.getService().assertOnline();
             byte[] image = entity.getService().getSnapshot();
             String encodedValue = "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(image);
@@ -461,7 +461,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
     @Override
     public @NotNull Map<String, ? extends DeviceEndpoint> getDeviceEndpoints() {
-        return optService().map(BaseVideoService::getEndpoints).orElse(Map.of());
+        return optService().map(BaseCameraService::getEndpoints).orElse(Map.of());
     }
 
     @Override
@@ -471,7 +471,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
     @Override
     public @NotNull ConfigDeviceDefinitionService getConfigDeviceDefinitionService() {
-        return BaseVideoService.CONFIG_DEVICE_SERVICE;
+        return BaseCameraService.CONFIG_DEVICE_SERVICE;
     }
 
     @Override

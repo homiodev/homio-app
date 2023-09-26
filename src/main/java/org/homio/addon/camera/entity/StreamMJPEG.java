@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Min;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import org.homio.addon.camera.service.BaseVideoService;
+import org.homio.addon.camera.service.BaseCameraService;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
 import org.homio.api.EntityContextMedia.FFMPEGHandler;
@@ -81,8 +81,8 @@ public interface StreamMJPEG extends HasJsonData {
         setJsonData("mjpeg_oo", value);
     }
 
-    default @NotNull <S extends BaseVideoService<T, S>, T extends BaseVideoEntity<T, S>> FFMPEG buildMjpegFFMPEG(
-        BaseVideoService<T, S> service) {
+    default @NotNull <S extends BaseCameraService<T, S>, T extends BaseCameraEntity<T, S>> FFMPEG buildMjpegFFMPEG(
+        BaseCameraService<T, S> service) {
         T entity = service.getEntity();
         String rtspUri = service.getUrls().getRtspUri();
 
@@ -116,7 +116,7 @@ public interface StreamMJPEG extends HasJsonData {
         return String.join(" ", options);
     }
 
-    default void recordMp4Async(Path filePath, String profile, int secondsToRecord, BaseVideoService<?, ?> service) {
+    default void recordMp4Async(Path filePath, String profile, int secondsToRecord, BaseCameraService<?, ?> service) {
         String inputOptions = "-y -t " + secondsToRecord + " -hide_banner";
         FFMPEG ffmpegMP4 = service.getEntityContext()
                                   .media()

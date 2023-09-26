@@ -3,7 +3,7 @@ package org.homio.addon.camera;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-public class VideoConstants {
+public class CameraConstants {
 
     public static final String CM = "/cgi-bin/configManager.cgi?action=";
 

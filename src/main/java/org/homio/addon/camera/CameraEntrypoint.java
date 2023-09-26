@@ -5,7 +5,7 @@ import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.addon.camera.entity.BaseVideoEntity;
+import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.addon.camera.scanner.OnvifCameraHttpScanner;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.EntityContext;
@@ -35,7 +35,7 @@ public class CameraEntrypoint implements AddonEntrypoint {
 
     public static void updateCamera(
             @NotNull EntityContext entityContext,
-            @NotNull BaseVideoEntity<?, ?> entity,
+            @NotNull BaseCameraEntity<?, ?> entity,
             @Nullable Supplier<String> titleSupplier,
             @NotNull Icon icon,
             @Nullable Consumer<UILayoutBuilder> settingsBuilder) {

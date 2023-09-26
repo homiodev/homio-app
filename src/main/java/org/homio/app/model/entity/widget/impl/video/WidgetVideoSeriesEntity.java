@@ -3,7 +3,7 @@ package org.homio.app.model.entity.widget.impl.video;
 import jakarta.persistence.Entity;
 import java.util.ArrayList;
 import java.util.List;
-import org.homio.addon.camera.entity.BaseVideoEntity;
+import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.StylePosition;
 import org.homio.api.ui.field.UIField;
@@ -74,7 +74,7 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
         @Override
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
             List<OptionModel> list = new ArrayList<>();
-            for (BaseVideoEntity<?, ?> entity : parameters.getEntityContext().findAll(BaseVideoEntity.class)) {
+            for (BaseCameraEntity<?, ?> entity : parameters.getEntityContext().findAll(BaseCameraEntity.class)) {
                 List<OptionModel> sources = entity.getVideoSources();
                 if (!sources.isEmpty()) {
                     OptionModel model = OptionModel

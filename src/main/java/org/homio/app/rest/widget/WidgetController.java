@@ -20,7 +20,7 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.addon.camera.entity.BaseVideoEntity;
+import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.HasOrder;
@@ -208,7 +208,7 @@ public class WidgetController {
     public void fireVideoAction(@RequestBody VideoActionRequest request) {
         WidgetVideoSeriesEntity series = getSeriesEntity(request);
         try {
-            BaseVideoEntity entity = entityContext.getEntity(series.getValueDataSource());
+            BaseCameraEntity entity = entityContext.getEntity(series.getValueDataSource());
             if (entity == null) {
                 throw new NotFoundException("ERROR.VIDEO_SERIES_NOT_FOUND");
             }

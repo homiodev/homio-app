@@ -12,7 +12,7 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-public interface VideoPlaybackStorage {
+public interface CameraPlaybackStorage {
 
     String getTitle();
 

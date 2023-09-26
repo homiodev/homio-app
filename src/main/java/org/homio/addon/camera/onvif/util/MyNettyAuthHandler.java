@@ -1,6 +1,6 @@
 package org.homio.addon.camera.onvif.util;
 
-import static org.homio.addon.camera.service.util.VideoUtils.calcMD5Hash;
+import static org.homio.addon.camera.service.util.CameraUtils.calcMD5Hash;
 
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -11,8 +11,6 @@ import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.api.model.Status;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Random;
 
 /**

@@ -8,8 +8,8 @@ import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.homio.addon.camera.entity.BaseVideoEntity;
-import org.homio.addon.camera.service.BaseVideoService;
+import org.homio.addon.camera.entity.BaseCameraEntity;
+import org.homio.addon.camera.service.BaseCameraService;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
@@ -25,7 +25,7 @@ public class FFMpegRtspAlarm {
     private int motionThreshold;
     private int audioThreshold;
     private final EntityContext entityContext;
-    private final BaseVideoEntity<?, ?> videoStreamEntity;
+    private final BaseCameraEntity<?, ?> videoStreamEntity;
 
     public void addMotionAlarmListener(String listener) {
         motionAlarmObservers.add(listener);
@@ -44,7 +44,7 @@ public class FFMpegRtspAlarm {
     }
 
     private void runFFMPEGRtspAlarmThread() {
-        BaseVideoService<?, ?> service = videoStreamEntity.getService();
+        BaseCameraService<?, ?> service = videoStreamEntity.getService();
         String inputOptions = "";
 
         if (ffmpegRtspHelper != null) {

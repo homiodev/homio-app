@@ -1,20 +1,20 @@
 package org.homio.addon.camera.service;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.homio.addon.camera.VideoConstants.AlarmEvents.CellMotionAlarm;
-import static org.homio.addon.camera.VideoConstants.AlarmEvents.FieldDetectAlarm;
-import static org.homio.addon.camera.VideoConstants.AlarmEvents.LineCrossAlarm;
-import static org.homio.addon.camera.VideoConstants.AlarmEvents.MotionAlarm;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_GOTO_PRESET;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_PAN;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_SCENE_CHANGE_ALARM;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_STORAGE_ALARM;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_TAMPER_ALARM;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_TILT;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_TOO_BLURRY_ALARM;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_TOO_BRIGHT_ALARM;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_TOO_DARK_ALARM;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ZOOM;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.CellMotionAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.FieldDetectAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.LineCrossAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_GOTO_PRESET;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_PAN;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_SCENE_CHANGE_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_STORAGE_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_TAMPER_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_TILT;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_TOO_BLURRY_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_TOO_BRIGHT_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_TOO_DARK_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ZOOM;
 import static org.homio.api.EntityContextSetting.SERVER_PORT;
 import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
@@ -65,7 +65,7 @@ import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
-import org.homio.addon.camera.entity.VideoPlaybackStorage;
+import org.homio.addon.camera.entity.CameraPlaybackStorage;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
@@ -74,11 +74,11 @@ import org.homio.addon.camera.onvif.impl.UnknownBrandHandler;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.onvif.util.MyNettyAuthHandler;
 import org.homio.addon.camera.service.util.CommonCameraHandler;
-import org.homio.addon.camera.service.util.VideoUtils;
+import org.homio.addon.camera.service.util.CameraUtils;
 import org.homio.addon.camera.ui.UICameraActionConditional;
 import org.homio.addon.camera.ui.UICameraDimmerButton;
 import org.homio.addon.camera.ui.UIVideoAction;
-import org.homio.addon.camera.ui.UIVideoActionGetter;
+import org.homio.addon.camera.ui.UICameraActionGetter;
 import org.homio.addon.camera.ui.UIVideoActionMetadata;
 import org.homio.addon.camera.ui.VideoActionType;
 import org.homio.api.EntityContext;
@@ -98,7 +98,7 @@ import org.onvif.ver10.schema.Profile;
 import org.onvif.ver10.schema.VideoResolution;
 
 @Log4j2
-public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, OnvifCameraService> {
+public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, OnvifCameraService> {
 
     private static @NotNull final Map<String, CameraBrandHandlerDescription> cameraBrands = new ConcurrentHashMap<>();
     private final @NotNull ChannelGroup openChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
@@ -199,8 +199,8 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return false;
     }
 
-    public VideoPlaybackStorage getVideoPlaybackStorage() {
-        return (VideoPlaybackStorage) brandHandler;
+    public CameraPlaybackStorage getVideoPlaybackStorage() {
+        return (CameraPlaybackStorage) brandHandler;
     }
 
     // false clears the stored user/pass hash, true creates the hash
@@ -380,7 +380,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return ""; // Did not find the String we were searching for
     }
 
-    @UIVideoActionGetter(ENDPOINT_PAN)
+    @UICameraActionGetter(ENDPOINT_PAN)
     public DecimalType getPan() {
         return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentPanPercentage()));
     }
@@ -405,7 +405,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         }
     }
 
-    @UIVideoActionGetter(ENDPOINT_TILT)
+    @UICameraActionGetter(ENDPOINT_TILT)
     public DecimalType getTilt() {
         return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentTiltPercentage()));
     }
@@ -429,12 +429,12 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         onvifDeviceState.getPtzDevices().setAbsoluteZoom(Float.parseFloat(command), profile);
     }
 
-    @UIVideoActionGetter(ENDPOINT_ZOOM)
+    @UICameraActionGetter(ENDPOINT_ZOOM)
     public DecimalType getZoom() {
         return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentZoomPercentage()));
     }
 
-    @UIVideoActionGetter(ENDPOINT_GOTO_PRESET)
+    @UICameraActionGetter(ENDPOINT_GOTO_PRESET)
     public DecimalType getGotoPreset() {
         return new DecimalType(0);
     }
@@ -483,7 +483,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
             if (snapshotUri.startsWith("/")) {
                 snapshotUri = "http://%s:%s%s".formatted(getEntity().getIp(), getEntity().getRestPort(), snapshotUri);
             }
-            VideoUtils.downloadImage(snapshotUri, entity.getUser(), entity.getPassword().asString(), output);
+            CameraUtils.downloadImage(snapshotUri, entity.getUser(), entity.getPassword().asString(), output);
         }
     }
 

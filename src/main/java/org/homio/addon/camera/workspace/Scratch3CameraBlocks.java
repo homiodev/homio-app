@@ -1,7 +1,7 @@
 package org.homio.addon.camera.workspace;
 
-import static org.homio.addon.camera.VideoConstants.AlarmEvents.ExternalMotionAlarm;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.ExternalMotionAlarm;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
 
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
@@ -19,14 +19,14 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.homio.addon.camera.CameraEntrypoint;
-import org.homio.addon.camera.VideoConstants.AlarmEvents;
-import org.homio.addon.camera.entity.BaseVideoEntity;
+import org.homio.addon.camera.CameraConstants.AlarmEvents;
+import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
-import org.homio.addon.camera.entity.VideoPlaybackStorage;
-import org.homio.addon.camera.entity.VideoPlaybackStorage.DownloadFile;
+import org.homio.addon.camera.entity.CameraPlaybackStorage;
+import org.homio.addon.camera.entity.CameraPlaybackStorage.DownloadFile;
 import org.homio.addon.camera.entity.storage.VideoBaseStorageService;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
-import org.homio.addon.camera.service.BaseVideoService;
+import org.homio.addon.camera.service.BaseCameraService;
 import org.homio.api.EntityContext;
 import org.homio.api.model.OptionModel.KeyValueEnum;
 import org.homio.api.state.DecimalType;
@@ -82,7 +82,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
 
         // Menu
         this.menuCameraRecord = menuServerItems(RECORD_STORAGE_MENU, VideoBaseStorageService.class, "Record storage");
-        this.menuFfmpegCamera = menuServerItems("ffmpegCameraMenu", BaseVideoEntity.class, "Camera");
+        this.menuFfmpegCamera = menuServerItems("ffmpegCameraMenu", BaseCameraEntity.class, "Camera");
         this.menuFfmpegCameraWithProfiles = menuServer("ffmpegCameraMenuWithProfiles", "rest/media/video/ffmpegWithProfiles", "Camera");
         this.menuOnOff = menuStatic("onOff", OnOffType.OnOffTypeEnum.class, OnOffType.OnOffTypeEnum.On);
         this.menuRecordType = menuStatic("recordType", RecordType.class, RecordType.Mp4);
@@ -158,7 +158,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
         });
     }
 
-    private static BaseOnvifCameraBrandHandler getBrandHandler(BaseVideoEntity<?, ?> entity) {
+    private static BaseOnvifCameraBrandHandler getBrandHandler(BaseCameraEntity<?, ?> entity) {
         return ((OnvifCameraEntity) entity).getService().getBrandHandler();
     }
 
@@ -218,9 +218,9 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
         String fileName = workspaceBlock.getInputStringRequired("NAME");
         RecordType recordType = workspaceBlock.getMenuValue(RECORD_TYPE, this.menuRecordType);
 
-        BaseVideoService<?, ?> service = camera.entity.getService();
+        BaseCameraService<?, ?> service = camera.entity.getService();
         Path basePath = recordType.getBasePath(service);
-        Path path = BaseVideoEntity.buildFilePathForRecord(basePath, fileName, recordType.ext);
+        Path path = BaseCameraEntity.buildFilePathForRecord(basePath, fileName, recordType.ext);
         workspaceBlock.logInfo("Record <{}> to <{}>", recordType, path);
         recordType.recordHandler.record(service, path, camera.profile,
                 workspaceBlock.getInputInteger("TIME"));
@@ -229,7 +229,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
     private void listenBoolHat(WorkspaceBlock workspaceBlock) {
         BoolHatMenuEnum boolHatMenuEnum = workspaceBlock.getMenuValue(VALUE, this.menuBoolHat);
         workspaceBlock.handleNext(next -> {
-            BaseVideoEntity<?, ?> entity = getEntity(workspaceBlock, this.menuFfmpegCamera);
+            BaseCameraEntity<?, ?> entity = getEntity(workspaceBlock, this.menuFfmpegCamera);
 
             workspaceBlock.onRelease(() -> entity.getService().removeMotionAlarmListener(workspaceBlock.getId()));
             entity.getService().startOrAddMotionAlarmListener(workspaceBlock.getId());
@@ -239,9 +239,9 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
         });
     }
 
-    private <T extends BaseVideoEntity<?, ?>> T getEntity(WorkspaceBlock workspaceBlock,
+    private <T extends BaseCameraEntity<?, ?>> T getEntity(WorkspaceBlock workspaceBlock,
                                                     MenuBlock.ServerMenuBlock serverMenuBlock) {
-        BaseVideoEntity<?, ?> entity = workspaceBlock.getMenuValueEntityRequired(VIDEO_STREAM, serverMenuBlock);
+        BaseCameraEntity<?, ?> entity = workspaceBlock.getMenuValueEntityRequired(VIDEO_STREAM, serverMenuBlock);
         if (!entity.isStart()) {
             throw new RuntimeException("Video camera " + entity.getTitle() + " not started");
         }
@@ -254,7 +254,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
 
     private CameraWithProfile getCameraProfile(WorkspaceBlock workspaceBlock) {
         String[] cameraWithProfile = workspaceBlock.getMenuValue(VIDEO_STREAM, menuFfmpegCameraWithProfiles).split("/");
-        BaseVideoEntity<?, ?> cameraEntity = workspaceBlock.getEntityContext().getEntity(cameraWithProfile[0]);
+        BaseCameraEntity<?, ?> cameraEntity = workspaceBlock.getEntityContext().getEntity(cameraWithProfile[0]);
         String profile = cameraWithProfile.length > 1 ? cameraWithProfile[1] : null;
         return new CameraWithProfile(cameraEntity, profile);
     }
@@ -287,7 +287,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
 
         private interface SetHandler {
 
-            void handle(BaseVideoEntity<?, ?> entity, OnOffType.OnOffTypeEnum onOffType, WorkspaceBlock workspaceBlock);
+            void handle(BaseCameraEntity<?, ?> entity, OnOffType.OnOffTypeEnum onOffType, WorkspaceBlock workspaceBlock);
         }
     }
 
@@ -313,7 +313,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
 
         private interface AlarmHandler {
 
-            void handle(BaseVideoEntity<?, ?> entity, OnOffType.OnOffTypeEnum onOffType,
+            void handle(BaseCameraEntity<?, ?> entity, OnOffType.OnOffTypeEnum onOffType,
                         WorkspaceBlock workspaceBlock, WorkspaceBlock next);
         }
     }
@@ -332,7 +332,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
 
         private interface SetCameraIntParamHandler {
 
-            void handle(BaseVideoEntity<?, ?> entity, int value, Scratch3CameraBlocks scratch,
+            void handle(BaseCameraEntity<?, ?> entity, int value, Scratch3CameraBlocks scratch,
                         WorkspaceBlock workspaceBlock);
         }
     }
@@ -340,14 +340,14 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
     @RequiredArgsConstructor
     private enum CameraProfileReportCommands implements KeyValueEnum {
         Snapshot("Snapshot", (workspaceBlock, scratch, cameraProfile) -> {
-            BaseVideoService<?, ?> service = cameraProfile.entity.getService();
+            BaseCameraService<?, ?> service = cameraProfile.entity.getService();
             return new RawType(service.getSnapshot(), MimeTypeUtils.IMAGE_JPEG_VALUE, "snapshot.jpg");
         }),
         LastPlayback("Last playback", (workspaceBlock, scratch, cameraProfile) -> {
-            BaseVideoEntity<?, ?> entity = cameraProfile.entity;
-            if (entity instanceof VideoPlaybackStorage videoPlaybackStorage) {
+            BaseCameraEntity<?, ?> entity = cameraProfile.entity;
+            if (entity instanceof CameraPlaybackStorage cameraPlaybackStorage) {
                 String profile = cameraProfile.profile;
-                VideoPlaybackStorage.PlaybackFile playbackFile = videoPlaybackStorage.getLastPlaybackFile(workspaceBlock.getEntityContext(), profile);
+                CameraPlaybackStorage.PlaybackFile playbackFile = cameraPlaybackStorage.getLastPlaybackFile(workspaceBlock.getEntityContext(), profile);
                 if (playbackFile == null) {
                     return null;
                 }
@@ -367,7 +367,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
                             .get(context -> {
                                 log.info("Reply <{}>. Download playback video file <{}>. <{}>", context.getAttemptCount(), entity.getTitle(),
                                         playbackFile.id);
-                                return videoPlaybackStorage.downloadPlaybackFile(workspaceBlock.getEntityContext(), "main", playbackFile.id, path);
+                                return cameraPlaybackStorage.downloadPlaybackFile(workspaceBlock.getEntityContext(), "main", playbackFile.id, path);
                             });
                 }
                 return new RawType(IOUtils.toByteArray(downloadFile.stream().getInputStream()), "video/mp4", playbackFile.name);
@@ -390,7 +390,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
     @RequiredArgsConstructor
     private enum CameraReportCommands implements KeyValueEnum {
         IRValue("IR led value", (workspaceBlock, scratch) -> {
-            BaseVideoEntity<?, ?> entity = scratch.getEntity(workspaceBlock, scratch.menuFfmpegCamera);
+            BaseCameraEntity<?, ?> entity = scratch.getEntity(workspaceBlock, scratch.menuFfmpegCamera);
             if (entity instanceof OnvifCameraEntity) {
                 Supplier<Boolean> handler = getBrandHandler(entity).getIrLedValueHandler();
                 if (handler == null) {
@@ -420,14 +420,14 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
 
     @RequiredArgsConstructor
     public enum RecordType {
-        Gif("image/gif", "gif", BaseVideoService::recordGifSync, BaseVideoService::recordGifAsync),
-        Mp4("video/mp4", "mp4", BaseVideoService::recordMp4Sync, BaseVideoService::recordMp4Async);
+        Gif("image/gif", "gif", BaseCameraService::recordGifSync, BaseCameraService::recordGifAsync),
+        Mp4("video/mp4", "mp4", BaseCameraService::recordMp4Sync, BaseCameraService::recordMp4Async);
         public final String mimeType;
         public final String ext;
         private final GetDataHandler getHandler;
         private final RecordHandler recordHandler;
 
-        public Path getBasePath(BaseVideoService<?, ?> service) {
+        public Path getBasePath(BaseCameraService<?, ?> service) {
             if (this == RecordType.Gif) {
                 return service.getFfmpegGifOutputPath();
             }
@@ -436,19 +436,19 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
 
         private interface GetDataHandler {
 
-            byte[] getData(BaseVideoService<?, ?> service, String profile, int time);
+            byte[] getData(BaseCameraService<?, ?> service, String profile, int time);
         }
 
         private interface RecordHandler {
 
-            void record(BaseVideoService<?, ?> service, Path filePath, String profile, int time);
+            void record(BaseCameraService<?, ?> service, Path filePath, String profile, int time);
         }
     }
 
     @AllArgsConstructor
     private static class CameraWithProfile {
 
-        private BaseVideoEntity<?, ?> entity;
+        private BaseCameraEntity<?, ?> entity;
         private String profile;
     }
 }

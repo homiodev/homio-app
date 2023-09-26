@@ -34,7 +34,7 @@ import org.jetbrains.annotations.Nullable;
 
 @Log4j2
 @Getter
-public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCameraService> {
+public class UsbCameraService extends BaseCameraService<UsbCameraEntity, UsbCameraService> {
 
     private FFMPEG ffmpegReStream;
     private @Nullable VideoInputDevice input;

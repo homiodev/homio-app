@@ -16,7 +16,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.service.OnvifCameraService;
-import org.homio.addon.camera.service.VideoDeviceEndpoint;
+import org.homio.addon.camera.service.CameraDeviceEndpoint;
 import org.homio.addon.camera.ui.UICameraActionConditional.ActionConditional;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
@@ -206,8 +206,8 @@ public class CameraActionBuilder {
     }
 
     private static Method findGetter(Object instance, String name) {
-        for (Method method : MethodUtils.getMethodsWithAnnotation(instance.getClass(), UIVideoActionGetter.class, true, true)) {
-            if (method.getDeclaredAnnotation(UIVideoActionGetter.class).value().equals(name)) {
+        for (Method method : MethodUtils.getMethodsWithAnnotation(instance.getClass(), UICameraActionGetter.class, true, true)) {
+            if (method.getDeclaredAnnotation(UICameraActionGetter.class).value().equals(name)) {
                 return method;
             }
         }
@@ -287,10 +287,10 @@ public class CameraActionBuilder {
                 if (condition == null) {
                     condition = (s, m, e) -> s.getEndpoints().containsKey(e);
                 }
-                VideoDeviceEndpoint endpoint = cameraService.getEndpoints().get(this.name);
+                CameraDeviceEndpoint endpoint = cameraService.getEndpoints().get(this.name);
                 this.order = endpoint == null ? -1 : endpoint.getOrder();
                 this.icon = endpoint == null ? new Icon() : endpoint.getIcon();
-                this.group = endpoint == null ? null : "GROUP_" + endpoint.getGroup().toUpperCase();
+                this.group = endpoint == null ? null : "GROUP." + endpoint.getGroup().toUpperCase();
             }
 
             if (condition == null) {

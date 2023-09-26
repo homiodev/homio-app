@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 import lombok.SneakyThrows;
 import org.aspectj.util.FileUtil;
-import org.homio.addon.camera.service.BaseVideoService;
+import org.homio.addon.camera.service.BaseCameraService;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
 import org.homio.api.entity.HasJsonData;
@@ -90,7 +90,7 @@ public interface StreamDASH extends HasJsonData {
     }
 
     @SneakyThrows
-    default @NotNull FFMPEG buildDashFfmpeg(BaseVideoService<? extends BaseVideoEntity<?, ?>, ?> service) {
+    default @NotNull FFMPEG buildDashFfmpeg(BaseCameraService<? extends BaseCameraEntity<?, ?>, ?> service) {
         String input = service.getDashUri();
         if (input == null) {
             throw new IllegalArgumentException("Unable to find video service dash url");
@@ -107,14 +107,14 @@ public interface StreamDASH extends HasJsonData {
                           "%s.mpd".formatted(streamPrefix),
                           service.getEntity().getUser(),
                           service.getEntity().getPassword().asString())
-                      .setWorkingDirectory(BaseVideoService.SHARE_DIR)
+                      .setWorkingDirectory(BaseCameraService.SHARE_DIR)
                       .addDestroyListener("DOS", () -> {
-                          FileUtil.deleteContents(BaseVideoService.SHARE_DIR.toFile(),
+                          FileUtil.deleteContents(BaseCameraService.SHARE_DIR.toFile(),
                               file -> file.getName().startsWith(streamPrefix), false);
                       });
     }
 
-    default String buildDashOptions(@NotNull BaseVideoService<? extends BaseVideoEntity<?, ?>, ?> service, String streamPrefix) {
+    default String buildDashOptions(@NotNull BaseCameraService<? extends BaseCameraEntity<?, ?>, ?> service, String streamPrefix) {
         List<String> options = new ArrayList<>();
         options.add("-c:v %s".formatted(getDashVideoCodec()));
         options.add("-b:v %sk".formatted(getDashBitRate()));

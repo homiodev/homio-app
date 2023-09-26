@@ -2,44 +2,44 @@ package org.homio.addon.camera.onvif.impl;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_3DNR;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ANTI_FLICKER;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_BANDWIDTH;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_BGCOLOR;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_BLACK_LIGHT;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_BLC;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_BLUE_GAIN;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_BRIGHT;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_CONTRAST;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_CPU_LOADING;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_DATETIME_POSITION;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_DATETIME_SHOW;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_DAY_NIGHT;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_DRC;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_EXPOSURE;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_HDD;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_HUE;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_IMAGE_MIRROR;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_IMAGE_ROTATE;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_NAME_POSITION;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_NAME_SHOW;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_REBOOT;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_RECORD_AUDIO;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_RED_GAIN;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_SATURATION;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_SHARPEN;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_MAIN_BITRATE;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_MAIN_FRAMERATE;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_MAIN_H264_PROFILE;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_MAIN_RESOLUTION;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_SECONDARY_BITRATE;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_SECONDARY_FRAMERATE;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_SECONDARY_H264_PROFILE;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_SECONDARY_RESOLUTION;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_WATERMARK_SHOW;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_WHITE_BALANCE;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_3DNR;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ANTI_FLICKER;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUTO_LED;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_BANDWIDTH;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_BGCOLOR;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_BLACK_LIGHT;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_BLC;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_BLUE_GAIN;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_BRIGHT;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_CONTRAST;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_CPU_LOADING;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_DATETIME_POSITION;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_DATETIME_SHOW;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_DAY_NIGHT;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_DRC;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_EXPOSURE;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_HDD;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_HUE;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_IMAGE_MIRROR;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_IMAGE_ROTATE;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_NAME_POSITION;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_NAME_SHOW;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_REBOOT;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_RECORD_AUDIO;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_RED_GAIN;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_SATURATION;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_SHARPEN;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_STREAM_MAIN_BITRATE;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_STREAM_MAIN_FRAMERATE;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_STREAM_MAIN_H264_PROFILE;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_STREAM_MAIN_RESOLUTION;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_STREAM_SECONDARY_BITRATE;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_STREAM_SECONDARY_FRAMERATE;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_STREAM_SECONDARY_H264_PROFILE;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_STREAM_SECONDARY_RESOLUTION;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_WATERMARK_SHOW;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_WHITE_BALANCE;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -84,13 +84,13 @@ import lombok.SneakyThrows;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
-import org.homio.addon.camera.entity.VideoPlaybackStorage;
+import org.homio.addon.camera.entity.CameraPlaybackStorage;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.impl.ReolinkBrandHandler.SearchRequest.Search;
 import org.homio.addon.camera.service.OnvifCameraService;
-import org.homio.addon.camera.service.VideoDeviceEndpoint;
-import org.homio.addon.camera.ui.UIVideoActionGetter;
+import org.homio.addon.camera.service.CameraDeviceEndpoint;
+import org.homio.addon.camera.ui.UICameraActionGetter;
 import org.homio.addon.camera.ui.UIVideoEndpointAction;
 import org.homio.api.EntityContext;
 import org.homio.api.exception.ServerException;
@@ -123,7 +123,7 @@ import org.springframework.web.client.RestTemplate;
 @NoArgsConstructor
 @CameraBrandHandler("Reolink")
 public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
-    BrandCameraHasMotionAlarm, VideoPlaybackStorage {
+    BrandCameraHasMotionAlarm, CameraPlaybackStorage {
 
     private static final JsonNode channelParam = OBJECT_MAPPER.createObjectNode().put("channel", 0);
 
@@ -338,7 +338,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         return () -> Optional.ofNullable(getAttribute(ENDPOINT_AUTO_LED)).map(State::boolValue).orElse(false);
     }
 
-    @UIVideoActionGetter(ENDPOINT_AUTO_LED)
+    @UICameraActionGetter(ENDPOINT_AUTO_LED)
     public State isAutoLed() {
         return getAttribute(ENDPOINT_AUTO_LED);
     }
@@ -421,7 +421,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
                     JsonNode initialNode = objectNode.initial.path(group);
                     configurations.values().stream().filter(c -> c.group.equals(group)).forEach(config -> {
                         if (JsonUtils.hasJsonPath(targetNode, config.key)) {
-                            VideoDeviceEndpoint endpoint = config.type.handler.handle(rangeNode, initialNode, config, this);
+                            CameraDeviceEndpoint endpoint = config.type.handler.handle(rangeNode, initialNode, config, this);
                             if (config.updateListener != null) {
                                 endpoint.addChangeListener("reflect", state -> config.updateListener.accept(state, this));
                             }
@@ -432,7 +432,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
             // Fire update listeners for all endpoints to be able to show/hide another endpoints
             for (EndpointConfiguration configuration : configurations.values()) {
                 if (configuration.updateListener != null) {
-                    VideoDeviceEndpoint endpoint = getEndpoint(configuration.endpointId).orElse(null);
+                    CameraDeviceEndpoint endpoint = getEndpoint(configuration.endpointId).orElse(null);
                     if (endpoint != null) {
                         configuration.updateListener.accept(endpoint.getValue(), this);
                     }
@@ -514,7 +514,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     private void handleGetHddInfoCommand(Root objectNode) {
         service.addEndpoint(ENDPOINT_HDD, key -> {
-            VideoDeviceEndpoint endpoint = new VideoDeviceEndpoint(getEntity(), getEntityContext(), key, DeviceEndpoint.EndpointType.string, false);
+            CameraDeviceEndpoint endpoint = new CameraDeviceEndpoint(getEntity(), getEntityContext(), key, DeviceEndpoint.EndpointType.string, false);
             endpoint.setValueConverter(state -> {
                 JsonNode hddInfo = ((JsonType) state).getJsonNode();
                 return new StringType(hddInfo.get("size").asText() + "/" + hddInfo.get("capacity").asText());
@@ -657,7 +657,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     private void handleSwitch(JsonNode ability, String endpointKey, String abilityKey, String getKey, String setKey, String valueKey) {
         int permit = ability.path(abilityKey).path("permit").asInt(0);
         if (permit > 0) {
-            VideoDeviceEndpoint endpoint = service.addEndpointSwitch(endpointKey, state ->
+            CameraDeviceEndpoint endpoint = service.addEndpointSwitch(endpointKey, state ->
                 sendCameraPushRequest(setKey, OBJECT_MAPPER.createObjectNode().set(valueKey,
                     OBJECT_MAPPER.createObjectNode().put("enable", 1))), true);
             sendCameraRequest(getKey, channelParam, root -> {
@@ -793,7 +793,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
             JsonNode numConfigPath = JsonUtils.getJsonPath(rangeNode, c.key);
             Float min = numConfigPath.has("min") ? (float)numConfigPath.path("min").asInt() : null;
             Float max = numConfigPath.has("max") ? (float)numConfigPath.path("max").asInt() : null;
-            VideoDeviceEndpoint endpoint = handler.service.addEndpointSlider(c.endpointId, min, max, setter, c.writable);
+            CameraDeviceEndpoint endpoint = handler.service.addEndpointSlider(c.endpointId, min, max, setter, c.writable);
             endpoint.setValue(getter.get(), true);
             JsonNode initPath = JsonUtils.getJsonPath(initialNode, c.key);
             if (!initPath.isMissingNode()) {
@@ -808,7 +808,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
                 JsonType group = (JsonType) handler.getAttribute(c.group);
                 return group == null ? null : OnOffType.of(JsonUtils.getJsonPath(group.getJsonNode(), c.key).asInt() == 1);
             };
-            VideoDeviceEndpoint endpoint = handler.service.addEndpointSwitch(c.endpointId, setter, c.writable);
+            CameraDeviceEndpoint endpoint = handler.service.addEndpointSwitch(c.endpointId, setter, c.writable);
             endpoint.setValue(getter.get(), true);
             return endpoint;
         }),
@@ -823,7 +823,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
                 JsonType group = (JsonType) handler.getAttribute(c.group);
                 return group == null ? null : new StringType(JsonUtils.getJsonPath(group.getJsonNode(), c.key).asText());
             };
-            VideoDeviceEndpoint endpoint = handler.service.addEndpointEnum(c.endpointId, range, setter);
+            CameraDeviceEndpoint endpoint = handler.service.addEndpointEnum(c.endpointId, range, setter);
             endpoint.setValue(getter.get(), true);
             JsonNode initPath = JsonUtils.getJsonPath(initialNode, c.key);
             if (!initPath.isMissingNode()) {
@@ -840,7 +840,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     private interface ConfigTypeHandler {
 
-        VideoDeviceEndpoint handle(JsonNode rangeNode, JsonNode initialNode, EndpointConfiguration c, ReolinkBrandHandler handler);
+        CameraDeviceEndpoint handle(JsonNode rangeNode, JsonNode initialNode, EndpointConfiguration c, ReolinkBrandHandler handler);
     }
 
     @Getter

@@ -1,6 +1,6 @@
 package org.homio.app.setting;
 
-import org.homio.addon.camera.entity.BaseVideoEntity;
+import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.model.Icon;
@@ -31,6 +31,6 @@ public class ScanVideoStreamSourcesSetting implements SettingPluginButton {
 
     @Override
     public Class<? extends BaseEntity> availableForEntity() {
-        return BaseVideoEntity.class;
+        return BaseCameraEntity.class;
     }
 }

@@ -1,7 +1,7 @@
 package org.homio.addon.camera.onvif.brand;
 
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUDIO_THRESHOLD;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_MOTION_THRESHOLD;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -23,10 +23,10 @@ import lombok.NoArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
-import org.homio.addon.camera.entity.VideoActionsContext;
+import org.homio.addon.camera.entity.CameraActionsContext;
 import org.homio.addon.camera.handler.BaseBrandCameraHandler;
 import org.homio.addon.camera.service.OnvifCameraService;
-import org.homio.addon.camera.service.VideoDeviceEndpoint;
+import org.homio.addon.camera.service.CameraDeviceEndpoint;
 import org.homio.addon.camera.ui.CameraActionBuilder;
 import org.homio.api.EntityContext;
 import org.homio.api.state.State;
@@ -39,7 +39,7 @@ import org.springframework.http.MediaType;
 @NoArgsConstructor
 public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler
     implements
-    VideoActionsContext,
+    CameraActionsContext,
     BaseBrandCameraHandler,
     HasDynamicUIFields {
 
@@ -171,17 +171,17 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler
         return this;
     }
 
-    public Optional<VideoDeviceEndpoint> getEndpoint(String endpointID) {
+    public Optional<CameraDeviceEndpoint> getEndpoint(String endpointID) {
         return Optional.ofNullable(service.getEndpoints().get(endpointID));
     }
 
-    public VideoDeviceEndpoint getEndpointRequire(String endpointID) {
+    public CameraDeviceEndpoint getEndpointRequire(String endpointID) {
         return Optional.ofNullable(service.getEndpoints().get(endpointID))
                        .orElseThrow(() -> new IllegalStateException("Unable to find camera endpoint: " + endpointID));
     }
 
     public boolean setEndpointVisible(String endpointID, boolean visible) {
-        VideoDeviceEndpoint endpoint = getEndpointRequire(endpointID);
+        CameraDeviceEndpoint endpoint = getEndpointRequire(endpointID);
         if (endpoint.isVisibleEndpoint() != visible) {
             endpoint.setVisibleEndpoint(visible);
             return true;

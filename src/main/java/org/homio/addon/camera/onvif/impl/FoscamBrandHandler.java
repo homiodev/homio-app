@@ -1,12 +1,11 @@
 package org.homio.addon.camera.onvif.impl;
 
-import static org.homio.addon.camera.VideoConstants.AlarmEvents.MotionAlarm;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LED;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_MOTION_ALARM;
-import static org.homio.addon.camera.VideoConstants.AlarmEvents;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUDIO_THRESHOLD;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUTO_LED;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_LED;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_MOTION_ALARM;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
@@ -21,7 +20,7 @@ import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.ui.UIVideoAction;
-import org.homio.addon.camera.ui.UIVideoActionGetter;
+import org.homio.addon.camera.ui.UICameraActionGetter;
 import org.homio.api.EntityContext;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
@@ -173,7 +172,7 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
         }
     }
 
-    @UIVideoActionGetter(ENDPOINT_ENABLE_MOTION_ALARM)
+    @UICameraActionGetter(ENDPOINT_ENABLE_MOTION_ALARM)
     public State getEnableMotionAlarm() {
         return getAttribute(ENDPOINT_ENABLE_MOTION_ALARM);
     }

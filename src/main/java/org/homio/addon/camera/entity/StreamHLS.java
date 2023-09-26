@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 import lombok.SneakyThrows;
 import org.aspectj.util.FileUtil;
-import org.homio.addon.camera.service.BaseVideoService;
+import org.homio.addon.camera.service.BaseCameraService;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
 import org.homio.api.entity.HasJsonData;
@@ -147,7 +147,7 @@ public interface StreamHLS extends HasJsonData {
     }
 
     @SneakyThrows
-    default @NotNull FFMPEG buildHlsFfmpeg(@NotNull Resolution resolution, BaseVideoService<? extends BaseVideoEntity<?, ?>, ?> service) {
+    default @NotNull FFMPEG buildHlsFfmpeg(@NotNull Resolution resolution, BaseCameraService<? extends BaseCameraEntity<?, ?>, ?> service) {
         String input = service.getHlsUri();
         if (input == null) {
             throw new IllegalArgumentException("Unable to find video service hls url");
@@ -163,14 +163,14 @@ public interface StreamHLS extends HasJsonData {
                           "%s.m3u8".formatted(streamPrefix),
                           service.getEntity().getUser(),
                           service.getEntity().getPassword().asString())
-                      .setWorkingDirectory(BaseVideoService.SHARE_DIR)
+                      .setWorkingDirectory(BaseCameraService.SHARE_DIR)
                       .addDestroyListener("DOS", () -> {
-                          FileUtil.deleteContents(BaseVideoService.SHARE_DIR.toFile(),
+                          FileUtil.deleteContents(BaseCameraService.SHARE_DIR.toFile(),
                               file -> file.getName().startsWith(streamPrefix), false);
                       });
     }
 
-    default String buildHlsOptions(@NotNull BaseVideoService<? extends BaseVideoEntity<?, ?>, ?> service,
+    default String buildHlsOptions(@NotNull BaseCameraService<? extends BaseCameraEntity<?, ?>, ?> service,
         @NotNull Resolution resolution, String streamPrefix) {
         List<String> options = new ArrayList<>();
         // To force a keyframe every 2 seconds you can specify the GOP size using -g:

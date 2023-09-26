@@ -1,15 +1,14 @@
 package org.homio.addon.camera.onvif.impl;
 
-import static org.homio.addon.camera.VideoConstants.AlarmEvents.MotionAlarm;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT2;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_DOORBELL;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_EXTERNAL_LIGHT;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT2;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_DOORBELL;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_EXTERNAL_LIGHT;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
 import lombok.NoArgsConstructor;
-import org.homio.addon.camera.VideoConstants.AlarmEvents;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.ui.UIVideoAction;

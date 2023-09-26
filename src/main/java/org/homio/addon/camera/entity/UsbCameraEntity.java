@@ -7,7 +7,6 @@ import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.service.UsbCameraService;
 import org.homio.api.EntityContext;
-import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.VideoInputDevice;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.OptionModel;
@@ -24,7 +23,7 @@ import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("unused")
 @Entity
-public class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraService> {
+public class UsbCameraEntity extends BaseCameraEntity<UsbCameraEntity, UsbCameraService> {
 
     @Override
     @UIField(order = 1, label = "usbSource")

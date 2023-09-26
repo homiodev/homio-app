@@ -3,7 +3,6 @@ package org.homio.addon.camera.service.util;
 import static org.springframework.http.HttpHeaders.WWW_AUTHENTICATE;
 
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.net.http.HttpClient;
@@ -27,8 +26,6 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Header;
-import org.apache.http.auth.AuthenticationException;
-import org.apache.http.auth.MalformedChallengeException;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.impl.auth.DigestScheme;
@@ -41,7 +38,7 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
 
 @Log4j2
-public class VideoUtils {
+public class CameraUtils {
 
     private static Map<String, AuthHandler> imageAuthHandler = new ConcurrentHashMap<>();
 

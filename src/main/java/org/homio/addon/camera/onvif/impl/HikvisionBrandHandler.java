@@ -1,36 +1,35 @@
 package org.homio.addon.camera.onvif.impl;
 
-import static org.homio.addon.camera.VideoConstants.AlarmEvents.FaceDetect;
-import static org.homio.addon.camera.VideoConstants.AlarmEvents.FieldDetectAlarm;
-import static org.homio.addon.camera.VideoConstants.AlarmEvents.ItemLeftDetection;
-import static org.homio.addon.camera.VideoConstants.AlarmEvents.ItemTakenDetection;
-import static org.homio.addon.camera.VideoConstants.AlarmEvents.LineCrossAlarm;
-import static org.homio.addon.camera.VideoConstants.AlarmEvents.MotionAlarm;
-import static org.homio.addon.camera.VideoConstants.AlarmEvents.PirAlarm;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_EXTERNAL_ALARM;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_FIELD_DETECTION_ALARM;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LINE_CROSSING_ALARM;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_MOTION_ALARM;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_PIR_ALARM;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_EXTERNAL_ALARM_INPUT;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_TEXT_OVERLAY;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.FaceDetect;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.FieldDetectAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.ItemLeftDetection;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.ItemTakenDetection;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.LineCrossAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.PirAlarm;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_EXTERNAL_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_FIELD_DETECTION_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_LINE_CROSSING_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_MOTION_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_PIR_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_EXTERNAL_ALARM_INPUT;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_TEXT_OVERLAY;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.ReferenceCountUtil;
 import lombok.NoArgsConstructor;
-import org.homio.addon.camera.VideoConstants.AlarmEvents;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.ui.UIVideoAction;
-import org.homio.addon.camera.ui.UIVideoActionGetter;
+import org.homio.addon.camera.ui.UICameraActionGetter;
 import org.homio.api.EntityContext;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
@@ -209,7 +208,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
         }
     }
 
-    @UIVideoActionGetter(ENDPOINT_TEXT_OVERLAY)
+    @UICameraActionGetter(ENDPOINT_TEXT_OVERLAY)
     public State getTextOverlay() {
         return getAttribute(ENDPOINT_TEXT_OVERLAY);
     }
@@ -261,7 +260,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
         }
     }
 
-    @UIVideoActionGetter(ENDPOINT_ENABLE_EXTERNAL_ALARM)
+    @UICameraActionGetter(ENDPOINT_ENABLE_EXTERNAL_ALARM)
     public State getEnableExternalAlarmInput() {
         return getAttribute(ENDPOINT_ENABLE_EXTERNAL_ALARM);
     }
@@ -272,7 +271,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
         hikChangeSetting("/ISAPI/System/IO/inputs/" + nvrChannel, "enabled", "<enabled>" + on + "</enabled>");
     }
 
-    @UIVideoActionGetter(ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT)
+    @UICameraActionGetter(ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT)
     public State getTriggerExternalAlarmInput() {
         return getAttribute(ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT);
     }
@@ -289,7 +288,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
         hikChangeSetting("/ISAPI/WLAlarm/PIR", "enabled", "<enabled>" + on + "</enabled>");
     }
 
-    @UIVideoActionGetter(ENDPOINT_ENABLE_LINE_CROSSING_ALARM)
+    @UICameraActionGetter(ENDPOINT_ENABLE_LINE_CROSSING_ALARM)
     public State getEnableLineCrossingAlarm() {
         return getAttribute(ENDPOINT_ENABLE_LINE_CROSSING_ALARM);
     }
@@ -311,7 +310,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
                 "enabled", "<enabled>" + on + "</enabled>");
     }
 
-    @UIVideoActionGetter(ENDPOINT_ENABLE_FIELD_DETECTION_ALARM)
+    @UICameraActionGetter(ENDPOINT_ENABLE_FIELD_DETECTION_ALARM)
     public State getEnableFieldDetectionAlarm() {
         return getAttribute(ENDPOINT_ENABLE_FIELD_DETECTION_ALARM);
     }

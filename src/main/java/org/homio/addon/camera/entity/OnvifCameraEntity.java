@@ -21,7 +21,6 @@ import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
-import org.homio.api.model.UpdatableValue;
 import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
@@ -48,8 +47,8 @@ import org.onvif.ver10.device.wsdl.GetDeviceInformationResponse;
 @Setter
 @Getter
 @Entity
-public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifCameraService>
-    implements HasDynamicContextMenuActions, VideoPlaybackStorage, HasEntityLog,
+public class OnvifCameraEntity extends BaseCameraEntity<OnvifCameraEntity, OnvifCameraService>
+    implements HasDynamicContextMenuActions, CameraPlaybackStorage, HasEntityLog,
     HasDynamicUIFields {
 
     @UIField(order = 20)

@@ -2,10 +2,10 @@ package org.homio.addon.camera.service;
 
 import static java.lang.String.join;
 import static org.homio.addon.camera.CameraController.camerasOpenStreams;
-import static org.homio.addon.camera.VideoConstants.AlarmEvents.AudioAlarm;
-import static org.homio.addon.camera.VideoConstants.AlarmEvents.MotionAlarm;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
-import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.AudioAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUDIO_THRESHOLD;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_MOTION_THRESHOLD;
 import static org.homio.addon.camera.entity.StreamMJPEG.mp4OutOptions;
 import static org.homio.api.model.Status.DONE;
 import static org.homio.api.model.Status.ERROR;
@@ -47,14 +47,14 @@ import org.apache.logging.log4j.Logger;
 import org.homio.addon.camera.CameraController;
 import org.homio.addon.camera.CameraController.OpenStreamsContainer;
 import org.homio.addon.camera.ConfigurationException;
-import org.homio.addon.camera.VideoConstants;
-import org.homio.addon.camera.entity.BaseVideoEntity;
+import org.homio.addon.camera.CameraConstants;
+import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.addon.camera.entity.StreamHLS;
-import org.homio.addon.camera.entity.VideoActionsContext;
+import org.homio.addon.camera.entity.CameraActionsContext;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.service.util.FFMpegRtspAlarm;
 import org.homio.addon.camera.service.util.VideoUrls;
-import org.homio.addon.camera.ui.UIVideoActionGetter;
+import org.homio.addon.camera.ui.UICameraActionGetter;
 import org.homio.addon.camera.ui.UIVideoEndpointAction;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextBGP;
@@ -87,8 +87,8 @@ import org.springframework.security.authentication.BadCredentialsException;
 
 @SuppressWarnings({"unused"})
 @Log4j2
-public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extends BaseVideoService<T, S>>
-    extends EntityService.ServiceInstance<T> implements VideoActionsContext<T>,
+public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S extends BaseCameraService<T, S>>
+    extends EntityService.ServiceInstance<T> implements CameraActionsContext<T>,
     FFMPEGHandler {
 
     public static final Path SHARE_DIR = CommonUtils.getTmpPath();
@@ -96,7 +96,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         new ConfigDeviceDefinitionService("camera-devices.json");
     private static final int MAX_PING_ERRORS = 10;
 
-    private final @NotNull @Getter Map<String, VideoDeviceEndpoint> endpoints = new ConcurrentHashMap<>();
+    private final @NotNull @Getter Map<String, CameraDeviceEndpoint> endpoints = new ConcurrentHashMap<>();
     private @Getter int communicationError;
 
     public @NotNull List<ConfigDeviceDefinition> findDevices() {
@@ -186,7 +186,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     @NotNull String mjpegContentType = "";
     public final @Getter VideoUrls urls = new VideoUrls();
 
-    public BaseVideoService(T entity, EntityContext entityContext) {
+    public BaseCameraService(T entity, EntityContext entityContext) {
         super(entityContext, entity, true);
         ffMpegRtspAlarm = new FFMpegRtspAlarm(entityContext, entity);
         camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer(entity));
@@ -286,7 +286,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     private boolean updateEntityStatus(Status status, String reason) {
         if (entity.getStatus() != status || !Objects.equals(reason, entity.getStatusMessage())) {
             entity.setStatus(status, reason);
-            VideoDeviceEndpoint endpoint = getEndpoints().get(ENDPOINT_DEVICE_STATUS);
+            CameraDeviceEndpoint endpoint = getEndpoints().get(ENDPOINT_DEVICE_STATUS);
             if (endpoint != null) {
                 endpoint.setValue(new StringType(status.toString()), false);
             }
@@ -367,26 +367,26 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         CommonUtils.deletePath(ffmpegImageOutputPath);
     }
 
-    @UIVideoActionGetter(ENDPOINT_AUDIO_THRESHOLD)
+    @UICameraActionGetter(ENDPOINT_AUDIO_THRESHOLD)
     public DecimalType getAudioAlarmThreshold() {
         return new DecimalType(entity.getAudioThreshold());
     }
 
-    @UIVideoActionGetter(ENDPOINT_MOTION_THRESHOLD)
+    @UICameraActionGetter(ENDPOINT_MOTION_THRESHOLD)
     public @NotNull DecimalType getMotionThreshold() {
         return new DecimalType(entity.getMotionThreshold());
     }
 
     public void setAttribute(String key, State state) {
         attributes.put(key, state);
-        VideoDeviceEndpoint endpoint = endpoints.get(key);
+        CameraDeviceEndpoint endpoint = endpoints.get(key);
         if (endpoint != null) {
             endpoint.setValue(state, true);
         }
         entityContext.event().fireEventIfNotSame(key + ":" + entityID, state);
     }
 
-    public void motionDetected(boolean on, @NotNull VideoConstants.AlarmEvents event) {
+    public void motionDetected(boolean on, @NotNull CameraConstants.AlarmEvents event) {
         addEndpointOptional(event);
         setAttribute(event.getEndpoint(), OnOffType.of(on));
         motionDetected = on;
@@ -444,7 +444,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     @Override
     protected void firstInitialize() {
-        log.info("[{}]: First init", entityID);
+        log.info("[{}]: Initialize", entityID);
         ffmpegOutputPath = CommonUtils.getMediaPath().resolve(entity.getFolderName()).resolve(entityID);
         ffmpegImageOutputPath = CommonUtils.createDirectoriesIfNotExists(ffmpegOutputPath.resolve("images"));
         ffmpegGifOutputPath = CommonUtils.createDirectoriesIfNotExists(ffmpegOutputPath.resolve("gif"));
@@ -564,7 +564,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     private synchronized void dispose() {
         entity.setStatus(DONE);
         videoStreamParametersHashCode = entity.getVideoParametersHashCode();
-        log.info("[{}]: Dispose video: <{}>", entityID, getEntity());
+        log.info("[{}]: Dispose camera: <{}>", entityID, getEntity());
         offline();
 
         OpenStreamsContainer container = camerasOpenStreams.remove(entityID);
@@ -692,7 +692,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     private void addPrimaryEndpoint() {
         endpoints.computeIfAbsent(ENDPOINT_DEVICE_STATUS, key -> {
             Set<String> range = Status.set(ONLINE, ERROR, OFFLINE, REQUIRE_AUTH, UNKNOWN, INITIALIZE);
-            VideoDeviceEndpoint videoEndpoint = new VideoDeviceEndpoint(entity, getEntityContext(), key, range, false) {
+            CameraDeviceEndpoint videoEndpoint = new CameraDeviceEndpoint(entity, getEntityContext(), key, range, false) {
                 @Override
                 public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
                     Status status = Status.valueOf(getValue().stringValue());
@@ -705,7 +705,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         });
 
         endpoints.computeIfAbsent(ENDPOINT_LAST_SEEN, key -> {
-            VideoDeviceEndpoint videoEndpoint = new VideoDeviceEndpoint(entity, getEntityContext(), key, EndpointType.number, false) {
+            CameraDeviceEndpoint videoEndpoint = new CameraDeviceEndpoint(entity, getEntityContext(), key, EndpointType.number, false) {
 
                 @Override
                 public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
@@ -717,40 +717,40 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         });
 
         endpoints.computeIfAbsent(ENDPOINT_MOTION_THRESHOLD, key ->
-            new VideoDeviceEndpoint(entity, getEntityContext(), key, 0F, 100F, true));
+            new CameraDeviceEndpoint(entity, getEntityContext(), key, 0F, 100F, true));
 
         if (entity.isHasAudioStream()) {
             endpoints.computeIfAbsent(ENDPOINT_AUDIO_THRESHOLD, key ->
-                new VideoDeviceEndpoint(entity, getEntityContext(), key, 0F, 100F, true));
+                new CameraDeviceEndpoint(entity, getEntityContext(), key, 0F, 100F, true));
         }
     }
 
-    public VideoDeviceEndpoint addEndpoint(
+    public CameraDeviceEndpoint addEndpoint(
         @NotNull String endpointId,
-        @NotNull Function<String, VideoDeviceEndpoint> handler,
+        @NotNull Function<String, CameraDeviceEndpoint> handler,
         @NotNull Consumer<State> updateHandler) {
         return endpoints.computeIfAbsent(endpointId, key -> {
-            VideoDeviceEndpoint endpoint = handler.apply(key);
+            CameraDeviceEndpoint endpoint = handler.apply(key);
             endpoint.setUpdateHandler(updateHandler);
             return endpoint;
         });
     }
 
-    public VideoDeviceEndpoint addEndpointSwitch(
+    public CameraDeviceEndpoint addEndpointSwitch(
         @NotNull String endpointId,
         @NotNull Consumer<State> updateHandler,
         boolean writable) {
-        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, getEntityContext(), key, EndpointType.bool, writable), updateHandler);
+        return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, getEntityContext(), key, EndpointType.bool, writable), updateHandler);
     }
 
-    public VideoDeviceEndpoint addEndpointTrigger(
+    public CameraDeviceEndpoint addEndpointTrigger(
         @NotNull String endpointId,
         @NotNull Icon buttonIcon,
         @Nullable String text,
         @Nullable String confirmMessage,
         @Nullable String confirmDialogColor,
         @NotNull Consumer<State> updateHandler) {
-        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, getEntityContext(),
+        return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, getEntityContext(),
             key, EndpointType.trigger, true) {
             @Override
             public UIInputBuilder createTriggerActionBuilder(@NotNull UIInputBuilder uiInputBuilder) {
@@ -767,12 +767,12 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         }, updateHandler);
     }
 
-    public VideoDeviceEndpoint addEndpointEnum(String endpointId, Set<String> range, Consumer<State> updateHandler) {
-        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, getEntityContext(), key, range, true), updateHandler);
+    public CameraDeviceEndpoint addEndpointEnum(String endpointId, Set<String> range, Consumer<State> updateHandler) {
+        return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, getEntityContext(), key, range, true), updateHandler);
     }
 
-    public VideoDeviceEndpoint addEndpointSlider(String endpointId, Float min, Float max, Consumer<State> updateHandler, boolean writable) {
-        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, getEntityContext(), key, min, max, writable), updateHandler);
+    public CameraDeviceEndpoint addEndpointSlider(String endpointId, Float min, Float max, Consumer<State> updateHandler, boolean writable) {
+        return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, getEntityContext(), key, min, max, writable), updateHandler);
     }
 
     public synchronized @NotNull FFMPEG getOrCreateFfmpegHls(@NotNull StreamHLS.Resolution resolution) {
@@ -801,7 +801,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         return ffmpegMainReStream;
     }
 
-    private void addEndpointOptional(@NotNull VideoConstants.AlarmEvents event) {
+    private void addEndpointOptional(@NotNull CameraConstants.AlarmEvents event) {
         if (!endpoints.containsKey(event.getEndpoint())) {
             addEndpointSwitch(event.getEndpoint(), state -> {
             }, false);

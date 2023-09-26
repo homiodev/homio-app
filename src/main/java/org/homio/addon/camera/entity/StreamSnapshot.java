@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.util.ArrayList;
 import java.util.List;
-import org.homio.addon.camera.service.BaseVideoService;
+import org.homio.addon.camera.service.BaseCameraService;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
 import org.homio.api.EntityContextMedia.FFMPEGHandler;
@@ -65,8 +65,8 @@ public interface StreamSnapshot extends HasJsonData {
         setJsonData("snap_eo", value);
     }
 
-    default <T extends BaseVideoEntity<T, S>, S extends BaseVideoService<T, S>> FFMPEG buildSnapshotFFMPEG(
-        BaseVideoService<T, S> service) {
+    default <T extends BaseCameraEntity<T, S>, S extends BaseCameraService<T, S>> FFMPEG buildSnapshotFFMPEG(
+        BaseCameraService<T, S> service) {
         T entity = service.getEntity();
         String rtspUri = service.getUrls().getRtspUri();
 

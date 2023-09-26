@@ -12,8 +12,8 @@ import java.util.Map;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
-import org.homio.addon.camera.entity.BaseVideoEntity;
-import org.homio.addon.camera.service.BaseVideoService;
+import org.homio.addon.camera.entity.BaseCameraEntity;
+import org.homio.addon.camera.service.BaseCameraService;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGHandler;
@@ -132,7 +132,7 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
     @Override
     public void startRecord(String id, String output, String profile, DeviceBaseEntity deviceEntity, EntityContext entityContext) {
         stopRecord(id, output, deviceEntity);
-        if (!(deviceEntity instanceof BaseVideoEntity)) {
+        if (!(deviceEntity instanceof BaseCameraEntity)) {
             throw new IllegalArgumentException("Unable to start video record for non ffmpeg compatible source");
         }
 
@@ -140,8 +140,8 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
             throw new IllegalArgumentException("To record to hls output need set file extension as .m3u8");
         }
 
-        BaseVideoEntity videoStreamEntity = (BaseVideoEntity) deviceEntity;
-        BaseVideoService service = videoStreamEntity.getService();
+        BaseCameraEntity videoStreamEntity = (BaseCameraEntity) deviceEntity;
+        BaseCameraService service = videoStreamEntity.getService();
 
         FFMPEGHandler ffmpegHandler = new FFMPEGHandler() {
 

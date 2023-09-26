@@ -2,7 +2,7 @@ package org.homio.addon.camera;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.homio.addon.camera.entity.BaseVideoEntity;
+import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.api.EntityContext;
@@ -24,7 +24,7 @@ public class CameraSelfContainedAudioSources implements SelfContainedAudioSource
     @Override
     public Collection<OptionModel> getAudioSource() {
         Collection<OptionModel> models = new ArrayList<>();
-        for (BaseVideoEntity cameraEntity : entityContext.findAll(BaseVideoEntity.class)) {
+        for (BaseCameraEntity cameraEntity : entityContext.findAll(BaseCameraEntity.class)) {
             // get sources from onvif audio streams
             if (cameraEntity.isStart() && cameraEntity instanceof OnvifCameraEntity) {
                 OnvifCameraService service = (OnvifCameraService) cameraEntity.getService();

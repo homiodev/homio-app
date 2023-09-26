@@ -2,7 +2,7 @@ package org.homio.app.model.entity.widget.impl.video;
 
 import jakarta.persistence.Entity;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
-import org.homio.addon.camera.entity.VideoPlaybackStorage;
+import org.homio.addon.camera.entity.CameraPlaybackStorage;
 import org.homio.api.model.OptionModel;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.UIField;
@@ -82,7 +82,7 @@ public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimel
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
             List<OptionModel> list = new ArrayList<>();
             for (OnvifCameraEntity entity : parameters.getEntityContext().findAll(OnvifCameraEntity.class)) {
-                if (entity.getService().getBrandHandler() instanceof VideoPlaybackStorage) {
+                if (entity.getService().getBrandHandler() instanceof CameraPlaybackStorage) {
                     list.add(OptionModel.of(entity.getEntityID(), entity.getTitle()));
                 }
             }

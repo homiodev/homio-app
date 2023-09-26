@@ -214,13 +214,13 @@ public class WorkspaceGroup extends BaseEntity
     }
 
     @UIContextMenuAction(value = "CLEAR_BACKUP", icon = "fas fa-database", inputs = {
-            @UIActionInput(name = "KEEP_DAYS", type = Type.number, value = "-1", min = -1, max = 365),
-            @UIActionInput(name = "KEEP_COUNT", type = Type.number, value = "-1", min = -1, max = 100_000)
+            @UIActionInput(name = "keepDays", type = Type.number, value = "-1", min = -1, max = 365),
+            @UIActionInput(name = "keepCount", type = Type.number, value = "-1", min = -1, max = 100_000)
     })
     public ActionResponseModel clearBackup(EntityContext entityContext, JSONObject params) {
         val repository = entityContext.getBean(VariableBackupRepository.class);
-        int days = params.optInt("KEEP_DAYS", -1);
-        int count = params.optInt("KEEP_COUNT", -1);
+        int days = params.optInt("keepDays", -1);
+        int count = params.optInt("keepCount", -1);
         if (days == 0 || count == 0) {
             return clearBackupResponse(clearAll(repository));
         }
