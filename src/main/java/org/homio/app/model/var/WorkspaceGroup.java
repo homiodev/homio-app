@@ -38,7 +38,6 @@ import org.homio.api.ui.field.UIFieldIconPicker;
 import org.homio.api.ui.field.UIFieldProgress;
 import org.homio.api.ui.field.UIFieldProgress.Progress;
 import org.homio.api.ui.field.UIFieldSlider;
-import org.homio.api.ui.field.UIFieldTitleRef;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIActionInput;
 import org.homio.api.ui.field.action.UIActionInput.Type;
@@ -91,6 +90,15 @@ public class WorkspaceGroup extends BaseEntity
     private String iconColor;
 
     private boolean hidden;
+
+    @UIField(order = 15, hideInEdit = true)
+    public int getVarCount() {
+        return workspaceVariables.size() +
+            (childrenGroups == null ? 0 : childrenGroups
+                .stream()
+                .map(WorkspaceGroup::getVarCount)
+                .reduce(0, Integer::sum));
+    }
 
     @Getter
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "workspaceGroup")
@@ -290,7 +298,6 @@ public class WorkspaceGroup extends BaseEntity
 
         @UIField(order = 10, type = UIFieldType.HTML)
         @UIFieldColorRef("color")
-        @UIFieldTitleRef("nameTitle")
         @UIFieldVariable
         private JSONObject name;
 
@@ -316,8 +323,6 @@ public class WorkspaceGroup extends BaseEntity
         private Progress usedQuota;
 
         private String color;
-
-        private String nameTitle;
 
         private Boolean disableDelete;
 
@@ -364,7 +369,6 @@ public class WorkspaceGroup extends BaseEntity
             this.backup = nullIfFalse(variable.isBackup());
             this.quota = variable.getQuota();
             this.usedQuota = variable.getUsedQuota();
-            this.nameTitle = variable.getName();
             this.disableDelete = Boolean.TRUE.equals(variable.isDisableDelete()) ? true : null;
             if (variable.getVarType() != VarType.standard) {
                 this.rowClass = "var-type-%s".formatted(variable.getVarType());

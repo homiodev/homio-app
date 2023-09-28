@@ -30,8 +30,6 @@ import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.entity.widget.attributes.HasStyle;
-import org.homio.app.setting.dashboard.DashboardHorizontalBlockCountSetting;
-import org.homio.app.setting.dashboard.DashboardVerticalBlockCountSetting;
 import org.jetbrains.annotations.NotNull;
 
 @Getter
@@ -150,8 +148,9 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
             return;
         }
 
-        var hBlockCount = getEntityContext().setting().getValue(DashboardHorizontalBlockCountSetting.class);
-        var vBlockCount = getEntityContext().setting().getValue(DashboardVerticalBlockCountSetting.class);
+
+        var hBlockCount = this.widgetTabEntity.getHorizontalBlocks();
+        var vBlockCount = this.widgetTabEntity.getVerticalBlocks();
         boolean[][] matrix = new boolean[vBlockCount][hBlockCount];
         for (int j = 0; j < vBlockCount; j++) {
             matrix[j] = new boolean[hBlockCount];

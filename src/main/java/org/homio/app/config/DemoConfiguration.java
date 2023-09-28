@@ -22,7 +22,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 @Log4j2
 @Profile("demo")
 @Configuration
-@Deprecated
+@Deprecated // TODO: DROP asap
 public class DemoConfiguration {
 
     @Autowired
@@ -66,14 +66,14 @@ public class DemoConfiguration {
     private void clearWorkspace() {
         entityContext.getBean(WorkspaceVariableRepository.class).deleteAll();
 
-        for (WorkspaceEntity tab : entityContext.findAll(WorkspaceEntity.class)) {
+        /*for (WorkspaceEntity tab : entityContext.findAll(WorkspaceEntity.class)) {
             if (!tab.getName().equals(WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME) && quiteOld(tab)) {
                 // first clean workspace
                 entityContext.save(tab.setContent(""));
                 // then drop it
                 entityContext.delete(tab);
             }
-        }
+        }*/
     }
 
     private void removeOutdatedVariables(JSONObject list, String repositoryPrefix) {

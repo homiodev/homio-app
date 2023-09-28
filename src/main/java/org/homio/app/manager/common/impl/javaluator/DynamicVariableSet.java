@@ -1,6 +1,6 @@
 package org.homio.app.manager.common.impl.javaluator;
 
-import com.fathzer.soft.javaluator.StaticVariableSet;
+import com.fathzer.soft.javaluator.AbstractVariableSet;
 import java.time.Duration;
 import java.util.List;
 import lombok.Getter;
@@ -10,23 +10,18 @@ import org.homio.app.manager.common.impl.EntityContextVarImpl;
 import org.jetbrains.annotations.NotNull;
 
 @RequiredArgsConstructor
-public class DynamicVariableSet extends StaticVariableSet<Object> {
+public class DynamicVariableSet implements AbstractVariableSet<Object> {
 
     private final @Getter @NotNull List<String> sources;
     private final EntityContextVarImpl var;
 
     @Override
     public Object get(String variableName) {
-        Object value = super.get(variableName);
-        if (value != null) {
-            return value;
-        }
         if (variableName.startsWith("VAR")) {
             int index = Integer.parseInt(variableName.substring("VAR".length()));
             assertVarExists(index);
             Number number = (Number) var.get(sources.get(index));
-            value = number == null ? 0D : number.doubleValue();
-            set(variableName, value);
+            return number == null ? 0D : number.doubleValue();
         } else if (variableName.startsWith("'VAR")) {
             int index = Integer.parseInt(variableName.substring("'VAR".length(), variableName.length() - 1));
             assertVarExists(index);
@@ -39,7 +34,7 @@ public class DynamicVariableSet extends StaticVariableSet<Object> {
         if (variableName.startsWith("PT")) {
             return (double) Duration.parse(variableName).getSeconds();
         }
-        return value;
+        throw new IllegalArgumentException("Unable to find variable: " + variableName);
     }
 
     private void assertVarExists(int index) {

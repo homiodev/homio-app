@@ -230,7 +230,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
                 dispose(ex);
             })
             .setInputLoggerOutput(msg -> {
-                Level level = Level.INFO;
+                Level level = Level.DEBUG;
                 if (msg.contains("WAR")) {
                     level = Level.WARN;
                 } else if (msg.contains("ERR")) {

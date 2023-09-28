@@ -182,6 +182,7 @@ public class EntityContextImpl implements EntityContext {
     private ApplicationContext applicationContext;
     private WorkspaceService workspaceService;
     private final TransactionManagerContext transactionManagerContext;
+    public static EntityContextImpl INSTANCE;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public EntityContextImpl(
@@ -284,6 +285,7 @@ public class EntityContextImpl implements EntityContext {
                 ui().handleResponse(new BeansItemsDiscovery(ItemDiscoverySupport.class).handleAction(this, null)));
         setting().listenValue(ScanVideoStreamSourcesSetting.class, "scan-video-sources", () ->
                 ui().handleResponse(new BeansItemsDiscovery(VideoStreamScanner.class).handleAction(this, null)));
+        INSTANCE = this;
     }
 
     @Override

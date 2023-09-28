@@ -68,7 +68,6 @@ import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.UIFieldTab;
 import org.homio.api.ui.field.UIFieldTableLayout;
-import org.homio.api.ui.field.UIFieldTitleRef;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.ActionInputParameter;
 import org.homio.api.ui.field.action.UIActionButton;
@@ -336,12 +335,6 @@ public class UIFieldUtils {
         UIFieldVariable fieldVariable = fieldContext.getDeclaredAnnotation(UIFieldVariable.class);
         if (fieldVariable != null) {
             entityUIMetaData.setType("Variable");
-        }
-
-        UIFieldTitleRef fieldTitleRef = fieldContext.getDeclaredAnnotation(UIFieldTitleRef.class);
-        if (fieldTitleRef != null) {
-            assertFieldExists(instance, fieldTitleRef.value());
-            jsonTypeMetadata.put("titleRef", fieldTitleRef.value());
         }
 
         UIFieldPosition fieldPosition = fieldContext.getDeclaredAnnotation(UIFieldPosition.class);

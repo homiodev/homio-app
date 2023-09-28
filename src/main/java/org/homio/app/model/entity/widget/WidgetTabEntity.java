@@ -1,5 +1,7 @@
 package org.homio.app.model.entity.widget;
 
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
@@ -13,7 +15,6 @@ import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasOrder;
 import org.homio.api.exception.ServerException;
-import org.homio.api.model.Icon;
 import org.homio.api.model.JSON;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.EntityContextImpl;
@@ -26,17 +27,24 @@ public final class WidgetTabEntity extends BaseEntity implements HasOrder {
 
     public static final String PREFIX = "tab_";
     public static final String MAIN_TAB_ID = PREFIX + "main";
-    @Getter
     @JsonIgnore
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "widgetTabEntity")
     private Set<WidgetBaseEntity> widgetBaseEntities;
 
-    @Getter
-    @Setter
     @Column(length = 10_000)
     @Convert(converter = JSONConverter.class)
     @NotNull
     private JSON jsonData = new JSON();
+
+    private String icon;
+
+    private String iconColor;
+
+    private boolean locked = false;
+
+    private int horizontalBlocks = 8;
+
+    private int verticalBlocks = 8;
 
     @Override
     public boolean enableUiOrdering() {
@@ -44,11 +52,12 @@ public final class WidgetTabEntity extends BaseEntity implements HasOrder {
     }
 
     public static void ensureMainTabExists(EntityContextImpl entityContext) {
-        if (entityContext.getEntity(MAIN_TAB_ID) == null) {
+        if (entityContext.getEntity(WidgetTabEntity.class, PRIMARY_DEVICE) == null) {
             String name = Lang.getServerMessage("MAIN_TAB_NAME");
             WidgetTabEntity mainTab = new WidgetTabEntity();
-            mainTab.setEntityID(MAIN_TAB_ID);
+            mainTab.setEntityID(PRIMARY_DEVICE);
             mainTab.setName(name);
+            mainTab.setLocked(true);
             mainTab.setOrder(0);
             entityContext.save(mainTab);
         }
@@ -57,15 +66,6 @@ public final class WidgetTabEntity extends BaseEntity implements HasOrder {
     @Override
     public int compareTo(@NotNull BaseEntity o) {
         return super.compareTo(o);
-    }
-
-    public Icon getIcon() {
-        return getJsonData("icon", Icon.class);
-    }
-
-    public WidgetTabEntity setIcon(Icon icon) {
-        setJsonDataObject("icon", icon);
-        return this;
     }
 
     @Override
@@ -80,17 +80,7 @@ public final class WidgetTabEntity extends BaseEntity implements HasOrder {
 
     @Override
     public boolean isDisableDelete() {
-        return this.getEntityID().equals(MAIN_TAB_ID);
-    }
-
-    @Override
-    public void beforeDelete() {
-        if (!widgetBaseEntities.isEmpty()) {
-            throw new IllegalArgumentException("W.ERROR.REMOVE_NON_EMPTY_TAB");
-        }
-        if (this.getEntityID().equals(MAIN_TAB_ID)) {
-            throw new IllegalArgumentException("W.ERROR.REMOVE_MAIN_TAB");
-        }
+        return super.isDisableDelete() || isLocked() || !widgetBaseEntities.isEmpty();
     }
 
     @Override
@@ -102,6 +92,17 @@ public final class WidgetTabEntity extends BaseEntity implements HasOrder {
     public void validate() {
         if (getName() == null || getName().length() < 2 || getName().length() > 16) {
             throw new ServerException("ERROR.WRONG_TAB_NAME");
+        }
+    }
+
+    @Override
+    public void afterDelete() {
+        // shift all higher order <<
+        for (WidgetTabEntity tabEntity : getEntityContext().findAll(WidgetTabEntity.class)) {
+            if (tabEntity.getOrder() > getOrder()) {
+                tabEntity.setOrder(tabEntity.getOrder() - 1);
+                getEntityContext().save(tabEntity, false);
+            }
         }
     }
 }

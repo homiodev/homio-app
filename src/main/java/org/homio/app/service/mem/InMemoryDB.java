@@ -88,7 +88,7 @@ public final class InMemoryDB {
             @NotNull String uniqueId,
             @Nullable Long quota) {
         return (DataStorageService<T>) map.computeIfAbsent(uniqueId, aClass -> {
-            String collectionName = pojoClass.getSimpleName() + uniqueId;
+            String collectionName = pojoClass.getSimpleName() + "_" + uniqueId;
             // create timestamp index
             MongoCollection<T> collection = datastore.getCollection(collectionName, pojoClass);
             //          collection.createIndex(Indexes.ascending(ID));
@@ -155,7 +155,7 @@ public final class InMemoryDB {
         public void save(@NotNull List<T> entities) {
             last = null;
             collection.insertMany(entities);
-            postInsertQuotaHandler();
+            postInsertQuotaHandler(entities.size());
         }
 
         @Override
@@ -165,7 +165,7 @@ public final class InMemoryDB {
             for (Consumer<T> listener : saveListeners.values()) {
                 listener.accept(entity);
             }
-            postInsertQuotaHandler();
+            postInsertQuotaHandler(1);
             return entity;
         }
 
@@ -324,9 +324,9 @@ public final class InMemoryDB {
                 filterList.size() == 1 ? filterList.iterator().next() : Filters.and(filterList);
         }
 
-        private void postInsertQuotaHandler() {
+        private void postInsertQuotaHandler(int count) {
             if (quota != null) {
-                estimateUsed.incrementAndGet();
+                estimateUsed.addAndGet(count);
 
                 if (estimateUsed.get() > quota) {
                     synchronized (this) {

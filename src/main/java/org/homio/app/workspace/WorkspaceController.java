@@ -119,45 +119,6 @@ public class WorkspaceController {
         return entityContext.getEntity(WorkspaceEntity.PREFIX + name) != null;
     }
 
-    @SneakyThrows
-    @PutMapping("/tab/{entityID}")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public void renameWorkspaceTab(@PathVariable("entityID") String entityID, @RequestBody OptionModel option) {
-        WorkspaceEntity entity = entityContext.getEntity(entityID);
-        if (entity == null) {
-            throw new NotFoundException("ERROR.TAB_NOT_FOUND", entityID);
-        }
-
-        if (!WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME.equals(entity.getName())
-                && !WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME.equals(option.getKey())) {
-
-            WorkspaceEntity newEntity = workspaceRepository.getByName(option.getKey());
-
-            if (newEntity == null) {
-                entity.setName(option.getKey());
-                entityContext.save(entity);
-            } else {
-                throw new IllegalArgumentException("Workspace tab with name <" + option.getKey() + "> already exists");
-            }
-        }
-    }
-
-    @DeleteMapping("/tab/{entityID}")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public void deleteWorkspaceTab(@PathVariable("entityID") String entityID) {
-        WorkspaceEntity entity = entityContext.getEntity(entityID);
-        if (entity == null) {
-            throw new NotFoundException("ERROR.TAB_NOT_FOUND", entityID);
-        }
-        if (WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME.equals(entity.getName())) {
-            throw new IllegalArgumentException("W.ERROR.REMOVE_MAIN_TAB");
-        }
-        if (!workspaceService.isEmpty(entity.getContent())) {
-            throw new IllegalArgumentException("W.ERROR.REMOVE_NON_EMPTY_TAB");
-        }
-        entityContext.delete(entityID);
-    }
-
     @Setter
     public static class CreateVariable {
 

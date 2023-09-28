@@ -166,6 +166,11 @@ public class WorkspaceVariable extends BaseEntity
     }
 
     @Override
+    public boolean isDisableEdit() {
+        return locked || getJsonData("dis_edit", false);
+    }
+
+    @Override
     public String getDefaultName() {
         return null;
     }

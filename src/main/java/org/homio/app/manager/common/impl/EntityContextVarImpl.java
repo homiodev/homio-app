@@ -81,6 +81,10 @@ public class EntityContextVarImpl implements EntityContextVar {
                 getOrCreateContext(variable.getVariableId()));
         entityContext.event().addEntityUpdateListener(WorkspaceVariable.class, "var-update", variable -> {
             VariableContext context = getOrCreateContext(variable.getVariableId());
+            if (variable.isBackup() != context.hasBackup) {
+                context.hasBackup = variable.isBackup();
+                variableBackupRepository.delete(context.groupVariable.getVariableId());
+            }
             context.groupVariable = variable;
             context.storageService.updateQuota((long) variable.getQuota());
         });
@@ -253,7 +257,6 @@ public class EntityContextVarImpl implements EntityContextVar {
     public @NotNull String buildDataSource(@NotNull String variableId, boolean forSet) {
         WorkspaceVariable variable = entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
         if (variable == null) {
-            throw new IllegalArgumentException("Unable to find variable: " + variableId);
         }
         return buildDataSource(variable, forSet);
     }
@@ -460,6 +463,7 @@ public class EntityContextVarImpl implements EntityContextVar {
 
         VariableContext context = new VariableContext(service, createValueConverter(variable.getRestriction()));
         context.groupVariable = variable;
+        context.hasBackup = variable.isBackup();
         globalVarStorageMap.put(variableId, context);
 
         if (context.groupVariable.getVarType() == VarType.transform) {
@@ -543,6 +547,7 @@ public class EntityContextVarImpl implements EntityContextVar {
         // fire every link listener in separate thread
         private ThrowingConsumer<Object, Exception> linkListener;
         private @Nullable @Setter TransformVariableContext transformVariableContext;
+        private boolean hasBackup;
 
         @Override
         public String toString() {

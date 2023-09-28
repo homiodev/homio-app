@@ -15,23 +15,6 @@ create table if not exists device_base_entity
 create index if not exists dc
     on device_base_entity (update_time);
 
-create table if not exists property_base_entity
-(
-    entityid       varchar(128)  not null,
-    creation_time  timestamp(6) not null,
-    name           varchar(255),
-    update_time    timestamp(6) not null,
-    version        integer,
-    address        integer,
-    description    varchar(255),
-    json_data      varchar(10000),
-    position       integer,
-    owner_entityid varchar(128),
-    primary key (entityid),
-    constraint fk6dajs8tto3r6wtd64cv932u2g
-    foreign key (owner_entityid) references device_base_entity
-    );
-
 create table if not exists script_entity
 (
     entityid               varchar(128)  not null,
@@ -39,7 +22,7 @@ create table if not exists script_entity
     name                   varchar(255),
     update_time            timestamp(6) not null,
     version                integer,
-    auto_start             boolean      not null,
+    auto_start             boolean,
     error                  varchar(1000),
     java_script            varchar(65535),
     java_script_parameters varchar(65535),
@@ -77,12 +60,17 @@ create index if not exists vc
 
 create table if not exists widget_tab_entity
 (
-    entityid      varchar(128)  not null,
-    creation_time timestamp(6) not null,
-    name          varchar(255),
-    update_time   timestamp(6) not null,
-    version       integer,
-    json_data     varchar(10000),
+    entityid         varchar(128) not null,
+    creation_time    timestamp(6) not null,
+    name             varchar(255),
+    update_time      timestamp(6) not null,
+    version          integer,
+    locked           boolean,
+    icon             varchar(32),
+    icon_color       varchar(32),
+    horizontal_blocks integer default 8,
+    vertical_blocks   integer default 8,
+    json_data        varchar(10000),
     primary key (entityid)
     );
 
@@ -119,11 +107,14 @@ create table if not exists widget_series_entity
 
 create table if not exists workspace_entity
 (
-    entityid      varchar(128)  not null,
+    entityid      varchar(128) not null,
     creation_time timestamp(6) not null,
     name          varchar(255),
     update_time   timestamp(6) not null,
     version       integer,
+    locked        boolean      not null,
+    icon          varchar(32),
+    icon_color    varchar(32),
     content       varchar(10485760),
     json_data     varchar(10000),
     primary key (entityid)

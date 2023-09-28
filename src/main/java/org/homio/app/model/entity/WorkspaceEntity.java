@@ -11,6 +11,7 @@ import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.model.JSON;
+import org.homio.app.workspace.WorkspaceService;
 import org.jetbrains.annotations.NotNull;
 
 @Getter
@@ -31,6 +32,10 @@ public final class WorkspaceEntity extends BaseEntity implements HasJsonData {
     @Convert(converter = JSONConverter.class)
     @NotNull
     private JSON jsonData = new JSON();
+
+    private String icon;
+    private String iconColor;
+    private boolean locked;
 
     public WorkspaceEntity(String entityID, String name) {
         setEntityID(entityID);
@@ -54,6 +59,11 @@ public final class WorkspaceEntity extends BaseEntity implements HasJsonData {
         int result = content != null ? content.hashCode() : 0;
         result = 31 * result + jsonData.toString().hashCode();
         return result;
+    }
+
+    @Override
+    public boolean isDisableDelete() {
+        return super.isDisableDelete() || isLocked() || !getEntityContext().getBean(WorkspaceService.class).isEmpty(content);
     }
 
     @Override

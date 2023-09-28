@@ -413,25 +413,21 @@ public class WidgetController {
     }
 
     @GetMapping("/tab")
-    public List<OptionModel> getWidgetTabs() {
-        return entityContext.findAll(WidgetTabEntity.class).stream().sorted()
-                .map(t -> OptionModel.of(t.getEntityID(), t.getName())
-                        .setIcon(t.getIcon()))
-                .collect(Collectors.toList());
+    public List<WidgetTabEntity> getWidgetTabs() {
+        return entityContext.findAll(WidgetTabEntity.class);
     }
 
     @SneakyThrows
     @PostMapping("/tab/{name}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public OptionModel createWidgetTab(@PathVariable("name") String name) {
+    public WidgetTabEntity createWidgetTab(@PathVariable("name") String name) {
         BaseEntity widgetTab = entityContext.getEntity(WidgetTabEntity.PREFIX + name);
         if (widgetTab == null) {
             WidgetTabEntity widgetTabEntity = new WidgetTabEntity();
             widgetTabEntity.setEntityID(name);
             widgetTabEntity.setName(name);
             widgetTabEntity.setOrder(this.findHighestOrder() + 1);
-            widgetTab = entityContext.save(widgetTabEntity);
-            return OptionModel.of(widgetTab.getEntityID(), widgetTab.getName());
+            return entityContext.save(widgetTabEntity);
         }
         throw new ServerException("Widget tab with same name already exists");
     }
@@ -440,41 +436,6 @@ public class WidgetController {
         return entityContext.findAll(WidgetTabEntity.class)
                 .stream().map(HasOrder::getOrder)
                 .max(Integer::compare).orElse(0);
-    }
-
-    @SneakyThrows
-    @PutMapping("/tab/{tabId}/{name}")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public void renameWidgetTab(@PathVariable("tabId") String tabId, @PathVariable("name") String name) {
-        WidgetTabEntity entity = getWidgetTabEntity(tabId);
-        WidgetTabEntity newEntity = widgetTabRepository.getByName(name);
-
-        if (newEntity == null) {
-            entity.setName(name);
-            entityContext.save(entity);
-        }
-    }
-
-    @DeleteMapping("/tab/{tabId}")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public void deleteWidgetTab(@PathVariable("tabId") String tabId) {
-        WidgetTabEntity widgetTabEntity = getWidgetTabEntity(tabId);
-        entityContext.delete(widgetTabEntity);
-        // shift all higher order <<
-        for (WidgetTabEntity tabEntity : entityContext.findAll(WidgetTabEntity.class)) {
-            if (tabEntity.getOrder() > widgetTabEntity.getOrder()) {
-                tabEntity.setOrder(tabEntity.getOrder() - 1);
-                entityContext.save(tabEntity, false);
-            }
-        }
-    }
-
-    @PostMapping("/tab/{tabId}/icon")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public void changeTabIcon(@PathVariable("tabId") String tabId, @RequestBody Icon icon) {
-        WidgetTabEntity widgetTabEntity = getWidgetTabEntity(tabId);
-        Icon tabIcon = widgetTabEntity.getIcon();
-        entityContext.save(widgetTabEntity.setIcon(tabIcon == null ? icon : tabIcon.merge(icon)), false);
     }
 
     @PostMapping("/tab/{tabId}/move")
