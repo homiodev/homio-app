@@ -707,6 +707,9 @@ public class EntityContextVarImpl implements EntityContextVar {
                         var func = new com.fathzer.soft.javaluator.Function(aggregationType.name(), 1, 3);
                         functions.put(aggregationType.name(), (arguments, varContext) -> {
                             String varId = arguments.next().toString();
+                            if (varId.contains(LIST_DELIMITER)) {
+                                throw new IllegalArgumentException("Unable to aggregate value with no variable type");
+                            }
                             Long from = arguments.hasNext() ? getSince((Double) arguments.next()) : null;
                             Long to = arguments.hasNext() ? getSince((Double) arguments.next()) : null;
                             Object value = varContext.aggregate(varId, from, to, aggregationType,

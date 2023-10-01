@@ -24,7 +24,7 @@ public class DynamicVariableSet implements AbstractVariableSet<Object> {
         } else if (variableName.startsWith("'VAR")) {
             int index = Integer.parseInt(variableName.substring("'VAR".length(), variableName.length() - 1));
             assertVarExists(index);
-            return sources.get(index);
+            return sources.get(index).getListenSource();
         }
         // string case
         /* if (variableName.charAt(0) == '\'') {

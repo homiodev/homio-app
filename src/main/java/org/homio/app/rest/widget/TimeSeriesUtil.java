@@ -98,7 +98,7 @@ public class TimeSeriesUtil {
                         WidgetChartsController.TimeSeriesChartData<ChartDataset> fullUpdatedData =
                                 this.buildTimeSeriesFullData(entityID, timePeriod, false, series);
 
-                        entityContext.ui().sendDynamicUpdate(item.getChartDataSource(), entityID, fullUpdatedData);
+                        entityContext.ui().sendDynamicUpdateImpl(item.getChartDataSource(), entityID, fullUpdatedData);
                     }
                 });
     }
@@ -152,7 +152,7 @@ public class TimeSeriesUtil {
                         R updatedValue = valueSupplier.apply(o);
                         if (valueRef.get() != updatedValue) {
                             valueRef.set(updatedValue);
-                            entityContext.ui().sendDynamicUpdate(dataSourceEntityID, entityID,
+                            entityContext.ui().sendDynamicUpdateImpl(dataSourceEntityID, entityID,
                                     new WidgetChartsController.SingleValueData(updatedValue, seriesEntityId));
                         }
                     });
