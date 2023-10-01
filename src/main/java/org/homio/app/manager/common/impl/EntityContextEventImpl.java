@@ -49,6 +49,7 @@ import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.service.EntityService;
 import org.homio.api.service.EntityService.ServiceInstance;
+import org.homio.api.state.State;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
@@ -71,11 +72,10 @@ public class EntityContextEventImpl implements EntityContextEvent {
     @Getter
     private final EntityListener entityRemoveListeners = new EntityListener();
 
-    @Getter
-    private final Set<OptionModel> events = new HashSet<>();
-    private final Map<String, Object> lastValues = new ConcurrentHashMap<>();
+    private final @Getter Set<OptionModel> events = new HashSet<>();
+    private final @Getter Map<String, State> lastValues = new ConcurrentHashMap<>();
 
-    private final Map<String, Map<String, Consumer<Object>>> eventListeners = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, Consumer<State>>> eventListeners = new ConcurrentHashMap<>();
 
     @Getter
     private final List<BiConsumer<String, Object>> globalEvenListeners = new ArrayList<>();
@@ -105,7 +105,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
 
     @Override
     public synchronized void removeEventListener(String discriminator, String key) {
-        Map<String, Consumer<Object>> map = eventListeners.get(discriminator);
+        Map<String, Consumer<State>> map = eventListeners.get(discriminator);
         if (map != null) {
             map.remove(key);
             if (map.isEmpty()) {
@@ -115,7 +115,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
     }
 
     @Override
-    public EntityContextEvent addEventBehaviourListener(String key, String discriminator, Consumer<Object> listener) {
+    public EntityContextEvent addEventBehaviourListener(String key, String discriminator, Consumer<State> listener) {
         if (lastValues.containsKey(key)) {
             listener.accept(lastValues.get(key));
         }
@@ -124,18 +124,18 @@ public class EntityContextEventImpl implements EntityContextEvent {
     }
 
     @Override
-    public EntityContextEvent addEventListener(String key, String discriminator, Consumer<Object> listener) {
+    public EntityContextEvent addEventListener(String key, String discriminator, Consumer<State> listener) {
         eventListeners.computeIfAbsent(discriminator, d -> new ConcurrentHashMap<>()).put(key, listener);
         return this;
     }
 
     @Override
-    public EntityContextEvent fireEventIfNotSame(@NotNull String key, @Nullable Object value) {
+    public EntityContextEvent fireEventIfNotSame(@NotNull String key, @Nullable State value) {
         return fireEvent(key, value, true);
     }
 
     @Override
-    public EntityContextEvent fireEvent(@NotNull String key, @Nullable Object value) {
+    public EntityContextEvent fireEvent(@NotNull String key, @Nullable State value) {
         return fireEvent(key, value, false);
     }
 
@@ -278,7 +278,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
             while (true) {
                 try {
                     Event event = eventQueue.take();
-                    for (Map<String, Consumer<Object>> eventListenerMap : eventListeners.values()) {
+                    for (Map<String, Consumer<State>> eventListenerMap : eventListeners.values()) {
                         if (eventListenerMap.containsKey(event.key)) {
                             eventListenerMap.get(event.key).accept(event.value);
                         }
@@ -292,8 +292,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
         }).start();
     }
 
-    @NotNull
-    private EntityContextEventImpl fireEvent(@NotNull String key, @Nullable Object value, boolean compareValues) {
+    private  @NotNull EntityContextEventImpl fireEvent(@NotNull String key, @Nullable State value, boolean compareValues) {
         // fire by key and key + value type
         fireEventInternal(key, value, compareValues);
         /*if (value != null && !(value instanceof String)) {
@@ -302,7 +301,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
         return this;
     }
 
-    private void fireEventInternal(@NotNull String key, @Nullable Object value, boolean compareValues) {
+    private void fireEventInternal(@NotNull String key, @Nullable State value, boolean compareValues) {
         if (StringUtils.isEmpty(key)) {
             throw new IllegalArgumentException("Unable to fire event with empty key");
         }
@@ -553,7 +552,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
         }
     }
 
-    private record Event(String key, Object value) {
+    private record Event(String key, State value) {
 
     }
 

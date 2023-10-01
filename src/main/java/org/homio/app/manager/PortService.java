@@ -10,6 +10,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPlugin;
 import org.homio.api.setting.SettingPluginOptions;
+import org.homio.api.state.OnOffType;
 import org.homio.api.ui.UI.Color;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.EntityContextImpl;
@@ -100,7 +101,7 @@ public class PortService implements ContextCreated, ContextRefreshed {
         // notify UI for reload available options
         if (!this.ports.equals(ports.keySet())) {
             // Notify that any port has been changed
-            entityContext.event().fireEvent("any-port-changed", true);
+            entityContext.event().fireEvent("any-port-changed", OnOffType.ON);
 
             this.ports = ports.keySet();
 

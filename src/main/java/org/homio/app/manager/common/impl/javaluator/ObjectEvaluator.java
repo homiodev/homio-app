@@ -47,31 +47,8 @@ import java.util.regex.Pattern;
 
 public class ObjectEvaluator extends AbstractEvaluator<Object> {
 
-	/**
-	 * The standard whole set of predefined operators
-	 */
-	private static final Operator[] OPERATORS = new Operator[]{NEGATE, MINUS, PLUS, MULTIPLY, DIVIDE, EXPONENT, MODULO};
-	/**
-	 * The excel like whole set of predefined operators
-	 */
-	private static final Operator[] OPERATORS_EXCEL = new Operator[]{NEGATE_HIGH, MINUS, PLUS, MULTIPLY, DIVIDE, EXPONENT, MODULO};
-	/**
-	 * The whole set of predefined functions
-	 */
-	private static final Function[] FUNCTIONS = new Function[]{SINE, COSINE, TANGENT, ASINE, ACOSINE, ATAN, SINEH, COSINEH, TANGENTH, MIN, MAX, SUM, AVERAGE, LN,
-		LOG, ROUND, CEIL, FLOOR, ABS, RANDOM};
-	/**
-	 * The whole set of predefined constants
-	 */
-	private static final Constant[] CONSTANTS = new Constant[]{PI, E};
-
 	private static final Pattern SCIENTIFIC_NOTATION_PATTERN = Pattern.compile("([+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)[eE][+-]?\\d+)$");
-	private static final ThreadLocal<NumberFormat> FORMATTER = new ThreadLocal<NumberFormat>() {
-		@Override
-		protected NumberFormat initialValue() {
-			return NumberFormat.getNumberInstance(Locale.US);
-		}
-	};
+	private static final ThreadLocal<NumberFormat> FORMATTER = ThreadLocal.withInitial(() -> NumberFormat.getNumberInstance(Locale.US));
 
 	private boolean supportsScientificNotation;
 

@@ -198,17 +198,21 @@ public final class UIFieldSelectionUtil {
         if (fileSelection != null) {
             ObjectNode meta = getSelectBoxList(jsonTypeMetadata);
             meta.put("selectType", "file");
+            meta.put("attachMetadata", fileSelection.isAttachMetadata());
+            if (fileSelection.isAttachMetadata()) {
+                meta.put("prefix", fileSelection.prefix())
+                    .put("prefixColor", fileSelection.prefixColor());
+            }
             meta.putPOJO("icon", evaluateIcon(fileSelection.icon(), fileSelection.iconColor(), jsonTypeMetadata));
 
             ObjectNode parameters = OBJECT_MAPPER.createObjectNode();
             parameters.set("fileSystemIds", OBJECT_MAPPER.valueToTree(fileSelection.fileSystemIds()));
-            parameters.put("rootPath", fileSelection.rootPath());
-            parameters.put("ASD", fileSelection.allowSelectDirs());
-            parameters.put("AMS", fileSelection.allowMultiSelect());
-            parameters.put("ASF", fileSelection.allowSelectFiles());
-            parameters.put("pattern", fileSelection.pattern());
-            parameters.put("dialogTitle", fileSelection.dialogTitle());
-
+            parameters.put("rootPath", fileSelection.rootPath())
+                      .put("ASD", fileSelection.allowSelectDirs())
+                      .put("AMS", fileSelection.allowMultiSelect())
+                      .put("ASF", fileSelection.allowSelectFiles())
+                      .put("pattern", fileSelection.pattern())
+                      .put("dialogTitle", fileSelection.dialogTitle());
             meta.set("treeParameters", parameters);
         }
     }

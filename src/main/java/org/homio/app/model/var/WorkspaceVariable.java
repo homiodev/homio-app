@@ -4,8 +4,10 @@ import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.type.TypeReference;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -22,10 +24,12 @@ import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextVar;
+import org.homio.api.EntityContextVar.TransformVariableSource;
 import org.homio.api.EntityContextVar.VariableType;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
@@ -36,6 +40,7 @@ import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.entity.widget.ability.HasTimeValueSeries;
 import org.homio.api.model.Icon;
 import org.homio.api.model.JSON;
+import org.homio.api.state.State;
 import org.homio.api.storage.SourceHistory;
 import org.homio.api.storage.SourceHistoryItem;
 import org.homio.api.ui.field.UIField;
@@ -182,7 +187,7 @@ public class WorkspaceVariable extends BaseEntity
     }
 
     @Override
-    public void addUpdateValueListener(EntityContext entityContext, String key, JSONObject dynamicParameters, Consumer<Object> listener) {
+    public void addUpdateValueListener(EntityContext entityContext, String key, JSONObject dynamicParameters, Consumer<State> listener) {
         entityContext.event().addEventListener(variableId, key, listener);
     }
 
@@ -376,15 +381,20 @@ public class WorkspaceVariable extends BaseEntity
         return new Icon(icon, iconColor);
     }
 
-    public List<String> getSources() {
-        return getJsonDataList("sources");
+    @SneakyThrows
+    public @NotNull List<TransformVariableSource> getSources() {
+        if (getJsonData().has("sources")) {
+            return OBJECT_MAPPER.readValue(getJsonData("sources"), new TypeReference<>() {
+            });
+        }
+        return List.of();
     }
 
-    public void setSources(List<String> sources) {
-        if (sources != null) {
-            sources = sources.stream().filter(StringUtils::isNotBlank).toList();
-        }
-        setJsonDataList("sources", sources);
+    @SneakyThrows
+    public void setSources(List<TransformVariableSource> sources) {
+        sources = sources.stream().filter(s -> StringUtils.isNotBlank(s.getType()) && StringUtils.isNotBlank(s.getValue())).toList();
+        String value = OBJECT_MAPPER.writeValueAsString(sources);
+        setJsonData("sources", value);
     }
 
     public String getCode() {

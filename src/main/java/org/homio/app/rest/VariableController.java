@@ -20,6 +20,7 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.apache.commons.lang3.tuple.Pair;
+import org.homio.api.EntityContextVar.TransformVariableSource;
 import org.homio.api.EntityContextVar.VariableType;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.widget.AggregationType;
@@ -213,7 +214,7 @@ public class VariableController {
     public static class EvaluateRequest {
 
         private String code;
-        private List<String> sources;
+        private List<TransformVariableSource> sources;
     }
 
     @Getter

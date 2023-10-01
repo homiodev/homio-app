@@ -33,6 +33,7 @@ import org.homio.api.setting.SettingPlugin;
 import org.homio.api.setting.SettingPluginOptions;
 import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
 import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
+import org.homio.api.state.StringType;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.extloader.AddonContext;
 import org.homio.app.manager.common.ClassFinder;
@@ -348,7 +349,8 @@ public class EntityContextSettingImpl implements EntityContextSetting {
             }
         }
 
-        entityContext.event().fireEvent(SettingEntity.getKey(settingPluginClazz), StringUtils.defaultIfEmpty(strValue, pluginFor.getDefaultValue()));
+        entityContext.event().fireEvent(SettingEntity.getKey(settingPluginClazz),
+            new StringType(StringUtils.defaultIfEmpty(strValue, pluginFor.getDefaultValue())));
 
         if (fireUpdatesToUI) {
             entityContext.ui().sendGlobal(setting, SettingEntity.getKey(settingPluginClazz), value, null,

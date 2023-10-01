@@ -27,9 +27,11 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
+import org.homio.api.EntityContextService.MQTTEntityService;
 import org.homio.api.EntityContextVar;
 import org.homio.api.entity.widget.AggregationType;
 import org.homio.api.exception.NotFoundException;
@@ -87,6 +89,10 @@ public class EntityContextVarImpl implements EntityContextVar {
             }
             context.groupVariable = variable;
             context.storageService.updateQuota((long) variable.getQuota());
+            if (context.transformVariableContext != null) {
+                context.transformVariableContext.dispose();
+                context.transformVariableContext.registerSources();
+            }
         });
         entityContext.event().addEntityRemovedListener(WorkspaceVariable.class, "var-delete",
                 workspaceVariable -> {
@@ -235,8 +241,18 @@ public class EntityContextVarImpl implements EntityContextVar {
         return saveOrUpdateGroup(groupId, groupName, groupBuilder, wg -> wg.setHidden(true).setParent(parentGroup));
     }
 
-    @NotNull
-    public String buildDataSource(WorkspaceVariable variable, boolean forSet) {
+    @Override
+    public boolean removeGroup(@NotNull String groupId) {
+        return entityContext.delete(getGroupEntityId(groupId)) != null;
+    }
+
+    @Override
+    public @NotNull String buildDataSource(@NotNull String variableId) {
+        WorkspaceVariable variable = entityContext.getEntityRequire(getVariableEntityId(variableId));
+        return buildDataSource(variable);
+    }
+
+    public static @NotNull String buildDataSource(WorkspaceVariable variable) {
         List<String> items = new ArrayList<>();
         WorkspaceGroup group = variable.getWorkspaceGroup();
         if (group.getParent() != null) {
@@ -248,32 +264,19 @@ public class EntityContextVarImpl implements EntityContextVar {
         return String.join("-->", items);
     }
 
-    @Override
-    public boolean removeGroup(@NotNull String groupId) {
-        return entityContext.delete(getGroupEntityId(groupId)) != null;
-    }
-
-    @Override
-    public @NotNull String buildDataSource(@NotNull String variableId, boolean forSet) {
-        WorkspaceVariable variable = entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
-        if (variable == null) {
-        }
-        return buildDataSource(variable, forSet);
-    }
-
     public Object aggregate(@NotNull String variableId, @Nullable Long from, @Nullable Long to, @NotNull AggregationType aggregationType, boolean exactNumber) {
         return getOrCreateContext(variableId)
                 .storageService.aggregate(from, to, null, null, aggregationType, exactNumber);
     }
 
-    public Object evaluate(@Nullable String code, @Nullable List<String> sources) {
-        List<String> sourceIds = sources == null ? List.of() :
+    public Object evaluate(@Nullable String code, @Nullable List<TransformVariableSource> sources) {
+        List<TransformVariableSourceImpl> sourceIds = sources == null ? List.of() :
             sources.stream()
-                   .filter(StringUtils::isNotBlank)
-                   .map(s -> DataSourceUtil.getSelection(s).getValue(entityContext).getEntityID())
+                   .filter(s -> StringUtils.isNotBlank(s.getType()) && StringUtils.isNotBlank(s.getValue()))
+                   .map((TransformVariableSource source) -> new TransformVariableSourceImpl(source, this))
                    .toList();
         if (StringUtils.isNotEmpty(code)) {
-            DynamicVariableSet variables = new DynamicVariableSet(sourceIds, EntityContextVarImpl.this);
+            DynamicVariableSet variables = new DynamicVariableSet(sourceIds);
             return new ExtendedDoubleEvaluator(EntityContextVarImpl.this).evaluate(code, variables);
         }
         return "";
@@ -394,7 +397,7 @@ public class EntityContextVarImpl implements EntityContextVar {
         }
         context.storageService.save(new WorkspaceVariableMessage(value));
         // entityContext.event().fireEvent(context.groupVariable.getVariableId(), value);
-        entityContext.event().fireEvent(context.groupVariable.getEntityID(), value);
+        entityContext.event().fireEvent(context.groupVariable.getEntityID(), State.of(value));
 
         // Fire update 'value' on UI
         WorkspaceVariableEntity updatedEntity = WorkspaceVariableEntity.updatableEntity(context.groupVariable, entityContext);
@@ -574,7 +577,8 @@ public class EntityContextVarImpl implements EntityContextVar {
         }
 
         @Override
-        public @NotNull VariableMetaBuilderImpl setSourceVariables(@NotNull List<String> sources) {
+        @SneakyThrows
+        public @NotNull VariableMetaBuilderImpl setSourceVariables(@NotNull List<TransformVariableSource> sources) {
             entity.setSources(sources);
             return this;
         }
@@ -647,32 +651,17 @@ public class EntityContextVarImpl implements EntityContextVar {
     public class TransformVariableContext {
 
         private final VariableContext context;
-        private final DynamicVariableSet variables;
+        private DynamicVariableSet variables;
         boolean error = false;
 
         public TransformVariableContext(VariableContext context) {
             this.context = context;
-            List<String> sources = List.of();
-            try {
-                sources = context.groupVariable
-                    .getSources().stream()
-                    .map(s -> DataSourceUtil.getSelection(s).getValue(entityContext).getEntityID())
-                    .toList();
-                for (String source : sources) {
-                    entityContext.event().addEventListener(source, context.groupVariable.getVariableId(), o ->
-                        this.recalculate());
-                }
-            } catch (Exception ex) {
-                this.error = true;
-                log.warn("Unable to register variable sources: {}. Msg: {}",
-                    context.groupVariable.getTitle(), CommonUtils.getErrorMessage(ex));
-            }
-            this.variables = new DynamicVariableSet(sources, EntityContextVarImpl.this);
+            registerSources();
         }
 
         public void dispose() {
-            for (String source : variables.getSources()) {
-                entityContext.event().removeEventListener(context.groupVariable.getVariableId(), source);
+            for (TransformVariableSourceImpl source : variables.getSources()) {
+                entityContext.event().removeEventListener(context.groupVariable.getVariableId(), source.getListenSource());
             }
         }
 
@@ -685,6 +674,25 @@ public class EntityContextVarImpl implements EntityContextVar {
             } catch (Exception ex) {
                 log.warn("Unable to evaluate variable expression: '{}'. Msg: {}", context.groupVariable.getCode(), CommonUtils.getErrorMessage(ex));
             }
+        }
+
+        private void registerSources() {
+            List<TransformVariableSourceImpl> sources = List.of();
+            try {
+                sources = context.groupVariable.getSources().stream().map(
+                                     (TransformVariableSource source) ->
+                                         new TransformVariableSourceImpl(source, EntityContextVarImpl.this))
+                                               .toList();
+                for (TransformVariableSourceImpl source : sources) {
+                    entityContext.event().addEventBehaviourListener(source.getListenSource(), context.groupVariable.getVariableId(), o ->
+                        this.recalculate());
+                }
+            } catch (Exception ex) {
+                this.error = true;
+                log.warn("Unable to register variable sources: {}. Msg: {}",
+                    context.groupVariable.getTitle(), CommonUtils.getErrorMessage(ex));
+            }
+            this.variables = new DynamicVariableSet(sources);
         }
 
         public static class ExtendedDoubleEvaluator extends ObjectEvaluator {
@@ -748,5 +756,43 @@ public class EntityContextVarImpl implements EntityContextVar {
 
     private String getVariableEntityId(@NotNull String groupId) {
         return groupId.startsWith(WorkspaceVariable.PREFIX) ? groupId : WorkspaceVariable.PREFIX + groupId;
+    }
+
+    public static class TransformVariableSourceImpl {
+
+        private final EntityContextVarImpl contextVar;
+        private final @Getter String listenSource;
+        private final @Getter TransformVariableValueHandler handler;
+
+        public TransformVariableSourceImpl(TransformVariableSource source, EntityContextVarImpl contextVar) {
+            this.listenSource = getListenerSource(source);
+            this.handler = createHandler(source);
+            this.contextVar = contextVar;
+        }
+
+        private String getListenerSource(TransformVariableSource source) {
+            String value = DataSourceUtil.getSelection(Objects.requireNonNull(source.getValue())).getEntityValue();
+            return switch (source.getType()) {
+                case "mqtt" -> MQTTEntityService.buildMqttListenEvent(source.getMeta(), value);
+                case "var" -> value;
+                default -> throw new IllegalArgumentException("Unable to find source listened for type: " + source.getType());
+            };
+        }
+
+        private TransformVariableValueHandler createHandler(TransformVariableSource source) {
+            return switch (source.getType()) {
+                case "mqtt" -> () -> {
+                    State state = contextVar.entityContext.event().getLastValues().get(listenSource);
+                    return state == null ? null : state.floatValue();
+                };
+                case "var" -> () -> (Number) contextVar.get(listenSource);
+                default -> throw new IllegalArgumentException("Unable to handle source with type: " + source.getType());
+            };
+        }
+
+        public interface TransformVariableValueHandler {
+
+            @Nullable Number getValue();
+        }
     }
 }

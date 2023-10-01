@@ -256,11 +256,6 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
 
     @Override
-    public <T extends BaseEntity> void sendEntityUpdated(@NotNull T entity) {
-        entityContext.sendEntityUpdateNotification(entity, EntityContextImpl.ItemAction.Update);
-    }
-
-    @Override
     public void progress(@NotNull String key, double progress, @Nullable String message, boolean cancellable) {
         if (progress >= 100) {
             progressMap.remove(key);

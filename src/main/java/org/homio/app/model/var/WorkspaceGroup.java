@@ -51,6 +51,7 @@ import org.homio.api.ui.field.inline.UIFieldInlineGroup;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent.SelectionParent;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.impl.EntityContextVarImpl;
 import org.homio.app.model.UIFieldClickToEdit;
 import org.homio.app.model.UIHideEntityIfFieldNotNull;
 import org.homio.app.model.var.WorkspaceVariable.VarType;
@@ -355,7 +356,7 @@ public class WorkspaceGroup extends BaseEntity
                     .put("description", variable.getDescription())
                     .put("listeners", entityContext.event().getEntityUpdateListeners().getCount(variable.getEntityID()))
                     .put("linked", entityContext.var().isLinked(variable.getVariableId()))
-                    .put("source", entityContext.var().buildDataSource(variable, false))
+                    .put("source", EntityContextVarImpl.buildDataSource(variable))
                     .put("readOnly", variable.isReadOnly());
             if (variable.isBackup()) {
                 name.put("backupCount", entityContext.var().backupCount(variable));

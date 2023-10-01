@@ -43,6 +43,7 @@ import org.homio.api.repository.GitHubProject;
 import org.homio.api.service.scan.BeansItemsDiscovery;
 import org.homio.api.service.scan.ItemDiscoverySupport;
 import org.homio.api.service.scan.VideoStreamScanner;
+import org.homio.api.state.StringType;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
 import org.homio.api.util.HardwareUtils;
@@ -275,7 +276,7 @@ public class EntityContextImpl implements EntityContext {
                 .execute(this::updateAppNotificationBlock);
         event().runOnceOnInternetUp("app-version", this::updateAppNotificationBlock);
 
-        event().fireEventIfNotSame("app-status", Status.ONLINE);
+        event().fireEventIfNotSame("app-status", new StringType(Status.ONLINE.toString()));
         setting().listenValue(SystemClearCacheButtonSetting.class, "im-clear-cache", () -> {
             cacheService.clearCache();
             ui().sendSuccessMessage("Cache has been cleared successfully");

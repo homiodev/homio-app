@@ -9,7 +9,7 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextBGP.ScheduleBuilder;
 import org.homio.api.EntityContextBGP.ThreadContext;
-import org.homio.api.model.Status;
+import org.homio.api.state.OnOffType;
 import org.homio.api.util.HardwareUtils;
 import org.homio.app.manager.common.impl.EntityContextBGPImpl;
 
@@ -30,8 +30,7 @@ public class InternetAvailabilityBgpService {
                 .valueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
                     if (isInternetUp != isInternetWasUp) {
                         internetUp.set(isInternetUp);
-                        entityContext.event().fireEventIfNotSame("internet-status",
-                                isInternetUp ? Status.ONLINE : Status.OFFLINE);
+                        entityContext.event().fireEventIfNotSame("internet-status", OnOffType.of(isInternetUp));
                     }
                     return null;
                 })

@@ -6,21 +6,20 @@ import java.util.List;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.exception.ServerException;
-import org.homio.app.manager.common.impl.EntityContextVarImpl;
+import org.homio.app.manager.common.impl.EntityContextVarImpl.TransformVariableSourceImpl;
 import org.jetbrains.annotations.NotNull;
 
 @RequiredArgsConstructor
 public class DynamicVariableSet implements AbstractVariableSet<Object> {
 
-    private final @Getter @NotNull List<String> sources;
-    private final EntityContextVarImpl var;
+    private final @Getter @NotNull List<TransformVariableSourceImpl> sources;
 
     @Override
     public Object get(String variableName) {
         if (variableName.startsWith("VAR")) {
             int index = Integer.parseInt(variableName.substring("VAR".length()));
             assertVarExists(index);
-            Number number = (Number) var.get(sources.get(index));
+            Number number = sources.get(index).getHandler().getValue();
             return number == null ? 0D : number.doubleValue();
         } else if (variableName.startsWith("'VAR")) {
             int index = Integer.parseInt(variableName.substring("'VAR".length(), variableName.length() - 1));
@@ -28,13 +27,13 @@ public class DynamicVariableSet implements AbstractVariableSet<Object> {
             return sources.get(index);
         }
         // string case
-        /*if (variableName.charAt(0) == '\'') {
+        /* if (variableName.charAt(0) == '\'') {
             return variableName.substring(1, variableName.length() - 2);
-        }*/
+        } */
         if (variableName.startsWith("PT")) {
             return (double) Duration.parse(variableName).getSeconds();
         }
-        throw new IllegalArgumentException("Unable to find variable: " + variableName);
+        return null;
     }
 
     private void assertVarExists(int index) {
