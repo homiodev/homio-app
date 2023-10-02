@@ -186,12 +186,6 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
         setJsonDataEnum("ll", value);
     }
 
-    @UIField(order = 20, hideInEdit = true)
-    @UIFieldGroup("STATUS")
-    public String getApiAddress() {
-        return getService().getApiURL();
-    }
-
     @UIField(order = 1, hideInEdit = true, color = "#C4CC23")
     @UIFieldGroup("STATUS")
     public int getConnectedStreamsCount() {

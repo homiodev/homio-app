@@ -35,6 +35,7 @@ import org.homio.api.storage.SourceHistoryItem;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.api.util.DataSourceUtil.SelectionSource;
 import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.model.var.WorkspaceGroup;
 import org.homio.app.model.var.WorkspaceVariable;
 import org.homio.app.rest.widget.ChartDataset;
 import org.homio.app.rest.widget.EvaluateDatesAndValues;
@@ -109,14 +110,12 @@ public class VariableController {
         return entityContext.var().evaluate(request.code, request.sources);
     }
 
+    // show all read/write variables
     @SneakyThrows
     @GetMapping("/values")
     public List<OptionModel> getWorkspaceVariableValues() {
         List<OptionModel> options = new ArrayList<>();
-        List<WorkspaceVariable> entities = entityContext.findAll(WorkspaceVariable.class)
-                                                        .stream()
-                                                        .filter(s -> !s.getWorkspaceGroup().getGroupId().equals("broadcasts"))
-                                                        .collect(Collectors.toList());
+        List<WorkspaceVariable> entities = getAllVariables();
         UIFieldSelectionUtil.assembleItemsToOptions(options, WorkspaceVariable.class,
             entities, entityContext, null);
         return UIFieldSelectionUtil.groupingOptions(UIFieldSelectionUtil.filterOptions(options));
@@ -126,13 +125,6 @@ public class VariableController {
     public List<OptionModel> getWorkspaceVariables(@PathVariable("type") String type) {
         return OptionModel.entityList(entityContext.findAllByPrefix(type));
     }
-
-   /* @GetMapping("/{source}/edit")
-    public Object getVarToEdit(@PathVariable("source") String source) {
-        BaseEntity entity = DataSourceUtil.getSelection(source).getValue(entityContext);
-
-        return OptionModel.entityList(entityContext.findAllByPrefix(type));
-    }*/
 
     @PostMapping("/source/history/info")
     public SourceHistory getSourceHistory(@RequestBody SourceHistoryRequest request) {
@@ -179,6 +171,13 @@ public class VariableController {
 
         val historyRequest = new GetStatusValueRequest(entityContext, request.dynamicParameters);
         return source.getSourceHistoryItems(historyRequest, request.getFrom(), request.getCount());
+    }
+
+    private List<WorkspaceVariable> getAllVariables() {
+        return entityContext.findAll(WorkspaceVariable.class)
+                            .stream()
+                            .filter(s -> !s.getWorkspaceGroup().getEntityID().equals(WorkspaceGroup.PREFIX + "broadcasts"))
+                            .collect(Collectors.toList());
     }
 
     private Pair<Long, Long> findMinAndMax(List<Object[]> rawValues) {

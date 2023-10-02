@@ -49,7 +49,6 @@ import org.homio.api.ui.field.inline.UIFieldInlineEntities;
 import org.homio.api.ui.field.inline.UIFieldInlineEntityWidth;
 import org.homio.api.ui.field.inline.UIFieldInlineGroup;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent.SelectionParent;
-import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.impl.EntityContextVarImpl;
 import org.homio.app.model.UIFieldClickToEdit;
@@ -121,18 +120,10 @@ public class WorkspaceGroup extends BaseEntity
     @Convert(converter = JSONConverter.class)
     private JSON jsonData = new JSON();
 
-    @Column(unique = true, nullable = false)
-    private String groupId;
-
     @Getter
     @JsonIgnore
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "parent")
     private Set<WorkspaceGroup> childrenGroups;
-
-    public WorkspaceGroup(String groupId, String name) {
-        this.groupId = groupId;
-        setName(name);
-    }
 
     @JsonIgnore
     public WorkspaceGroup getParent() {
@@ -207,7 +198,7 @@ public class WorkspaceGroup extends BaseEntity
 
     @Override
     public boolean isDisableDelete() {
-        return locked || this.groupId.equals("broadcasts") || getJsonData("dis_del", false);
+        return locked || getEntityID().equals(PREFIX + "broadcasts") || getJsonData("dis_del", false);
     }
 
     public static String generateValue(Object val, WorkspaceVariable variable) {
@@ -243,17 +234,13 @@ public class WorkspaceGroup extends BaseEntity
 
     @Override
     public void beforePersist() {
-        setGroupId(defaultIfEmpty(groupId, CommonUtils.generateUUID()));
-        setEntityID(PREFIX + groupId);
         setIcon(defaultIfEmpty(icon, "fas fa-layer-group"));
         setIconColor(defaultIfEmpty(iconColor, "#28A60C"));
-        setName(defaultIfEmpty(getName(), CommonUtils.generateUUID()));
     }
 
     @Override
     protected long getChildEntityHashCode() {
         int result = description != null ? description.hashCode() : 0;
-        result = 31 * result + (groupId != null ? groupId.hashCode() : 0);
         result = 31 * result + (icon != null ? icon.hashCode() : 0);
         result = 31 * result + (iconColor != null ? iconColor.hashCode() : 0);
         result = 31 * result + (locked ? 1 : 0);
@@ -263,19 +250,19 @@ public class WorkspaceGroup extends BaseEntity
 
     private int clearAll(VariableBackupRepository repository) {
         return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
-                .map(v -> repository.delete(v.getVariableId()))
+                .map(v -> repository.delete(v))
                 .mapToInt(i -> i).sum();
     }
 
     private int clearByCount(int count, VariableBackupRepository repository) {
         return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
-                .map(v -> repository.deleteButKeepCount(v.getVariableId(), count))
+                .map(v -> repository.deleteButKeepCount(v, count))
                 .mapToInt(i -> i).sum();
     }
 
     private int clearByDays(int days, VariableBackupRepository repository) {
         return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
-                .map(v -> repository.deleteButKeepDays(v.getVariableId(), days))
+                .map(v -> repository.deleteButKeepDays(v, days))
                 .mapToInt(i -> i).sum();
     }
 
@@ -340,7 +327,7 @@ public class WorkspaceGroup extends BaseEntity
 
         public static WorkspaceVariableEntity updatableEntity(WorkspaceVariable variable, EntityContextImpl entityContext) {
             WorkspaceVariableEntity entity = new WorkspaceVariableEntity();
-            Object val = entityContext.var().get(variable.getVariableId());
+            Object val = entityContext.var().get(variable.getEntityID());
             entity.entityID = variable.getEntityID();
             entity.value = generateValue(val, variable);
             entity.usedQuota = variable.getUsedQuota();
@@ -354,8 +341,8 @@ public class WorkspaceGroup extends BaseEntity
                 .put("color", variable.getIconColor())
                     .put("name", variable.getName())
                     .put("description", variable.getDescription())
-                    .put("listeners", entityContext.event().getEntityUpdateListeners().getCount(variable.getEntityID()))
-                    .put("linked", entityContext.var().isLinked(variable.getVariableId()))
+                    .put("listeners", entityContext.event().getEventCount(variable.getEntityID()))
+                    .put("linked", entityContext.var().isLinked(variable.getEntityID()))
                     .put("source", EntityContextVarImpl.buildDataSource(variable))
                     .put("readOnly", variable.isReadOnly());
             if (variable.isBackup()) {
@@ -365,7 +352,7 @@ public class WorkspaceGroup extends BaseEntity
                 name.put("icon", new Icon(variable.getIcon(), variable.getIconColor()));
             }
             this.restriction = variable.getRestriction().name().toLowerCase();
-            Object val = entityContext.var().get(variable.getVariableId());
+            Object val = entityContext.var().get(variable.getEntityID());
             this.value = generateValue(val, variable);
             this.backup = nullIfFalse(variable.isBackup());
             this.quota = variable.getQuota();

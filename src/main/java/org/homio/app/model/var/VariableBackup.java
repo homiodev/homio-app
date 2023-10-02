@@ -1,9 +1,9 @@
 package org.homio.app.model.var;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.Table;
+import jakarta.persistence.ManyToOne;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -11,22 +11,22 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(indexes = {@Index(name = "vc", columnList = "vid,created")})
 @NoArgsConstructor
 public class VariableBackup {
 
     @Id
     private Integer id;
 
-    private String vid;
-
     private long created;
 
     private String value;
 
-    public VariableBackup(Integer id, String variableId, WorkspaceVariableMessage message) {
+    @ManyToOne(fetch = FetchType.LAZY, targetEntity = WorkspaceVariable.class)
+    private WorkspaceVariable workspaceVariable;
+
+    public VariableBackup(Integer id, WorkspaceVariable variable, WorkspaceVariableMessage message) {
         this.id = id;
-        this.vid = variableId;
+        this.workspaceVariable = variable;
         this.created = message.getCreated();
         this.value = message.getValue().toString();
     }

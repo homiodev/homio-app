@@ -48,15 +48,17 @@ create table if not exists setting_entity
 
 create table if not exists variable_backup
 (
-    id      integer not null,
-    created bigint  not null,
-    value   varchar(255),
-    vid     varchar(128),
-    primary key (id)
+    id                              integer not null,
+    created bigint                  not null,
+    value                           varchar(32),
+    workspace_variable_entityid     varchar(128),
+    primary key (id),
+    constraint vb_2_v
+    foreign key (workspace_variable_entityid) references workspace_variable
     );
 
 create index if not exists vc
-    on variable_backup (vid, created);
+    on variable_backup (workspace_variable_entityid, created);
 
 create table if not exists widget_tab_entity
 (
@@ -128,7 +130,6 @@ create table if not exists workspace_group
     update_time     timestamp(6) not null,
     version         integer,
     description     varchar(255),
-    group_id        varchar(255) not null,
     hidden          boolean      not null,
     icon            varchar(32),
     icon_color      varchar(32),
@@ -136,8 +137,6 @@ create table if not exists workspace_group
     locked          boolean      not null,
     parent_entityid varchar(128),
     primary key (entityid),
-    constraint uk_i4c44wwkkvfr1nqk4qob5wc9u
-    unique (group_id),
     constraint fkfqeg6kt1gyvq0bea6u2gqvmwn
     foreign key (parent_entityid) references workspace_group
     );
@@ -158,12 +157,9 @@ create table if not exists workspace_variable
     read_only                boolean      not null,
     restriction              varchar(32),
     unit                     varchar(32),
-    variable_id              varchar(128) not null,
     locked boolean not null,
     workspace_group_entityid varchar(128),
     primary key (entityid),
-    constraint uk_ed7bugig9d8vnui1nll862fcx
-    unique (variable_id),
     constraint fkasa2xfl3o3dalxw029mm5702v
     foreign key (workspace_group_entityid) references workspace_group
     );

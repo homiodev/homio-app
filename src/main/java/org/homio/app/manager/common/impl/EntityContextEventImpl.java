@@ -94,9 +94,9 @@ public class EntityContextEventImpl implements EntityContextEvent {
     }
 
     @Override
-    public synchronized void removeEvents(String key, String... additionalKeys) {
-        eventListeners.remove(key);
-        lastValues.remove(key);
+    public synchronized void removeEvents(String discriminator, String... additionalKeys) {
+        eventListeners.remove(discriminator);
+        lastValues.remove(discriminator);
         for (String additionalKey : additionalKeys) {
             eventListeners.remove(additionalKey);
             lastValues.remove(additionalKey);
@@ -220,6 +220,17 @@ public class EntityContextEventImpl implements EntityContextEvent {
         this.entityRemoveListeners.typeListeners.putIfAbsent(entityClass.getName(), new HashMap<>());
         this.entityRemoveListeners.typeListeners.get(entityClass.getName()).put(key, listener);
         return this;
+    }
+
+    @Override
+    public int getEventCount(@NotNull String key) {
+        int count = 0;
+        for (Map<String, Consumer<State>> item : eventListeners.values()) {
+            if (item.containsKey(key)) {
+                count++;
+            }
+        }
+        return count;
     }
 
     @Override
@@ -380,9 +391,9 @@ public class EntityContextEventImpl implements EntityContextEvent {
             baseEntity.setEntityContext(entityContext);
             loadEntityService(entityContext, entity);
             if (persist) {
-                baseEntity.afterUpdate();
-            } else {
                 baseEntity.afterPersist();
+            } else {
+                baseEntity.afterUpdate();
             }
             // corner case if save/update WorkspaceVariable
             if (entity instanceof WorkspaceVariable wv) {
@@ -536,10 +547,6 @@ public class EntityContextEventImpl implements EntityContextEvent {
                 cursor = cursor.getSuperclass();
             }
             return false;
-        }
-
-        public int getCount(String key) {
-            return 0;
         }
 
         private <T extends HasEntityIdentifier> void notifyByType(String name, T saved, T oldEntity) {

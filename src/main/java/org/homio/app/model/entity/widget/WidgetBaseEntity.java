@@ -28,6 +28,7 @@ import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.entity.widget.attributes.HasStyle;
 import org.jetbrains.annotations.NotNull;
@@ -206,5 +207,11 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     @Override
     protected long getChildEntityHashCode() {
         return 0;
+    }
+
+    @Override
+    public void afterUpdate() {
+        super.afterUpdate();
+        ((EntityContextImpl)getEntityContext()).event().removeEvents(getEntityID());
     }
 }

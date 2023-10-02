@@ -1,13 +1,13 @@
 package org.homio.app.model.var;
 
 import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.type.TypeReference;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -15,10 +15,10 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import lombok.Getter;
@@ -98,9 +98,6 @@ public class WorkspaceVariable extends BaseEntity
     @UIField(order = 30)
     private boolean backup = false;
 
-    @Column(unique = true, nullable = false)
-    private String variableId;
-
     private String icon;
 
     private String iconColor;
@@ -116,6 +113,10 @@ public class WorkspaceVariable extends BaseEntity
     @Convert(converter = JSONConverter.class)
     private JSON jsonData = new JSON();
 
+    @JsonIgnore
+    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, mappedBy = "workspaceVariable")
+    private Set<VariableBackup> backups;
+
     private boolean locked;
 
     public WorkspaceVariable(@NotNull WorkspaceGroup workspaceGroup) {
@@ -124,14 +125,13 @@ public class WorkspaceVariable extends BaseEntity
 
     public WorkspaceVariable(String variableId, String variableName, WorkspaceGroup workspaceGroup, VariableType variableType) {
         this(workspaceGroup);
-        this.variableId = variableId;
         this.restriction = variableType;
         this.setName(variableName);
         this.setEntityID(variableId);
     }
 
     public int getBackupStorageCount() {
-        return backup ? getEntityContext().getBean(VariableBackupRepository.class).count(variableId) : 0;
+        return backup ? getEntityContext().getBean(VariableBackupRepository.class).count(this) : 0;
     }
 
     @Override
@@ -167,7 +167,7 @@ public class WorkspaceVariable extends BaseEntity
 
     @Override
     public boolean isDisableDelete() {
-        return locked || getJsonData("dis_del", false);
+        return locked || getJsonData("dis_del", false) || getEntityContext().event().getEventCount(getEntityID()) > 0;
     }
 
     @Override
@@ -187,8 +187,8 @@ public class WorkspaceVariable extends BaseEntity
     }
 
     @Override
-    public void addUpdateValueListener(EntityContext entityContext, String key, JSONObject dynamicParameters, Consumer<State> listener) {
-        entityContext.event().addEventListener(variableId, key, listener);
+    public void addUpdateValueListener(EntityContext entityContext, String discriminator, JSONObject dynamicParameters, Consumer<State> listener) {
+        entityContext.event().addEventListener(getEntityID(), discriminator, listener);
     }
 
     public String getParentId() {
@@ -256,18 +256,19 @@ public class WorkspaceVariable extends BaseEntity
 
     @Override
     public @NotNull List<Object[]> getTimeValueSeries(PeriodRequest request) {
-        return ((EntityContextVarImpl) request.getEntityContext().var()).getTimeSeries(variableId, request.getFromTime(), request.getToTime());
+        return ((EntityContextVarImpl) request.getEntityContext().var())
+            .getTimeSeries(getEntityID(), request.getFromTime(), request.getToTime());
     }
 
     @Override
     public Object getStatusValue(GetStatusValueRequest request) {
-        return request.getEntityContext().var().get(variableId);
+        return request.getEntityContext().var().get(getEntityID());
     }
 
     @Override
     public SourceHistory getSourceHistory(GetStatusValueRequest request) {
         SourceHistory sourceHistory = ((EntityContextVarImpl) request.getEntityContext().var())
-                .getSourceHistory(variableId)
+            .getSourceHistory(getEntityID())
                 .setIcon(new Icon(icon, iconColor))
                 .setName(getName())
                 .setDescription(getDescription());
@@ -276,6 +277,8 @@ public class WorkspaceVariable extends BaseEntity
                 "Backup:" + backup,
                 "Quota:" + quota,
                 "Type:" + restriction.name().toLowerCase(),
+                "Locked:" + locked,
+                "Listeners:" + getEntityContext().event().getEventCount(getEntityID()),
                 "Writable:" + !readOnly)));
         if (unit != null) {
             sourceHistory.getAttributes().add("Unit: " + unit);
@@ -295,26 +298,28 @@ public class WorkspaceVariable extends BaseEntity
 
     @Override
     public List<SourceHistoryItem> getSourceHistoryItems(GetStatusValueRequest request, int from, int count) {
-        return ((EntityContextVarImpl) request.getEntityContext().var()).getSourceHistoryItems(variableId, from, count);
+        return ((EntityContextVarImpl) request.getEntityContext().var()).getSourceHistoryItems(getEntityID(), from, count);
     }
 
     @Override
     public void setStatusValue(SetStatusValueRequest request) {
         ((EntityContextVarImpl) request.getEntityContext().var())
-            .set(variableId, request.getValue(), true);
+            .set(getEntityID(), request.getValue(), true);
     }
 
     @Override
     public String getStatusValueRepresentation(EntityContext entityContext) {
-        Object value = entityContext.var().get(variableId);
-        String str =
-                value == null ? null :
-                        value instanceof Double ? format("%.2f", (Double) value) :
-                                value instanceof Float ? format("%.2f", (Float) value) : value.toString();
+        Object value = entityContext.var().get(getEntityID());
+        String str = value == null ? null : formatVariableValue(value);
         if (isEmpty(unit)) {
             return str;
         }
         return format("%s <small>%s</small>", defaultString(str, "-"), unit);
+    }
+
+    private static String formatVariableValue(Object value) {
+        return value instanceof Double ? format("%.2f", (Double) value) :
+            value instanceof Float ? format("%.2f", (Float) value) : value.toString();
     }
 
     @Override
@@ -344,20 +349,13 @@ public class WorkspaceVariable extends BaseEntity
         @NotNull Consumer<WorkspaceVariable> builder,
         @NotNull VariableType variableType) {
         long entityHashCode = getEntityHashCode();
-        String varId = Objects.toString(variableId, String.valueOf(System.currentTimeMillis()));
         this.setName(variableName);
         this.restriction = variableType;
-        this.setEntityID(varId);
-        this.variableId = varId;
-        this.restriction = variableType;
+        if(variableId != null) {
+            this.setEntityID(variableId);
+        }
         builder.accept(this);
         return entityHashCode != getEntityHashCode();
-    }
-
-    @Override
-    public void beforePersist() {
-        setVariableId(defaultIfEmpty(variableId, "" + System.currentTimeMillis()));
-        setEntityID(this.getVariableId());
     }
 
     @Override
@@ -368,7 +366,6 @@ public class WorkspaceVariable extends BaseEntity
         result = 31 * result + (readOnly ? 1 : 0);
         result = 31 * result + (backup ? 1 : 0);
         result = 31 * result + (locked ? 1 : 0);
-        result = 31 * result + (variableId != null ? variableId.hashCode() : 0);
         result = 31 * result + (icon != null ? icon.hashCode() : 0);
         result = 31 * result + (iconColor != null ? iconColor.hashCode() : 0);
         result = 31 * result + (unit != null ? unit.hashCode() : 0);
