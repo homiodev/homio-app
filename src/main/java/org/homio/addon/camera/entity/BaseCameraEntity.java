@@ -314,7 +314,6 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
             if (!getHlsHighResolution().isEmpty()) {
                 m3u8.addChild(of("video_high.m3u8", "HLS [%s]".formatted(getHlsHighResolution()))
                     .setIcon(FFMPEGFormat.HLS.getIconModel()));
-                ;
             }
             if (mediaMTXReady) {
                 m3u8.addChild(OptionModel.of("mediamtx/index.m3u8", "MediaMTX HLS")

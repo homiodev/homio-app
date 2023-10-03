@@ -364,7 +364,7 @@ public class UIFieldUtils {
         }
 
         if (entityUIMetaData.getType() != null) {
-            UIFieldSelectionUtil.handleFieldSelections(fieldContext, entityContext, jsonTypeMetadata);
+            UIFieldSelectionUtil.handleFieldSelections(fieldContext, jsonTypeMetadata);
         }
 
         var fieldMarkers = fieldContext.getDeclaredAnnotation(UIFieldMarkers.class);

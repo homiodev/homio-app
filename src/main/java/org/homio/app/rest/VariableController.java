@@ -16,7 +16,6 @@ import java.util.stream.IntStream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.apache.commons.lang3.tuple.Pair;
@@ -111,7 +110,6 @@ public class VariableController {
     }
 
     // show all read/write variables
-    @SneakyThrows
     @GetMapping("/values")
     public List<OptionModel> getWorkspaceVariableValues() {
         List<OptionModel> options = new ArrayList<>();

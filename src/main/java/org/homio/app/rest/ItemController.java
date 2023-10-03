@@ -91,6 +91,7 @@ import org.homio.app.manager.common.EntityManager;
 import org.homio.app.model.UIHideEntityIfFieldNotNull;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.rest.EntityUIMetaData;
+import org.homio.app.model.var.WorkspaceVariable;
 import org.homio.app.repository.AbstractRepository;
 import org.homio.app.rest.UIFieldBuilderImpl.FieldBuilderImpl;
 import org.homio.app.setting.system.SystemClearCacheButtonSetting;
@@ -393,13 +394,16 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @GetMapping("/type/{type}/options")
     public List<OptionModel> getItemOptionsByType(@PathVariable("type") String type) {
         putTypeToEntityIfNotExists(type);
-        List<OptionModel> list = new ArrayList<>();
+        List<BaseEntity> entities = new ArrayList<>();
         for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
-            list.addAll(OptionModel.entityList(entityContext.findAll(aClass)));
+            for (BaseEntity entity : entityContext.findAll(aClass)) {
+                entities.add(entity);
+            }
         }
-        Collections.sort(list);
-
-        return list;
+        List<OptionModel> options = new ArrayList<>();
+        UIFieldSelectionUtil.assembleItemsToOptions(options, null,
+            entities, entityContext, null);
+        return UIFieldSelectionUtil.groupingOptions(UIFieldSelectionUtil.filterOptions(options));
     }
 
     @PostMapping(value = "/{entityID}/context/action")

@@ -36,6 +36,8 @@ import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.HasStatusAndMsg;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.entity.widget.ability.SelectDataSourceDescription;
@@ -43,6 +45,7 @@ import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
+import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.selection.UIFieldBeanSelection;
 import org.homio.api.ui.field.selection.UIFieldBeanSelection.BeanSelectionCondition;
 import org.homio.api.ui.field.selection.UIFieldBeanSelection.UIFieldListBeanSelection;
@@ -62,6 +65,7 @@ import org.homio.api.util.Lang;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.impl.EntityContextServiceImpl;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @Log4j2
 public final class UIFieldSelectionUtil {
@@ -97,7 +101,8 @@ public final class UIFieldSelectionUtil {
             "Unable to find select handler for entity type: " + classEntity.getClass().getSimpleName() + " and fieldName: " + fieldName);
     }
 
-    public static List<OptionModel> groupingOptions(List<OptionModel> options) throws JsonProcessingException {
+    @SneakyThrows
+    public static List<OptionModel> groupingOptions(List<OptionModel> options) {
         List<OptionModel> result = new ArrayList<>();
         Map<SelectionParent, List<OptionModel>> groupedModels = buildGroupOptionsBySelectionParent(options, result);
         Map<String, OptionModel> parentModels = new HashMap<>();
@@ -118,8 +123,12 @@ public final class UIFieldSelectionUtil {
         return options;
     }
 
-    public static void assembleItemsToOptions(List<OptionModel> list, Class<? extends HasEntityIdentifier> sourceClassType,
-        List<? extends BaseEntity> items, EntityContext entityContext, Object classEntityForDynamicOptionLoader) {
+    public static void assembleItemsToOptions(
+        @NotNull List<OptionModel> list,
+        @Nullable Class<? extends HasEntityIdentifier> sourceClassType,
+        @NotNull List<? extends BaseEntity> items,
+        @NotNull EntityContext entityContext,
+        @Nullable Object classEntityForDynamicOptionLoader) {
         for (BaseEntity baseEntity : items) {
             String lastValue = tryFetchCurrentValueFromEntity(baseEntity, entityContext);
             String title = baseEntity.getTitle();
@@ -127,17 +136,25 @@ public final class UIFieldSelectionUtil {
             if (lastValue != null) {
                 optionModel.json(jsonNodes -> jsonNodes.put("cv", lastValue));
             }
+            if (baseEntity instanceof HasStatusAndMsg status) {
+                optionModel.setStatus(status);
+            }
+            baseEntity.configureOptionModel(optionModel);
             if (baseEntity instanceof UIFieldDynamicSelection.SelectionConfiguration conf) {
                 optionModel.setIcon(conf.selectionIcon().getIcon());
                 optionModel.setColor(conf.selectionIcon().getColor());
+            } else if (baseEntity.getClass().isAnnotationPresent(UISidebarChildren.class)) {
+                UISidebarChildren sc = baseEntity.getClass().getAnnotation(UISidebarChildren.class);
+                optionModel.setIcon(sc.icon());
+                optionModel.setColor(sc.color());
             }
 
-            updateSelectedOptionModel(baseEntity, classEntityForDynamicOptionLoader, sourceClassType, optionModel, "entityByClass");
+            updateSelectedOptionModel(baseEntity, classEntityForDynamicOptionLoader, sourceClassType, optionModel);
             list.add(optionModel);
         }
     }
 
-    static void handleFieldSelections(UIFieldUtils.UIFieldContext uiFieldContext, EntityContext entityContext, ObjectNode jsonTypeMetadata) {
+    static void handleFieldSelections(UIFieldUtils.UIFieldContext uiFieldContext, ObjectNode jsonTypeMetadata) {
         List<OptionModel> selectOptions = new ArrayList<>();
 
         UIFieldListBeanSelection selectionList = uiFieldContext.getDeclaredAnnotation(UIFieldListBeanSelection.class);
@@ -256,8 +273,6 @@ public final class UIFieldSelectionUtil {
         return filterAndGroupingOptions(options);
     }
 
-    @SneakyThrows
-
     private static List<OptionModel> filterAndGroupingOptions(List<OptionModel> options) {
         // filter options
         options = filterOptions(options);
@@ -350,7 +365,7 @@ public final class UIFieldSelectionUtil {
                     }
                 }
                 OptionModel optionModel = OptionModel.of(entry.getKey());
-                updateSelectedOptionModel(bean, null, selection.value(), optionModel, SelectHandler.bean.name());
+                updateSelectedOptionModel(bean, null, selection.value(), optionModel);
                 selectOptions.add(optionModel);
             }
         }
@@ -366,8 +381,7 @@ public final class UIFieldSelectionUtil {
         return subMeta;
     }
 
-    public static void updateSelectedOptionModel(Object target, Object requestedEntity, Class<?> sourceClassType, OptionModel optionModel,
-        String selectHandler) {
+    public static void updateSelectedOptionModel(Object target, Object requestedEntity, Class<?> sourceClassType, OptionModel optionModel) {
         setDescription(target, sourceClassType, optionModel);
 
         SelectionParent item = new SelectionParent();
@@ -410,17 +424,22 @@ public final class UIFieldSelectionUtil {
         }
     }
 
-    private static void setDescription(Object target, Class<?> sourceClassType, OptionModel optionModel) {
-        List<Method> classDescriptionMethods = MethodUtils.getMethodsListWithAnnotation(
-            sourceClassType, SelectDataSourceDescription.class);
-        Method descriptionMethod = classDescriptionMethods.isEmpty() ? null : classDescriptionMethods.iterator().next();
-        String entityTypeDescription;
-        try {
-            entityTypeDescription = descriptionMethod == null ? null : (String) descriptionMethod.invoke(target);
-            if (entityTypeDescription != null) {
-                optionModel.setDescription(Lang.getServerMessage(entityTypeDescription));
+    private static void setDescription(@NotNull Object target, @Nullable Class<?> sourceClassType, @NotNull OptionModel optionModel) {
+        String entityTypeDescription = null;
+        if (sourceClassType != null) {
+            List<Method> classDescriptionMethods = MethodUtils.getMethodsListWithAnnotation(
+                sourceClassType, SelectDataSourceDescription.class);
+            Method descriptionMethod = classDescriptionMethods.isEmpty() ? null : classDescriptionMethods.iterator().next();
+            try {
+                entityTypeDescription = descriptionMethod == null ? null : (String) descriptionMethod.invoke(target);
+            } catch (Exception ignore) {
             }
-        } catch (Exception ignore) {
+        }
+        if (StringUtils.isEmpty(entityTypeDescription) && target instanceof DeviceBaseEntity dbe) {
+            entityTypeDescription = dbe.getDescription();
+        }
+        if (entityTypeDescription != null) {
+            optionModel.setDescription(Lang.getServerMessage(entityTypeDescription));
         }
     }
 

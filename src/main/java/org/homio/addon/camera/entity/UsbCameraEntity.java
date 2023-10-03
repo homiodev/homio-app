@@ -10,6 +10,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.VideoInputDevice;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.OptionModel;
+import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;
@@ -23,6 +24,7 @@ import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("unused")
 @Entity
+@UISidebarChildren(icon = "fab fa-usb", color = "#AE21B8")
 public class UsbCameraEntity extends BaseCameraEntity<UsbCameraEntity, UsbCameraService> {
 
     @Override
