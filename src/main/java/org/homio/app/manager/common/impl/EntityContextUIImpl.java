@@ -5,6 +5,7 @@ import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.pivovarit.function.ThrowingBiFunction;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -16,7 +17,6 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -30,12 +30,13 @@ import org.homio.api.EntityContextUI;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.BaseEntityIdentifier;
-import org.homio.api.entity.HasFirmwareVersion;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
+import org.homio.api.entity.version.HasFirmwareVersion;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
+import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.setting.SettingPluginButton;
 import org.homio.api.ui.UIActionHandler;
@@ -746,8 +747,8 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
 
         @Override
-        public @NotNull NotificationBlockBuilder setUpdatable(@NotNull BiFunction<ProgressBar, String, ActionResponseModel> updateHandler,
-            @NotNull List<String> versions) {
+        public @NotNull NotificationBlockBuilder setUpdatable(@NotNull ThrowingBiFunction<ProgressBar, String, ActionResponseModel, Exception> updateHandler,
+            @NotNull List<OptionModel> versions) {
             notificationBlock.setUpdatable(updateHandler, versions);
             return this;
         }

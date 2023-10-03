@@ -35,6 +35,7 @@ import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.log.HasEntitySourceLog;
 import org.homio.api.entity.types.MediaEntity;
+import org.homio.api.entity.version.HasFirmwareVersion;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.FileContentType;
@@ -74,6 +75,7 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
     StreamHLS,
     StreamDASH,
     StreamSnapshot,
+    HasFirmwareVersion,
     DeviceEndpointsBehaviourContract,
     EntityService<S, T> {
 
@@ -109,9 +111,7 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
 
     }
 
-    @UIField(order = 1, hideOnEmpty = true, hideInEdit = true)
-    @UIFieldGroup(value = "HARDWARE", order = 10, borderColor = Color.RED)
-    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    @Override
     public String getFirmwareVersion() {
         return getJsonData("fv");
     }

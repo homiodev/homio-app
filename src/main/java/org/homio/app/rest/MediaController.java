@@ -227,8 +227,8 @@ public class MediaController {
     public ResponseEntity<InputStreamResource> getImage(
         WebRequest webRequest,
         @PathVariable String entityID,
-        @RequestParam("fs") String fs) {
-        String eTag = String.valueOf(entityID.hashCode());
+        @RequestParam(value = "fs", required = false) String fs) {
+        String eTag = String.valueOf((entityID + StringUtils.trimToEmpty(fs)).hashCode());
         if (webRequest.checkNotModified(eTag)) {
             return null;
         }

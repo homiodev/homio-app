@@ -9,19 +9,21 @@ import jakarta.persistence.Entity;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
-import org.homio.api.entity.HasFirmwareVersion;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContractStub;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.MediaEntity;
+import org.homio.api.entity.version.HasGitHubFirmwareVersion;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.FileContentType;
 import org.homio.api.model.FileModel;
 import org.homio.api.model.Icon;
+import org.homio.api.model.OptionModel;
 import org.homio.api.model.endpoint.BaseDeviceEndpoint;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.repository.GitHubProject;
@@ -37,6 +39,7 @@ import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.service.video.MediaMTXService;
+import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -44,7 +47,7 @@ import org.json.JSONObject;
 @Entity
 @UISidebarChildren(icon = "fas fa-square-rss", color = "#308BB3", allowCreateItem = false)
 public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
-    HasFirmwareVersion, EntityService<MediaMTXService, MediaMTXEntity>,
+    HasGitHubFirmwareVersion, EntityService<MediaMTXService, MediaMTXEntity>,
     DeviceEndpointsBehaviourContractStub {
 
     public static final int RTSP_PORT = 8554;
@@ -106,8 +109,13 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     }
 
     @Override
-    public String getFirmwareVersion() {
-        return mediamtxGitHub.getInstalledVersion(getEntityContext());
+    public @NotNull ActionResponseModel update(@NotNull ProgressBar progressBar, @NotNull String version) {
+        return getService().updateFirmware(progressBar, version);
+    }
+
+    @Override
+    public @NotNull GitHubProject getGitHubProject() {
+        return mediamtxGitHub;
     }
 
     @Override
@@ -129,7 +137,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
 
     @Override
     public long getEntityServiceHashCode() {
-        return getJsonDataHashCode("ll", "rt", "wt", "rbc", "umps");
+        return getJsonDataHashCode("start", "ll", "rt", "wt", "rbc", "umps");
     }
 
     @UIField(order = 1)

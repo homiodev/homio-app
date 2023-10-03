@@ -59,6 +59,7 @@ import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.log.HasEntitySourceLog;
+import org.homio.api.entity.version.HasFirmwareVersion;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
@@ -166,33 +167,33 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIContextMenuAction.class)) {
             UIContextMenuAction menuAction = method.getDeclaredAnnotation(UIContextMenuAction.class);
             if (menuAction.value().equals(request.getEntityID())) {
-                return executeMethodAction(method, actionHolder, entityContext, actionEntity, request.metadata);
+                return executeMethodAction(method, actionHolder, entityContext, actionEntity, request.params);
             }
         }
         for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIContextMenuUploadAction.class)) {
             UIContextMenuUploadAction menuAction = method.getDeclaredAnnotation(UIContextMenuUploadAction.class);
             if (menuAction.value().equals(request.getEntityID())) {
-                return executeMethodAction(method, actionHolder, entityContext, actionEntity, request.metadata);
+                return executeMethodAction(method, actionHolder, entityContext, actionEntity, request.params);
             }
         }
         // in case when action attached to field or method
-        if (request.metadata != null && request.metadata.has("field")) {
-            String fieldName = request.metadata.getString("field");
+        if (request.params != null && request.params.has("field")) {
+            String fieldName = request.params.getString("field");
 
             AccessibleObject field = Optional.ofNullable((AccessibleObject) FieldUtils.getField(actionHolder.getClass(), fieldName, true))
                                              .orElse(InternalUtil.findMethodByName(actionHolder.getClass(), fieldName));
             if (field != null) {
                 for (UIActionButton actionButton : field.getDeclaredAnnotationsByType(UIActionButton.class)) {
-                    if (actionButton.name().equals(request.metadata.get("action"))) {
-                        return CommonUtils.newInstance(actionButton.actionHandler()).handleAction(entityContext, request.metadata);
+                    if (actionButton.name().equals(request.params.get("action"))) {
+                        return CommonUtils.newInstance(actionButton.actionHandler()).handleAction(entityContext, request.params);
                     }
                 }
                 // case when <a> or <button> direct from en.json or from text. call custom handler
-                return actionEntity.handleTextFieldAction(fieldName, request.metadata);
+                return actionEntity.handleTextFieldAction(fieldName, request.params);
             }
         }
         if (actionHolder instanceof HasDynamicContextMenuActions) {
-            return ((HasDynamicContextMenuActions) actionHolder).handleAction(entityContext, request.getEntityID(), request.metadata);
+            return ((HasDynamicContextMenuActions) actionHolder).handleAction(entityContext, request.getEntityID(), request.params);
         }
         throw new IllegalArgumentException("Unable to find action: <" + request.getEntityID() + "> for model: " + actionHolder);
     }
@@ -262,6 +263,42 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
 
         return UIFieldSelectionUtil.loadOptions(classEntity, entityContext, fieldName, null, optionsRequest.getSelectType(), optionsRequest.getDeps());
+    }
+
+    @GetMapping("/{entityID}/firmwareUpdate/{version}/readme")
+    public String getFirmwareUpdateReadme(
+        @PathVariable("entityID") String entityID,
+        @PathVariable("version") String version) {
+        BaseEntity entity = entityContext.getEntity(entityID);
+        if (!(entity instanceof HasFirmwareVersion firmware)) {
+            throw new ServerException("Unable to update non HasFirmwareVersion entity");
+        }
+        return firmware.getFirmwareVersionReadme(version);
+    }
+
+    @PostMapping("/{entityID}/firmwareUpdate/{version}")
+    public void updateFirmware(
+        @PathVariable("entityID") String entityID,
+        @PathVariable("version") String version) {
+        BaseEntity entity = entityContext.getEntity(entityID);
+        if (!(entity instanceof HasFirmwareVersion firmware)) {
+            throw new ServerException("Unable to update non HasFirmwareVersion entity");
+        }
+        if (firmware.isFirmwareUpdating()) {
+            throw new ServerException("W.ERROR.UPDATE_IN_PROGRESS");
+        }
+        if (version.equals(firmware.getFirmwareVersion())) {
+            throw new ServerException("Entity: %s already has version: %s".formatted(entity.getTitle(), version));
+        }
+        String key = "Update " + entity.getTitle() + "/" + version;
+        entityContext.ui().runWithProgress(key, false, progressBar ->
+                firmware.update(progressBar, version),
+            ex -> {
+                if (ex != null) {
+                    entityContext.ui().sendErrorMessage(ex);
+                }
+                entityContext.ui().updateItem(entity);
+            });
     }
 
     @GetMapping("/options")
@@ -385,11 +422,11 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             }
 
             BaseEntity entity = entityContext.getEntityRequire(entityID);
-            if (request.metadata == null) {
-                request.metadata = new JSONObject();
+            if (request.params == null) {
+                request.params = new JSONObject();
             }
-            request.metadata.put("files", files);
-            request.metadata.put("entityID", entityID);
+            request.params.put("files", files);
+            request.params.put("entityID", entityID);
             return executeAction(request, entity, entity);
         } catch (Exception ex) {
             log.error("Error while execute action: {}", CommonUtils.getErrorMessage(ex));
@@ -412,7 +449,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public ActionResponseModel notificationAction(@PathVariable("entityID") String entityID,
         @RequestBody ActionModelRequest request) throws Exception {
-        return entityContext.ui().handleNotificationAction(entityID, request.entityID, request.metadata);
+        return entityContext.ui().handleNotificationAction(entityID, request.entityID, request.params);
     }
 
     @GetMapping("/{type}/actions")
@@ -941,7 +978,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     public static class ActionModelRequest {
 
         private String entityID;
-        private JSONObject metadata;
+        private JSONObject params;
     }
 
     @Getter

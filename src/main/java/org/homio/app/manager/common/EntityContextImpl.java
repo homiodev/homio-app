@@ -38,6 +38,7 @@ import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Icon;
+import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.repository.GitHubProject;
 import org.homio.api.service.scan.BeansItemsDiscovery;
@@ -691,7 +692,7 @@ public class EntityContextImpl implements EntityContext {
                             restartApplication();
                             return null;
                         }, null),
-                        appGitHub.getReleasesSince(installedVersion, false));
+                    OptionModel.list(appGitHub.getReleasesSince(installedVersion, false)));
             }
             builder.fireOnFetch(() -> {
                 long runDuration = TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - START_TIME);

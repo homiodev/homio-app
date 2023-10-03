@@ -56,8 +56,8 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         optionModel.setDescription((user.isEmpty() ? "" : user + "@") + getHost() + ":" + getPort());
     }
 
-    @UIField(order = 1, inlineEditWhenEmpty = true, required = true)
-    @UIFieldGroup(order = 1, value = "GENERAL")
+    @UIField(order = 20, inlineEditWhenEmpty = true, required = true)
+    @UIFieldGroup("GENERAL")
     public String getHost() {
         return getJsonData("host");
     }
@@ -66,7 +66,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         setJsonData("host", value);
     }
 
-    @UIField(order = 2)
+    @UIField(order = 25)
     @UIFieldGroup("GENERAL")
     public int getPort() {
         return getJsonData("port", 22);
@@ -76,7 +76,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         setJsonData("port", value);
     }
 
-    @UIField(order = 3)
+    @UIField(order = 30)
     @UIFieldSlider(min = 1, max = 60)
     @UIFieldGroup("GENERAL")
     public int getConnectionTimeout() {
@@ -88,7 +88,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @UIField(order = 1, inlineEditWhenEmpty = true)
-    @UIFieldGroup(order = 2, value = "SECURITY", borderColor = "#23ADAB")
+    @UIFieldGroup(order = 15, value = "SECURITY", borderColor = "#23ADAB")
     public String getUser() {
         return getJsonData("user", "");
     }

@@ -34,13 +34,18 @@ import org.homio.api.EntityContextBGP.ProcessContext;
 import org.homio.api.EntityContextMedia.MediaMTXInfo;
 import org.homio.api.EntityContextMedia.MediaMTXSource;
 import org.homio.api.exception.ServerException;
+import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.HasEntityIdentifier;
+import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.model.UpdatableValue;
 import org.homio.api.service.EntityService.ServiceInstance;
+import org.homio.api.ui.UI.Color;
+import org.homio.api.util.Lang;
 import org.homio.app.model.entity.MediaMTXEntity;
 import org.homio.app.model.entity.MediaMTXEntity.LogLevel;
 import org.homio.hquery.Curl;
+import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -56,8 +61,8 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
 
     private ProcessContext processContext;
     private ObjectNode configuration;
-    @Getter
-    private boolean isRunningLocally;
+
+    private @Getter boolean isRunningLocally;
 
     public MediaMTXService(@NotNull EntityContext entityContext, @NotNull MediaMTXEntity entity) {
         super(entityContext, entity, true);
@@ -171,6 +176,33 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         return new MediaMTXInfoImpl(path, false, false);
     }
 
+    @SneakyThrows
+    public @NotNull ActionResponseModel updateFirmware(ProgressBar progressBar, String version) {
+        return mediamtxGitHub.updateProject("mediamtx", progressBar, true, projectUpdate -> {
+            dispose(null);
+            Thread.sleep(1000); // wait to finish process. not sure if it's need
+
+            try {
+                projectUpdate.getGitHubProject().deleteProject();
+            } catch (Exception ex) {
+                getEntityContext().ui().sendErrorMessage(
+                    Lang.getServerMessage("ZIGBEE.ERROR.DELETE",
+                        projectUpdate.getGitHubProject().getLocalProjectPath().toString()));
+                throw ex;
+            }
+            mediamtxGitHub.downloadReleaseAndInstall(entityContext, version, (progress, message, error) ->
+                progressBar.progress(progress, message));
+            if (projectUpdate.isHasBackup()) {
+                projectUpdate.copyFromBackup(Set.of(Path.of("mediamtx_initial.yml"), Path.of("mediamtx.yml")));
+            } else {
+                mediamtxGitHub.backup(Paths.get("mediamtx.yml"), Paths.get("mediamtx_initial.yml"));
+            }
+            // fire restart service
+            initialize();
+            return ActionResponseModel.success();
+        }, null);
+    }
+
     @Override
     protected void initialize() {
         destroy();
@@ -198,11 +230,14 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     }
 
     private void startLocalProcess() {
+        log.info("Starting MediaMTX");
         // not need internet because we should fail create service if no internet
         if (!mediamtxGitHub.isLocalProjectInstalled()) {
             mediamtxGitHub.installLatestRelease(entityContext);
             mediamtxGitHub.backup(Paths.get("mediamtx.yml"), Paths.get("mediamtx_initial.yml"));
         }
+
+        //updateNotificationBlock();
 
         String processStr = mediamtxGitHub.getLocalProjectPath().resolve("mediamtx")
             + " " + mediamtxGitHub.getLocalProjectPath().resolve("mediamtx.yml");
@@ -243,6 +278,20 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
             })
             .execute(processStr);
     }
+
+    /*private void updateNotificationBlock() {
+        entityContext.ui().addNotificationBlock(entityID, "MediaMTX", new Icon("fas fa-square-rss", "#308BB3"), builder -> {
+            builder.setStatus(entity.getStatus());
+            builder.linkToEntity(entity);
+            builder.setUpdatable(entity);
+
+            if (entity.getStatus().isOnline()) {
+                builder.addInfo("ACTION.SUCCESS", new Icon("fas fa-seedling", Color.GREEN));
+            } else {
+                builder.addErrorStatusInfo(entity.getStatusMessage());
+            }
+        });
+    }*/
 
     @SneakyThrows
     private void syncConfiguration() {

@@ -115,7 +115,7 @@ public class AddonService implements ContextCreated, ContextRefreshed {
     @SneakyThrows
     public @Nullable InputStream getImageStream(String addonID) {
         AddonEntrypoint addonEntrypoint = getAddon(addonID.contains("-") ? addonID.substring(0, addonID.indexOf("-")) : addonID);
-        URL imageUrl = addonEntrypoint.getResource(addonID + ".png");
+        URL imageUrl = addonEntrypoint.getResource("images/%s.png".formatted(addonID));
         if (imageUrl == null) {
             imageUrl = addonEntrypoint.getAddonImageURL();
         }

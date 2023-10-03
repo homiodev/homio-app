@@ -33,6 +33,8 @@ public class FileSystemService implements ContextCreated, ContextRefreshed {
             e -> findAllFileSystems(this.entityContext));
         this.entityContext.event().addEntityCreateListener(BaseFileSystemEntity.class, "fs-create",
             e -> findAllFileSystems(this.entityContext));
+        this.entityContext.event().addEntityUpdateListener(BaseFileSystemEntity.class, "fs-update",
+            e -> findAllFileSystems(this.entityContext));
         entityContext.setting().listenValue(ConsoleFMClearCacheButtonSetting.class, "fs-cache",
             jsonObject -> {
                 for (BaseFileSystemEntity<?, ?> fileSystem : fileSystems) {
