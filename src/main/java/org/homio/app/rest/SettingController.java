@@ -19,6 +19,7 @@ import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.spring.ContextRefreshed;
+import org.homio.app.utils.OptionUtil;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -138,7 +139,7 @@ public class SettingController implements ContextRefreshed {
 
     @GetMapping("/name")
     public List<OptionModel> getSettingNames() {
-        return OptionModel.entityList(entityContext.findAll(SettingEntity.class));
+        return OptionUtil.buildOptions(entityContext.findAll(SettingEntity.class), entityContext);
     }
 
     public List<SettingEntity> getSettings() {

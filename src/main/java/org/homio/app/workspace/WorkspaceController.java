@@ -3,7 +3,6 @@ package org.homio.app.workspace;
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -17,7 +16,7 @@ import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.WorkspaceEntity;
 import org.homio.app.model.var.WorkspaceGroup;
 import org.homio.app.model.var.WorkspaceVariable;
-import org.homio.app.repository.device.WorkspaceRepository;
+import org.homio.app.utils.OptionUtil;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -36,7 +35,6 @@ public class WorkspaceController {
 
     private final EntityContextImpl entityContext;
     private final WorkspaceService workspaceService;
-    private final WorkspaceRepository workspaceRepository;
 
     @GetMapping("/extension")
     public List<Scratch3ExtensionImpl> getExtensions() {
@@ -96,9 +94,7 @@ public class WorkspaceController {
 
     @GetMapping("/tab")
     public List<OptionModel> getWorkspaceTabs() {
-        List<WorkspaceEntity> tabs = entityContext.findAll(WorkspaceEntity.class);
-        Collections.sort(tabs);
-        return OptionModel.entityList(tabs);
+        return OptionUtil.buildOptions(entityContext.findAll(WorkspaceEntity.class), entityContext);
     }
 
     @SneakyThrows

@@ -279,8 +279,7 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
         setJsonData(ENDPOINT_AUDIO_THRESHOLD, value);
     }
 
-    @UIField(order = 300, hideInView = true)
-    @UIFieldGroup(value = "STREAMING", order = 10, borderColor = "#59B8AD")
+    @JsonIgnore
     public boolean isHasAudioStream() {
         return getJsonData("hasAudioStream", false);
     }

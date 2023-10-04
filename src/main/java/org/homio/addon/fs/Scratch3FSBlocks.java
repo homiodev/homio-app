@@ -3,8 +3,8 @@ package org.homio.addon.fs;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
+import static org.homio.api.util.CommonUtils.TIKA;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
-import static org.homio.app.utils.InternalUtil.TIKA;
 import static org.springframework.http.MediaType.TEXT_PLAIN_VALUE;
 
 import java.io.InputStream;

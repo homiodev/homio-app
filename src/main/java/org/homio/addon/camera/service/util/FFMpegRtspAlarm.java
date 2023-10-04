@@ -15,7 +15,6 @@ import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
 import org.homio.api.state.StringType;
 
-// TODO: not tested
 @Log4j2
 @RequiredArgsConstructor
 public class FFMpegRtspAlarm {
@@ -71,11 +70,12 @@ public class FFMpegRtspAlarm {
         } else {
             filterOptionsList.add("-vn");
         }
-        ffmpegRtspHelper = entityContext.media().buildFFMPEG(videoStreamEntity.getEntityID(), "FFMPEG rtsp alarm",
+        ffmpegRtspHelper = entityContext.media().buildFFMPEG(videoStreamEntity.getEntityID(), "RTSP ALARM",
                 service, FFMPEGFormat.RTSP_ALARMS, inputOptions, input,
                 String.join(" ", filterOptionsList), "-f null -",
                 videoStreamEntity.getUser(),
                 videoStreamEntity.getPassword().asString());
+        ffmpegRtspHelper.
         FFMPEG.run(ffmpegRtspHelper, FFMPEG::startConverting);
         service.setAttribute("FFMPEG_RTSP_ALARM", new StringType(String.join(" ", ffmpegRtspHelper.getCommandArrayList())));
     }

@@ -1,11 +1,11 @@
 package org.homio.addon.camera.service;
 
 import static java.lang.String.join;
-import static org.homio.addon.camera.CameraController.camerasOpenStreams;
 import static org.homio.addon.camera.CameraConstants.AlarmEvents.AudioAlarm;
 import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_MOTION_THRESHOLD;
+import static org.homio.addon.camera.CameraController.camerasOpenStreams;
 import static org.homio.addon.camera.entity.StreamMJPEG.mp4OutOptions;
 import static org.homio.api.model.Status.DONE;
 import static org.homio.api.model.Status.ERROR;
@@ -39,18 +39,18 @@ import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.homio.addon.camera.CameraConstants;
 import org.homio.addon.camera.CameraController;
 import org.homio.addon.camera.CameraController.OpenStreamsContainer;
 import org.homio.addon.camera.ConfigurationException;
-import org.homio.addon.camera.CameraConstants;
 import org.homio.addon.camera.entity.BaseCameraEntity;
-import org.homio.addon.camera.entity.StreamHLS;
 import org.homio.addon.camera.entity.CameraActionsContext;
+import org.homio.addon.camera.entity.StreamHLS;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.service.util.FFMpegRtspAlarm;
 import org.homio.addon.camera.service.util.VideoUrls;
@@ -86,10 +86,11 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.security.authentication.BadCredentialsException;
 
 @SuppressWarnings({"unused"})
-@Log4j2
 public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S extends BaseCameraService<T, S>>
     extends EntityService.ServiceInstance<T> implements CameraActionsContext<T>,
     FFMPEGHandler {
+
+    public static final Logger log = LogManager.getLogger();
 
     public static final Path SHARE_DIR = CommonUtils.getTmpPath();
     public static final ConfigDeviceDefinitionService CONFIG_DEVICE_SERVICE =
@@ -190,6 +191,7 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         super(entityContext, entity, true);
         ffMpegRtspAlarm = new FFMpegRtspAlarm(entityContext, entity);
         camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer(entity));
+        addPrimaryEndpoint();
     }
 
     private void createConnectionJob() {
@@ -256,7 +258,6 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
     public final void initializeCamera() {
         this.urls.clear();
         createOrUpdateDeviceGroup();
-        addPrimaryEndpoint();
         updateEntityStatus(INITIALIZE, null);
         log.info("[{}]: Initialize camera: <{}>", entityID, getEntity());
         camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer(entity));
@@ -659,7 +660,11 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
     }
 
     public void updateLastSeen() {
-        endpoints.get(ENDPOINT_LAST_SEEN).setValue(new DecimalType(System.currentTimeMillis()), true);
+        CameraDeviceEndpoint endpoint = endpoints.get(ENDPOINT_LAST_SEEN);
+        // update not often than 1s
+        if(System.currentTimeMillis() - endpoint.getValue().longValue() > 1000) {
+            endpoint.setValue(new DecimalType(System.currentTimeMillis()), true);
+        }
     }
 
     void recreateFFmpeg() {
@@ -716,13 +721,18 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
             return videoEndpoint;
         });
 
-        endpoints.computeIfAbsent(ENDPOINT_MOTION_THRESHOLD, key ->
-            new CameraDeviceEndpoint(entity, getEntityContext(), key, 0F, 100F, true));
+        endpoints.computeIfAbsent(ENDPOINT_MOTION_THRESHOLD, key -> {
+            CameraDeviceEndpoint endpoint = new CameraDeviceEndpoint(entity, getEntityContext(), key, 0F, 100F, true);
+            endpoint.setValue(new DecimalType(entity.getMotionThreshold()), false);
+            return endpoint;
+        });
 
-        if (entity.isHasAudioStream()) {
-            endpoints.computeIfAbsent(ENDPOINT_AUDIO_THRESHOLD, key ->
-                new CameraDeviceEndpoint(entity, getEntityContext(), key, 0F, 100F, true));
-        }
+        endpoints.computeIfAbsent(ENDPOINT_AUDIO_THRESHOLD, key -> {
+            CameraDeviceEndpoint endpoint = new CameraDeviceEndpoint(entity, getEntityContext(), key, 0F, 100F, true);
+            endpoint.setValue(new DecimalType(entity.getAudioThreshold()), false);
+            endpoint.setVisibleEndpointHandler(() -> entity.isHasAudioStream());
+            return endpoint;
+        });
     }
 
     public CameraDeviceEndpoint addEndpoint(

@@ -91,7 +91,6 @@ import org.homio.app.manager.common.EntityManager;
 import org.homio.app.model.UIHideEntityIfFieldNotNull;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.rest.EntityUIMetaData;
-import org.homio.app.model.var.WorkspaceVariable;
 import org.homio.app.repository.AbstractRepository;
 import org.homio.app.rest.UIFieldBuilderImpl.FieldBuilderImpl;
 import org.homio.app.setting.system.SystemClearCacheButtonSetting;
@@ -99,8 +98,7 @@ import org.homio.app.setting.system.SystemShowEntityCreateTimeSetting;
 import org.homio.app.setting.system.SystemShowEntityUpdateTimeSetting;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
-import org.homio.app.utils.InternalUtil;
-import org.homio.app.utils.UIFieldSelectionUtil;
+import org.homio.app.utils.OptionUtil;
 import org.homio.app.utils.UIFieldUtils;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
@@ -182,7 +180,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             String fieldName = request.params.getString("field");
 
             AccessibleObject field = Optional.ofNullable((AccessibleObject) FieldUtils.getField(actionHolder.getClass(), fieldName, true))
-                                             .orElse(InternalUtil.findMethodByName(actionHolder.getClass(), fieldName));
+                                             .orElse(CommonUtils.findMethodByName(actionHolder.getClass(), fieldName));
             if (field != null) {
                 for (UIActionButton actionButton : field.getDeclaredAnnotationsByType(UIActionButton.class)) {
                     if (actionButton.name().equals(request.params.get("action"))) {
@@ -263,7 +261,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             return options;
         }
 
-        return UIFieldSelectionUtil.loadOptions(classEntity, entityContext, fieldName, null, optionsRequest.getSelectType(), optionsRequest.getDeps());
+        return OptionUtil.loadOptions(classEntity, entityContext, fieldName, null, optionsRequest.getSelectType(), optionsRequest.getDeps());
     }
 
     @GetMapping("/{entityID}/firmwareUpdate/{version}/readme")
@@ -304,7 +302,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     @GetMapping("/options")
     public Collection<OptionModel> getAllOptions() {
-        return UIFieldSelectionUtil.getAllOptions(entityContext);
+        return OptionUtil.getAllOptions(entityContext);
     }
 
     @GetMapping("/{type}/types")
@@ -400,10 +398,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 entities.add(entity);
             }
         }
-        List<OptionModel> options = new ArrayList<>();
-        UIFieldSelectionUtil.assembleItemsToOptions(options, null,
-            entities, entityContext, null);
-        return UIFieldSelectionUtil.groupingOptions(UIFieldSelectionUtil.filterOptions(options));
+        return OptionUtil.buildOptions(entities, entityContext);
     }
 
     @PostMapping(value = "/{entityID}/context/action")
@@ -712,7 +707,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         if (dynamicParameterFields == null) {
             throw new IllegalStateException("SelectedEntity getDynamicParameterFields returned null");
         }
-        return UIFieldSelectionUtil.loadOptions(dynamicParameterFields, entityContext, fieldName, selectedClassEntity, null, null);
+        return OptionUtil.loadOptions(dynamicParameterFields, entityContext, fieldName, selectedClassEntity, null, null);
     }
 
     @SneakyThrows
@@ -779,7 +774,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         Field field = FieldUtils.getField(entityClass, fieldName, true);
         Class<?> returnType = field == null ? null : field.getType();
         if (returnType == null) {
-            Method method = InternalUtil.findMethodByName(entityClass, fieldName);
+            Method method = CommonUtils.findMethodByName(entityClass, fieldName);
             if (method == null) {
                 return null;
             }

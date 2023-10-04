@@ -3,7 +3,7 @@ package org.homio.app.service;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 import static org.homio.api.fs.BaseCachedFileSystemProvider.fixPath;
-import static org.homio.app.utils.InternalUtil.TIKA;
+import static org.homio.api.util.CommonUtils.TIKA;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -41,7 +41,6 @@ import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 
@@ -80,7 +79,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
             }
         }
         try (Stream<Path> stream = Files.list(fullPath)) {
-            for (Path path : stream.collect(Collectors.toList())) {
+            for (Path path : stream.toList()) {
                 try {
                     if (!Files.isHidden(path)) {
                         fmPaths.add(buildTreeNode(path, path.toFile()));
@@ -137,7 +136,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
 
     @Override
     @SneakyThrows
-    public InputStream getEntryInputStream(@NotNull String id) {
+    public @NotNull InputStream getEntryInputStream(@NotNull String id) {
         Path path = buildPath(id);
         if (!Files.exists(path)) {
             // try check if path is archive;

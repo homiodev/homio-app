@@ -249,7 +249,6 @@ public class OnvifCameraEntity extends BaseCameraEntity<OnvifCameraEntity, Onvif
     }
 
     @Override
-    @UIFieldIgnore
     public boolean isHasAudioStream() {
         return true;
     }

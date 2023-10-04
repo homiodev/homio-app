@@ -32,7 +32,6 @@ import org.homio.app.model.entity.MediaMTXEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-@Log4j2
 @Getter
 public class UsbCameraService extends BaseCameraService<UsbCameraEntity, UsbCameraService> {
 
@@ -41,12 +40,6 @@ public class UsbCameraService extends BaseCameraService<UsbCameraEntity, UsbCame
 
     public UsbCameraService(UsbCameraEntity entity, EntityContext entityContext) {
         super(entity, entityContext);
-    }
-
-    @Override
-    public void ffmpegLog(@NotNull Level level, @NotNull String message) {
-        log.log(level, "[{}]: {}", getEntityID(), message);
-        bringCameraOnline();
     }
 
     @Override

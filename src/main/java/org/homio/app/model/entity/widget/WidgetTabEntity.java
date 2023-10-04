@@ -15,7 +15,9 @@ import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasOrder;
 import org.homio.api.exception.ServerException;
+import org.homio.api.model.Icon;
 import org.homio.api.model.JSON;
+import org.homio.api.ui.field.selection.SelectionConfiguration;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.jetbrains.annotations.NotNull;
@@ -23,7 +25,9 @@ import org.jetbrains.annotations.NotNull;
 @Getter
 @Setter
 @Entity
-public final class WidgetTabEntity extends BaseEntity implements HasOrder {
+public final class WidgetTabEntity extends BaseEntity implements
+    HasOrder,
+    SelectionConfiguration {
 
     public static final String PREFIX = "tab_";
     public static final String MAIN_TAB_ID = PREFIX + "main";
@@ -66,6 +70,11 @@ public final class WidgetTabEntity extends BaseEntity implements HasOrder {
     @Override
     public int compareTo(@NotNull BaseEntity o) {
         return super.compareTo(o);
+    }
+
+    @Override
+    public @NotNull Icon getSelectionIcon() {
+        return new Icon(icon, iconColor);
     }
 
     @Override

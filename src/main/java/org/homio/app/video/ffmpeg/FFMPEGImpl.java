@@ -81,6 +81,7 @@ public class FFMPEGImpl implements FFMPEG {
     private int keepAlive = 8;
     private final String entityID;
     private long lastAnswerFromFFMPEG = 0;
+    private boolean testLastAnswerFromFFMPEG = true;
     private final @Getter AtomicBoolean running = new AtomicBoolean(false);
     private @Setter @Accessors(chain = true) @Nullable Path workingDirectory;
 
@@ -175,7 +176,7 @@ public class FFMPEGImpl implements FFMPEG {
             keepAlive = 8;
         }
         boolean processAlive = ipVideoFfmpegThread.isAlive();
-        if(processAlive && System.currentTimeMillis() - lastAnswerFromFFMPEG > 30000) {
+        if(processAlive && isNoAnswerFromFFMPEG()) {
             stopConverting();
         }
         if (!processAlive) {
@@ -188,8 +189,12 @@ public class FFMPEGImpl implements FFMPEG {
         return false;
     }
 
+    private boolean isNoAnswerFromFFMPEG() {
+        return testLastAnswerFromFFMPEG && System.currentTimeMillis() - lastAnswerFromFFMPEG > 30000;
+    }
+
     public boolean getIsAlive() {
-        return process != null && process.isAlive() && System.currentTimeMillis() - lastAnswerFromFFMPEG < 30000;
+        return process != null && process.isAlive() && !isNoAnswerFromFFMPEG();
     }
 
     @Override

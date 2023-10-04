@@ -13,7 +13,6 @@ import org.homio.api.model.OptionModel;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldPort;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.selection.UIFieldSelectConfig;
@@ -37,9 +36,8 @@ public class UsbCameraEntity extends BaseCameraEntity<UsbCameraEntity, UsbCamera
     }
 
     @Override
-    @UIFieldIgnore
     public boolean isHasAudioStream() {
-        return super.isHasAudioStream();
+        return StringUtils.isNotEmpty(getAudioSource());
     }
 
     @UIField(order = 2)

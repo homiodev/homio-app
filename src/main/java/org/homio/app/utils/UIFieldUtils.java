@@ -795,7 +795,7 @@ public class UIFieldUtils {
         try {
             instance.getClass().getDeclaredField(fieldName);
         } catch (NoSuchFieldException ex) {
-            if (InternalUtil.findMethodByName(instance.getClass(), fieldName) == null) {
+            if (CommonUtils.findMethodByName(instance.getClass(), fieldName) == null) {
                 throw new ServerException("Unable to find field <" + fieldName + ">");
             }
         }
@@ -1030,7 +1030,7 @@ public class UIFieldUtils {
                 throw new IllegalStateException(message);
             }
             this.name = uiField.name();
-            this.methodName = InternalUtil.getMethodShortName(fieldMethod);
+            this.methodName = CommonUtils.getMethodShortName(fieldMethod);
         }
 
         @Override

@@ -45,7 +45,7 @@ import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.ssh.SshBaseEntity;
 import org.homio.app.ssh.SshProviderService;
 import org.homio.app.ssh.SshProviderService.SshSession;
-import org.homio.app.utils.UIFieldSelectionUtil;
+import org.homio.app.utils.OptionUtil;
 import org.homio.app.utils.UIFieldUtils;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -144,8 +144,7 @@ public class ConsoleController implements ContextRefreshed {
             HasEntityIdentifier identifier =
                     baseEntities.stream().filter(e -> e.getEntityID().equals(entityID)).findAny().orElseThrow(
                         () -> NotFoundException.entityNotFound(entityID));
-            return UIFieldSelectionUtil.loadOptions(
-                    identifier, entityContext, fieldName, null, null, null);
+            return OptionUtil.loadOptions(identifier, entityContext, fieldName, null, null, null);
         }
         return null;
     }
@@ -259,7 +258,7 @@ public class ConsoleController implements ContextRefreshed {
     @Setter
     @Accessors(chain = true)
     @RequiredArgsConstructor
-    private static class ConsoleTab {
+    public static class ConsoleTab {
 
         private final String name;
         private final ConsolePlugin.RenderType renderType;

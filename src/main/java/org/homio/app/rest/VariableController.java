@@ -40,6 +40,7 @@ import org.homio.app.rest.widget.ChartDataset;
 import org.homio.app.rest.widget.EvaluateDatesAndValues;
 import org.homio.app.rest.widget.WidgetChartsController;
 import org.homio.app.rest.widget.WidgetChartsController.TimeSeriesChartData;
+import org.homio.app.utils.OptionUtil;
 import org.homio.app.utils.UIFieldSelectionUtil;
 import org.json.JSONObject;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -110,13 +111,9 @@ public class VariableController {
     }
 
     // show all read/write variables
-    @GetMapping("/values")
+    @GetMapping("/options")
     public List<OptionModel> getWorkspaceVariableValues() {
-        List<OptionModel> options = new ArrayList<>();
-        List<WorkspaceVariable> entities = getAllVariables();
-        UIFieldSelectionUtil.assembleItemsToOptions(options, WorkspaceVariable.class,
-            entities, entityContext, null);
-        return UIFieldSelectionUtil.groupingOptions(UIFieldSelectionUtil.filterOptions(options));
+        return OptionUtil.buildOptions(getAllVariables(), entityContext);
     }
 
     @GetMapping("/{type}")

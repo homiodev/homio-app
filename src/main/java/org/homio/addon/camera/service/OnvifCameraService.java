@@ -61,11 +61,10 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.homio.addon.camera.CameraEntrypoint;
-import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.CameraPlaybackStorage;
+import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
@@ -73,12 +72,12 @@ import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
 import org.homio.addon.camera.onvif.impl.UnknownBrandHandler;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.onvif.util.MyNettyAuthHandler;
-import org.homio.addon.camera.service.util.CommonCameraHandler;
 import org.homio.addon.camera.service.util.CameraUtils;
+import org.homio.addon.camera.service.util.CommonCameraHandler;
 import org.homio.addon.camera.ui.UICameraActionConditional;
+import org.homio.addon.camera.ui.UICameraActionGetter;
 import org.homio.addon.camera.ui.UICameraDimmerButton;
 import org.homio.addon.camera.ui.UIVideoAction;
-import org.homio.addon.camera.ui.UICameraActionGetter;
 import org.homio.addon.camera.ui.UIVideoActionMetadata;
 import org.homio.addon.camera.ui.VideoActionType;
 import org.homio.api.EntityContext;
@@ -97,7 +96,6 @@ import org.jetbrains.annotations.Nullable;
 import org.onvif.ver10.schema.Profile;
 import org.onvif.ver10.schema.VideoResolution;
 
-@Log4j2
 public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, OnvifCameraService> {
 
     private static @NotNull final Map<String, CameraBrandHandlerDescription> cameraBrands = new ConcurrentHashMap<>();

@@ -48,9 +48,9 @@ import org.homio.api.ui.field.UIFieldProgress;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.color.UIFieldColorRef;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
+import org.homio.api.ui.field.selection.SelectionConfiguration;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent.SelectionParent;
-import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection.SelectionConfiguration;
 import org.homio.app.manager.common.impl.EntityContextVarImpl;
 import org.homio.app.repository.VariableBackupRepository;
 import org.jetbrains.annotations.NotNull;
@@ -72,8 +72,8 @@ public class WorkspaceVariable extends BaseEntity
         UIFieldSelectionParent.SelectionParent,
         HasTimeValueSeries,
         HasGetStatusValue,
-    HasSetStatusValue,
-    SelectionConfiguration {
+        HasSetStatusValue,
+        SelectionConfiguration {
 
     public static final String PREFIX = "var_";
 
@@ -240,21 +240,6 @@ public class WorkspaceVariable extends BaseEntity
     }
 
     @Override
-    public String getTimeValueSeriesDescription() {
-        return getDescription();
-    }
-
-    @Override
-    public String getGetStatusDescription() {
-        return getDescription();
-    }
-
-    @Override
-    public String getSetStatusDescription() {
-        return getDescription();
-    }
-
-    @Override
     public @NotNull List<Object[]> getTimeValueSeries(PeriodRequest request) {
         return ((EntityContextVarImpl) request.getEntityContext().var())
             .getTimeSeries(getEntityID(), request.getFromTime(), request.getToTime());
@@ -317,6 +302,16 @@ public class WorkspaceVariable extends BaseEntity
         return format("%s <small>%s</small>", defaultString(str, "-"), unit);
     }
 
+    @Override
+    public @NotNull Icon getSelectionIcon() {
+        return new Icon(icon, iconColor);
+    }
+
+    @Override
+    public @Nullable String getSelectionDescription() {
+        return getDescription();
+    }
+
     private static String formatVariableValue(Object value) {
         return value instanceof Double ? format("%.2f", (Double) value) :
             value instanceof Float ? format("%.2f", (Float) value) : value.toString();
@@ -371,11 +366,6 @@ public class WorkspaceVariable extends BaseEntity
         result = 31 * result + (unit != null ? unit.hashCode() : 0);
         result = 31 * result + jsonData.toString().hashCode();
         return result;
-    }
-
-    @Override
-    public @NotNull Icon selectionIcon() {
-        return new Icon(icon, iconColor);
     }
 
     @SneakyThrows

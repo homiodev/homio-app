@@ -10,7 +10,9 @@ import lombok.experimental.Accessors;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
+import org.homio.api.model.Icon;
 import org.homio.api.model.JSON;
+import org.homio.api.ui.field.selection.SelectionConfiguration;
 import org.homio.app.workspace.WorkspaceService;
 import org.jetbrains.annotations.NotNull;
 
@@ -19,7 +21,9 @@ import org.jetbrains.annotations.NotNull;
 @Entity
 @Accessors(chain = true)
 @NoArgsConstructor
-public final class WorkspaceEntity extends BaseEntity implements HasJsonData {
+public final class WorkspaceEntity extends BaseEntity implements
+    HasJsonData,
+    SelectionConfiguration {
 
     public static final String PREFIX = "space_";
 
@@ -52,6 +56,11 @@ public final class WorkspaceEntity extends BaseEntity implements HasJsonData {
         if (getName() == null || getName().length() < 2 || getName().length() > 10) {
             throw new IllegalStateException("Workspace tab name must be between 2..10 characters");
         }
+    }
+
+    @Override
+    public @NotNull Icon getSelectionIcon() {
+        return new Icon(icon, iconColor);
     }
 
     @Override
