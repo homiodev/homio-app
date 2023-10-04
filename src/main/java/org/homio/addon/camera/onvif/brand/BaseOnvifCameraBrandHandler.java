@@ -1,8 +1,5 @@
 package org.homio.addon.camera.onvif.brand;
 
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUDIO_THRESHOLD;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_MOTION_THRESHOLD;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
@@ -22,11 +19,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.CameraActionsContext;
+import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.handler.BaseBrandCameraHandler;
-import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.service.CameraDeviceEndpoint;
+import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.ui.CameraActionBuilder;
 import org.homio.api.EntityContext;
 import org.homio.api.state.State;
@@ -114,22 +111,6 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler
 
     protected void setAttribute(@NotNull String key, @NotNull State state) {
         service.setAttribute(key, state);
-        switch (key) {
-            case ENDPOINT_MOTION_THRESHOLD -> getEntityContext().updateDelayed(getEntity(), entity -> {
-                entity.setMotionThreshold(state.intValue());
-            });
-            case ENDPOINT_AUDIO_THRESHOLD -> getEntityContext().updateDelayed(getEntity(), entity -> {
-                entity.setAudioThreshold(state.intValue());
-            });
-        }
-    }
-
-    protected void setAttributeRequest(String key, State state) {
-        service.setAttributeRequest(key, state);
-    }
-
-    protected State getAttributeRequest(String key) {
-        return service.getRequestAttributes().get(key);
     }
 
     public void pollCameraRunnable() {

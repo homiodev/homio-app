@@ -8,21 +8,21 @@ import static org.homio.addon.camera.CameraConstants.AlarmEvents.ItemLeftDetecti
 import static org.homio.addon.camera.CameraConstants.AlarmEvents.ItemTakenDetection;
 import static org.homio.addon.camera.CameraConstants.AlarmEvents.LineCrossAlarm;
 import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
+import static org.homio.addon.camera.CameraConstants.CM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT2;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_PRIVACY_MODE;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_EXTERNAL_ALARM_INPUT;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_EXTERNAL_ALARM_INPUT2;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_TEXT_OVERLAY;
-import static org.homio.addon.camera.CameraConstants.CM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUTO_LED;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_LED;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_LINE_CROSSING_ALARM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_MOTION_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_PRIVACY_MODE;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_EXTERNAL_ALARM_INPUT;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_EXTERNAL_ALARM_INPUT2;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_PARKING_ALARM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_SCENE_CHANGE_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_TEXT_OVERLAY;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_TOO_BLURRY_ALARM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_TOO_DARK_ALARM;
 
@@ -33,12 +33,10 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.NoArgsConstructor;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
-import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
-import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.OnvifCameraService;
-import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.addon.camera.ui.UICameraActionGetter;
+import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
@@ -49,7 +47,7 @@ import org.jetbrains.annotations.Nullable;
  */
 @NoArgsConstructor
 @CameraBrandHandler("Dahua")
-public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements BrandCameraHasAudioAlarm, BrandCameraHasMotionAlarm {
+public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
 
     private int audioThreshold;
 
@@ -152,12 +150,22 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
     }
 
     @Override
+    public boolean isHasMotionAlarm() {
+        return true;
+    }
+
+    @Override
     public void setMotionAlarmThreshold(int threshold) {
         if (threshold > 0) {
             service.sendHttpGET(CM + "setConfig&AudioDetect[0].MutationDetect=true&AudioDetect[0].EventHandler.Dejitter=1");
         } else {
             service.sendHttpGET(CM + "setConfig&AudioDetect[0].MutationDetect=false");
         }
+    }
+
+    @Override
+    public boolean isHasAudioAlarm() {
+        return true;
     }
 
     @Override

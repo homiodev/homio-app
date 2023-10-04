@@ -15,12 +15,10 @@ import java.util.function.Supplier;
 import lombok.NoArgsConstructor;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
-import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
-import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.OnvifCameraService;
-import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.addon.camera.ui.UICameraActionGetter;
+import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.api.EntityContext;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
@@ -32,7 +30,7 @@ import org.jetbrains.annotations.Nullable;
  */
 @NoArgsConstructor
 @CameraBrandHandler("Foscam")
-public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements BrandCameraHasAudioAlarm, BrandCameraHasMotionAlarm {
+public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler {
 
     private static final String CG = "/cgi-bin/CGIProxy.fcgi?cmd=";
     private int audioThreshold;
@@ -138,6 +136,11 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
     }
 
     @Override
+    public boolean isHasAudioAlarm() {
+        return true;
+    }
+
+    @Override
     public void setAudioAlarmThreshold(int audioThreshold) {
         if (audioThreshold != this.audioThreshold) {
             this.audioThreshold = audioThreshold;
@@ -155,6 +158,11 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
                         + username + "&pwd=" + password);
             }
         }
+    }
+
+    @Override
+    public boolean isHasMotionAlarm() {
+        return true;
     }
 
     @Override

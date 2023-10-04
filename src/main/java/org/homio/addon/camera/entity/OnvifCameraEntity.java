@@ -25,7 +25,6 @@ import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldPort;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
@@ -251,6 +250,11 @@ public class OnvifCameraEntity extends BaseCameraEntity<OnvifCameraEntity, Onvif
     @Override
     public boolean isHasAudioStream() {
         return true;
+    }
+
+    @Override
+    public @Nullable String getVideoMotionAlarmProvider() {
+        return null;
     }
 
     public void tryUpdateData(EntityContext entityContext, String ip, Integer port) {

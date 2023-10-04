@@ -18,12 +18,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
-import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.CameraConstants.AlarmEvents;
+import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.entity.BaseCameraEntity;
-import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.CameraPlaybackStorage;
 import org.homio.addon.camera.entity.CameraPlaybackStorage.DownloadFile;
+import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.storage.VideoBaseStorageService;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.service.BaseCameraService;
@@ -232,7 +232,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
             BaseCameraEntity<?, ?> entity = getEntity(workspaceBlock, this.menuFfmpegCamera);
 
             workspaceBlock.onRelease(() -> entity.getService().removeMotionAlarmListener(workspaceBlock.getId()));
-            entity.getService().startOrAddMotionAlarmListener(workspaceBlock.getId());
+            entity.getService().addMotionAlarmListener(workspaceBlock.getId());
 
             OnOffType.OnOffTypeEnum onOffType = workspaceBlock.getMenuValue(ON_OFF, this.menuOnOff);
             boolHatMenuEnum.handler.handle(entity, onOffType, workspaceBlock, next);

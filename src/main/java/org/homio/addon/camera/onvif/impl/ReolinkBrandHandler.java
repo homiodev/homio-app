@@ -83,13 +83,12 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.ToString;
 import lombok.experimental.Accessors;
-import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.CameraPlaybackStorage;
+import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
-import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.impl.ReolinkBrandHandler.SearchRequest.Search;
-import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.service.CameraDeviceEndpoint;
+import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.ui.UICameraActionGetter;
 import org.homio.addon.camera.ui.UIVideoEndpointAction;
 import org.homio.api.EntityContext;
@@ -122,8 +121,7 @@ import org.springframework.web.client.RestTemplate;
 
 @NoArgsConstructor
 @CameraBrandHandler("Reolink")
-public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
-    BrandCameraHasMotionAlarm, CameraPlaybackStorage {
+public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements CameraPlaybackStorage {
 
     private static final JsonNode channelParam = OBJECT_MAPPER.createObjectNode().put("channel", 0);
 
@@ -580,11 +578,6 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
             url = updateURL(url);
         }
         return "http://" + this.ip + ":" + getEntity().getRestPort() + "/cgi-bin/api.cgi?" + url;
-    }
-
-    @Override
-    public void setMotionAlarmThreshold(int threshold) {
-
     }
 
     private void loginIfRequire() {

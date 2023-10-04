@@ -66,8 +66,6 @@ import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.entity.CameraPlaybackStorage;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
-import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
-import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
 import org.homio.addon.camera.onvif.impl.UnknownBrandHandler;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
@@ -607,22 +605,22 @@ public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, Onv
 
     @Override
     protected void setAudioAlarmThreshold(int audioThreshold) {
-        ((BrandCameraHasAudioAlarm) brandHandler).setAudioAlarmThreshold(audioThreshold);
+        brandHandler.setAudioAlarmThreshold(audioThreshold);
     }
 
     @Override
     protected void setMotionAlarmThreshold(int motionThreshold) {
-        ((BrandCameraHasMotionAlarm) brandHandler).setMotionAlarmThreshold(motionThreshold);
+        brandHandler.setMotionAlarmThreshold(motionThreshold);
     }
 
     @Override
     protected boolean isAudioAlarmHandlesByVideo() {
-        return brandHandler instanceof BrandCameraHasAudioAlarm;
+        return brandHandler.isHasAudioAlarm();
     }
 
     @Override
     protected boolean isMotionAlarmHandlesByVideo() {
-        return brandHandler instanceof BrandCameraHasMotionAlarm;
+        return brandHandler.isHasMotionAlarm();
     }
 
     private int getPortFromShortenedUrl(String httpRequestURL, OnvifCameraEntity entity) {

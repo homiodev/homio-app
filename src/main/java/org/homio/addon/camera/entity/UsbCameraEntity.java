@@ -15,6 +15,7 @@ import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldPort;
 import org.homio.api.ui.field.action.UIContextMenuAction;
+import org.homio.api.ui.field.selection.UIFieldBeanSelection;
 import org.homio.api.ui.field.selection.UIFieldSelectConfig;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
@@ -50,6 +51,17 @@ public class UsbCameraEntity extends BaseCameraEntity<UsbCameraEntity, UsbCamera
 
     public void setAudioSource(String value) {
         setJsonData("asource", value);
+    }
+
+    @UIField(order = 50, required = true)
+    @UIFieldBeanSelection(VideoMotionAlarmProvider.class)
+    @UIFieldGroup("GENERAL")
+    public @Nullable String getVideoMotionAlarmProvider() {
+        return getJsonData("map");
+    }
+
+    public void setVideoMotionAlarmProvider(String value) {
+        setJsonData("map", value);
     }
 
     @Override
@@ -161,7 +173,7 @@ public class UsbCameraEntity extends BaseCameraEntity<UsbCameraEntity, UsbCamera
     public long getVideoParametersHashCode() {
         return super.getVideoParametersHashCode() +
                 (getIeeeAddress() == null ? 0 : getIeeeAddress().hashCode()) +
-            getJsonDataHashCode("asource", "stream", "streamPort", "sfps", "sbr");
+            getJsonDataHashCode("asource", "stream", "streamPort", "sfps", "sbr", "map");
     }
 
     @UIContextMenuAction(value = "GET_INFO", icon = "fab fa-quinscape", iconColor = "#899343")

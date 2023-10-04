@@ -2,7 +2,6 @@ package org.homio.addon.camera.onvif.impl;
 
 import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
 import static org.homio.addon.camera.CameraConstants.AlarmEvents.PirAlarm;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_TEXT_OVERLAY;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUTO_LED;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
@@ -10,6 +9,7 @@ import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_EXTERNAL_AL
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_LED;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_MOTION_ALARM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_PIR_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_TEXT_OVERLAY;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -19,7 +19,6 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.NoArgsConstructor;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
-import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.ui.UIVideoAction;
@@ -35,7 +34,7 @@ import org.jetbrains.annotations.Nullable;
  */
 @NoArgsConstructor
 @CameraBrandHandler("Instar")
-public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements BrandCameraHasAudioAlarm {
+public class InstarBrandHandler extends BaseOnvifCameraBrandHandler {
 
     private String requestUrl = "Empty";
     private int audioThreshold;
@@ -128,6 +127,11 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
         } finally {
             ReferenceCountUtil.release(msg);
         }
+    }
+
+    @Override
+    public boolean isHasAudioAlarm() {
+        return true;
     }
 
     @Override

@@ -24,12 +24,11 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.ReferenceCountUtil;
 import lombok.NoArgsConstructor;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
-import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.OnvifCameraService;
-import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.addon.camera.ui.UICameraActionGetter;
+import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.api.EntityContext;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
@@ -42,7 +41,7 @@ import org.springframework.http.MediaType;
  */
 @NoArgsConstructor
 @CameraBrandHandler("Hikvision")
-public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implements BrandCameraHasMotionAlarm {
+public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler {
 
     private int lineCount, vmdCount, leftCount, takenCount, faceCount, pirCount, fieldCount;
 
@@ -291,6 +290,11 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
     @UICameraActionGetter(ENDPOINT_ENABLE_LINE_CROSSING_ALARM)
     public State getEnableLineCrossingAlarm() {
         return getAttribute(ENDPOINT_ENABLE_LINE_CROSSING_ALARM);
+    }
+
+    @Override
+    public boolean isHasMotionAlarm() {
+        return true;
     }
 
     @Override

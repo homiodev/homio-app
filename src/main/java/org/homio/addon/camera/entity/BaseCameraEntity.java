@@ -59,6 +59,7 @@ import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.api.ui.field.image.UIFieldImage;
 import org.homio.api.util.CommonUtils;
+import org.homio.api.util.DataSourceUtil;
 import org.homio.api.util.SecureString;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.jetbrains.annotations.NotNull;
@@ -264,18 +265,24 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
     }
 
     public int getMotionThreshold() {
-        return getJsonData(ENDPOINT_MOTION_THRESHOLD, 40);
+        return getJsonData(ENDPOINT_MOTION_THRESHOLD, 20);
     }
 
     public void setMotionThreshold(int value) {
+        if (value < 0 || value > 50) {
+            throw new IllegalArgumentException("Motion threshold must be in range: 0..50");
+        }
         setJsonData(ENDPOINT_MOTION_THRESHOLD, value);
     }
 
     public int getAudioThreshold() {
-        return getJsonData(ENDPOINT_AUDIO_THRESHOLD, 40);
+        return getJsonData(ENDPOINT_AUDIO_THRESHOLD, 20);
     }
 
     public void setAudioThreshold(int value) {
+        if (value < 0 || value > 50) {
+            throw new IllegalArgumentException("Audio threshold must be in range: 0..50");
+        }
         setJsonData(ENDPOINT_AUDIO_THRESHOLD, value);
     }
 
@@ -359,6 +366,21 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
 
     protected void appendAdditionWebRTCStreams(OptionModel m3u8) {
 
+    }
+
+    public abstract @Nullable String getVideoMotionAlarmProvider();
+
+    @JsonIgnore
+    public @NotNull VideoMotionAlarmProvider getVideoMotionAlarmProviderImpl() {
+        if (StringUtils.isNotEmpty(getVideoMotionAlarmProvider())) {
+            try {
+                return getEntityContext().getBean(DataSourceUtil.getSelection(getVideoMotionAlarmProvider()).getValue(),
+                    VideoMotionAlarmProvider.class);
+            } catch (Exception ne) {
+                log.warn("Unable to find video motion alarm provider: {}", getVideoMotionAlarmProvider());
+            }
+        }
+        return getEntityContext().getBean(VideoMotionAlarmProvider.class);
     }
 
     private void assembleStream(String key, String title, Consumer<OptionModel> consumer, List<OptionModel> videoSources) {
