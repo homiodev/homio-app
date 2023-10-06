@@ -103,10 +103,6 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler
 
     }
 
-    protected void setAttribute(@NotNull String key, @NotNull State state) {
-        service.setAttribute(key, state);
-    }
-
     public void pollCameraRunnable() {
     }
 

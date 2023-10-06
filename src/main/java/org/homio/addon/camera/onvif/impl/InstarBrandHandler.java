@@ -50,55 +50,53 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler {
             log.debug("[{}]: HTTP Result back from camera is \t:{}:", entityID, content);
             switch (requestUrl) {
                 case "/param.cgi?cmd=getinfrared" -> {
-                    if (content.contains("var infraredstat=\"auto")) {
-                        setAttribute(ENDPOINT_AUTO_LED, OnOffType.ON);
-                    } else {
-                        setAttribute(ENDPOINT_AUTO_LED, OnOffType.OFF);
-                    }
+                    getEndpointRequire(ENDPOINT_AUTO_LED).setValue(OnOffType.of(content.contains("var infraredstat=\"auto")));
                 }
                 case "/param.cgi?cmd=getoverlayattr&-region=1" -> {// Text Overlays
                     if (content.contains("var show_1=\"0\"")) {
-                        setAttribute(ENDPOINT_TEXT_OVERLAY, StringType.EMPTY);
+                        getEndpointRequire(ENDPOINT_TEXT_OVERLAY).setValue(StringType.EMPTY);
                     } else {
                         value1 = Helper.searchString(content, "var name_1=\"");
                         if (!value1.isEmpty()) {
-                            setAttribute(ENDPOINT_TEXT_OVERLAY, new StringType(value1));
+                            getEndpointRequire(ENDPOINT_TEXT_OVERLAY).setValue(new StringType(value1));
                         }
                     }
                 }
                 case "/cgi-bin/hi3510/param.cgi?cmd=getmdattr" -> {// Motion Alarm
                     // Motion Alarm
                     if (content.contains("var m1_enable=\"1\"")) {
-                        setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.ON);
+                        getEndpointRequire(ENDPOINT_ENABLE_MOTION_ALARM).setValue(OnOffType.ON);
                     } else {
-                        setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.OFF);
+                        getEndpointRequire(ENDPOINT_ENABLE_MOTION_ALARM).setValue(OnOffType.OFF);
                     }
                 }
                 case "/cgi-bin/hi3510/param.cgi?cmd=getaudioalarmattr" -> {// Audio Alarm
                     if (content.contains("var aa_enable=\"1\"")) {
-                        setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.ON);
+                        getEndpointRequire(ENDPOINT_ENABLE_AUDIO_ALARM).setValue(OnOffType.ON);
                         value1 = Helper.searchString(content, "var aa_value=\"");
                         if (!value1.isEmpty()) {
-                            setAttribute(ENDPOINT_AUDIO_THRESHOLD, new DecimalType(value1));
+                            DecimalType threshold = new DecimalType(value1);
+                            this.audioThreshold = threshold.intValue();
+                            getEndpointRequire(ENDPOINT_AUDIO_THRESHOLD).setValue(threshold);
                         }
                     } else {
-                        setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.OFF);
+                        getEndpointRequire(ENDPOINT_ENABLE_AUDIO_ALARM).setValue(OnOffType.OFF);
                     }
                 }
                 case "param.cgi?cmd=getpirattr" -> {// PIR Alarm
                     if (content.contains("var pir_enable=\"1\"")) {
-                        setAttribute(ENDPOINT_ENABLE_PIR_ALARM, OnOffType.ON);
+                        getEndpointRequire(ENDPOINT_ENABLE_PIR_ALARM).setValue(OnOffType.ON);
                     } else {
-                        setAttribute(ENDPOINT_ENABLE_PIR_ALARM, OnOffType.OFF);
+                        getEndpointRequire(ENDPOINT_ENABLE_PIR_ALARM).setValue(OnOffType.OFF);
                     }
                     // Reset the Alarm, need to find better place to put this.
                     service.motionDetected(false, PirAlarm);
                 }
                 case "/param.cgi?cmd=getioattr" -> {// External Alarm Input
                     if (content.contains("var io_enable=\"1\"")) {
-                        setAttribute(ENDPOINT_ENABLE_EXTERNAL_ALARM, OnOffType.ON);
+                        getEndpointRequire(ENDPOINT_ENABLE_PIR_ALARM).setValue(OnOffType.ON);
                     } else {
-                        setAttribute(ENDPOINT_ENABLE_EXTERNAL_ALARM, OnOffType.OFF);
+                        getEndpointRequire(ENDPOINT_ENABLE_EXTERNAL_ALARM).setValue(OnOffType.OFF);
                     }
                 }
                 default -> {

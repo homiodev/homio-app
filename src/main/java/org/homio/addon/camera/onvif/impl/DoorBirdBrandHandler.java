@@ -4,6 +4,7 @@ import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT2;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_DOORBELL;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_PRIVACY_MODE;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_EXTERNAL_LIGHT;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -35,10 +36,10 @@ public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
             String content = msg.toString();
             log.debug("[{}]: HTTP Result back from camera is \t:{}:", entityID, content);
             if (content.contains("doorbell:H")) {
-                setAttribute(ENDPOINT_DOORBELL, OnOffType.ON);
+                getEndpointRequire(ENDPOINT_DOORBELL).setValue(OnOffType.ON);
             }
             if (content.contains("doorbell:L")) {
-                setAttribute(ENDPOINT_DOORBELL, OnOffType.OFF);
+                getEndpointRequire(ENDPOINT_DOORBELL).setValue(OnOffType.OFF);
             }
             if (content.contains("motionsensor:L")) {
                 service.motionDetected(false, MotionAlarm);

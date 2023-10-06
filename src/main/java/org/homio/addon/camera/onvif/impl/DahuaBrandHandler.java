@@ -8,6 +8,9 @@ import static org.homio.addon.camera.CameraConstants.AlarmEvents.ItemLeftDetecti
 import static org.homio.addon.camera.CameraConstants.AlarmEvents.ItemTakenDetection;
 import static org.homio.addon.camera.CameraConstants.AlarmEvents.LineCrossAlarm;
 import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.SceneChangeAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.TooBlurryAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.TooDarkAlarm;
 import static org.homio.addon.camera.CameraConstants.CM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT2;
@@ -28,6 +31,7 @@ import static org.homio.addon.camera.CameraConstants.ENDPOINT_TOO_DARK_ALARM;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
 import lombok.NoArgsConstructor;
+import org.homio.addon.camera.CameraConstants.AlarmEvents;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.OnvifCameraService;
@@ -63,35 +67,36 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
             log.debug("[{}]: HTTP Result back from camera is \t:{}:", entityID, content);
             // determine if the motion detection is turned on or off.
             if (content.contains("table.MotionDetect[0].Enable=true")) {
-                setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.ON);
+                getEndpointRequire(ENDPOINT_ENABLE_MOTION_ALARM).setValue(OnOffType.ON);
             } else if (content.contains("table.MotionDetect[" + nvrChannel + "].Enable=false")) {
-                setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.OFF);
+                getEndpointRequire(ENDPOINT_ENABLE_MOTION_ALARM).setValue(OnOffType.OFF);
             }
 
             // determine if the audio alarm is turned on or off.
             if (content.contains("table.AudioDetect[0].MutationDetect=true")) {
-                setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.ON);
+                getEndpointRequire(ENDPOINT_ENABLE_AUDIO_ALARM).setValue(OnOffType.ON);
             } else if (content.contains("table.AudioDetect[0].MutationDetect=false")) {
-                setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.OFF);
+                getEndpointRequire(ENDPOINT_ENABLE_AUDIO_ALARM).setValue(OnOffType.OFF);
             }
 
             // Handle AudioMutationThreshold alarm
             if (content.contains("table.AudioDetect[0].MutationThreold=")) {
-                String value = service.returnValueFromString(content, "table.AudioDetect[0].MutationThreold=");
-                setAttribute(ENDPOINT_AUDIO_THRESHOLD, new DecimalType(value));
+                DecimalType value = new DecimalType(service.returnValueFromString(content, "table.AudioDetect[0].MutationThreold="));
+                this.audioThreshold = value.intValue();
+                getEndpointRequire(ENDPOINT_AUDIO_THRESHOLD).setValue(value);
             }
 
             // CrossLineDetection alarm on/off
             if (content.contains("table.VideoAnalyseRule[0][1].Enable=true")) {
-                setAttribute(ENDPOINT_ENABLE_LINE_CROSSING_ALARM, OnOffType.ON);
+                getEndpointRequire(ENDPOINT_ENABLE_LINE_CROSSING_ALARM).setValue(OnOffType.ON);
             } else if (content.contains("table.VideoAnalyseRule[0][1].Enable=false")) {
-                setAttribute(ENDPOINT_ENABLE_LINE_CROSSING_ALARM, OnOffType.OFF);
+                getEndpointRequire(ENDPOINT_ENABLE_LINE_CROSSING_ALARM).setValue(OnOffType.OFF);
             }
             // Privacy Mode on/off
             if (content.contains("table.LeLensMask[0].Enable=true")) {
-                setAttribute(ENDPOINT_ENABLE_PRIVACY_MODE, OnOffType.ON);
+                getEndpointRequire(ENDPOINT_ENABLE_PRIVACY_MODE).setValue(OnOffType.ON);
             } else if (content.contains("table.LeLensMask[0].Enable=false")) {
-                setAttribute(ENDPOINT_ENABLE_PRIVACY_MODE, OnOffType.OFF);
+                getEndpointRequire(ENDPOINT_ENABLE_PRIVACY_MODE).setValue(OnOffType.OFF);
             }
         } finally {
             ReferenceCountUtil.release(msg);
@@ -228,9 +233,9 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
                 }
                 case "ParkingDetection" -> {
                     if (action.equals("Start")) {
-                        setAttribute(ENDPOINT_PARKING_ALARM, OnOffType.ON);
+                        service.motionDetected(true, AlarmEvents.ParkingAlarm);
                     } else if (action.equals("Stop")) {
-                        setAttribute(ENDPOINT_PARKING_ALARM, OnOffType.OFF);
+                        service.motionDetected(false, AlarmEvents.ParkingAlarm);
                     }
                 }
                 case "CrossRegionDetection" -> {
@@ -242,43 +247,46 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
                 }
                 case "VideoLoss", "VideoBlind" -> {
                     if (action.equals("Start")) {
-                        setAttribute(ENDPOINT_TOO_DARK_ALARM, OnOffType.ON);
+                        service.motionDetected(true, TooDarkAlarm);
                     } else if (action.equals("Stop")) {
-                        setAttribute(ENDPOINT_TOO_DARK_ALARM, OnOffType.OFF);
+                        service.motionDetected(false, TooDarkAlarm);
                     }
                 }
                 case "VideoAbnormalDetection" -> {
                     if (action.equals("Start")) {
-                        setAttribute(ENDPOINT_SCENE_CHANGE_ALARM, OnOffType.ON);
+                        service.motionDetected(true, SceneChangeAlarm);
                     } else if (action.equals("Stop")) {
-                        setAttribute(ENDPOINT_SCENE_CHANGE_ALARM, OnOffType.OFF);
+                        service.motionDetected(false, SceneChangeAlarm);
                     }
                 }
                 case "VideoUnFocus" -> {
                     if (action.equals("Start")) {
-                        setAttribute(ENDPOINT_TOO_BLURRY_ALARM, OnOffType.ON);
+                        service.motionDetected(true, TooBlurryAlarm);
                     } else if (action.equals("Stop")) {
-                        setAttribute(ENDPOINT_TOO_BLURRY_ALARM, OnOffType.OFF);
+                        service.motionDetected(false, TooBlurryAlarm);
                     }
                 }
                 case "AlarmLocal" -> {
                     if (action.equals("Start")) {
                         if (content.contains("index=0")) {
-                            setAttribute(ENDPOINT_EXTERNAL_ALARM_INPUT, OnOffType.ON);
+                            getEndpointRequire(ENDPOINT_EXTERNAL_ALARM_INPUT).setValue(OnOffType.ON);
                         } else {
-                            setAttribute(ENDPOINT_EXTERNAL_ALARM_INPUT2, OnOffType.ON);
+                            getEndpointRequire(ENDPOINT_EXTERNAL_ALARM_INPUT2).setValue(OnOffType.ON);
                         }
                     } else if (action.equals("Stop")) {
                         if (content.contains("index=0")) {
-                            setAttribute(ENDPOINT_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
+                            getEndpointRequire(ENDPOINT_EXTERNAL_ALARM_INPUT).setValue(OnOffType.OFF);
                         } else {
-                            setAttribute(ENDPOINT_EXTERNAL_ALARM_INPUT2, OnOffType.OFF);
+                            getEndpointRequire(ENDPOINT_EXTERNAL_ALARM_INPUT2).setValue(OnOffType.OFF);
                         }
                     }
                 }
-                case "LensMaskOpen" -> setAttribute(ENDPOINT_ENABLE_PRIVACY_MODE, OnOffType.ON);
-                case "LensMaskClose" ->
-                        setAttribute(ENDPOINT_ENABLE_PRIVACY_MODE, OnOffType.OFF);
+                case "LensMaskOpen" -> {
+                    getEndpointRequire(ENDPOINT_ENABLE_PRIVACY_MODE).setValue(OnOffType.ON);
+                }
+                case "LensMaskClose" -> {
+                    getEndpointRequire(ENDPOINT_ENABLE_PRIVACY_MODE).setValue(OnOffType.OFF);
+                }
                 case "TimeChange", "NTPAdjustTime", "StorageChange", "Reboot", "NewFile", "VideoMotionInfo", "RtspSessionDisconnect", "LeFunctionStatusSync", "RecordDelete" -> {
                 }
                 default -> log.debug("[{}]: Unrecognised Dahua event, Code={}, action={}", entityID, code, action);

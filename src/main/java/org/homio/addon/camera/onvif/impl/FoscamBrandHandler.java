@@ -3,6 +3,7 @@ package org.homio.addon.camera.onvif.impl;
 import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUTO_LED;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_DOORBELL;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_LED;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_MOTION_ALARM;
@@ -45,46 +46,48 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler {
             ////////////// Motion Alarm //////////////
             if (content.contains("<motionDetectAlarm>")) {
                 if (content.contains("<motionDetectAlarm>0</motionDetectAlarm>")) {
-                    setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.OFF);
+                    getEndpointRequire(ENDPOINT_ENABLE_MOTION_ALARM).setValue(OnOffType.OFF);
                 } else if (content.contains("<motionDetectAlarm>1</motionDetectAlarm>")) { // Enabled but no alarm
-                    setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.ON);
-                    service.motionDetected(false, MotionAlarm);
+                    getEndpointRequire(ENDPOINT_ENABLE_MOTION_ALARM).setValue(OnOffType.ON);
                 } else if (content.contains("<motionDetectAlarm>2</motionDetectAlarm>")) {// Enabled, alarm on
-                    setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.ON);
+                    getEndpointRequire(ENDPOINT_ENABLE_MOTION_ALARM).setValue(OnOffType.ON);
                     service.motionDetected(true, MotionAlarm);
                 }
             }
 
             ////////////// Sound Alarm //////////////
             if (content.contains("<soundAlarm>0</soundAlarm>")) {
-                setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.OFF);
+                getEndpointRequire(ENDPOINT_ENABLE_AUDIO_ALARM).setValue(OnOffType.OFF);
             }
             if (content.contains("<soundAlarm>1</soundAlarm>")) {
-                setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.ON);
+                getEndpointRequire(ENDPOINT_ENABLE_AUDIO_ALARM).setValue(OnOffType.ON);
                 service.audioDetected(false);
             }
             if (content.contains("<soundAlarm>2</soundAlarm>")) {
-                setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.ON);
+                getEndpointRequire(ENDPOINT_ENABLE_AUDIO_ALARM).setValue(OnOffType.ON);
                 service.audioDetected(true);
             }
 
             ////////////// Sound Threshold //////////////
             if (content.contains("<sensitivity>0</sensitivity>")) {
-                setAttribute(ENDPOINT_AUDIO_THRESHOLD, DecimalType.ZERO);
+                audioThreshold = 0;
+                getEndpointRequire(ENDPOINT_AUDIO_THRESHOLD).setValue(DecimalType.ZERO);
             }
             if (content.contains("<sensitivity>1</sensitivity>")) {
-                setAttribute(ENDPOINT_AUDIO_THRESHOLD, new DecimalType(50));
+                audioThreshold = 50;
+                getEndpointRequire(ENDPOINT_AUDIO_THRESHOLD).setValue(new DecimalType(50));
             }
             if (content.contains("<sensitivity>2</sensitivity>")) {
-                setAttribute(ENDPOINT_AUDIO_THRESHOLD, DecimalType.HUNDRED);
+                audioThreshold = 100;
+                getEndpointRequire(ENDPOINT_AUDIO_THRESHOLD).setValue(DecimalType.HUNDRED);
             }
 
             //////////////// Infrared LED /////////////////////
             if (content.contains("<infraLedState>0</infraLedState>")) {
-                setAttribute(ENDPOINT_ENABLE_LED, OnOffType.OFF);
+                getEndpointRequire(ENDPOINT_ENABLE_LED).setValue(OnOffType.OFF);
             }
             if (content.contains("<infraLedState>1</infraLedState>")) {
-                setAttribute(ENDPOINT_ENABLE_LED, OnOffType.ON);
+                getEndpointRequire(ENDPOINT_ENABLE_LED).setValue(OnOffType.ON);
             }
 
             if (content.contains("</CGI_Result>")) {
@@ -164,7 +167,7 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler {
     private void addEndpoints() {
         service.addEndpointSwitch(ENDPOINT_AUTO_LED, state -> {
             /*if (on) {
-                setAttribute(ENDPOINT_ENABLE_LED, OnOffType.OFF*//*UnDefType.UNDEF*//*);
+                set Attribute(ENDPOINT_ENABLE_LED, OnOffType.OFF*//*UnDefType.UNDEF*//*);
                 service.sendHttpGET(CG + "setInfraLedConfig&mode=0&usr=" + username + "&pwd=" + password);
             } else {
                 service.sendHttpGET(CG + "setInfraLedConfig&mode=1&usr=" + username + "&pwd=" + password);
@@ -172,7 +175,7 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler {
 
             // Disable the auto mode first
             /*service.sendHttpGET(CG + "setInfraLedConfig&mode=1&usr=" + username + "&pwd=" + password);
-            setAttribute(ENDPOINT_AUTO_LED, OnOffType.OFF);
+            se tAttribute(ENDPOINT_AUTO_LED, OnOffType.OFF);
             */
             if (state.boolValue()) {
                 service.sendHttpGET(CG + "openInfraLed&usr=" + username + "&pwd=" + password);
