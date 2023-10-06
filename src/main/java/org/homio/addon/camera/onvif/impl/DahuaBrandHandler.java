@@ -14,7 +14,6 @@ import static org.homio.addon.camera.CameraConstants.ENDPOINT_ACTIVATE_ALARM_OUT
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUTO_LED;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_LED;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_LINE_CROSSING_ALARM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_MOTION_ALARM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_PRIVACY_MODE;
@@ -28,16 +27,12 @@ import static org.homio.addon.camera.CameraConstants.ENDPOINT_TOO_DARK_ALARM;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 import lombok.NoArgsConstructor;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
-import org.homio.api.state.State;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -132,27 +127,6 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
                 service.sendHttpGET(CM + "setConfig&AudioDetect[0].MutationThreold=1");
             }
         }
-    }
-
-    @Override
-    public Consumer<Boolean> getIRLedHandler() {
-        return on -> {
-            setAttribute(ENDPOINT_AUTO_LED, OnOffType.OFF);
-            if (!on) {
-                service.sendHttpGET(CM + "setConfig&Lighting[0][0].Mode=Off");
-            } else {
-                service.sendHttpGET(CM + "setConfig&Lighting[0][0].Mode=Auto");
-            } /*else {
-                        ipCameraHandler.sendHttpGET(
-                                CM + "setConfig&Lighting[0][0].Mode=Manual&Lighting[0][0].MiddleLight[0].Light="
-                                        + command.toString());
-                    }*/
-        };
-    }
-
-    @Override
-    public Supplier<Boolean> getIrLedValueHandler() {
-        return () -> Optional.ofNullable(getAttribute(ENDPOINT_ENABLE_LED)).map(State::boolValue).orElse(false);
     }
 
     @Override
@@ -336,7 +310,14 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
             service.sendHttpGET(CM + "setConfig&VideoAnalyseRule[0][1].Enable=" + state.boolValue());
         });
 
-        service.addEndpointSwitch(ENDPOINT_AUTO_LED, state -> getIRLedHandler().accept(state.boolValue()));
+        service.addEndpointSwitch(ENDPOINT_AUTO_LED, state -> {
+            service.sendHttpGET(CM + "setConfig&Lighting[0][0].Mode=" + state.boolValue("Auto", "Off"));
+            /*else {
+                        ipCameraHandler.sendHttpGET(
+                                CM + "setConfig&Lighting[0][0].Mode=Manual&Lighting[0][0].MiddleLight[0].Light="
+                                        + command.toString());
+                    }*/
+        });
 
         service.addEndpointInput(ENDPOINT_TEXT_OVERLAY, state -> {
             String text = Helper.encodeSpecialChars(state.stringValue());

@@ -6,7 +6,6 @@ import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUTO_LED;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_EXTERNAL_ALARM;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_LED;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_MOTION_ALARM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_PIR_ALARM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_TEXT_OVERLAY;
@@ -14,9 +13,6 @@ import static org.homio.addon.camera.CameraConstants.ENDPOINT_TEXT_OVERLAY;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 import lombok.NoArgsConstructor;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.util.Helper;
@@ -24,7 +20,6 @@ import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.api.EntityContext;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
-import org.homio.api.state.State;
 import org.homio.api.state.StringType;
 import org.jetbrains.annotations.Nullable;
 
@@ -146,18 +141,6 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler {
         }
     }
 
-    @Override
-    public Consumer<Boolean> getIRLedHandler() {
-        return on -> {
-            service.sendHttpGET("/param.cgi?cmd=setinfrared&-infraredstat=%s".formatted(on ? "auto" : "close"));
-        };
-    }
-
-    @Override
-    public Supplier<Boolean> getIrLedValueHandler() {
-        return () -> Optional.ofNullable(getAttribute(ENDPOINT_ENABLE_LED)).map(State::boolValue).orElse(false);
-    }
-
     public void alarmTriggered(String alarm) {
         log.debug("[{}]: Alarm has been triggered:{}", entityID, alarm);
         switch (alarm) {
@@ -191,7 +174,8 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler {
     }
 
     private void addEndpoints() {
-        service.addEndpointSwitch(ENDPOINT_AUTO_LED, state -> getIRLedHandler().accept(state.boolValue()));
+        service.addEndpointSwitch(ENDPOINT_AUTO_LED, state ->
+            service.sendHttpGET("/param.cgi?cmd=setinfrared&-infraredstat=" + state.boolValue("auto", "close")));
 
         service.addEndpointSwitch(ENDPOINT_ENABLE_MOTION_ALARM, state -> {
             int val = state.intValue();
@@ -209,13 +193,11 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler {
             }
         });
 
-        service.addEndpointSwitch(ENDPOINT_ENABLE_PIR_ALARM, state -> {
-            service.sendHttpGET("/param.cgi?cmd=setpirattr&-pir_enable=" + state.intValue());
-        });
+        service.addEndpointSwitch(ENDPOINT_ENABLE_PIR_ALARM, state ->
+            service.sendHttpGET("/param.cgi?cmd=setpirattr&-pir_enable=" + state.intValue()));
 
-        service.addEndpointSwitch(ENDPOINT_ENABLE_EXTERNAL_ALARM, state -> {
-            service.sendHttpGET("/param.cgi?cmd=setioattr&-io_enable=" + state.intValue());
-        });
+        service.addEndpointSwitch(ENDPOINT_ENABLE_EXTERNAL_ALARM, state ->
+            service.sendHttpGET("/param.cgi?cmd=setioattr&-io_enable=" + state.intValue()));
     }
 
     @Override

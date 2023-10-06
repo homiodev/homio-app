@@ -9,9 +9,6 @@ import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_MOTION_ALAR
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 import lombok.NoArgsConstructor;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
@@ -20,7 +17,6 @@ import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.api.EntityContext;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
-import org.homio.api.state.State;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -100,32 +96,6 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler {
     }
 
     @Override
-    public Consumer<Boolean> getIRLedHandler() {
-        return on -> {
-            if (on) {
-                setAttribute(ENDPOINT_ENABLE_LED, OnOffType.OFF/*UnDefType.UNDEF*/);
-                service.sendHttpGET(CG + "setInfraLedConfig&mode=0&usr=" + username + "&pwd=" + password);
-            } else {
-                service.sendHttpGET(CG + "setInfraLedConfig&mode=1&usr=" + username + "&pwd=" + password);
-            }
-
-            // Disable the auto mode first
-            /*service.sendHttpGET(CG + "setInfraLedConfig&mode=1&usr=" + username + "&pwd=" + password);
-            setAttribute(ENDPOINT_AUTO_LED, OnOffType.OFF);
-            if (on) {
-                service.sendHttpGET(CG + "openInfraLed&usr=" + username + "&pwd=" + password);
-            } else {
-                service.sendHttpGET(CG + "closeInfraLed&usr=" + username + "&pwd=" + password);
-            }*/
-        };
-    }
-
-    @Override
-    public Supplier<Boolean> getIrLedValueHandler() {
-        return () -> Optional.ofNullable(getAttribute(ENDPOINT_ENABLE_LED)).map(State::boolValue).orElse(false);
-    }
-
-    @Override
     public boolean isHasAudioAlarm() {
         return true;
     }
@@ -192,7 +162,24 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler {
     }
 
     private void addEndpoints() {
-        service.addEndpointSwitch(ENDPOINT_AUTO_LED, state -> getIRLedHandler().accept(state.boolValue()));
+        service.addEndpointSwitch(ENDPOINT_AUTO_LED, state -> {
+            /*if (on) {
+                setAttribute(ENDPOINT_ENABLE_LED, OnOffType.OFF*//*UnDefType.UNDEF*//*);
+                service.sendHttpGET(CG + "setInfraLedConfig&mode=0&usr=" + username + "&pwd=" + password);
+            } else {
+                service.sendHttpGET(CG + "setInfraLedConfig&mode=1&usr=" + username + "&pwd=" + password);
+            }*/
+
+            // Disable the auto mode first
+            /*service.sendHttpGET(CG + "setInfraLedConfig&mode=1&usr=" + username + "&pwd=" + password);
+            setAttribute(ENDPOINT_AUTO_LED, OnOffType.OFF);
+            */
+            if (state.boolValue()) {
+                service.sendHttpGET(CG + "openInfraLed&usr=" + username + "&pwd=" + password);
+            } else {
+                service.sendHttpGET(CG + "closeInfraLed&usr=" + username + "&pwd=" + password);
+            }
+        });
 
         service.addEndpointSwitch(ENDPOINT_ENABLE_MOTION_ALARM, state -> {
             String prefix = CG + "setMotionDetectConfig&isEnable=%s&usr=" + username + "&pwd=" + password;

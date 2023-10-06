@@ -357,6 +357,11 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         CommonUtils.deletePath(ffmpegImageOutputPath);
     }
 
+    /**
+     * This method should fire only from 3th path i.e. from camera API
+     * @param key - endpointId or any key
+     * @param state - current value
+     */
     public void setAttribute(String key, State state) {
         attributes.put(key, state);
         CameraDeviceEndpoint endpoint = endpoints.get(key);

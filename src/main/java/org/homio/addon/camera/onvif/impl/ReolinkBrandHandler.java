@@ -67,7 +67,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -318,18 +317,6 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
     }
 
     @Override
-    public Consumer<Boolean> getIRLedHandler() {
-        return on ->
-            sendCameraPushRequest("SetIrLights", OBJECT_MAPPER.createObjectNode().set("IrLights",
-                OBJECT_MAPPER.createObjectNode().put("state", on ? "Auto" : "Off")));
-    }
-
-    @Override
-    public Supplier<Boolean> getIrLedValueHandler() {
-        return () -> Optional.ofNullable(getAttribute(ENDPOINT_AUTO_LED)).map(State::boolValue).orElse(false);
-    }
-
-    @Override
     public @Nullable String getSnapshotUri() {
         return "/cgi-bin/api.cgi?cmd=Snap&channel=%s&rs=homio".formatted(nvrChannel);
     }
@@ -418,10 +405,8 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
             // Fire update listeners for all endpoints to be able to show/hide another endpoints
             for (EndpointConfiguration configuration : configurations.values()) {
                 if (configuration.updateListener != null) {
-                    CameraDeviceEndpoint endpoint = getEndpoint(configuration.endpointId).orElse(null);
-                    if (endpoint != null) {
-                        configuration.updateListener.accept(endpoint.getValue(), this);
-                    }
+                    getEndpoint(configuration.endpointId).ifPresent(endpoint ->
+                        configuration.updateListener.accept(endpoint.getValue(), this));
                 }
             }
         }
@@ -526,7 +511,9 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
 
     private void handleGetIrLightCommand(Root objectNode) {
         setAttribute(ENDPOINT_AUTO_LED, OnOffType.of("auto".equals(objectNode.value.get("IrLights").get("state").asText())));
-        service.addEndpointSwitch(ENDPOINT_AUTO_LED, state -> getIRLedHandler().accept(state.boolValue()));
+        service.addEndpointSwitch(ENDPOINT_AUTO_LED, state ->
+            sendCameraPushRequest("SetIrLights", OBJECT_MAPPER.createObjectNode().set("IrLights",
+                OBJECT_MAPPER.createObjectNode().put("state", state.boolValue("Auto", "Off")))));
     }
 
     @Override

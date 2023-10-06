@@ -7,7 +7,6 @@ import static org.homio.addon.camera.CameraConstants.ENDPOINT_ACTIVATE_ALARM_OUT
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUTO_LED;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_LED;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_LINE_CROSSING_ALARM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_MOTION_ALARM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_PRIVACY_MODE;
@@ -16,16 +15,12 @@ import static org.homio.addon.camera.CameraConstants.ENDPOINT_TEXT_OVERLAY;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 import lombok.NoArgsConstructor;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
-import org.homio.api.state.State;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -40,24 +35,6 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler {
 
     public AmcrestBrandHandler(OnvifCameraService service) {
         super(service);
-    }
-
-
-    @Override
-    public Consumer<Boolean> getIRLedHandler() {
-        return on -> {
-            setAttribute(ENDPOINT_AUTO_LED, OnOffType.OFF);
-            if (on) {
-                service.sendHttpGET(CM + "setConfig&Lighting[0][0].Mode=Auto");
-            } else {
-                service.sendHttpGET(CM + "setConfig&Lighting[0][0].Mode=Off");
-            }
-        };
-    }
-
-    @Override
-    public Supplier<Boolean> getIrLedValueHandler() {
-        return () -> Optional.ofNullable(getAttribute(ENDPOINT_ENABLE_LED)).map(State::boolValue).orElse(false);
     }
 
     @Override
@@ -115,27 +92,27 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler {
             }
 
             if (content.contains("table.MotionDetect[0].Enable=false")) {
-                setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.OFF);
+                getEndpointRequire(ENDPOINT_ENABLE_MOTION_ALARM).setValue(OnOffType.OFF);
             } else if (content.contains("table.MotionDetect[0].Enable=true")) {
-                setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.ON);
+                getEndpointRequire(ENDPOINT_ENABLE_MOTION_ALARM).setValue(OnOffType.ON);
             }
             // determine if the audio alarm is turned on or off.
             if (content.contains("table.AudioDetect[0].MutationDetect=true")) {
-                setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.ON);
+                getEndpointRequire(ENDPOINT_ENABLE_AUDIO_ALARM).setValue(OnOffType.ON);
             } else if (content.contains("table.AudioDetect[0].MutationDetect=false")) {
-                setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.OFF);
+                getEndpointRequire(ENDPOINT_ENABLE_AUDIO_ALARM).setValue(OnOffType.OFF);
             }
             // Handle AudioMutationThreshold alarm
             if (content.contains("table.AudioDetect[0].MutationThreold=")) {
-                String value = service.returnValueFromString(content, "table.AudioDetect[0].MutationThreold=");
-                setAttribute(ENDPOINT_AUDIO_THRESHOLD, new DecimalType(value));
+                DecimalType value = new DecimalType(service.returnValueFromString(content, "table.AudioDetect[0].MutationThreold="));
+                this.audioThreshold = value.intValue();
+                getEndpointRequire(ENDPOINT_AUDIO_THRESHOLD).setValue(value);
             }
             // Privacy Mode on/off
             if (content.contains("Code=LensMaskOpen;") || content.contains("table.LeLensMask[0].Enable=true")) {
-                setAttribute(ENDPOINT_ENABLE_PRIVACY_MODE, OnOffType.ON);
-            } else if (content.contains("Code=LensMaskClose;")
-                    || content.contains("table.LeLensMask[0].Enable=false")) {
-                setAttribute(ENDPOINT_ENABLE_PRIVACY_MODE, OnOffType.OFF);
+                getEndpointRequire(ENDPOINT_ENABLE_PRIVACY_MODE).setValue(OnOffType.ON);
+            } else if (content.contains("Code=LensMaskClose;") || content.contains("table.LeLensMask[0].Enable=false")) {
+                getEndpointRequire(ENDPOINT_ENABLE_PRIVACY_MODE).setValue(OnOffType.OFF);
             }
         } finally {
             ReferenceCountUtil.release(msg);
@@ -174,11 +151,11 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler {
             }
         });
 
-        service.addEndpointSwitch(ENDPOINT_AUTO_LED, state -> getIRLedHandler().accept(state.boolValue()));
+        service.addEndpointSwitch(ENDPOINT_AUTO_LED, state ->
+            service.sendHttpGET(CM + "setConfig&Lighting[0][0].Mode=" + (state.boolValue() ? "Auto" : "Off")));
 
-        service.addEndpointSwitch(ENDPOINT_ENABLE_LINE_CROSSING_ALARM, state -> {
-            service.sendHttpGET(CM + "setConfig&VideoAnalyseRule[0][1].Enable=" + state.boolValue());
-        });
+        service.addEndpointSwitch(ENDPOINT_ENABLE_LINE_CROSSING_ALARM, state ->
+            service.sendHttpGET(CM + "setConfig&VideoAnalyseRule[0][1].Enable=" + state.boolValue()));
 
         service.addEndpointSwitch(ENDPOINT_ENABLE_MOTION_ALARM, state -> {
             if (state.boolValue()) {

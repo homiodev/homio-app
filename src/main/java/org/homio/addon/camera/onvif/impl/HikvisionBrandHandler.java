@@ -113,60 +113,60 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler {
                         service.storeHttpReply(
                                 "/ISAPI/System/Video/inputs/channels/" + nvrChannel + "01/motionDetection", content);
                         if (content.contains("<enabled>true</enabled>")) {
-                            setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.ON);
+                            getEndpointRequire(ENDPOINT_ENABLE_MOTION_ALARM).setValue(OnOffType.ON, true);
                         } else if (content.contains("<enabled>false</enabled>")) {
-                            setAttribute(ENDPOINT_ENABLE_MOTION_ALARM, OnOffType.OFF);
+                            getEndpointRequire(ENDPOINT_ENABLE_MOTION_ALARM).setValue(OnOffType.OFF, true);
                         }
                     }
                     case "IOInputPort version=" -> {
                         service.storeHttpReply("/ISAPI/System/IO/inputs/" + nvrChannel, content);
                         if (content.contains("<enabled>true</enabled>")) {
-                            setAttribute(ENDPOINT_ENABLE_EXTERNAL_ALARM, OnOffType.ON);
+                            getEndpointRequire(ENDPOINT_ENABLE_EXTERNAL_ALARM).setValue(OnOffType.ON, true);
                         } else if (content.contains("<enabled>false</enabled>")) {
-                            setAttribute(ENDPOINT_ENABLE_EXTERNAL_ALARM, OnOffType.OFF);
+                            getEndpointRequire(ENDPOINT_ENABLE_EXTERNAL_ALARM).setValue(OnOffType.OFF, true);
                         }
                         if (content.contains("<triggering>low</triggering>")) {
-                            setAttribute(ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
+                            getEndpointRequire(ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT).setValue(OnOffType.OFF, true);
                         } else if (content.contains("<triggering>high</triggering>")) {
-                            setAttribute(ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT, OnOffType.ON);
+                            getEndpointRequire(ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT).setValue(OnOffType.ON, true);
                         }
                     }
                     case "LineDetection" -> {
                         service.storeHttpReply("/ISAPI/Smart/LineDetection/" + nvrChannel + "01", content);
                         if (content.contains("<enabled>true</enabled>")) {
-                            setAttribute(ENDPOINT_ENABLE_LINE_CROSSING_ALARM, OnOffType.ON);
+                            getEndpointRequire(ENDPOINT_ENABLE_LINE_CROSSING_ALARM).setValue(OnOffType.ON, true);
                         } else if (content.contains("<enabled>false</enabled>")) {
-                            setAttribute(ENDPOINT_ENABLE_LINE_CROSSING_ALARM, OnOffType.OFF);
+                            getEndpointRequire(ENDPOINT_ENABLE_LINE_CROSSING_ALARM).setValue(OnOffType.OFF, true);
                         }
                     }
                     case "TextOverlay version=" -> {
                         service.storeHttpReply(
                                 "/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1", content);
                         String text = Helper.fetchXML(content, "<enabled>true</enabled>", "<displayText>");
-                        setAttribute(ENDPOINT_TEXT_OVERLAY, new StringType(text));
+                        getEndpointRequire(ENDPOINT_ENABLE_AUDIO_ALARM).setValue(new StringType(text), true);
                     }
                     case "AudioDetection version=" -> {
                         service.storeHttpReply("/ISAPI/Smart/AudioDetection/channels/" + nvrChannel + "01",
                                 content);
                         if (content.contains("<enabled>true</enabled>")) {
-                            setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.ON);
+                            getEndpointRequire(ENDPOINT_ENABLE_AUDIO_ALARM).setValue(OnOffType.ON, true);
                         } else if (content.contains("<enabled>false</enabled>")) {
-                            setAttribute(ENDPOINT_ENABLE_AUDIO_ALARM, OnOffType.OFF);
+                            getEndpointRequire(ENDPOINT_ENABLE_AUDIO_ALARM).setValue(OnOffType.OFF, true);
                         }
                     }
                     case "IOPortStatus version=" -> {
                         if (content.contains("<ioState>active</ioState>")) {
-                            setAttribute(ENDPOINT_EXTERNAL_ALARM_INPUT, OnOffType.ON);
+                            getEndpointRequire(ENDPOINT_EXTERNAL_ALARM_INPUT).setValue(OnOffType.ON, true);
                         } else if (content.contains("<ioState>inactive</ioState>")) {
-                            setAttribute(ENDPOINT_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
+                            getEndpointRequire(ENDPOINT_EXTERNAL_ALARM_INPUT).setValue(OnOffType.OFF, true);
                         }
                     }
                     case "FieldDetection version=" -> {
                         service.storeHttpReply("/ISAPI/Smart/FieldDetection/" + nvrChannel + "01", content);
                         if (content.contains("<enabled>true</enabled>")) {
-                            setAttribute(ENDPOINT_ENABLE_FIELD_DETECTION_ALARM, OnOffType.ON);
+                            getEndpointRequire(ENDPOINT_ENABLE_FIELD_DETECTION_ALARM).setValue(OnOffType.ON, true);
                         } else if (content.contains("<enabled>false</enabled>")) {
-                            setAttribute(ENDPOINT_ENABLE_FIELD_DETECTION_ALARM, OnOffType.OFF);
+                            getEndpointRequire(ENDPOINT_ENABLE_FIELD_DETECTION_ALARM).setValue(OnOffType.OFF, true);
                         }
                     }
                     case "ResponseStatus version=" -> {
@@ -334,26 +334,22 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler {
     }
 
     private void addEndpoints() {
-        service.addEndpointSwitch(ENDPOINT_ENABLE_LINE_CROSSING_ALARM, state -> {
+        service.addEndpointSwitch(ENDPOINT_ENABLE_LINE_CROSSING_ALARM, state ->
             hikChangeSetting("/ISAPI/Smart/LineDetection/" + nvrChannel + "01", "enabled",
-                "<enabled>" + state.boolValue() + "</enabled>");
-        });
+                "<enabled>" + state.boolValue() + "</enabled>"));
 
-        service.addEndpointSwitch(ENDPOINT_ENABLE_MOTION_ALARM, state -> {
+        service.addEndpointSwitch(ENDPOINT_ENABLE_MOTION_ALARM, state ->
             hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "01/motionDetection",
-                "enabled", "<enabled>" + state.boolValue() + "</enabled>");
-        });
+                "enabled", "<enabled>" + state.boolValue() + "</enabled>"));
 
-        service.addEndpointSwitch(ENDPOINT_ENABLE_FIELD_DETECTION_ALARM, state -> {
+        service.addEndpointSwitch(ENDPOINT_ENABLE_FIELD_DETECTION_ALARM, state ->
             hikChangeSetting("/ISAPI/Smart/FieldDetection/" + nvrChannel + "01", "enabled",
-                "<enabled>" + state.boolValue() + "</enabled>");
-        });
+                "<enabled>" + state.boolValue() + "</enabled>"));
 
-        service.addEndpointSwitch(ENDPOINT_ACTIVATE_ALARM_OUTPUT, state -> {
+        service.addEndpointSwitch(ENDPOINT_ACTIVATE_ALARM_OUTPUT, state ->
             hikSendXml("/ISAPI/System/IO/outputs/" + nvrChannel + "/trigger",
                 "<IOPortData version=\"1.0\" xmlns=\"http://www.hikvision.com/ver10/XMLSchema\">\r\n    <outputState>" +
-                    (state.boolValue() ? "high" : "low") + "</outputState>\r\n</IOPortData>\r\n");
-        });
+                    (state.boolValue() ? "high" : "low") + "</outputState>\r\n</IOPortData>\r\n"));
 
         service.addEndpointInput(ENDPOINT_TEXT_OVERLAY, state -> {
             if (state.stringValue().isEmpty()) {
@@ -367,20 +363,17 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler {
             }
         });
 
-        service.addEndpointSwitch(ENDPOINT_ENABLE_EXTERNAL_ALARM, state -> {
+        service.addEndpointSwitch(ENDPOINT_ENABLE_EXTERNAL_ALARM, state ->
             hikChangeSetting("/ISAPI/System/IO/inputs/" + nvrChannel,
-                "enabled", "<enabled>" + state.boolValue() + "</enabled>");
-        });
+                "enabled", "<enabled>" + state.boolValue() + "</enabled>"));
 
-        service.addEndpointSwitch(ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT, state -> {
+        service.addEndpointSwitch(ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT, state ->
             hikChangeSetting("/ISAPI/System/IO/inputs/" + nvrChannel, "triggering",
-                "<triggering>" + (state.boolValue() ? "high" : "low") + "</triggering>");
-        });
+                "<triggering>" + (state.boolValue() ? "high" : "low") + "</triggering>"));
 
-        service.addEndpointSwitch(ENDPOINT_ENABLE_PIR_ALARM, state -> {
+        service.addEndpointSwitch(ENDPOINT_ENABLE_PIR_ALARM, state ->
             hikChangeSetting("/ISAPI/WLAlarm/PIR", "enabled",
-                "<enabled>" + state.boolValue() + "</enabled>");
-        });
+                "<enabled>" + state.boolValue() + "</enabled>"));
     }
 
     @Override

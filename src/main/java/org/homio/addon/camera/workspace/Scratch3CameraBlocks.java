@@ -1,6 +1,7 @@
 package org.homio.addon.camera.workspace;
 
 import static org.homio.addon.camera.CameraConstants.AlarmEvents.ExternalMotionAlarm;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUTO_LED;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
 
 import dev.failsafe.Failsafe;
@@ -10,8 +11,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +24,8 @@ import org.homio.addon.camera.entity.CameraPlaybackStorage;
 import org.homio.addon.camera.entity.CameraPlaybackStorage.DownloadFile;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.storage.VideoBaseStorageService;
-import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.service.BaseCameraService;
+import org.homio.addon.camera.service.CameraDeviceEndpoint;
 import org.homio.api.EntityContext;
 import org.homio.api.model.OptionModel.KeyValueEnum;
 import org.homio.api.state.DecimalType;
@@ -158,10 +157,6 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
         });
     }
 
-    private static BaseOnvifCameraBrandHandler getBrandHandler(BaseCameraEntity<?, ?> entity) {
-        return ((OnvifCameraEntity) entity).getService().getBrandHandler();
-    }
-
     private void whenDetectionAlarmHat(WorkspaceBlock workspaceBlock) {
         throw new RuntimeException("Not implemented yet");
     }
@@ -262,16 +257,12 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
     @RequiredArgsConstructor
     private enum SetCameraBoolParamEnum implements KeyValueEnum {
         IRLedValue("IR led value", (entity, onOffType, workspaceBlock) -> {
-            if (entity instanceof OnvifCameraEntity) {
-                Consumer<Boolean> handler = getBrandHandler(entity).getIRLedHandler();
-                if (handler == null) {
+            CameraDeviceEndpoint endpoint = entity.getService().getEndpoints().get(ENDPOINT_AUTO_LED);
+            if (endpoint == null) {
                     workspaceBlock.logErrorAndThrow("Unable to find ir led handler for camera: <{}>", entity.getTitle());
                 } else {
-                    handler.accept(onOffType.boolValue());
+                endpoint.setValue(OnOffType.of(onOffType.boolValue()), true);
                 }
-            } else {
-                workspaceBlock.logErrorAndThrow("Unable to find ir led handler for camera: <{}>", entity.getTitle());
-            }
         }),
 
         AudioAlarm("Audio alarm", (entity, onOffType, workspaceBlock) ->
@@ -391,16 +382,12 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
     private enum CameraReportCommands implements KeyValueEnum {
         IRValue("IR led value", (workspaceBlock, scratch) -> {
             BaseCameraEntity<?, ?> entity = scratch.getEntity(workspaceBlock, scratch.menuFfmpegCamera);
-            if (entity instanceof OnvifCameraEntity) {
-                Supplier<Boolean> handler = getBrandHandler(entity).getIrLedValueHandler();
-                if (handler == null) {
-                    workspaceBlock.logErrorAndThrow("Unable to find ir led get value handler for camera: <{}>",
-                            entity.getTitle());
-                } else {
-                    return OnOffType.of(handler.get());
-                }
+            CameraDeviceEndpoint endpoint = entity.getService().getEndpoints().get(ENDPOINT_AUTO_LED);
+            if (endpoint == null) {
+                workspaceBlock.logErrorAndThrow("Unable to find ir led get value handler for camera: <{}>",
+                    entity.getTitle());
             } else {
-                workspaceBlock.logErrorAndThrow("Unable to find ir led get value handler for camera: <{}>", entity.getTitle());
+                return endpoint.getValue();
             }
             return null;
         }),
