@@ -61,17 +61,13 @@ public class CameraConstants {
     public static final String ENDPOINT_ENABLE_LINE_CROSSING_ALARM = "enable_line_cross_alarm";
     public static final String ENDPOINT_ENABLE_EXTERNAL_ALARM = "enable_external_alarm";
     public static final String ENDPOINT_ENABLE_PIR_ALARM = "enable_pir_alarm";
-    public static final String ENDPOINT_PARKING_ALARM = "parking_alarm";
-    public static final String ENDPOINT_TAMPER_ALARM = "tamper_alarm";
-    public static final String ENDPOINT_TOO_DARK_ALARM = "too_dark_alarm";
-    public static final String ENDPOINT_STORAGE_ALARM = "storage_alarm";
-    public static final String ENDPOINT_SCENE_CHANGE_ALARM = "scene_change_alarm";
-    public static final String ENDPOINT_TOO_BRIGHT_ALARM = "too_bright_alarm";
-    public static final String ENDPOINT_TOO_BLURRY_ALARM = "too_blurry_alarm";
 
     public static final String ENDPOINT_PAN = "pan";
+    public static final String ENDPOINT_PAN_COMMAND = "pan_cmd";
     public static final String ENDPOINT_TILT = "tilt";
+    public static final String ENDPOINT_TILT_COMMAND = "tilt_cmd";
     public static final String ENDPOINT_ZOOM = "zoom";
+    public static final String ENDPOINT_ZOOM_COMMAND = "zoom_cmd";
 
     public static final String ENDPOINT_ACTIVATE_ALARM_OUTPUT = "activate_alarm_output";
     public static final String ENDPOINT_ACTIVATE_ALARM_OUTPUT2 = "activate_alarm_output2";
@@ -97,6 +93,15 @@ public class CameraConstants {
     public static final String ENDPOINT_FACE_DETECT = "face_detect_alarm";
     public static final String ENDPOINT_EXTERNAL_ALARM = "external_alarm";
     public static final String ENDPOINT_AUDIO_ALARM = "audio_alarm";
+    public static final String ENDPOINT_TAMPER_ALARM = "tamper_alarm";
+    public static final String ENDPOINT_STORAGE_ALARM = "storage_alarm";
+
+    public static final String ENDPOINT_PARKING_ALARM = "parking_alarm";
+    public static final String ENDPOINT_TOO_DARK_ALARM = "too_dark_alarm";
+    public static final String ENDPOINT_SCENE_CHANGE_ALARM = "scene_change_alarm";
+    public static final String ENDPOINT_TOO_BRIGHT_ALARM = "too_bright_alarm";
+    public static final String ENDPOINT_TOO_BLURRY_ALARM = "too_blurry_alarm";
+
 
     @RequiredArgsConstructor
     public enum AlarmEvents {
@@ -111,7 +116,14 @@ public class CameraConstants {
         HumanAlarm(ENDPOINT_HUMAN_ALARM),
         FaceDetect(ENDPOINT_FACE_DETECT),
         ExternalMotionAlarm(ENDPOINT_EXTERNAL_ALARM),
-        AudioAlarm(ENDPOINT_AUDIO_ALARM);
+        AudioAlarm(ENDPOINT_AUDIO_ALARM),
+        TamperAlarm(ENDPOINT_TAMPER_ALARM),
+        ParkingAlarm(ENDPOINT_PARKING_ALARM),
+        TooDarkAlarm(ENDPOINT_TOO_DARK_ALARM),
+        SceneChangeAlarm(ENDPOINT_SCENE_CHANGE_ALARM),
+        TooBrightAlarm(ENDPOINT_TOO_BRIGHT_ALARM),
+        TooBlurryAlarm(ENDPOINT_TOO_BLURRY_ALARM),
+        StorageAlarm(ENDPOINT_STORAGE_ALARM);
 
         @Getter
         private final String endpoint;

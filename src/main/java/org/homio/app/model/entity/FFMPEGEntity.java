@@ -12,9 +12,11 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -36,6 +38,7 @@ import org.homio.api.state.StringType;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.ui.field.action.v1.item.UIInfoItemBuilder.InfoType;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.video.ffmpeg.FFMPEGImpl;
 import org.homio.hquery.ProgressBar;
@@ -198,10 +201,16 @@ public class FFMPEGEntity extends MediaEntity implements
             this.description = ffmpeg.getCmd();
             if (ffmpeg.getIsAlive()) {
                 ProcessStat stat = ffmpeg.getProcessStat(this::updateUI);
-                setValue(new StringType("Cpu(%.2f%%), Mem(%.2f%%)".formatted(stat.getCpuUsage(), stat.getMemUsage())), false);
+                setValue(new StringType("Cpu(%.1f%%) Mem(%.1f%%)".formatted(stat.getCpuUsage(), stat.getMemUsage())), false);
             } else {
                 setValue(new StringType("Dead"), false);
             }
+        }
+
+        public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
+            String html = Arrays.stream(getValue().toString().split(" "))
+                                .collect(Collectors.joining("</div><div>", "<div>", "</div>"));
+            uiInputBuilder.addInfo("<div class=\"dfc fs14\">%s</div>".formatted(html), InfoType.HTML);
         }
     }
 

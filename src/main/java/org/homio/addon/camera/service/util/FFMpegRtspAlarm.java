@@ -1,7 +1,5 @@
 package org.homio.addon.camera.service.util;
 
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,10 +28,10 @@ public class FFMpegRtspAlarm implements VideoMotionAlarmProvider {
 
     @Override
     public void addMotionAlarmListener(BaseCameraEntity<?, ?> entity, String listener) {
-        MotionContext motionContext = motionListeners.computeIfAbsent(entity.getEntityID(), s -> new MotionContext(entity));
+        MotionContext motionContext = motionListeners.computeIfAbsent(entity.getEntityID(), s -> new MotionContext());
         log.info("[{}]: Rtsp alarm add listener: {}", entity.getEntityID(), listener);
         motionContext.listeners.add(listener);
-        motionContext.updated();
+        motionContext.updated(entity);
     }
 
     @Override
@@ -42,7 +40,7 @@ public class FFMpegRtspAlarm implements VideoMotionAlarmProvider {
         if (motionContext != null) {
             log.info("[{}]: Rtsp alarm remove listener: {}", entity.getEntityID(), listener);
             motionContext.listeners.remove(listener);
-            motionContext.updated();
+            motionContext.updated(entity);
         }
     }
 
@@ -62,17 +60,26 @@ public class FFMpegRtspAlarm implements VideoMotionAlarmProvider {
         }
     }
 
+    @Override
+    public void entityUpdated(BaseCameraEntity<?, ?> entity) {
+        MotionContext motionContext = motionListeners.get(entity.getEntityID());
+        if (motionContext != null) {
+            motionContext.updated(entity);
+        }
+    }
+
     @RequiredArgsConstructor
     private static final class MotionContext {
 
         private final Set<String> listeners = new ConcurrentSkipListSet<>();
-        private final BaseCameraEntity<?, ?> entity;
+        private BaseCameraEntity<?, ?> entity;
         private FFMpegRtspAlarmImpl ffmpegRtspHelper;
         private boolean suspended;
         private int commandHashCode;
 
-        public void updated() {
-            if (listeners.isEmpty() || (entity.getAudioThreshold() == 0 && entity.getMotionThreshold() == 0)) {
+        public void updated(BaseCameraEntity<?, ?> entity) {
+            this.entity = entity;
+            if (listeners.isEmpty() || (this.entity.getAudioThreshold() == 0 && this.entity.getMotionThreshold() == 0)) {
                 FFMPEG.run(ffmpegRtspHelper, FFMPEG::stopConverting);
             } else {
                 startIfRequires();
@@ -127,8 +134,7 @@ public class FFMpegRtspAlarm implements VideoMotionAlarmProvider {
             }
             optionsList.add("-f null");
             return FFMPEGImpl.buildCommand("",
-                defaultIfEmpty(entity.getAlarmInputUrl(),
-                    entity.getService().getUrls().getRtspUri()), String.join(" ", optionsList), "-",
+                entity.getService().getUrls().getRtspUri(), String.join(" ", optionsList), "-",
                 entity.getUser(), entity.getPassword().asString());
         }
     }
@@ -150,7 +156,7 @@ public class FFMpegRtspAlarm implements VideoMotionAlarmProvider {
             return new RtspAlarmFfmpegThread();
         }
 
-        private class RtspAlarmFfmpegThread extends IpVideoFfmpegThread {
+        private class RtspAlarmFfmpegThread extends FFMPEGThread {
 
             public int countOfMotions;
 

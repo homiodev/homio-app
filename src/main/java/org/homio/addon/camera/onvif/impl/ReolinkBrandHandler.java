@@ -89,8 +89,6 @@ import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.impl.ReolinkBrandHandler.SearchRequest.Search;
 import org.homio.addon.camera.service.CameraDeviceEndpoint;
 import org.homio.addon.camera.service.OnvifCameraService;
-import org.homio.addon.camera.ui.UICameraActionGetter;
-import org.homio.addon.camera.ui.UIVideoEndpointAction;
 import org.homio.api.EntityContext;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
@@ -319,11 +317,6 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
         return playbackFiles;
     }
 
-    @UIVideoEndpointAction(ENDPOINT_AUTO_LED)
-    public void setAutoLed(boolean on) {
-        getIRLedHandler().accept(on);
-    }
-
     @Override
     public Consumer<Boolean> getIRLedHandler() {
         return on ->
@@ -334,11 +327,6 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
     @Override
     public Supplier<Boolean> getIrLedValueHandler() {
         return () -> Optional.ofNullable(getAttribute(ENDPOINT_AUTO_LED)).map(State::boolValue).orElse(false);
-    }
-
-    @UICameraActionGetter(ENDPOINT_AUTO_LED)
-    public State isAutoLed() {
-        return getAttribute(ENDPOINT_AUTO_LED);
     }
 
     @Override
@@ -538,8 +526,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
 
     private void handleGetIrLightCommand(Root objectNode) {
         setAttribute(ENDPOINT_AUTO_LED, OnOffType.of("auto".equals(objectNode.value.get("IrLights").get("state").asText())));
-        service.addEndpointSwitch(ENDPOINT_AUTO_LED, state -> setAutoLed(state.boolValue()), true)
-               .setValue(isAutoLed(), true);
+        service.addEndpointSwitch(ENDPOINT_AUTO_LED, state -> getIRLedHandler().accept(state.boolValue()));
     }
 
     @Override
@@ -652,7 +639,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
         if (permit > 0) {
             CameraDeviceEndpoint endpoint = service.addEndpointSwitch(endpointKey, state ->
                 sendCameraPushRequest(setKey, OBJECT_MAPPER.createObjectNode().set(valueKey,
-                    OBJECT_MAPPER.createObjectNode().put("enable", 1))), true);
+                    OBJECT_MAPPER.createObjectNode().put("enable", 1))));
             sendCameraRequest(getKey, channelParam, root -> {
                 boolean value = root.value.path(valueKey).path("enable").asBoolean(false);
                 endpoint.setValue(OnOffType.of(value), true);

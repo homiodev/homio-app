@@ -397,6 +397,8 @@ public class EntityContextImpl implements EntityContext {
                 Object newValue = setName.startsWith("setJsonData") ? args[1] : args[0];
                 if (!Objects.equals(oldValue, newValue)) {
                     changeFields.put(setName, args);
+                    // invoke called entity to update with new value
+                    MethodUtils.invokeMethod(entity, method.getName(), args);
                 }
             }
             if (method.getReturnType().isAssignableFrom(entity.getClass())) {

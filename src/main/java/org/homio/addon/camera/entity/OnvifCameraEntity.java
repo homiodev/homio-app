@@ -156,13 +156,6 @@ public class OnvifCameraEntity extends BaseCameraEntity<OnvifCameraEntity, Onvif
         return super.getPassword();
     }
 
-    @Override
-    @UIField(order = 1, hideInView = true)
-    @UIFieldGroup("ADVANCED")
-    public String getAlarmInputUrl() {
-        return super.getAlarmInputUrl();
-    }
-
     @UIField(order = 2, hideInView = true)
     @UIFieldGroup("ADVANCED")
     public String getCustomMotionAlarmUrl() {

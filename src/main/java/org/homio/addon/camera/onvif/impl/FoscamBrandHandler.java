@@ -17,8 +17,6 @@ import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.OnvifCameraService;
-import org.homio.addon.camera.ui.UICameraActionGetter;
-import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.api.EntityContext;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
@@ -101,38 +99,30 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler {
         }
     }
 
-    @UIVideoAction(name = ENDPOINT_ENABLE_LED, order = 50, icon = "far fa-lightbulb")
-    public void enableLED(boolean on) {
-        getIRLedHandler().accept(on);
-    }
-
     @Override
     public Consumer<Boolean> getIRLedHandler() {
         return on -> {
+            if (on) {
+                setAttribute(ENDPOINT_ENABLE_LED, OnOffType.OFF/*UnDefType.UNDEF*/);
+                service.sendHttpGET(CG + "setInfraLedConfig&mode=0&usr=" + username + "&pwd=" + password);
+            } else {
+                service.sendHttpGET(CG + "setInfraLedConfig&mode=1&usr=" + username + "&pwd=" + password);
+            }
+
             // Disable the auto mode first
-            service.sendHttpGET(CG + "setInfraLedConfig&mode=1&usr=" + username + "&pwd=" + password);
+            /*service.sendHttpGET(CG + "setInfraLedConfig&mode=1&usr=" + username + "&pwd=" + password);
             setAttribute(ENDPOINT_AUTO_LED, OnOffType.OFF);
             if (on) {
                 service.sendHttpGET(CG + "openInfraLed&usr=" + username + "&pwd=" + password);
             } else {
                 service.sendHttpGET(CG + "closeInfraLed&usr=" + username + "&pwd=" + password);
-            }
+            }*/
         };
     }
 
     @Override
     public Supplier<Boolean> getIrLedValueHandler() {
         return () -> Optional.ofNullable(getAttribute(ENDPOINT_ENABLE_LED)).map(State::boolValue).orElse(false);
-    }
-
-    @UIVideoAction(name = ENDPOINT_AUTO_LED, order = 60, icon = "fas fa-lightbulb")
-    public void autoLED(boolean on) {
-        if (on) {
-            setAttribute(ENDPOINT_ENABLE_LED, OnOffType.OFF/*UnDefType.UNDEF*/);
-            service.sendHttpGET(CG + "setInfraLedConfig&mode=0&usr=" + username + "&pwd=" + password);
-        } else {
-            service.sendHttpGET(CG + "setInfraLedConfig&mode=1&usr=" + username + "&pwd=" + password);
-        }
     }
 
     @Override
@@ -180,30 +170,6 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler {
         }
     }
 
-    @UICameraActionGetter(ENDPOINT_ENABLE_MOTION_ALARM)
-    public State getEnableMotionAlarm() {
-        return getAttribute(ENDPOINT_ENABLE_MOTION_ALARM);
-    }
-
-    @UIVideoAction(name = ENDPOINT_ENABLE_MOTION_ALARM, order = 14, icon = "fas fa-running")
-    public void setEnableMotionAlarm(boolean on) {
-        if (on) {
-            if (getEntity().getCustomMotionAlarmUrl().isEmpty()) {
-                service.sendHttpGET(CG + "setMotionDetectConfig&isEnable=1&usr="
-                        + username + "&pwd=" + password);
-                service.sendHttpGET(CG + "setMotionDetectConfig1&isEnable=1&usr="
-                        + username + "&pwd=" + password);
-            } else {
-                service.sendHttpGET(getEntity().getCustomMotionAlarmUrl());
-            }
-        } else {
-            service.sendHttpGET(CG + "setMotionDetectConfig&isEnable=0&usr="
-                    + username + "&pwd=" + password);
-            service.sendHttpGET(CG + "setMotionDetectConfig1&isEnable=0&usr="
-                    + username + "&pwd=" + password);
-        }
-    }
-
     @Override
     public void postInitializeCamera(EntityContext entityContext) {
         OnvifCameraEntity entity = getEntity();
@@ -220,8 +186,29 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler {
 
     @Override
     public void onCameraConnected() {
+        addEndpoints();
         service.sendHttpGET(CG + "getDevState&usr=" + username + "&pwd=" + password);
         service.sendHttpGET(CG + "getAudioAlarmConfig&usr=" + username + "&pwd=" + password);
+    }
+
+    private void addEndpoints() {
+        service.addEndpointSwitch(ENDPOINT_AUTO_LED, state -> getIRLedHandler().accept(state.boolValue()));
+
+        service.addEndpointSwitch(ENDPOINT_ENABLE_MOTION_ALARM, state -> {
+            String prefix = CG + "setMotionDetectConfig&isEnable=%s&usr=" + username + "&pwd=" + password;
+            String prefix1 = CG + "setMotionDetectConfig1&isEnable=%s&usr=" + username + "&pwd=" + password;
+            if (state.boolValue()) {
+                if (getEntity().getCustomMotionAlarmUrl().isEmpty()) {
+                    service.sendHttpGET(prefix.formatted("1"));
+                    service.sendHttpGET(prefix1.formatted("1"));
+                } else {
+                    service.sendHttpGET(getEntity().getCustomMotionAlarmUrl());
+                }
+            } else {
+                service.sendHttpGET(prefix.formatted("0"));
+                service.sendHttpGET(prefix1.formatted("0"));
+            }
+        });
     }
 
     @Override

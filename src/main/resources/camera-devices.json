@@ -481,9 +481,23 @@
       "iconColor": "#8035A6"
     },
     {
+      "name": "pan_cmd",
+      "stateless": true,
+      "order": 500,
+      "icon": "fa-panorama",
+      "iconColor": "#8035A6"
+    },
+    {
       "name": "tilt",
       "stateless": true,
       "order": 510,
+      "icon": "fa-sort",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "tilt_cmd",
+      "stateless": true,
+      "order": 511,
       "icon": "fa-sort",
       "iconColor": "#8035A6"
     },
@@ -494,12 +508,13 @@
       "icon": "fa-magnifying-glass-plus",
       "iconColor": "#8035A6"
     },
-
-
-
-
-
-
+    {
+      "name": "zoom_cmd",
+      "stateless": true,
+      "order": 521,
+      "icon": "fa-magnifying-glass-plus",
+      "iconColor": "#8035A6"
+    },
     {
       "name": "activate_alarm_output",
       "stateless": true,
@@ -518,7 +533,7 @@
       "name": "trigger_external_alarm_input",
       "stateless": true,
       "order": 520,
-      "icon": "fa-bell",
+      "icon": "fa-external-link-alt",
       "iconColor": "#8035A6"
     },
     {
@@ -559,7 +574,7 @@
       "name": "goto_preset",
       "stateless": true,
       "order": 520,
-      "icon": "fa-gift",
+      "icon": "fa-location-arrow",
       "iconColor": "#8035A6"
     },
     {

@@ -11,7 +11,6 @@ import io.netty.util.ReferenceCountUtil;
 import lombok.NoArgsConstructor;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.service.OnvifCameraService;
-import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.api.state.OnOffType;
 import org.jetbrains.annotations.Nullable;
 
@@ -68,7 +67,29 @@ public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
 
     @Override
     public void onCameraConnected() {
+        addEndpoints();
         // do nothing
+    }
+
+    private void addEndpoints() {
+        service.addEndpointSwitch(ENDPOINT_EXTERNAL_LIGHT, state -> {
+            if (state.boolValue()) {
+                service.sendHttpGET("/bha-api/light-on.cgi");
+            }
+        });
+
+        service.addEndpointSwitch(ENDPOINT_ACTIVATE_ALARM_OUTPUT2, state -> {
+            if (state.boolValue()) {
+                service.sendHttpGET("/bha-api/open-door.cgi?r=2");
+            }
+        });
+
+        service.addEndpointSwitch(ENDPOINT_ACTIVATE_ALARM_OUTPUT, state -> {
+            if (state.boolValue()) {
+                service.sendHttpGET("/bha-api/open-door.cgi");
+            }
+        });
+
     }
 
     @Override
@@ -79,26 +100,5 @@ public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
     @Override
     public String getUrlToKeepOpenForIdleStateEvent() {
         return "/bha-api/monitor.cgi?ring=doorbell,motionsensor";
-    }
-
-    @UIVideoAction(name = ENDPOINT_EXTERNAL_LIGHT, order = 200, icon = "fas fa-sun")
-    public void externalLight(boolean on) {
-        if (on) {
-            service.sendHttpGET("/bha-api/light-on.cgi");
-        }
-    }
-
-    @UIVideoAction(name = ENDPOINT_ACTIVATE_ALARM_OUTPUT2, order = 47, icon = "fas fa-bell")
-    public void activateAlarmOutput2(boolean on) {
-        if (on) {
-            service.sendHttpGET("/bha-api/open-door.cgi?r=2");
-        }
-    }
-
-    @UIVideoAction(name = ENDPOINT_ACTIVATE_ALARM_OUTPUT, order = 45, icon = "fas fa-bell")
-    public void activateAlarmOutput(boolean on) {
-        if (on) {
-            service.sendHttpGET("/bha-api/open-door.cgi");
-        }
     }
 }

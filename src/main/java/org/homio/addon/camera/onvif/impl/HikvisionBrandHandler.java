@@ -27,11 +27,8 @@ import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.OnvifCameraService;
-import org.homio.addon.camera.ui.UICameraActionGetter;
-import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.api.EntityContext;
 import org.homio.api.state.OnOffType;
-import org.homio.api.state.State;
 import org.homio.api.state.StringType;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.http.MediaType;
@@ -207,11 +204,6 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler {
         }
     }
 
-    @UICameraActionGetter(ENDPOINT_TEXT_OVERLAY)
-    public State getTextOverlay() {
-        return getAttribute(ENDPOINT_TEXT_OVERLAY);
-    }
-
     public void hikSendXml(String httpPutURL, String xml) {
         log.debug("[{}]: Body for PUT:{} is going to be:{}", entityID, httpPutURL, xml);
         FullHttpRequest fullHttpRequest = buildFullHttpRequest(httpPutURL, xml, HttpMethod.PUT, MediaType.APPLICATION_XML);
@@ -245,53 +237,6 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler {
         }
     }
 
-    @UIVideoAction(name = ENDPOINT_TEXT_OVERLAY, order = 100, icon = "fas fa-paragraph")
-    public void setTextOverlay(String command) {
-        log.debug("[{}]: Changing text overlay to {}", entityID, command);
-        if (command.isEmpty()) {
-            hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1",
-                    "enabled", "<enabled>false</enabled>");
-        } else {
-            hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1",
-                    "displayText", "<displayText>" + command + "</displayText>");
-            hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1",
-                    "enabled", "<enabled>true</enabled>");
-        }
-    }
-
-    @UICameraActionGetter(ENDPOINT_ENABLE_EXTERNAL_ALARM)
-    public State getEnableExternalAlarmInput() {
-        return getAttribute(ENDPOINT_ENABLE_EXTERNAL_ALARM);
-    }
-
-    @UIVideoAction(name = ENDPOINT_ENABLE_EXTERNAL_ALARM, order = 250, icon = "fas fa-external-link-square-alt")
-    public void setEnableExternalAlarmInput(boolean on) {
-        log.debug("[{}]: Changing enabled state of the external input 1 to {}", entityID, on);
-        hikChangeSetting("/ISAPI/System/IO/inputs/" + nvrChannel, "enabled", "<enabled>" + on + "</enabled>");
-    }
-
-    @UICameraActionGetter(ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT)
-    public State getTriggerExternalAlarmInput() {
-        return getAttribute(ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT);
-    }
-
-    @UIVideoAction(name = ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT, order = 300, icon = "fas fa-external-link-alt")
-    public void setTriggerExternalAlarmInput(boolean on) {
-        log.debug("[{}]: Changing triggering state of the external input 1 to {}", entityID, on);
-        hikChangeSetting("/ISAPI/System/IO/inputs/" + nvrChannel, "triggering",
-                "<triggering>" + (on ? "high" : "low") + "</triggering>");
-    }
-
-    @UIVideoAction(name = ENDPOINT_ENABLE_PIR_ALARM, order = 120, icon = "fas fa-compress-alt")
-    public void enablePirAlarm(boolean on) {
-        hikChangeSetting("/ISAPI/WLAlarm/PIR", "enabled", "<enabled>" + on + "</enabled>");
-    }
-
-    @UICameraActionGetter(ENDPOINT_ENABLE_LINE_CROSSING_ALARM)
-    public State getEnableLineCrossingAlarm() {
-        return getAttribute(ENDPOINT_ENABLE_LINE_CROSSING_ALARM);
-    }
-
     @Override
     public boolean isHasMotionAlarm() {
         return true;
@@ -300,36 +245,6 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler {
     @Override
     public void setMotionAlarmThreshold(int threshold) {
         hikChangeSetting("/ISAPI/WLAlarm/PIR", "enabled", "<enabled>" + (threshold > 0) + "</enabled>");
-    }
-
-    @UIVideoAction(name = ENDPOINT_ENABLE_LINE_CROSSING_ALARM, order = 150, icon = "fas fa-grip-lines-vertical")
-    public void setEnableLineCrossingAlarm(boolean on) {
-        hikChangeSetting("/ISAPI/Smart/LineDetection/" + nvrChannel + "01", "enabled",
-                "<enabled>" + on + "</enabled>");
-    }
-
-    @UIVideoAction(name = ENDPOINT_ENABLE_MOTION_ALARM, order = 14, icon = "fas fa-running")
-    public void enableMotionAlarm(boolean on) {
-        hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "01/motionDetection",
-                "enabled", "<enabled>" + on + "</enabled>");
-    }
-
-    @UICameraActionGetter(ENDPOINT_ENABLE_FIELD_DETECTION_ALARM)
-    public State getEnableFieldDetectionAlarm() {
-        return getAttribute(ENDPOINT_ENABLE_FIELD_DETECTION_ALARM);
-    }
-
-    @UIVideoAction(name = ENDPOINT_ENABLE_FIELD_DETECTION_ALARM, order = 140, icon = "fas fa-shield-alt")
-    public void setEnableFieldDetectionAlarm(boolean on) {
-        hikChangeSetting("/ISAPI/Smart/FieldDetection/" + nvrChannel + "01", "enabled",
-                "<enabled>" + on + "</enabled>");
-    }
-
-    @UIVideoAction(name = ENDPOINT_ACTIVATE_ALARM_OUTPUT, order = 45, icon = "fas fa-bell")
-    public void activateAlarmOutput(boolean on) {
-        hikSendXml("/ISAPI/System/IO/outputs/" + nvrChannel + "/trigger",
-                "<IOPortData version=\"1.0\" xmlns=\"http://www.hikvision.com/ver10/XMLSchema\">\r\n    <outputState>" +
-                        (on ? "high" : "low") + "</outputState>\r\n</IOPortData>\r\n");
     }
 
     // This does debouncing of the alarms
@@ -410,11 +325,62 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler {
 
     @Override
     public void onCameraConnected() {
+        addEndpoints();
         service.sendHttpGET("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "01/motionDetection");
         service.sendHttpGET("/ISAPI/Smart/LineDetection/" + nvrChannel + "01");
         service.sendHttpGET("/ISAPI/Smart/AudioDetection/channels/" + nvrChannel + "01");
         service.sendHttpGET("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1");
         service.sendHttpGET("/ISAPI/System/IO/inputs/" + nvrChannel);
+    }
+
+    private void addEndpoints() {
+        service.addEndpointSwitch(ENDPOINT_ENABLE_LINE_CROSSING_ALARM, state -> {
+            hikChangeSetting("/ISAPI/Smart/LineDetection/" + nvrChannel + "01", "enabled",
+                "<enabled>" + state.boolValue() + "</enabled>");
+        });
+
+        service.addEndpointSwitch(ENDPOINT_ENABLE_MOTION_ALARM, state -> {
+            hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "01/motionDetection",
+                "enabled", "<enabled>" + state.boolValue() + "</enabled>");
+        });
+
+        service.addEndpointSwitch(ENDPOINT_ENABLE_FIELD_DETECTION_ALARM, state -> {
+            hikChangeSetting("/ISAPI/Smart/FieldDetection/" + nvrChannel + "01", "enabled",
+                "<enabled>" + state.boolValue() + "</enabled>");
+        });
+
+        service.addEndpointSwitch(ENDPOINT_ACTIVATE_ALARM_OUTPUT, state -> {
+            hikSendXml("/ISAPI/System/IO/outputs/" + nvrChannel + "/trigger",
+                "<IOPortData version=\"1.0\" xmlns=\"http://www.hikvision.com/ver10/XMLSchema\">\r\n    <outputState>" +
+                    (state.boolValue() ? "high" : "low") + "</outputState>\r\n</IOPortData>\r\n");
+        });
+
+        service.addEndpointInput(ENDPOINT_TEXT_OVERLAY, state -> {
+            if (state.stringValue().isEmpty()) {
+                hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1",
+                    "enabled", "<enabled>false</enabled>");
+            } else {
+                hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1",
+                    "displayText", "<displayText>" + state.stringValue() + "</displayText>");
+                hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1",
+                    "enabled", "<enabled>true</enabled>");
+            }
+        });
+
+        service.addEndpointSwitch(ENDPOINT_ENABLE_EXTERNAL_ALARM, state -> {
+            hikChangeSetting("/ISAPI/System/IO/inputs/" + nvrChannel,
+                "enabled", "<enabled>" + state.boolValue() + "</enabled>");
+        });
+
+        service.addEndpointSwitch(ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT, state -> {
+            hikChangeSetting("/ISAPI/System/IO/inputs/" + nvrChannel, "triggering",
+                "<triggering>" + (state.boolValue() ? "high" : "low") + "</triggering>");
+        });
+
+        service.addEndpointSwitch(ENDPOINT_ENABLE_PIR_ALARM, state -> {
+            hikChangeSetting("/ISAPI/WLAlarm/PIR", "enabled",
+                "<enabled>" + state.boolValue() + "</enabled>");
+        });
     }
 
     @Override

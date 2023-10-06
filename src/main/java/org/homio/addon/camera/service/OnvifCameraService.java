@@ -5,16 +5,19 @@ import static org.homio.addon.camera.CameraConstants.AlarmEvents.CellMotionAlarm
 import static org.homio.addon.camera.CameraConstants.AlarmEvents.FieldDetectAlarm;
 import static org.homio.addon.camera.CameraConstants.AlarmEvents.LineCrossAlarm;
 import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.SceneChangeAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.StorageAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.TamperAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.TooBlurryAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.TooBrightAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvents.TooDarkAlarm;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_GOTO_PRESET;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_PAN;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_SCENE_CHANGE_ALARM;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_STORAGE_ALARM;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_TAMPER_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_PAN_COMMAND;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_TILT;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_TOO_BLURRY_ALARM;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_TOO_BRIGHT_ALARM;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_TOO_DARK_ALARM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_TILT_COMMAND;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ZOOM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ZOOM_COMMAND;
 import static org.homio.api.EntityContextSetting.SERVER_PORT;
 import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
@@ -47,7 +50,6 @@ import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import java.awt.Dimension;
-import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -55,9 +57,12 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -72,20 +77,13 @@ import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.onvif.util.MyNettyAuthHandler;
 import org.homio.addon.camera.service.util.CameraUtils;
 import org.homio.addon.camera.service.util.CommonCameraHandler;
-import org.homio.addon.camera.ui.UICameraActionConditional;
-import org.homio.addon.camera.ui.UICameraActionGetter;
-import org.homio.addon.camera.ui.UICameraDimmerButton;
-import org.homio.addon.camera.ui.UIVideoAction;
-import org.homio.addon.camera.ui.UIVideoActionMetadata;
-import org.homio.addon.camera.ui.VideoActionType;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.MediaMTXSource;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
+import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.state.DecimalType;
-import org.homio.api.state.ObjectType;
-import org.homio.api.state.OnOffType;
 import org.homio.api.ui.field.action.ActionInputParameter;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.HardwareUtils;
@@ -135,33 +133,33 @@ public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, Onv
         onvifDeviceState.getEventDevices().subscribe("RuleEngine/LineDetector/Crossed",
             (dataName, dataValue) -> motionDetected(dataName.equals("ObjectId"), LineCrossAlarm));
         onvifDeviceState.getEventDevices().subscribe("RuleEngine/TamperDetector/Tamper",
-            (dataName, dataValue) -> setAttribute(ENDPOINT_TAMPER_ALARM, OnOffType.of(dataValue.equals("true"))));
+            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), TamperAlarm));
         onvifDeviceState.getEventDevices().subscribe("Device/HardwareFailure/StorageFailure",
-            (dataName, dataValue) -> setAttribute(ENDPOINT_STORAGE_ALARM, OnOffType.of(dataValue.equals("true"))));
+            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), StorageAlarm));
 
         onvifDeviceState.getEventDevices().subscribe(
             "VideoSource/ImageTooDark/AnalyticsService",
             "VideoSource/ImageTooDark/ImagingService",
             "VideoSource/ImageTooDark/RecordingService",
-            (dataName, dataValue) -> setAttribute(ENDPOINT_TOO_DARK_ALARM, OnOffType.of(dataValue.equals("true"))));
+            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), TooDarkAlarm));
 
         onvifDeviceState.getEventDevices().subscribe(
             "VideoSource/GlobalSceneChange/AnalyticsService",
             "VideoSource/GlobalSceneChange/ImagingService",
             "VideoSource/GlobalSceneChange/RecordingService",
-            (dataName, dataValue) -> setAttribute(ENDPOINT_SCENE_CHANGE_ALARM, OnOffType.of(dataValue.equals("true"))));
+            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), SceneChangeAlarm));
 
         onvifDeviceState.getEventDevices().subscribe(
             "VideoSource/ImageTooBright/AnalyticsService",
             "VideoSource/ImageTooBright/ImagingService",
             "VideoSource/ImageTooBright/RecordingService",
-            (dataName, dataValue) -> setAttribute(ENDPOINT_TOO_BRIGHT_ALARM, OnOffType.of(dataValue.equals("true"))));
+            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), TooBrightAlarm));
 
         onvifDeviceState.getEventDevices().subscribe(
             "VideoSource/ImageTooBlurry/AnalyticsService",
             "VideoSource/ImageTooBlurry/ImagingService",
             "VideoSource/ImageTooBlurry/RecordingService",
-            (dataName, dataValue) -> setAttribute(ENDPOINT_TOO_BLURRY_ALARM, OnOffType.of(dataValue.equals("true"))));
+            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), TooBlurryAlarm));
 
         if (entity.getCameraType() != null && getCameraBrands(entityContext).containsKey(entity.getCameraType())) {
             CameraBrandHandlerDescription cameraBrandHandlerDescription = getCameraBrands(entityContext).get(entity.getCameraType());
@@ -230,7 +228,7 @@ public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, Onv
     }
 
     public void sendHttpPUT(String httpRequestURL, FullHttpRequest request) {
-        putRequestWithBody = request; // use Global so the authhandler can use it when resent with DIGEST.
+        putRequestWithBody = request; // use Global so the auth handler can use it when resent with DIGEST.
         sendHttpRequest("PUT", httpRequestURL, null);
     }
 
@@ -332,26 +330,6 @@ public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, Onv
         }
     }
 
-    @UIVideoAction(name = ENDPOINT_PAN, order = 3, icon = "fas fa-expand-arrows-alt", type = VideoActionType.slider)
-    @UICameraActionConditional(SupportPTZCondition.class)
-    @UICameraDimmerButton(name = "LEFT", icon = "fas fa-caret-left")
-    @UICameraDimmerButton(name = "OFF", icon = "fas fa-power-off")
-    @UICameraDimmerButton(name = "RIGHT", icon = "fas fa-caret-right")
-    public void setPan(String command) {
-        Profile profile = getProfile();
-        if ("LEFT".equals(command) || "RIGHT".equals(command)) {
-            if ("LEFT".equals(command)) {
-                onvifDeviceState.getPtzDevices().moveLeft(entity.isPtzContinuous(), profile);
-            } else {
-                onvifDeviceState.getPtzDevices().moveRight(entity.isPtzContinuous(), profile);
-            }
-        } else if ("OFF".equals(command)) {
-            onvifDeviceState.getPtzDevices().stopMove(profile);
-        } else {
-            onvifDeviceState.getPtzDevices().setAbsolutePan(Float.parseFloat(command), profile);
-        }
-    }
-
     private Profile getProfile() {
         List<Profile> profiles = onvifDeviceState.getProfiles();
         if (profiles.isEmpty()) {
@@ -374,72 +352,6 @@ public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, Onv
             }
         }
         return ""; // Did not find the String we were searching for
-    }
-
-    @UICameraActionGetter(ENDPOINT_PAN)
-    public DecimalType getPan() {
-        return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentPanPercentage()));
-    }
-
-    @UIVideoAction(name = ENDPOINT_TILT, order = 5, icon = "fas fa-sort", type = VideoActionType.slider)
-    @UICameraActionConditional(SupportPTZCondition.class)
-    @UICameraDimmerButton(name = "UP", icon = "fas fa-caret-up")
-    @UICameraDimmerButton(name = "OFF", icon = "fas fa-power-off")
-    @UICameraDimmerButton(name = "DOWN", icon = "fas fa-caret-down")
-    public void setTilt(String command) {
-        Profile profile = getProfile();
-        if ("UP".equals(command) || "DOWN".equals(command)) {
-            if ("UP".equals(command)) {
-                onvifDeviceState.getPtzDevices().moveUp(entity.isPtzContinuous(), profile);
-            } else {
-                onvifDeviceState.getPtzDevices().moveDown(entity.isPtzContinuous(), profile);
-            }
-        } else if ("OFF".equals(command)) {
-            onvifDeviceState.getPtzDevices().stopMove(profile);
-        } else {
-            onvifDeviceState.getPtzDevices().setAbsoluteTilt(Float.parseFloat(command), profile);
-        }
-    }
-
-    @UICameraActionGetter(ENDPOINT_TILT)
-    public DecimalType getTilt() {
-        return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentTiltPercentage()));
-    }
-
-    @UIVideoAction(name = ENDPOINT_ZOOM, order = 7, icon = "fas fa-search-plus", type = VideoActionType.slider)
-    @UICameraActionConditional(SupportPTZCondition.class)
-    @UICameraDimmerButton(name = "IN", icon = "fas fa-search-plus")
-    @UICameraDimmerButton(name = "OFF", icon = "fas fa-power-off")
-    @UICameraDimmerButton(name = "OUT", icon = "fas fa-search-minus")
-    public void setZoom(String command) {
-        Profile profile = getProfile();
-        if ("IN".equals(command) || "OUT".equals(command)) {
-            if ("IN".equals(command)) {
-                onvifDeviceState.getPtzDevices().moveIn(entity.isPtzContinuous(), profile);
-            } else {
-                onvifDeviceState.getPtzDevices().moveOut(entity.isPtzContinuous(), profile);
-            }
-        } else if ("OFF".equals(command)) {
-            onvifDeviceState.getPtzDevices().stopMove(profile);
-        }
-        onvifDeviceState.getPtzDevices().setAbsoluteZoom(Float.parseFloat(command), profile);
-    }
-
-    @UICameraActionGetter(ENDPOINT_ZOOM)
-    public DecimalType getZoom() {
-        return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentZoomPercentage()));
-    }
-
-    @UICameraActionGetter(ENDPOINT_GOTO_PRESET)
-    public DecimalType getGotoPreset() {
-        return new DecimalType(0);
-    }
-
-    @UIVideoAction(name = ENDPOINT_GOTO_PRESET, order = 30, icon = "fas fa-location-arrow")
-    @UIVideoActionMetadata(min = 1, max = 25, selectReplacer = "Preset %0  ")
-    @UICameraActionConditional(SupportPTZCondition.class)
-    public void gotoPreset(int preset) {
-        onvifDeviceState.getPtzDevices().gotoPreset(preset, getProfile());
     }
 
     public boolean streamIsStopped(String url) {
@@ -561,9 +473,97 @@ public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, Onv
         brandHandler.postInitializeCamera(entityContext);
     }
 
+    public void gotoPreset(int preset) {
+        onvifDeviceState.getPtzDevices().gotoPreset(preset, getProfile());
+    }
+
     @Override
     protected void onCameraConnected() {
+        addEndpoints();
         brandHandler.onCameraConnected();
+    }
+
+    private void addEndpoints() {
+        if (isSupportPtz()) {
+            addTiltEndpoint();
+            addZoomEndpoint();
+            addPanEndpoint();
+
+            Set<String> presets = IntStream.range(1, 26).boxed().map(id -> "Preset " + id).collect(Collectors.toCollection(TreeSet::new));
+            addEndpointEnum(ENDPOINT_GOTO_PRESET, presets, state -> {
+                int preset = Integer.parseInt(state.stringValue().substring("Preset ".length()));
+                gotoPreset(preset);
+            });
+        }
+    }
+
+    private void addPanEndpoint() {
+        addEndpointSlider(ENDPOINT_PAN, 0F, 100F, state ->
+            onvifDeviceState.getPtzDevices().setAbsolutePan(state.floatValue(), getProfile()), true).setValue(
+            new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentPanPercentage())), false);
+
+        addEndpointButtons(ENDPOINT_PAN_COMMAND, List.of(
+            OptionModel.of("LEFT").setIcon("fas fa-caret-left"),
+            OptionModel.of("OFF").setIcon("fas fa-power-off"),
+            OptionModel.of("RIGHT").setIcon("fas fa-caret-right")
+        ), state -> {
+            String command = state.stringValue();
+            if ("LEFT".equals(command)) {
+                onvifDeviceState.getPtzDevices().moveLeft(entity.isPtzContinuous(), getProfile());
+            } else if ("RIGHT".equals(command)) {
+                onvifDeviceState.getPtzDevices().moveRight(entity.isPtzContinuous(), getProfile());
+            } else if ("OFF".equals(command)) {
+                onvifDeviceState.getPtzDevices().stopMove(getProfile());
+            } else {
+                throw new IllegalStateException("Illegal TILT command: " + command);
+            }
+        });
+    }
+
+    private void addTiltEndpoint() {
+        addEndpointSlider(ENDPOINT_TILT, 0F, 100F, state ->
+            onvifDeviceState.getPtzDevices().setAbsoluteTilt(state.floatValue(), getProfile()), true).setValue(
+            new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentTiltPercentage())), false);
+
+        addEndpointButtons(ENDPOINT_TILT_COMMAND, List.of(
+            OptionModel.of("UP").setIcon("fas fa-caret-up"),
+            OptionModel.of("OFF").setIcon("fas fa-power-off"),
+            OptionModel.of("DOWN").setIcon("fas fa-caret-down")
+        ), state -> {
+            String command = state.stringValue();
+            if ("UP".equals(command)) {
+                onvifDeviceState.getPtzDevices().moveUp(entity.isPtzContinuous(), getProfile());
+            } else if ("DOWN".equals(command)) {
+                onvifDeviceState.getPtzDevices().moveDown(entity.isPtzContinuous(), getProfile());
+            } else if ("OFF".equals(command)) {
+                onvifDeviceState.getPtzDevices().stopMove(getProfile());
+            } else {
+                throw new IllegalStateException("Illegal TILT command: " + command);
+            }
+        });
+    }
+
+    private void addZoomEndpoint() {
+        addEndpointSlider(ENDPOINT_ZOOM, 0F, 100F, state ->
+            onvifDeviceState.getPtzDevices().setAbsoluteZoom(state.floatValue(), getProfile()), true).setValue(
+            new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentZoomPercentage())), false);
+
+        addEndpointButtons(ENDPOINT_ZOOM_COMMAND, List.of(
+            OptionModel.of("IN").setIcon("fas fa-search-plus"),
+            OptionModel.of("OFF").setIcon("fas fa-power-off"),
+            OptionModel.of("OUT").setIcon("fas fa-search-minus")
+        ), state -> {
+            String command = state.stringValue();
+            if ("IN".equals(command)) {
+                onvifDeviceState.getPtzDevices().moveIn(entity.isPtzContinuous(), getProfile());
+            } else if ("OUT".equals(command)) {
+                onvifDeviceState.getPtzDevices().moveOut(entity.isPtzContinuous(), getProfile());
+            } else if ("OFF".equals(command)) {
+                onvifDeviceState.getPtzDevices().stopMove(getProfile());
+            } else {
+                throw new IllegalStateException("Illegal ZOOM command: " + command);
+            }
+        });
     }
 
     @Override
@@ -638,7 +638,6 @@ public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, Onv
             String subscribeUrl = "%s:%s/rest/media/video/%s/OnvifEvent".formatted(onvifDeviceState.getIp(), SERVER_PORT, entityID);
             onvifDeviceState.getEventDevices().initFully(subscribeUrl);
         }
-        setAttribute("PROFILES", new ObjectType(onvifDeviceState.getProfiles()));
         for (Profile profile : onvifDeviceState.getProfiles()) {
             urls.setRtspUri(onvifDeviceState.getMediaDevices().getRTSPStreamUri(profile.getToken()), profile.getName());
             urls.setSnapshotUri(onvifDeviceState.getMediaDevices().getSnapshotUri(profile.getToken()), profile.getName());
@@ -701,14 +700,6 @@ public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, Onv
                 progressBar.done();
             }
         });
-    }
-
-    public static class SupportPTZCondition implements UICameraActionConditional.ActionConditional {
-
-        @Override
-        public boolean match(OnvifCameraService service, Method method, String endpoint) {
-            return service.isSupportPtz();
-        }
     }
 
     @RequiredArgsConstructor

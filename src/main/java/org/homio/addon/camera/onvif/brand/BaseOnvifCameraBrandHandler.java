@@ -24,7 +24,6 @@ import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.handler.BaseBrandCameraHandler;
 import org.homio.addon.camera.service.CameraDeviceEndpoint;
 import org.homio.addon.camera.service.OnvifCameraService;
-import org.homio.addon.camera.ui.CameraActionBuilder;
 import org.homio.api.EntityContext;
 import org.homio.api.state.State;
 import org.homio.api.ui.field.action.HasDynamicUIFields;
@@ -86,12 +85,7 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler
         return service.getAttributes().getOrDefault(name, null);
     }
 
-    public int boolToInt(boolean on) {
-        return on ? 1 : 0;
-    }
-
     public void assembleActions(UIInputBuilder uiInputBuilder) {
-        CameraActionBuilder.assembleActions(this, uiInputBuilder);
     }
 
     public @Nullable String getSnapshotUri() {

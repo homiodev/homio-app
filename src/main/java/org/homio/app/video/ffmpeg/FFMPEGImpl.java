@@ -80,7 +80,7 @@ public class FFMPEGImpl implements FFMPEG {
     protected Process process = null;
     // this is indicator that tells if this ffmpeg command is still need by 3th part request
     private int keepAlive = 8;
-    private Thread ipVideoFfmpegThread;
+    private Thread ffmpegThread;
     private long lastAnswerFromFFMPEG = 0;
     private final @Getter AtomicBoolean running = new AtomicBoolean(false);
     private @Setter @Accessors(chain = true) @Nullable Path workingDirectory;
@@ -97,7 +97,8 @@ public class FFMPEGImpl implements FFMPEG {
         @NotNull String username,
         @NotNull String password,
         @NotNull EntityContext entityContext) {
-        this(entityID, description, handler, format, output, buildCommand(inputArguments, input, outArguments, output, username, password), entityContext);
+        this(entityID, description, handler, format, output, buildCommand(inputArguments,
+            input, outArguments, output, username, password), entityContext);
     }
 
     @SneakyThrows
@@ -119,7 +120,7 @@ public class FFMPEGImpl implements FFMPEG {
         this.description = description;
         this.format = format;
         this.handler = handler;
-        this.ipVideoFfmpegThread = createFFMPEGThread();
+        this.ffmpegThread = createFFMPEGThread();
         this.output = output;
         this.commandHashCode = command.hashCode();
         Collections.addAll(commandArrayList, command.split("\\s+"));
@@ -158,15 +159,15 @@ public class FFMPEGImpl implements FFMPEG {
         if (keepAlive != -1) {
             keepAlive = 8;
         }
-        boolean processAlive = ipVideoFfmpegThread.isAlive();
+        boolean processAlive = ffmpegThread.isAlive();
         if (processAlive && System.currentTimeMillis() - lastAnswerFromFFMPEG > 30000) {
             stopConverting();
         }
         if (!processAlive) {
-            ipVideoFfmpegThread = createFFMPEGThread();
+            ffmpegThread = createFFMPEGThread();
             running.set(true);
             FFMPEGImpl.ffmpegMap.put(entityID + "_" + description, this);
-            ipVideoFfmpegThread.start();
+            ffmpegThread.start();
             return true;
         }
         return false;
@@ -228,7 +229,7 @@ public class FFMPEGImpl implements FFMPEG {
 
     @Override
     public synchronized boolean stopConverting(Duration duration) {
-        if (ipVideoFfmpegThread.isAlive()) {
+        if (ffmpegThread.isAlive()) {
             logWarn("Stopping '%s' ffmpeg %s now when keepalive is: %s".formatted(description, format, keepAlive));
             if (process != null) {
                 EntityContextBGPImpl.stopProcess(process, description);
@@ -243,7 +244,7 @@ public class FFMPEGImpl implements FFMPEG {
     }
 
     protected @NotNull Thread createFFMPEGThread() {
-        return new IpVideoFfmpegThread();
+        return new FFMPEGThread();
     }
 
     private void finishFFMPEG() {
@@ -280,13 +281,13 @@ public class FFMPEGImpl implements FFMPEG {
         fileHandler.publish(new LogRecord(java.util.logging.Level.FINE, message));
     }
 
-    protected class IpVideoFfmpegThread extends Thread {
+    protected class FFMPEGThread extends Thread {
 
         public int countOfMotions;
 
-        protected IpVideoFfmpegThread() {
+        protected FFMPEGThread() {
             setDaemon(true);
-            setName("VideoThread_" + format + "_" + entityID);
+            setName("FFMPEG_thread_" + format + "_" + entityID);
         }
 
         @Override

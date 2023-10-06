@@ -1,5 +1,16 @@
 package org.homio.addon.camera.workspace;
 
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_PAN;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_PAN_COMMAND;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_TILT;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_TILT_COMMAND;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ZOOM;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ZOOM_COMMAND;
+
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -7,16 +18,13 @@ import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.api.EntityContext;
+import org.homio.api.state.DecimalType;
 import org.homio.api.state.State;
+import org.homio.api.state.StringType;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.MenuBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.springframework.stereotype.Component;
-
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 @Log4j2
 @Getter
@@ -103,29 +111,29 @@ public class Scratch3OnvifPTZBlocks extends Scratch3ExtensionBlocks {
 
     private void fireZoomActionCommand(WorkspaceBlock workspaceBlock) {
         String command = workspaceBlock.getMenuValue(VALUE, this.menuZoomActionType).name().toUpperCase();
-        getOnvifService(workspaceBlock).setZoom(command);
+        setEndpointValue(workspaceBlock, ENDPOINT_ZOOM_COMMAND, new StringType(command));
     }
 
     private void fireZoomCommand(WorkspaceBlock workspaceBlock) {
-        getOnvifService(workspaceBlock).setZoom(String.valueOf(workspaceBlock.getInputFloat(VALUE)));
+        setEndpointValue(workspaceBlock, ENDPOINT_ZOOM, new DecimalType(workspaceBlock.getInputFloat(VALUE)));
     }
 
     private void fireTiltActionCommand(WorkspaceBlock workspaceBlock) {
         String command = workspaceBlock.getMenuValue(VALUE, this.menuTiltActionType).name().toUpperCase();
-        getOnvifService(workspaceBlock).setTilt(command);
+        setEndpointValue(workspaceBlock, ENDPOINT_TILT_COMMAND, new StringType(command));
     }
 
     private void fireTiltCommand(WorkspaceBlock workspaceBlock) {
-        getOnvifService(workspaceBlock).setTilt(String.valueOf(workspaceBlock.getInputFloat(VALUE)));
+        setEndpointValue(workspaceBlock, ENDPOINT_TILT, new DecimalType(workspaceBlock.getInputFloat(VALUE)));
     }
 
     private void firePanActionCommand(WorkspaceBlock workspaceBlock) {
         String command = workspaceBlock.getMenuValue(VALUE, this.menuPanActionType).name().toUpperCase();
-        getOnvifService(workspaceBlock).setPan(command);
+        setEndpointValue(workspaceBlock, ENDPOINT_PAN_COMMAND, new StringType(command));
     }
 
     private void firePanCommand(WorkspaceBlock workspaceBlock) {
-        getOnvifService(workspaceBlock).setPan(String.valueOf(workspaceBlock.getInputFloat(VALUE)));
+        setEndpointValue(workspaceBlock, ENDPOINT_PAN, new DecimalType(workspaceBlock.getInputFloat(VALUE)));
     }
 
     private OnvifCameraService getOnvifService(WorkspaceBlock workspaceBlock) {
@@ -134,6 +142,10 @@ public class Scratch3OnvifPTZBlocks extends Scratch3ExtensionBlocks {
 
     private OnvifCameraEntity getOnvifEntity(WorkspaceBlock workspaceBlock) {
         return workspaceBlock.getMenuValueEntityRequired(Scratch3CameraBlocks.VIDEO_STREAM, menuOnvifCamera);
+    }
+
+    private void setEndpointValue(WorkspaceBlock workspaceBlock, String endpoint, State state) {
+        getOnvifService(workspaceBlock).getEndpoints().get(endpoint).setValue(state, true);
     }
 
     private enum PanActionType {
@@ -150,10 +162,9 @@ public class Scratch3OnvifPTZBlocks extends Scratch3ExtensionBlocks {
 
     @RequiredArgsConstructor
     private enum GetPTZValueType {
-        GoToPreset(camera -> camera.getGotoPreset()),
-        Zoom(camera -> camera.getZoom()),
-        Tilt(camera -> camera.getTilt()),
-        Pan(camera -> camera.getPan());
+        Zoom(camera -> new DecimalType(camera.getOnvifDeviceState().getPtzDevices().getCurrentZoomPercentage())),
+        Tilt(camera -> new DecimalType(camera.getOnvifDeviceState().getPtzDevices().getCurrentTiltPercentage())),
+        Pan(camera -> new DecimalType(camera.getOnvifDeviceState().getPtzDevices().getCurrentPanPercentage()));
 
         private final Function<OnvifCameraService, State> handler;
     }

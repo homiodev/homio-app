@@ -9,4 +9,6 @@ public interface VideoMotionAlarmProvider {
     void suspendMotionAlarmListeners(BaseCameraEntity<?, ?> entity);
 
     void resumeMotionAlarmListeners(BaseCameraEntity<?, ?> entity);
+
+    void entityUpdated(BaseCameraEntity<?, ?> entity);
 }

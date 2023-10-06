@@ -53,7 +53,7 @@ public class UsbCameraEntity extends BaseCameraEntity<UsbCameraEntity, UsbCamera
         setJsonData("asource", value);
     }
 
-    @UIField(order = 50, required = true)
+    @UIField(order = 50)
     @UIFieldBeanSelection(VideoMotionAlarmProvider.class)
     @UIFieldGroup("GENERAL")
     public @Nullable String getVideoMotionAlarmProvider() {
@@ -179,5 +179,14 @@ public class UsbCameraEntity extends BaseCameraEntity<UsbCameraEntity, UsbCamera
     @UIContextMenuAction(value = "GET_INFO", icon = "fab fa-quinscape", iconColor = "#899343")
     public ActionResponseModel apiGetList() {
         return ActionResponseModel.showJson("GET_INFO", getService().getInput());
+    }
+
+    @Override
+    public void beforePersist() {
+        super.beforePersist();
+        String alarmProvider = getEntityContext()
+            .getBeansOfTypeWithBeanName(VideoMotionAlarmProvider.class)
+            .keySet().iterator().next();
+        setVideoMotionAlarmProvider(alarmProvider);
     }
 }

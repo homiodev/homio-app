@@ -35,8 +35,6 @@ import lombok.NoArgsConstructor;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.OnvifCameraService;
-import org.homio.addon.camera.ui.UICameraActionGetter;
-import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
@@ -105,50 +103,6 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
         }
     }
 
-    @UICameraActionGetter(ENDPOINT_ENABLE_PRIVACY_MODE)
-    public State getEnablePrivacyMode() {
-        return getAttribute(ENDPOINT_ENABLE_PRIVACY_MODE);
-    }
-
-    @UIVideoAction(name = ENDPOINT_ENABLE_PRIVACY_MODE, order = 70, icon = "fas fa-user-secret")
-    public void setEnablePrivacyMode(boolean on) {
-        service.sendHttpGET(CM + "setConfig&LeLensMask[0].Enable=" + on);
-    }
-
-    @UIVideoAction(name = ENDPOINT_ACTIVATE_ALARM_OUTPUT2, order = 47, icon = "fas fa-bell")
-    public void activateAlarmOutput2(boolean on) {
-        service.sendHttpGET(CM + "setConfig&AlarmOut[1].Mode=" + boolToInt(on));
-    }
-
-    @UIVideoAction(name = ENDPOINT_ACTIVATE_ALARM_OUTPUT, order = 45, icon = "fas fa-bell")
-    public void activateAlarmOutput(boolean on) {
-        service.sendHttpGET(CM + "setConfig&AlarmOut[1].Mode=" + boolToInt(on));
-    }
-
-    @UICameraActionGetter(ENDPOINT_ENABLE_MOTION_ALARM)
-    public State getEnableMotionAlarm() {
-        return getAttribute(ENDPOINT_ENABLE_MOTION_ALARM);
-    }
-
-    @UIVideoAction(name = ENDPOINT_ENABLE_MOTION_ALARM, order = 14, icon = "fas fa-running")
-    public void setEnableMotionAlarm(boolean on) {
-        if (on) {
-            service.sendHttpGET(CM + "setConfig&MotionDetect[0].Enable=true&MotionDetect[0].EventHandler.Dejitter=1");
-        } else {
-            service.sendHttpGET(CM + "setConfig&MotionDetect[0].Enable=false");
-        }
-    }
-
-    @UICameraActionGetter(ENDPOINT_ENABLE_LINE_CROSSING_ALARM)
-    public State getEnableLineCrossingAlarm() {
-        return getAttribute(ENDPOINT_ENABLE_LINE_CROSSING_ALARM);
-    }
-
-    @UIVideoAction(name = ENDPOINT_ENABLE_LINE_CROSSING_ALARM, order = 150, icon = "fas fa-grip-lines-vertical")
-    public void setEnableLineCrossingAlarm(boolean on) {
-        service.sendHttpGET(CM + "setConfig&VideoAnalyseRule[0][1].Enable=" + on);
-    }
-
     @Override
     public boolean isHasMotionAlarm() {
         return true;
@@ -180,19 +134,6 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
         }
     }
 
-    @UIVideoAction(name = ENDPOINT_AUTO_LED, order = 60, icon = "fas fa-lightbulb")
-    public void autoLED(boolean on) {
-        if (on) {
-            setAttribute(ENDPOINT_ENABLE_LED, OnOffType.OFF/*UnDefType.UNDEF*/);
-            service.sendHttpGET(CM + "setConfig&Lighting[0][0].Mode=Auto");
-        }
-    }
-
-    @UIVideoAction(name = ENDPOINT_ENABLE_LED, order = 50, icon = "far fa-lightbulb")
-    public void enableLED(boolean on) {
-        getIRLedHandler().accept(on);
-    }
-
     @Override
     public Consumer<Boolean> getIRLedHandler() {
         return on -> {
@@ -200,7 +141,7 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
             if (!on) {
                 service.sendHttpGET(CM + "setConfig&Lighting[0][0].Mode=Off");
             } else {
-                service.sendHttpGET(CM + "setConfig&Lighting[0][0].Mode=Manual");
+                service.sendHttpGET(CM + "setConfig&Lighting[0][0].Mode=Auto");
             } /*else {
                         ipCameraHandler.sendHttpGET(
                                 CM + "setConfig&Lighting[0][0].Mode=Manual&Lighting[0][0].MiddleLight[0].Light="
@@ -212,18 +153,6 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
     @Override
     public Supplier<Boolean> getIrLedValueHandler() {
         return () -> Optional.ofNullable(getAttribute(ENDPOINT_ENABLE_LED)).map(State::boolValue).orElse(false);
-    }
-
-    @UIVideoAction(name = ENDPOINT_TEXT_OVERLAY, order = 100, icon = "fas fa-paragraph")
-    public void textOverlay(String value) {
-        String text = Helper.encodeSpecialChars(value);
-        if (text.isEmpty()) {
-            service.sendHttpGET(CM + "setConfig&VideoWidget[0].CustomTitle[1].EncodeBlend=false");
-        } else {
-            service.sendHttpGET(
-                    CM + "setConfig&VideoWidget[0].CustomTitle[1].EncodeBlend=true&VideoWidget[0].CustomTitle[1].Text="
-                            + text);
-        }
     }
 
     @Override
@@ -242,6 +171,7 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
 
     @Override
     public void onCameraConnected() {
+        addEndpoints();
         service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=AudioDetect[0]");
         service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=CrossLineDetection[0]");
         service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=MotionDetect[0]");
@@ -382,5 +312,40 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
         } catch (IndexOutOfBoundsException e) {
             log.debug("[{}]: IndexOutOfBoundsException on Dahua event. Content was:{}", entityID, content);
         }
+    }
+
+    private void addEndpoints() {
+        service.addEndpointSwitch(ENDPOINT_ENABLE_PRIVACY_MODE, state ->
+            service.sendHttpGET(CM + "setConfig&LeLensMask[0].Enable=" + state.boolValue()));
+
+        service.addEndpointSwitch(ENDPOINT_ACTIVATE_ALARM_OUTPUT, state ->
+            service.sendHttpGET(CM + "setConfig&AlarmOut[0].Mode=" + state.intValue()));
+
+        service.addEndpointSwitch(ENDPOINT_ACTIVATE_ALARM_OUTPUT2, state ->
+            service.sendHttpGET(CM + "setConfig&AlarmOut[1].Mode=" + state.intValue()));
+
+        service.addEndpointSwitch(ENDPOINT_ENABLE_MOTION_ALARM, state -> {
+            if (state.boolValue()) {
+                service.sendHttpGET(CM + "setConfig&MotionDetect[0].Enable=true&MotionDetect[0].EventHandler.Dejitter=1");
+            } else {
+                service.sendHttpGET(CM + "setConfig&MotionDetect[0].Enable=false");
+            }
+        });
+
+        service.addEndpointSwitch(ENDPOINT_ENABLE_LINE_CROSSING_ALARM, state -> {
+            service.sendHttpGET(CM + "setConfig&VideoAnalyseRule[0][1].Enable=" + state.boolValue());
+        });
+
+        service.addEndpointSwitch(ENDPOINT_AUTO_LED, state -> getIRLedHandler().accept(state.boolValue()));
+
+        service.addEndpointInput(ENDPOINT_TEXT_OVERLAY, state -> {
+            String text = Helper.encodeSpecialChars(state.stringValue());
+            if (text.isEmpty()) {
+                service.sendHttpGET(CM + "setConfig&VideoWidget[0].CustomTitle[1].EncodeBlend=false");
+            } else {
+                service.sendHttpGET(CM + "setConfig&VideoWidget[0].CustomTitle[1].EncodeBlend=true&VideoWidget[0].CustomTitle[1].Text="
+                    + text);
+            }
+        });
     }
 }

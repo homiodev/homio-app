@@ -250,10 +250,6 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
         setJsonDataSecure("pwd", value);
     }
 
-    public String getAlarmInputUrl() {
-        return getJsonData("alarmInputUrl", "");
-    }
-
     public void setAlarmInputUrl(String value) {
         setJsonData("alarmInputUrl", value);
     }
@@ -268,22 +264,30 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
         return getJsonData(ENDPOINT_MOTION_THRESHOLD, 20);
     }
 
-    public void setMotionThreshold(int value) {
+    public boolean setMotionThreshold(int value) {
+        if (value == getMotionThreshold()) {
+            return false;
+        }
         if (value < 0 || value > 50) {
             throw new IllegalArgumentException("Motion threshold must be in range: 0..50");
         }
         setJsonData(ENDPOINT_MOTION_THRESHOLD, value);
+        return true;
     }
 
     public int getAudioThreshold() {
         return getJsonData(ENDPOINT_AUDIO_THRESHOLD, 20);
     }
 
-    public void setAudioThreshold(int value) {
+    public boolean setAudioThreshold(int value) {
+        if (value == getAudioThreshold()) {
+            return false;
+        }
         if (value < 0 || value > 50) {
             throw new IllegalArgumentException("Audio threshold must be in range: 0..50");
         }
         setJsonData(ENDPOINT_AUDIO_THRESHOLD, value);
+        return true;
     }
 
     @JsonIgnore

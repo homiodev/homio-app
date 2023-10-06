@@ -18,8 +18,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class CameraDeviceEndpoint extends BaseDeviceEndpoint<BaseCameraEntity<?, ?>> {
 
-    private @Nullable
-    @Setter Consumer<State> updateHandler;
+    private @Setter @Nullable Consumer<State> updateHandler;
     private final boolean dbValueStorable;
     private @Setter @NotNull Function<State, State> valueConverter = state -> state;
 
@@ -126,6 +125,8 @@ public class CameraDeviceEndpoint extends BaseDeviceEndpoint<BaseCameraEntity<?,
     }
 
     public void setValue(@Nullable State value, boolean externalUpdate) {
-        super.setValue(valueConverter.apply(value), externalUpdate);
+        State state = valueConverter.apply(value);
+        super.setValue(state, externalUpdate);
+        getEntityContext().event().fireEventIfNotSame(getEntityID(), state);
     }
 }

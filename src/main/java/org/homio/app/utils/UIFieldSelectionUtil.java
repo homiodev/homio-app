@@ -154,8 +154,7 @@ public final class UIFieldSelectionUtil {
 
     private static void buildSelectionsFromBean(List<UIFieldBeanSelection> selections, EntityContext entityContext, List<OptionModel> selectOptions) {
         for (UIFieldBeanSelection selection : selections) {
-            for (Map.Entry<String, ?> entry :
-                entityContext.getBeansOfTypeWithBeanName(selection.value()).entrySet()) {
+            for (Map.Entry<String, ?> entry : entityContext.getBeansOfTypeWithBeanName(selection.value()).entrySet()) {
                 Object bean = entry.getValue();
                 // filter if bean is BeanSelectionCondition and visible is false
                 if (bean instanceof BeanSelectionCondition cond) {
