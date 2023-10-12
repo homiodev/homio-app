@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.addon.camera.entity.OnvifCameraEntity;
+import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.addon.camera.onvif.OnvifDiscovery;
 import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
 import org.homio.addon.camera.setting.CameraScanPortRangeSetting;
@@ -24,8 +24,8 @@ import org.homio.addon.camera.setting.onvif.ScanOnvifHttpDefaultUserAuthSetting;
 import org.homio.addon.camera.setting.onvif.ScanOnvifHttpMaxPingTimeoutSetting;
 import org.homio.addon.camera.setting.onvif.ScanOnvifPortsSetting;
 import org.homio.api.EntityContext;
+import org.homio.api.service.camera.VideoStreamScanner;
 import org.homio.api.service.scan.BaseItemsDiscovery;
-import org.homio.api.service.scan.VideoStreamScanner;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.HardwareUtils;
 import org.homio.api.util.Lang;
@@ -60,9 +60,9 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
                                                               String headerConfirmButtonKey, boolean rediscoverIpAddresses) {
         this.headerConfirmButtonKey = headerConfirmButtonKey;
         this.result = new BaseItemsDiscovery.DeviceScannerResult();
-        List<OnvifCameraEntity> allSavedCameraEntities = entityContext.findAll(OnvifCameraEntity.class);
-        Map<String, OnvifCameraEntity> existsCameraByIpPort = allSavedCameraEntities.stream()
-                .collect(Collectors.toMap(e -> e.getIp() + ":" + e.getOnvifPort(),
+        List<IpCameraEntity> allSavedCameraEntities = entityContext.findAll(IpCameraEntity.class);
+        Map<String, IpCameraEntity> existsCameraByIpPort = allSavedCameraEntities.stream()
+                                                                                 .collect(Collectors.toMap(e -> e.getIp() + ":" + e.getOnvifPort(),
                         Function.identity()));
 
         String user = entityContext.setting().getValue(ScanOnvifHttpDefaultUserAuthSetting.class);
@@ -95,8 +95,8 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
         return result;
     }
 
-    private void buildCameraTask(boolean rediscoverIpAddresses, List<OnvifCameraEntity> allSavedCameraEntities,
-                                 Map<String, OnvifCameraEntity> existsCameraByIpPort, String user, String password,
+    private void buildCameraTask(boolean rediscoverIpAddresses, List<IpCameraEntity> allSavedCameraEntities,
+                                 Map<String, IpCameraEntity> existsCameraByIpPort, String user, String password,
                                  String ipAddress, Integer port) {
         String host = ipAddress + ":" + port;
 
@@ -128,11 +128,11 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
         onvifDeviceState.getInitialDevices().getDeviceInformation();
     }
 
-    private boolean tryFindCameraFromDb(List<OnvifCameraEntity> allSavedCameraEntities, String ipAddress, Integer port,
-                                        Map<String, OnvifCameraEntity> existsCameraByIpPort) {
+    private boolean tryFindCameraFromDb(List<IpCameraEntity> allSavedCameraEntities, String ipAddress, Integer port,
+                                        Map<String, IpCameraEntity> existsCameraByIpPort) {
         log.info("Onvif camera got fault auth response. Checking user/pwd from other all saved cameras. Maybe ip address has " +
                 "been changed");
-        for (OnvifCameraEntity entity : allSavedCameraEntities) {
+        for (IpCameraEntity entity : allSavedCameraEntities) {
             OnvifDeviceState onvifDeviceState = new OnvifDeviceState("-");
             onvifDeviceState.updateParameters(ipAddress, port,
                     entity.getUser(), entity.getPassword().asString());
@@ -147,10 +147,10 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
     }
 
     private void foundDeviceServices(OnvifDeviceState onvifDeviceState, boolean requireAuth,
-                                     boolean rediscoverIpAddresses, Map<String, OnvifCameraEntity> existsCameraByIpPort) {
+                                     boolean rediscoverIpAddresses, Map<String, IpCameraEntity> existsCameraByIpPort) {
         log.info("Scan found onvif camera: <{}>", onvifDeviceState.getHOST_IP());
 
-        OnvifCameraEntity existedCamera = existsCameraByIpPort.get(onvifDeviceState.getIp() +
+        IpCameraEntity existedCamera = existsCameraByIpPort.get(onvifDeviceState.getIp() +
                 ":" + onvifDeviceState.getOnvifPort());
         if (existedCamera != null) {
             updateCameraIpPortName(onvifDeviceState, existedCamera);
@@ -179,13 +179,13 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
                 },
                 () -> {
                     log.info("Saving onvif camera with host: <{}>", onvifDeviceState.getHOST_IP());
-                    OnvifCameraEntity entity = new OnvifCameraEntity().setCameraType(brand.getID());
+                    IpCameraEntity entity = new IpCameraEntity().setCameraType(brand.getID());
                     entity.setInfo(onvifDeviceState, requireAuth);
                     entityContext.save(entity);
                 });
     }
 
-    private void updateCameraIpPortName(OnvifDeviceState onvifDeviceState, OnvifCameraEntity existedCamera) {
+    private void updateCameraIpPortName(OnvifDeviceState onvifDeviceState, IpCameraEntity existedCamera) {
         try {
             existedCamera.tryUpdateData(entityContext, onvifDeviceState.getIp(), onvifDeviceState.getOnvifPort());
         } catch (Exception ex) {

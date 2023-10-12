@@ -129,8 +129,6 @@ public class CameraDeviceEndpoint extends BaseDeviceEndpoint<BaseCameraEntity<?,
     }
 
     public void setValue(@Nullable State value, boolean externalUpdate) {
-        State state = valueConverter.apply(value);
-        super.setValue(state, externalUpdate);
-        getEntityContext().event().fireEventIfNotSame(getEntityID(), state);
+        super.setValue(valueConverter.apply(value), externalUpdate);
     }
 }

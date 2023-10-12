@@ -1,5 +1,14 @@
 package org.homio.app.repository;
 
+import static org.homio.api.AddonEntrypoint.ADDON_PREFIX;
+import static org.homio.app.model.entity.SettingEntity.getKey;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
@@ -7,7 +16,11 @@ import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
-import org.homio.api.setting.*;
+import org.homio.api.setting.SettingPlugin;
+import org.homio.api.setting.SettingPluginButton;
+import org.homio.api.setting.SettingPluginOptions;
+import org.homio.api.setting.SettingPluginOptionsRemovable;
+import org.homio.api.setting.SettingPluginToggle;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
 import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
 import org.homio.api.ui.field.UIFieldType;
@@ -17,11 +30,6 @@ import org.homio.app.setting.CoreSettingPlugin;
 import org.homio.app.spring.ContextRefreshed;
 import org.json.JSONObject;
 import org.springframework.stereotype.Repository;
-
-import java.util.*;
-
-import static org.homio.api.AddonEntrypoint.ADDON_PREFIX;
-import static org.homio.app.model.entity.SettingEntity.getKey;
 
 @Repository
 public class SettingRepository extends AbstractRepository<SettingEntity>

@@ -1,6 +1,10 @@
 package org.homio.app.utils.color;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 public class MMCQ {
 
@@ -12,30 +16,22 @@ public class MMCQ {
     private static final double FRACT_BY_POPULATION = 0.75;
     private static final int MAX_ITERATIONS = 1000;
     private static final Comparator<VBox> COMPARATOR_COUNT =
-            new Comparator<VBox>() {
-                @Override
-                public int compare(VBox a, VBox b) {
-                    return a.count(false) - b.count(false);
-                }
-            };
+        (a, b) -> a.count(false) - b.count(false);
     private static final Comparator<VBox> COMPARATOR_PRODUCT =
-            new Comparator<VBox>() {
-                @Override
-                public int compare(VBox a, VBox b) {
-                    int aCount = a.count(false);
-                    int bCount = b.count(false);
-                    int aVolume = a.volume(false);
-                    int bVolume = b.volume(false);
+        (a, b) -> {
+            int aCount = a.count(false);
+            int bCount = b.count(false);
+            int aVolume = a.volume(false);
+            int bVolume = b.volume(false);
 
-                    // If count is 0 for both (or the same), sort by volume
-                    if (aCount == bCount) {
-                        return aVolume - bVolume;
-                    }
+            // If count is 0 for both (or the same), sort by volume
+            if (aCount == bCount) {
+                return aVolume - bVolume;
+            }
 
-                    // Otherwise sort by products
-                    return Long.compare((long) aCount * aVolume, (long) bCount * bVolume);
-                }
-            };
+            // Otherwise sort by products
+            return Long.compare((long) aCount * aVolume, (long) bCount * bVolume);
+        };
 
     public static CMap quantize(int[][] pixels, int maxcolors) {
         // short-circuit
@@ -57,7 +53,7 @@ public class MMCQ {
         iter(pq, COMPARATOR_COUNT, target, histo);
 
         // Re-sort by the product of pixel occupancy times the size in color space.
-        Collections.sort(pq, COMPARATOR_PRODUCT);
+        pq.sort(COMPARATOR_PRODUCT);
 
         // next set - generateBooleanLink the median cuts using the (npix * vol) sorting.
         if (maxcolors > pq.size()) {
@@ -96,8 +92,7 @@ public class MMCQ {
         int index, rval, gval, bval;
 
         int numPixels = pixels.length;
-        for (int i = 0; i < numPixels; i++) {
-            int[] pixel = pixels[i];
+        for (int[] pixel : pixels) {
             rval = pixel[0] >> RSHIFT;
             gval = pixel[1] >> RSHIFT;
             bval = pixel[2] >> RSHIFT;
@@ -116,8 +111,7 @@ public class MMCQ {
 
         // find min/max
         int numPixels = pixels.length;
-        for (int i = 0; i < numPixels; i++) {
-            int[] pixel = pixels[i];
+        for (int[] pixel : pixels) {
             rval = pixel[0] >> RSHIFT;
             gval = pixel[1] >> RSHIFT;
             bval = pixel[2] >> RSHIFT;
@@ -238,7 +232,7 @@ public class MMCQ {
         }
 
         int left, right;
-        VBox vbox1 = null, vbox2 = null;
+        VBox vbox1, vbox2;
         int d2, count2;
 
         for (int i = vbox_dim1; i <= vbox_dim2; i++) {
@@ -250,10 +244,10 @@ public class MMCQ {
                 right = vbox_dim2 - i;
 
                 if (left <= right) {
-                    d2 = Math.min(vbox_dim2 - 1, ~~(i + right / 2));
+                    d2 = Math.min(vbox_dim2 - 1, (i + right / 2));
                 } else {
                     // 2.0 and cast to int is necessary to have the same behaviour as in JavaScript
-                    d2 = Math.max(vbox_dim1, ~~((int) (i - 1 - left / 2.0)));
+                    d2 = Math.max(vbox_dim1, ((int) (i - 1 - left / 2.0)));
                 }
 
                 // avoid 0-count boxes
@@ -295,7 +289,7 @@ public class MMCQ {
         while (niters < MAX_ITERATIONS) {
             vbox = lh.get(lh.size() - 1);
             if (vbox.count(false) == 0) {
-                Collections.sort(lh, comparator);
+                lh.sort(comparator);
                 niters++;
                 continue;
             }
@@ -314,7 +308,7 @@ public class MMCQ {
             if (vbox2 != null) {
                 lh.add(vbox2);
             }
-            Collections.sort(lh, comparator);
+            lh.sort(comparator);
 
             if (lh.size() >= target) {
                 return;
@@ -354,8 +348,7 @@ public class MMCQ {
 
         @Override
         public String toString() {
-            return "r1: " + r1 + " / r2: " + r2 + " / g1: " + g1 + " / g2: " + g2 + " / b1: " + b1
-                    + " / b2: " + b2;
+            return "r1: %d / r2: %d / g1: %d / g2: %d / b1: %d / b2: %d".formatted(r1, r2, g1, g2, b1, b2);
         }
 
         public int volume(boolean force) {
@@ -415,13 +408,13 @@ public class MMCQ {
                 }
 
                 if (ntot > 0) {
-                    _avg = new int[]{~~(rsum / ntot), ~~(gsum / ntot), ~~(bsum / ntot)};
+                    _avg = new int[]{(rsum / ntot), (gsum / ntot), (bsum / ntot)};
                 } else {
                     _avg =
                             new int[]{
-                                    ~~(MULT * (r1 + r2 + 1) / 2),
-                                    ~~(MULT * (g1 + g2 + 1) / 2),
-                                    ~~(MULT * (b1 + b2 + 1) / 2)
+                                (MULT * (r1 + r2 + 1) / 2),
+                                (MULT * (g1 + g2 + 1) / 2),
+                                (MULT * (b1 + b2 + 1) / 2)
                             };
                 }
             }
@@ -469,8 +462,7 @@ public class MMCQ {
 
         public int[] map(int[] color) {
             int numVBoxes = vboxes.size();
-            for (int i = 0; i < numVBoxes; i++) {
-                VBox vbox = vboxes.get(i);
+            for (VBox vbox : vboxes) {
                 if (vbox.contains(color)) {
                     return vbox.avg(false);
                 }
@@ -484,13 +476,13 @@ public class MMCQ {
             int[] pColor = null;
 
             int numVBoxes = vboxes.size();
-            for (int i = 0; i < numVBoxes; i++) {
-                int[] vbColor = vboxes.get(i).avg(false);
+            for (VBox vbox : vboxes) {
+                int[] vbColor = vbox.avg(false);
                 d2 =
-                        Math.sqrt(
-                                Math.pow(color[0] - vbColor[0], 2)
-                                        + Math.pow(color[1] - vbColor[1], 2)
-                                        + Math.pow(color[2] - vbColor[2], 2));
+                    Math.sqrt(
+                        Math.pow(color[0] - vbColor[0], 2)
+                            + Math.pow(color[1] - vbColor[1], 2)
+                            + Math.pow(color[2] - vbColor[2], 2));
                 if (d2 < d1) {
                     d1 = d2;
                     pColor = vbColor;

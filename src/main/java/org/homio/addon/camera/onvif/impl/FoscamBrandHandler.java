@@ -1,9 +1,9 @@
 package org.homio.addon.camera.onvif.impl;
 
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.AudioAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.MotionAlarm;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUTO_LED;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_DOORBELL;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_LED;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_MOTION_ALARM;
@@ -11,10 +11,10 @@ import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_MOTION_ALAR
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
 import lombok.NoArgsConstructor;
-import org.homio.addon.camera.entity.OnvifCameraEntity;
+import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.util.Helper;
-import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.addon.camera.service.IpCameraService;
 import org.homio.api.EntityContext;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
@@ -30,7 +30,7 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler {
     private static final String CG = "/cgi-bin/CGIProxy.fcgi?cmd=";
     private int audioThreshold;
 
-    public FoscamBrandHandler(OnvifCameraService service) {
+    public FoscamBrandHandler(IpCameraService service) {
         super(service);
     }
 
@@ -51,7 +51,7 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler {
                     getEndpointRequire(ENDPOINT_ENABLE_MOTION_ALARM).setValue(OnOffType.ON);
                 } else if (content.contains("<motionDetectAlarm>2</motionDetectAlarm>")) {// Enabled, alarm on
                     getEndpointRequire(ENDPOINT_ENABLE_MOTION_ALARM).setValue(OnOffType.ON);
-                    service.motionDetected(true, MotionAlarm);
+                    service.alarmDetected(true, MotionAlarm);
                 }
             }
 
@@ -61,11 +61,11 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler {
             }
             if (content.contains("<soundAlarm>1</soundAlarm>")) {
                 getEndpointRequire(ENDPOINT_ENABLE_AUDIO_ALARM).setValue(OnOffType.ON);
-                service.audioDetected(false);
+                service.alarmDetected(false, AudioAlarm);
             }
             if (content.contains("<soundAlarm>2</soundAlarm>")) {
                 getEndpointRequire(ENDPOINT_ENABLE_AUDIO_ALARM).setValue(OnOffType.ON);
-                service.audioDetected(true);
+                service.alarmDetected(true, AudioAlarm);
             }
 
             ////////////// Sound Threshold //////////////
@@ -145,7 +145,7 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler {
 
     @Override
     public void postInitializeCamera(EntityContext entityContext) {
-        OnvifCameraEntity entity = getEntity();
+        IpCameraEntity entity = getEntity();
         // Foscam needs any special char like spaces (%20) to be encoded for URLs.
         entity.setUser(Helper.encodeSpecialChars(entity.getUser()));
         entity.setPassword(Helper.encodeSpecialChars(entity.getPassword().asString()));

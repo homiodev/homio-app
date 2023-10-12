@@ -8,7 +8,7 @@ import lombok.SneakyThrows;
 import org.homio.api.EntityContext;
 import org.homio.api.state.State;
 import org.homio.api.util.DataSourceUtil;
-import org.homio.api.workspace.BroadcastLock;
+import org.homio.api.workspace.Lock;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.workspace.WorkspaceBlockImpl;
@@ -34,7 +34,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     private void onChangeVariableHat(WorkspaceBlock workspaceBlock) {
         workspaceBlock.handleNext(next -> {
             String variableId = getVariable(workspaceBlock);
-            BroadcastLock lock = workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock, variableId);
+            Lock lock = workspaceBlock.getLockManager().getLock(workspaceBlock, variableId);
             workspaceBlock.subscribeToLock(lock, next::handle);
         });
     }
@@ -43,7 +43,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         workspaceBlock.handleNext(next -> {
             WhenValueOperator operator = WhenValueOperator.getByOp(workspaceBlock.getField("OPERATOR"));
             String variableId = getVariable(workspaceBlock);
-            BroadcastLock lock = workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock, variableId);
+            Lock lock = workspaceBlock.getLockManager().getLock(workspaceBlock, variableId);
             workspaceBlock.subscribeToLock(lock, o -> operator.checkFn.apply(workspaceBlock, o), next::handle);
         });
     }

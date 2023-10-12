@@ -1,16 +1,17 @@
 package org.homio.addon.camera.service;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.CellMotionAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.FieldDetectAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.LineCrossAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.SceneChangeAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.StorageAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.TamperAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.TooBlurryAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.TooBrightAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.TooDarkAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.AudioAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.CellMotionAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.FieldDetectAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.LineCrossAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.MotionAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.SceneChangeAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.StorageAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.TamperAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.TooBlurryAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.TooBrightAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.TooDarkAlarm;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_GOTO_PRESET;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_PAN;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_PAN_COMMAND;
@@ -50,6 +51,7 @@ import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import java.awt.Dimension;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -67,9 +69,10 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.val;
+import org.homio.addon.camera.CameraConstants.AlarmEvent;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.entity.CameraPlaybackStorage;
-import org.homio.addon.camera.entity.OnvifCameraEntity;
+import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
 import org.homio.addon.camera.onvif.impl.UnknownBrandHandler;
@@ -78,6 +81,7 @@ import org.homio.addon.camera.onvif.util.MyNettyAuthHandler;
 import org.homio.addon.camera.service.util.CameraUtils;
 import org.homio.addon.camera.service.util.CommonCameraHandler;
 import org.homio.api.EntityContext;
+import org.homio.api.EntityContext.FileLogger;
 import org.homio.api.EntityContextMedia.MediaMTXSource;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
@@ -92,7 +96,7 @@ import org.jetbrains.annotations.Nullable;
 import org.onvif.ver10.schema.Profile;
 import org.onvif.ver10.schema.VideoResolution;
 
-public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, OnvifCameraService> {
+public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraService> {
 
     private static @NotNull final Map<String, CameraBrandHandlerDescription> cameraBrands = new ConcurrentHashMap<>();
     private final @NotNull ChannelGroup openChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
@@ -103,6 +107,7 @@ public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, Onv
     private final @NotNull EventLoopGroup mainEventLoopGroup = new NioEventLoopGroup(1);
     @Getter
     private final @NotNull OnvifDeviceState onvifDeviceState;
+    private final FileLogger onvifEventsLogger;
     public boolean useDigestAuth = false;
 
     private Bootstrap mainBootstrap;
@@ -112,8 +117,10 @@ public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, Onv
     public List<LowRequest> lowPriorityRequests = new ArrayList<>(0);
     private byte lowPriorityCounter = 0;
 
-    public OnvifCameraService(EntityContext entityContext, OnvifCameraEntity entity) {
+    public IpCameraService(EntityContext entityContext, IpCameraEntity entity) {
         super(entity, entityContext);
+
+        onvifEventsLogger = getEntityContext().getFileLogger(getEntity(), "onvifEvents");
 
         onvifDeviceState = new OnvifDeviceState(entity.getEntityID());
         onvifDeviceState.setUpdateListener(() -> entityContext.ui().updateItem(entity));
@@ -122,44 +129,51 @@ public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, Onv
 
         onvifDeviceState.setUnreachableHandler(message -> this.disposeAndSetStatus(Status.OFFLINE, message));
 
-        onvifDeviceState.getEventDevices().subscribe("RuleEngine/CellMotionDetector/Motion",
-            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), CellMotionAlarm));
-        onvifDeviceState.getEventDevices().subscribe("VideoSource/MotionAlarm",
-            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), MotionAlarm));
-        onvifDeviceState.getEventDevices().subscribe("AudioAnalytics/Audio/DetectedSound",
-            (dataName, dataValue) -> audioDetected(dataValue.equals("true")));
-        onvifDeviceState.getEventDevices().subscribe("RuleEngine/FieldDetector/ObjectsInside",
-            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), FieldDetectAlarm));
-        onvifDeviceState.getEventDevices().subscribe("RuleEngine/LineDetector/Crossed",
-            (dataName, dataValue) -> motionDetected(dataName.equals("ObjectId"), LineCrossAlarm));
-        onvifDeviceState.getEventDevices().subscribe("RuleEngine/TamperDetector/Tamper",
-            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), TamperAlarm));
-        onvifDeviceState.getEventDevices().subscribe("Device/HardwareFailure/StorageFailure",
-            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), StorageAlarm));
+        onvifDeviceState.getEventDevices().subscribe(
+            (dataName, dataValue) -> onvifSubscribeEvent(dataName, dataValue, CellMotionAlarm),
+            "RuleEngine/CellMotionDetector/Motion");
+        onvifDeviceState.getEventDevices().subscribe(
+            (dataName, dataValue) -> onvifSubscribeEvent(dataName, dataValue, MotionAlarm),
+            "VideoSource/MotionAlarm");
+        onvifDeviceState.getEventDevices().subscribe(
+            (dataName, dataValue) -> onvifSubscribeEvent(dataName, dataValue, AudioAlarm),
+            "AudioAnalytics/Audio/DetectedSound");
+        onvifDeviceState.getEventDevices().subscribe(
+            (dataName, dataValue) -> onvifSubscribeEvent(dataName, dataValue, FieldDetectAlarm),
+            "RuleEngine/FieldDetector/ObjectsInside");
+        onvifDeviceState.getEventDevices().subscribe(
+            (dataName, dataValue) -> onvifSubscribeEvent(dataName, dataValue, LineCrossAlarm),
+            "RuleEngine/LineDetector/Crossed");
+        onvifDeviceState.getEventDevices().subscribe(
+            (dataName, dataValue) -> onvifSubscribeEvent(dataName, dataValue, TamperAlarm),
+            "RuleEngine/TamperDetector/Tamper");
+        onvifDeviceState.getEventDevices().subscribe(
+            (dataName, dataValue) -> onvifSubscribeEvent(dataName, dataValue, StorageAlarm),
+            "Device/HardwareFailure/StorageFailure");
 
         onvifDeviceState.getEventDevices().subscribe(
+            (dataName, dataValue) -> onvifSubscribeEvent(dataName, dataValue, TooDarkAlarm),
             "VideoSource/ImageTooDark/AnalyticsService",
             "VideoSource/ImageTooDark/ImagingService",
-            "VideoSource/ImageTooDark/RecordingService",
-            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), TooDarkAlarm));
+            "VideoSource/ImageTooDark/RecordingService");
 
         onvifDeviceState.getEventDevices().subscribe(
+            (dataName, dataValue) -> onvifSubscribeEvent(dataName, dataValue, SceneChangeAlarm),
             "VideoSource/GlobalSceneChange/AnalyticsService",
             "VideoSource/GlobalSceneChange/ImagingService",
-            "VideoSource/GlobalSceneChange/RecordingService",
-            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), SceneChangeAlarm));
+            "VideoSource/GlobalSceneChange/RecordingService");
 
         onvifDeviceState.getEventDevices().subscribe(
+            (dataName, dataValue) -> onvifSubscribeEvent(dataName, dataValue, TooBrightAlarm),
             "VideoSource/ImageTooBright/AnalyticsService",
             "VideoSource/ImageTooBright/ImagingService",
-            "VideoSource/ImageTooBright/RecordingService",
-            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), TooBrightAlarm));
+            "VideoSource/ImageTooBright/RecordingService");
 
         onvifDeviceState.getEventDevices().subscribe(
+            (dataName, dataValue) -> onvifSubscribeEvent(dataName, dataValue, TooBlurryAlarm),
             "VideoSource/ImageTooBlurry/AnalyticsService",
             "VideoSource/ImageTooBlurry/ImagingService",
-            "VideoSource/ImageTooBlurry/RecordingService",
-            (dataName, dataValue) -> motionDetected(dataValue.equals("true"), TooBlurryAlarm));
+            "VideoSource/ImageTooBlurry/RecordingService");
 
         if (entity.getCameraType() != null && getCameraBrands(entityContext).containsKey(entity.getCameraType())) {
             CameraBrandHandlerDescription cameraBrandHandlerDescription = getCameraBrands(entityContext).get(entity.getCameraType());
@@ -167,6 +181,11 @@ public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, Onv
         } else {
             this.brandHandler = new UnknownBrandHandler(this);
         }
+    }
+
+    private void onvifSubscribeEvent(String dataName, String dataValue, AlarmEvent alarmEvent) {
+        onvifEventsLogger.logInfo("%s %s: %s".formatted(alarmEvent, dataName, dataValue));
+        alarmDetected(dataValue.equals("true"), alarmEvent);
     }
 
     public static Map<String, CameraBrandHandlerDescription> getCameraBrands(EntityContext entityContext) {
@@ -208,7 +227,7 @@ public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, Onv
             log.warn("[{}]: Camera is reporting your username and/or password is wrong.", getEntityID());
             return false;
         }
-        OnvifCameraEntity entity = getEntity();
+        IpCameraEntity entity = getEntity();
         if (!entity.getUser().isEmpty() && !entity.getPassword().isEmpty()) {
             String authString = entity.getUser() + ":" + entity.getPassword().asString();
             ByteBuf byteBuf = null;
@@ -240,7 +259,7 @@ public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, Onv
     // The authHandler will generate a digest string and re-send using this same function when needed.
     @SuppressWarnings("null")
     public void sendHttpRequest(String httpMethod, String httpRequestURLFull, String digestString) {
-        OnvifCameraEntity entity = getEntity();
+        IpCameraEntity entity = getEntity();
         int port = getPortFromShortenedUrl(httpRequestURLFull, entity);
         String httpRequestURL = getTinyUrl(httpRequestURLFull);
 
@@ -262,8 +281,8 @@ public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, Onv
                     socketChannel.pipeline().addLast(new IdleStateHandler(18, 0, 0));
                     socketChannel.pipeline().addLast(new HttpClientCodec());
                     socketChannel.pipeline().addLast(MyNettyAuthHandler.AUTH_HANDLER,
-                        new MyNettyAuthHandler(entity, OnvifCameraService.this));
-                    socketChannel.pipeline().addLast(CommonCameraHandler.COMMON_HANDLER, new CommonCameraHandler(OnvifCameraService.this));
+                        new MyNettyAuthHandler(entity, IpCameraService.this));
+                    socketChannel.pipeline().addLast(CommonCameraHandler.COMMON_HANDLER, new CommonCameraHandler(IpCameraService.this));
 
                     socketChannel.pipeline().addLast(brandHandler.getClass().getSimpleName(), brandHandler.asBootstrapHandler());
                 }
@@ -623,12 +642,27 @@ public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, Onv
         return brandHandler.isHasMotionAlarm();
     }
 
-    private int getPortFromShortenedUrl(String httpRequestURL, OnvifCameraEntity entity) {
+    private int getPortFromShortenedUrl(String httpRequestURL, IpCameraEntity entity) {
         if (httpRequestURL.startsWith(":")) {
             int end = httpRequestURL.indexOf("/");
             return Integer.parseInt(httpRequestURL.substring(1, end));
         }
         return entity.getRestPort();
+    }
+
+    @Override
+    public List<OptionModel> getLogSources() {
+        ArrayList<OptionModel> list = new ArrayList<>(super.getLogSources());
+        list.add(OptionModel.of("onvifEvents", "Onvif events"));
+        return list;
+    }
+
+    @Override
+    public @Nullable InputStream getSourceLogInputStream(@NotNull String sourceID) {
+        if ("onvifEvents".equals(sourceID)) {
+            return onvifEventsLogger.getFileInputStream();
+        }
+        return super.getSourceLogInputStream(sourceID);
     }
 
     @Override
@@ -686,7 +720,7 @@ public class OnvifCameraService extends BaseCameraService<OnvifCameraEntity, Onv
             try {
                 String user = params.get("user").asText();
                 String password = params.get("password").asText();
-                OnvifCameraEntity entity = entityContext.getEntityRequire(getEntityID());
+                IpCameraEntity entity = entityContext.getEntityRequire(getEntityID());
                 OnvifDeviceState onvifDeviceState = new OnvifDeviceState(getEntityID());
                 onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(), user, password);
                 HardwareUtils.ping(entity.getIp(), entity.getRestPort());

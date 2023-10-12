@@ -6,12 +6,11 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpResponse;
 import java.security.SecureRandom;
-import lombok.extern.log4j.Log4j2;
-import org.homio.addon.camera.entity.OnvifCameraEntity;
-import org.homio.addon.camera.service.OnvifCameraService;
-import org.homio.api.model.Status;
-
 import java.util.Random;
+import lombok.extern.log4j.Log4j2;
+import org.homio.addon.camera.entity.IpCameraEntity;
+import org.homio.addon.camera.service.IpCameraService;
+import org.homio.api.model.Status;
 
 /**
  * responsible for handling the basic and digest auths
@@ -22,14 +21,14 @@ public class MyNettyAuthHandler extends ChannelDuplexHandler {
 
     private final String username;
     private final String password;
-    private final OnvifCameraService service;
+    private final IpCameraService service;
 
     private String httpMethod = "", httpUrl = "";
     private byte ncCounter = 0;
     private String nonce = "", opaque = "", qop = "";
     private String realm = "";
 
-    public MyNettyAuthHandler(OnvifCameraEntity entity, OnvifCameraService service) {
+    public MyNettyAuthHandler(IpCameraEntity entity, IpCameraService service) {
         this.service = service;
         username = entity.getUser();
         password = entity.getPassword().asString();

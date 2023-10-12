@@ -35,7 +35,7 @@ import org.homio.api.exception.ServerException;
 import org.homio.api.state.RawType;
 import org.homio.api.state.State;
 import org.homio.api.util.CommonUtils;
-import org.homio.api.workspace.BroadcastLockManager;
+import org.homio.api.workspace.LockManager;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.BlockType;
 import org.homio.api.workspace.scratch.MenuBlock;
@@ -418,19 +418,14 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         if (objects == null) {
             return false;
         }
-        switch (objects.getInt(0)) {
-            case 5:
-                return true;
-            case 3:
-                return true;
-            case 1:
-                return !objects.isNull(1);
-            case 2:
-                return true;
-            default:
+        return switch (objects.getInt(0)) {
+            case 5, 3, 2 -> true;
+            case 1 -> !objects.isNull(1);
+            default -> {
                 logErrorAndThrow("Unable to fetch/parse integer value from input with key: " + key);
-                return false;
-        }
+                yield false;
+            }
+        };
     }
 
     @Override
@@ -438,8 +433,8 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         return this.opcode;
     }
 
-    public BroadcastLockManager getBroadcastLockManager() {
-        return workspaceTabHolder.getBroadcastLockManager();
+    public LockManager getLockManager() {
+        return workspaceTabHolder.getLockManager();
     }
 
     @Override
@@ -477,17 +472,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     @Override
     public String toString() {
-        return "WorkspaceBlockImpl{"
-                + "id='"
-                + id
-                + '\''
-                + ", extensionId='"
-                + extensionId
-                + '\''
-                + ", opcode='"
-                + opcode
-                + '\''
-                + '}';
+        return "WorkspaceBlockImpl{id='%s', extensionId='%s', opcode='%s'}".formatted(id, extensionId, opcode);
     }
 
     public State getLastValue() {
@@ -502,7 +487,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         return null;
     }
 
-    public void addLock(BroadcastLockImpl broadcastLock) {
+    public void addLock(LockImpl broadcastLock) {
         broadcastLock.addSignalListener(
                 value -> {
                     if (value instanceof Collection && ((Collection) value).size() > 1) {

@@ -1,21 +1,24 @@
 package org.homio.app.workspace;
 
-import lombok.Getter;
-import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
-import org.homio.api.workspace.BroadcastLock;
-import org.homio.api.workspace.WorkspaceBlock;
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import lombok.Getter;
+import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
+import org.homio.api.workspace.Lock;
+import org.homio.api.workspace.WorkspaceBlock;
 
 @Log4j2
-public class BroadcastLockImpl implements BroadcastLock {
+public class LockImpl implements Lock {
 
     private final Condition condition;
     private final ReentrantLock lock;
@@ -28,7 +31,7 @@ public class BroadcastLockImpl implements BroadcastLock {
     @Getter
     private Object value;
 
-    public BroadcastLockImpl(String id, Object expectedValue) {
+    public LockImpl(String id, Object expectedValue) {
         this.key = id;
         this.expectedValue = expectedValue;
         if (this.expectedValue == null) {

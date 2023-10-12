@@ -1,6 +1,10 @@
 package org.homio.addon.hardware;
 
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+
 import com.fasterxml.jackson.databind.JsonNode;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
@@ -8,7 +12,7 @@ import org.homio.api.state.DecimalType;
 import org.homio.api.state.JsonType;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
-import org.homio.api.workspace.BroadcastLock;
+import org.homio.api.workspace.Lock;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.MenuBlock;
 import org.homio.api.workspace.scratch.Scratch3Block;
@@ -16,11 +20,6 @@ import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
-
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
-import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 @Log4j2
 @Getter
@@ -94,7 +93,7 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
     private void fireHardwareHatEvent(WorkspaceBlock workspaceBlock) {
         workspaceBlock.handleNext(next -> {
             String eventName = workspaceBlock.getMenuValue(EVENT, this.hardwareEventsMenu);
-            BroadcastLock lock = workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock, eventName);
+            Lock lock = workspaceBlock.getLockManager().getLock(workspaceBlock, eventName);
             workspaceBlock.subscribeToLock(lock, next::handle);
         });
     }
@@ -104,7 +103,7 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
             String settingName = workspaceBlock.getMenuValue(SETTING, this.settingsMenu);
             String value = workspaceBlock.getInputString(VALUE);
 
-            BroadcastLock lock = workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock, settingName);
+            Lock lock = workspaceBlock.getLockManager().getLock(workspaceBlock, settingName);
             workspaceBlock.subscribeToLock(lock, lockValue -> isEmpty(value) || value.equals(lockValue), next::handle);
         });
     }

@@ -1,16 +1,17 @@
 package org.homio.addon.camera.onvif.impl;
 
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.CarAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.FaceDetect;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.FieldDetectAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.HumanAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.ItemLeftDetection;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.ItemTakenDetection;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.LineCrossAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.SceneChangeAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.TooBlurryAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.TooDarkAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.AudioAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.CarAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.FaceDetect;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.FieldDetectAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.HumanAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.ItemLeftDetection;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.ItemTakenDetection;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.LineCrossAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.MotionAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.SceneChangeAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.TooBlurryAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.TooDarkAlarm;
 import static org.homio.addon.camera.CameraConstants.CM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT2;
@@ -22,19 +23,15 @@ import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_MOTION_ALAR
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_PRIVACY_MODE;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_EXTERNAL_ALARM_INPUT;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_EXTERNAL_ALARM_INPUT2;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_PARKING_ALARM;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_SCENE_CHANGE_ALARM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_TEXT_OVERLAY;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_TOO_BLURRY_ALARM;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_TOO_DARK_ALARM;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
 import lombok.NoArgsConstructor;
-import org.homio.addon.camera.CameraConstants.AlarmEvents;
+import org.homio.addon.camera.CameraConstants.AlarmEvent;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.util.Helper;
-import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.addon.camera.service.IpCameraService;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
 import org.jetbrains.annotations.Nullable;
@@ -48,7 +45,7 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
 
     private int audioThreshold;
 
-    public DahuaBrandHandler(OnvifCameraService service) {
+    public DahuaBrandHandler(IpCameraService service) {
         super(service);
     }
 
@@ -177,93 +174,93 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
             switch (code) {
                 case "VideoMotion" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, MotionAlarm);
+                        service.alarmDetected(true, MotionAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, MotionAlarm);
+                        service.alarmDetected(false, MotionAlarm);
                     }
                 }
                 case "TakenAwayDetection" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, ItemTakenDetection);
+                        service.alarmDetected(true, ItemTakenDetection);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, ItemTakenDetection);
+                        service.alarmDetected(false, ItemTakenDetection);
                     }
                 }
                 case "LeftDetection" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, ItemLeftDetection);
+                        service.alarmDetected(true, ItemLeftDetection);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, ItemLeftDetection);
+                        service.alarmDetected(false, ItemLeftDetection);
                     }
                 }
                 case "SmartMotionVehicle" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, CarAlarm);
+                        service.alarmDetected(true, CarAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, CarAlarm);
+                        service.alarmDetected(false, CarAlarm);
                     }
                 }
                 case "SmartMotionHuman" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, HumanAlarm);
+                        service.alarmDetected(true, HumanAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, HumanAlarm);
+                        service.alarmDetected(false, HumanAlarm);
                     }
                 }
                 case "CrossLineDetection" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, LineCrossAlarm);
+                        service.alarmDetected(true, LineCrossAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, LineCrossAlarm);
+                        service.alarmDetected(false, LineCrossAlarm);
                     }
                 }
                 case "AudioMutation" -> {
                     if (action.equals("Start")) {
-                        service.audioDetected(true);
+                        service.alarmDetected(true, AudioAlarm);
                     } else if (action.equals("Stop")) {
-                        service.audioDetected(false);
+                        service.alarmDetected(false, AudioAlarm);
                     }
                 }
                 case "FaceDetection" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, FaceDetect);
+                        service.alarmDetected(true, FaceDetect);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, FaceDetect);
+                        service.alarmDetected(false, FaceDetect);
                     }
                 }
                 case "ParkingDetection" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, AlarmEvents.ParkingAlarm);
+                        service.alarmDetected(true, AlarmEvent.ParkingAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, AlarmEvents.ParkingAlarm);
+                        service.alarmDetected(false, AlarmEvent.ParkingAlarm);
                     }
                 }
                 case "CrossRegionDetection" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, FieldDetectAlarm);
+                        service.alarmDetected(true, FieldDetectAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, FieldDetectAlarm);
+                        service.alarmDetected(false, FieldDetectAlarm);
                     }
                 }
                 case "VideoLoss", "VideoBlind" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, TooDarkAlarm);
+                        service.alarmDetected(true, TooDarkAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, TooDarkAlarm);
+                        service.alarmDetected(false, TooDarkAlarm);
                     }
                 }
                 case "VideoAbnormalDetection" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, SceneChangeAlarm);
+                        service.alarmDetected(true, SceneChangeAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, SceneChangeAlarm);
+                        service.alarmDetected(false, SceneChangeAlarm);
                     }
                 }
                 case "VideoUnFocus" -> {
                     if (action.equals("Start")) {
-                        service.motionDetected(true, TooBlurryAlarm);
+                        service.alarmDetected(true, TooBlurryAlarm);
                     } else if (action.equals("Stop")) {
-                        service.motionDetected(false, TooBlurryAlarm);
+                        service.alarmDetected(false, TooBlurryAlarm);
                     }
                 }
                 case "AlarmLocal" -> {

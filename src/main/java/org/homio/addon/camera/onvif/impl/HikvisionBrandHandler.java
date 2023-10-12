@@ -1,12 +1,12 @@
 package org.homio.addon.camera.onvif.impl;
 
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.FaceDetect;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.FieldDetectAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.ItemLeftDetection;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.ItemTakenDetection;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.LineCrossAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.PirAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.FaceDetect;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.FieldDetectAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.ItemLeftDetection;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.ItemTakenDetection;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.LineCrossAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.MotionAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.PirAlarm;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_EXTERNAL_ALARM;
@@ -26,7 +26,7 @@ import lombok.NoArgsConstructor;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.onvif.util.Helper;
-import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.addon.camera.service.IpCameraService;
 import org.homio.api.EntityContext;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.StringType;
@@ -42,7 +42,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler {
 
     private int lineCount, vmdCount, leftCount, takenCount, faceCount, pirCount, fieldCount;
 
-    public HikvisionBrandHandler(OnvifCameraService service) {
+    public HikvisionBrandHandler(IpCameraService service) {
         super(service);
     }
 
@@ -60,31 +60,31 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler {
                 if (content.contains("<EventNotificationAlert version=\"")) {
                     if (content.contains("hannelID>" + nvrChannel + "</")) {// some camera use c or <dynChannelID>
                         if (content.contains("<eventType>linedetection</eventType>")) {
-                            service.motionDetected(true, LineCrossAlarm);
+                            service.alarmDetected(true, LineCrossAlarm);
                             lineCount = debounce;
                         }
                         if (content.contains("<eventType>fielddetection</eventType>")) {
-                            service.motionDetected(true, FieldDetectAlarm);
+                            service.alarmDetected(true, FieldDetectAlarm);
                             fieldCount = debounce;
                         }
                         if (content.contains("<eventType>VMD</eventType>")) {
-                            service.motionDetected(true, MotionAlarm);
+                            service.alarmDetected(true, MotionAlarm);
                             vmdCount = debounce;
                         }
                         if (content.contains("<eventType>facedetection</eventType>")) {
-                            service.motionDetected(true, FaceDetect);
+                            service.alarmDetected(true, FaceDetect);
                             faceCount = debounce;
                         }
                         if (content.contains("<eventType>unattendedBaggage</eventType>")) {
-                            service.motionDetected(true, ItemLeftDetection);
+                            service.alarmDetected(true, ItemLeftDetection);
                             leftCount = debounce;
                         }
                         if (content.contains("<eventType>attendedBaggage</eventType>")) {
-                            service.motionDetected(true, ItemTakenDetection);
+                            service.alarmDetected(true, ItemTakenDetection);
                             takenCount = debounce;
                         }
                         if (content.contains("<eventType>PIR</eventType>")) {
-                            service.motionDetected(true, PirAlarm);
+                            service.alarmDetected(true, PirAlarm);
                             pirCount = debounce;
                         }
                         if (content.contains("<eventType>videoloss</eventType>\r\n<eventState>inactive</eventState>")) {
@@ -252,48 +252,48 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler {
         if (lineCount > 1) {
             lineCount--;
         } else if (lineCount == 1) {
-            service.motionDetected(false, LineCrossAlarm);
+            service.alarmDetected(false, LineCrossAlarm);
             lineCount--;
         }
         if (vmdCount > 1) {
             vmdCount--;
         } else if (vmdCount == 1) {
-            service.motionDetected(false, MotionAlarm);
+            service.alarmDetected(false, MotionAlarm);
             vmdCount--;
         }
         if (leftCount > 1) {
             leftCount--;
         } else if (leftCount == 1) {
-            service.motionDetected(false, ItemLeftDetection);
+            service.alarmDetected(false, ItemLeftDetection);
             leftCount--;
         }
         if (takenCount > 1) {
             takenCount--;
         } else if (takenCount == 1) {
-            service.motionDetected(false, ItemTakenDetection);
+            service.alarmDetected(false, ItemTakenDetection);
             takenCount--;
         }
         if (faceCount > 1) {
             faceCount--;
         } else if (faceCount == 1) {
-            service.motionDetected(false, FaceDetect);
+            service.alarmDetected(false, FaceDetect);
             faceCount--;
         }
         if (pirCount > 1) {
             pirCount--;
         } else if (pirCount == 1) {
-            service.motionDetected(false, PirAlarm);
+            service.alarmDetected(false, PirAlarm);
             pirCount--;
         }
         if (fieldCount > 1) {
             fieldCount--;
         } else if (fieldCount == 1) {
-            service.motionDetected(false, FieldDetectAlarm);
+            service.alarmDetected(false, FieldDetectAlarm);
             fieldCount--;
         }
         if (fieldCount == 0 && pirCount == 0 && faceCount == 0 && takenCount == 0 && leftCount == 0 && vmdCount == 0
                 && lineCount == 0) {
-            service.motionDetected(false, MotionAlarm);
+            service.alarmDetected(false, MotionAlarm);
         }
     }
 

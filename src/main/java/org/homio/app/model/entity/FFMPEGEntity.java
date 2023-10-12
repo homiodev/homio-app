@@ -2,12 +2,12 @@ package org.homio.app.model.entity;
 
 import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
 import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
+import static org.homio.api.util.CommonUtils.STATIC_FILES;
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import java.io.File;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,6 +33,7 @@ import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.model.endpoint.BaseDeviceEndpoint;
 import org.homio.api.model.endpoint.DeviceEndpoint;
+import org.homio.api.repository.GitHubProject.VersionedFile;
 import org.homio.api.service.DependencyExecutableInstaller;
 import org.homio.api.state.StringType;
 import org.homio.api.ui.UISidebarChildren;
@@ -79,8 +80,10 @@ public class FFMPEGEntity extends MediaEntity implements
             entity.setEntityID(PRIMARY_DEVICE);
             entity.setJsonData("dis_del", true);
             entity.setJsonData("dis_edit", true);
-            entityContext.save(entity);
+            entity = entityContext.save(entity);
         }
+        FFMPEGImpl.entity = entity;
+
 
         entityContext.bgp().registerThreadsPuller("ffmpeg", threadPuller -> {
             for (Map.Entry<String, FFMPEGImpl> threadEntry : FFMPEGImpl.ffmpegMap.entrySet()) {
@@ -93,6 +96,12 @@ public class FFMPEGEntity extends MediaEntity implements
                 }
             }
         });
+    }
+
+    @Override
+    @JsonIgnore
+    public @Nullable String getIeeeAddress() {
+        return getEntityID();
     }
 
     @Override
@@ -135,22 +144,20 @@ public class FFMPEGEntity extends MediaEntity implements
     @Override
     public @NotNull List<OptionModel> getLogSources() {
         List<OptionModel> list = new ArrayList<>();
-        File[] listFiles = FFMPEGImpl.FFMPEG_LOG_PATH.toFile().listFiles();
-        if (listFiles != null) {
-            for (File file : listFiles) {
-                try {
-                    if (file.length() > 0) {
-                        list.add(OptionModel.of(file.getName()));
-                    }
-                } catch (Exception ignore) {}
-            }
+        for (FFMPEGImpl ffmpeg : FFMPEGImpl.ffmpegMap.values()) {
+            list.add(OptionModel.of(ffmpeg.getFileLogger().getName()));
         }
         return list;
     }
 
     @Override
-    public @Nullable InputStream getSourceLogInputStream(@NotNull String sourceID) throws Exception {
-        return Files.newInputStream(FFMPEGImpl.FFMPEG_LOG_PATH.resolve(sourceID));
+    public @Nullable InputStream getSourceLogInputStream(@NotNull String sourceID) {
+        for (FFMPEGImpl ffmpeg : FFMPEGImpl.ffmpegMap.values()) {
+            if (ffmpeg.getFileLogger().getName().equals(sourceID)) {
+                return ffmpeg.getFileLogger().getFileInputStream();
+            }
+        }
+        return null;
     }
 
     @Override
@@ -258,8 +265,13 @@ public class FFMPEGEntity extends MediaEntity implements
                     hardware.installSoftware("ffmpeg", 600);
                 }
             } else {
-                String url = entityContext.setting().getEnvRequire("source-ffmpeg", String.class,
-                    "https://github.com/homiodev/static-files/raw/master/ffmpeg.7z", true);
+                String url = entityContext.setting().getEnv("source-ffmpeg");
+                if (url == null) {
+                    url = STATIC_FILES.getContentFile("ffmpeg").map(VersionedFile::getDownloadUrl).orElse(null);
+                }
+                if (url == null) {
+                    throw new IllegalStateException("Unable to find ffmpeg download url");
+                }
                 CommonUtils.downloadAndExtract(url, "ffmpeg.7z",
                     (progress, message, error) -> {
                         progressBar.progress(progress, message);

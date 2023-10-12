@@ -1,6 +1,7 @@
 package org.homio.addon.camera.onvif.impl;
 
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.AudioAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.MotionAlarm;
 import static org.homio.addon.camera.CameraConstants.CM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT2;
@@ -18,7 +19,7 @@ import io.netty.util.ReferenceCountUtil;
 import lombok.NoArgsConstructor;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.util.Helper;
-import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.addon.camera.service.IpCameraService;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
 import org.jetbrains.annotations.Nullable;
@@ -33,7 +34,7 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler {
     private String requestUrl = "Empty";
     private int audioThreshold;
 
-    public AmcrestBrandHandler(OnvifCameraService service) {
+    public AmcrestBrandHandler(IpCameraService service) {
         super(service);
     }
 
@@ -79,15 +80,15 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler {
             log.debug("[{}]: HTTP Result back from camera is \t:{}:", entityID, content);
             if (content.contains("Error: No Events")) {
                 if ("/cgi-bin/eventManager.cgi?action=getEventIndexes&code=VideoMotion".equals(requestUrl)) {
-                    service.motionDetected(false, MotionAlarm);
+                    service.alarmDetected(false, MotionAlarm);
                 } else if ("/cgi-bin/eventManager.cgi?action=getEventIndexes&code=AudioMutation".equals(requestUrl)) {
-                    service.audioDetected(false);
+                    service.alarmDetected(false, AudioAlarm);
                 }
             } else if (content.contains("channels[0]=0")) {
                 if ("/cgi-bin/eventManager.cgi?action=getEventIndexes&code=VideoMotion".equals(requestUrl)) {
-                    service.motionDetected(true, MotionAlarm);
+                    service.alarmDetected(true, MotionAlarm);
                 } else if ("/cgi-bin/eventManager.cgi?action=getEventIndexes&code=AudioMutation".equals(requestUrl)) {
-                    service.audioDetected(true);
+                    service.alarmDetected(true, AudioAlarm);
                 }
             }
 

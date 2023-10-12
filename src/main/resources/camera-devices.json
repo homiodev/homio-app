@@ -76,74 +76,96 @@
       "iconColor": "#42B52D"
     },
     {
+      "name": "motion_score",
+      "order": 99,
+      "min": 0,
+      "max": 100,
+      "unit": "%",
+      "persistent": true,
+      "icon": "fa-hashtag",
+      "iconColor": "#32B1C2"
+    },
+    {
       "name": "motion_alarm",
       "order": 100,
+      "persistent": true,
       "icon": "fa-bell",
       "iconColor": "#387BE0"
     },
     {
       "name": "field_detect_alarm",
       "order": 110,
+      "persistent": true,
       "icon": "fa-flag",
       "iconColor": "#387BE0"
     },
     {
       "name": "line_cross_alarm",
       "order": 120,
+      "persistent": true,
       "icon": "fab fa-spotify",
       "iconColor": "#387BE0"
     },
     {
       "name": "pir_alarm",
       "order": 130,
+      "persistent": true,
       "icon": "fa-flag-checkered",
       "iconColor": "#387BE0"
     },
     {
       "name": "cell_alarm",
       "order": 140,
+      "persistent": true,
       "icon": "fa-table-cells-large",
       "iconColor": "#387BE0"
     },
     {
       "name": "item_taken_alarm",
       "order": 150,
+      "persistent": true,
       "icon": "fa-code-pull-request",
       "iconColor": "#387BE0"
     },
     {
       "name": "item_left_alarm",
       "order": 110,
+      "persistent": true,
       "icon": "fa-code-merge",
       "iconColor": "#387BE0"
     },
     {
       "name": "car_alarm",
       "order": 170,
+      "persistent": true,
       "icon": "fa-car-on",
       "iconColor": "#387BE0"
     },
     {
       "name": "human_alarm",
       "order": 180,
+      "persistent": true,
       "icon": "fa-person",
       "iconColor": "#387BE0"
     },
     {
       "name": "face_detect_alarm",
       "order": 190,
+      "persistent": true,
       "icon": "fa-face-smile",
       "iconColor": "#387BE0"
     },
     {
       "name": "external_alarm",
       "order": 193,
+      "persistent": true,
       "icon": "fa-voicemail",
       "iconColor": "#387BE0"
     },
     {
       "name": "audio_alarm",
       "order": 197,
+      "persistent": true,
       "icon": "fa-volume-high",
       "iconColor": "#387BE0"
     },

@@ -8,6 +8,7 @@ public class CameraConstants {
     public static final String CM = "/cgi-bin/configManager.cgi?action=";
 
     public static final String ENDPOINT_MOTION_THRESHOLD = "motion_threshold";
+    public static final String ENDPOINT_MOTION_SCORE = "motion_score";
     public static final String ENDPOINT_AUDIO_THRESHOLD = "audio_threshold";
 
     public static final String ENDPOINT_AUTO_LED = "auto_led";
@@ -104,7 +105,7 @@ public class CameraConstants {
 
 
     @RequiredArgsConstructor
-    public enum AlarmEvents {
+    public enum AlarmEvent {
         MotionAlarm(ENDPOINT_MOTION_ALARM),
         FieldDetectAlarm(ENDPOINT_FIELD_DETECTION_ALARM),
         LineCrossAlarm(ENDPOINT_LINE_CROSSING_ALARM),

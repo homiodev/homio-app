@@ -1,7 +1,8 @@
 package org.homio.addon.camera.onvif.impl;
 
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.PirAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.AudioAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.MotionAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.PirAlarm;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUTO_LED;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
@@ -16,7 +17,7 @@ import io.netty.util.ReferenceCountUtil;
 import lombok.NoArgsConstructor;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.util.Helper;
-import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.addon.camera.service.IpCameraService;
 import org.homio.api.EntityContext;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
@@ -34,7 +35,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler {
     private int audioThreshold;
     private boolean newApi;
 
-    public InstarBrandHandler(OnvifCameraService service) {
+    public InstarBrandHandler(IpCameraService service) {
         super(service);
     }
 
@@ -90,7 +91,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler {
                         getEndpointRequire(ENDPOINT_ENABLE_PIR_ALARM).setValue(OnOffType.OFF);
                     }
                     // Reset the Alarm, need to find better place to put this.
-                    service.motionDetected(false, PirAlarm);
+                    service.alarmDetected(false, PirAlarm);
                 }
                 case "/param.cgi?cmd=getioattr" -> {// External Alarm Input
                     if (content.contains("var io_enable=\"1\"")) {
@@ -143,21 +144,21 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler {
         log.debug("[{}]: Alarm has been triggered:{}", entityID, alarm);
         switch (alarm) {
             case "/instar?&active=1", "/instar?&active=2", "/instar?&active=3", "/instar?&active=4" ->
-                service.motionDetected(true, MotionAlarm);
+                service.alarmDetected(true, MotionAlarm);
             case "/instar?&active=5" ->// PIR
-                service.motionDetected(true, PirAlarm);
+                service.alarmDetected(true, PirAlarm);
             case "/instar?&active=6" ->// Audio Alarm
-                service.audioDetected(true);
+                service.alarmDetected(true, AudioAlarm);
             case "/instar?&active=7", "/instar?&active=8", "/instar?&active=9", "/instar?&active=10" ->// Motion Area 4
-                service.motionDetected(true, MotionAlarm);
+                service.alarmDetected(true, MotionAlarm);
         }
     }
 
     @Override
     public void pollCameraRunnable() {
-        service.motionDetected(false, MotionAlarm);
-        service.motionDetected(false, PirAlarm);
-        service.audioDetected(false);
+        service.alarmDetected(false, MotionAlarm);
+        service.alarmDetected(false, PirAlarm);
+        service.alarmDetected(false, AudioAlarm);
     }
 
     @Override

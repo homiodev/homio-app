@@ -9,10 +9,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.homio.addon.camera.CameraConstants.AlarmEvent;
 import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.addon.camera.entity.VideoMotionAlarmProvider;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
+import org.homio.api.state.DecimalType;
 import org.homio.app.video.ffmpeg.FFMPEGImpl;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Primary;
@@ -141,9 +143,12 @@ public class FFMpegRtspAlarm implements VideoMotionAlarmProvider {
 
     private static final class FFMpegRtspAlarmImpl extends FFMPEGImpl {
 
+        private final BaseCameraEntity<?, ?> entity;
+
         public FFMpegRtspAlarmImpl(BaseCameraEntity<?, ?> entity, String command) {
             super(entity.getEntityID(), "RTSP ALARM", entity.getService(), FFMPEGFormat.RTSP_ALARMS,
                 "-", command, entity.getEntityContext());
+            this.entity = entity;
         }
 
         @Override
@@ -168,12 +173,13 @@ public class FFMpegRtspAlarm implements VideoMotionAlarmProvider {
 
             @Override
             protected void handleLine(String line) {
-                logInfo(line);
-                int motionThreshold = handler.getMotionThreshold().intValue();
+                logDebug(line);
                 if (line.contains("lavfi.")) {
                     // When the number of pixels that change are below the noise floor we need to look
                     // across frames to confirm it is motion and not noise.
-                    if (countOfMotions < 10) {// Stop increasing otherwise it takes too long to go OFF
+                    DecimalType score = new DecimalType(line.substring(line.indexOf("lavfi.scene_score=") + "lavfi.scene_score=".length()));
+                    entity.getService().motionDetected(score);
+                    /*if (countOfMotions < 10) {// Stop increasing otherwise it takes too long to go OFF
                         countOfMotions++;
                     }
                     if (countOfMotions > 9
@@ -185,9 +191,10 @@ public class FFMpegRtspAlarm implements VideoMotionAlarmProvider {
                         if (countOfMotions < 2) {
                             countOfMotions = 4;// Used to debounce the Alarm.
                         }
-                    }
+                    }*/
                 } else if (line.contains("speed=")) {
-                    if (countOfMotions > 0) {
+                    entity.getService().motionDetected(null);
+                    /*if (countOfMotions > 0) {
                         if (motionThreshold > 89) {
                             countOfMotions--;
                         }
@@ -197,14 +204,14 @@ public class FFMpegRtspAlarm implements VideoMotionAlarmProvider {
                             countOfMotions -= 4;
                         }
                         if (countOfMotions <= 0) {
-                            handler.motionDetected(false);
+                            entity.getService().motionDetected(null);
                             countOfMotions = 0;
                         }
-                    }
+                    }*/
                 } else if (line.contains("silence_start")) {
-                    handler.audioDetected(false);
+                    entity.getService().alarmDetected(false, AlarmEvent.AudioAlarm);
                 } else if (line.contains("silence_end")) {
-                    handler.audioDetected(true);
+                    entity.getService().alarmDetected(true, AlarmEvent.AudioAlarm);
                 }
             }
         }

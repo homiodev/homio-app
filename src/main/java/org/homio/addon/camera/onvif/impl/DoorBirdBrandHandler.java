@@ -1,17 +1,16 @@
 package org.homio.addon.camera.onvif.impl;
 
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.MotionAlarm;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ACTIVATE_ALARM_OUTPUT2;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_DOORBELL;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_PRIVACY_MODE;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_EXTERNAL_LIGHT;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
 import lombok.NoArgsConstructor;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
-import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.addon.camera.service.IpCameraService;
 import org.homio.api.state.OnOffType;
 import org.jetbrains.annotations.Nullable;
 
@@ -22,7 +21,7 @@ import org.jetbrains.annotations.Nullable;
 @CameraBrandHandler("DoorBird")
 public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
 
-    public DoorBirdBrandHandler(OnvifCameraService service) {
+    public DoorBirdBrandHandler(IpCameraService service) {
         super(service);
     }
 
@@ -42,10 +41,10 @@ public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
                 getEndpointRequire(ENDPOINT_DOORBELL).setValue(OnOffType.OFF);
             }
             if (content.contains("motionsensor:L")) {
-                service.motionDetected(false, MotionAlarm);
+                service.alarmDetected(false, MotionAlarm);
             }
             if (content.contains("motionsensor:H")) {
-                service.motionDetected(true, MotionAlarm);
+                service.alarmDetected(true, MotionAlarm);
             }
         } finally {
             ReferenceCountUtil.release(msg);

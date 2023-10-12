@@ -118,9 +118,9 @@ public class WorkspaceService implements ContextRefreshed {
         return null;
     }
 
-    public void fireAllBroadcastLock(Consumer<BroadcastLockManagerImpl> handler) {
+    public void fireAllLock(Consumer<LockManagerImpl> handler) {
         for (WorkspaceTabHolder workspaceTabHolder : tabs.values()) {
-            handler.accept(workspaceTabHolder.broadcastLockManager);
+            handler.accept(workspaceTabHolder.lockManager);
         }
     }
 
@@ -184,7 +184,7 @@ public class WorkspaceService implements ContextRefreshed {
 
     private void releaseWorkspaceEntity(
             WorkspaceEntity workspaceTab, WorkspaceTabHolder oldWorkspaceTabHolder) {
-        oldWorkspaceTabHolder.broadcastLockManager.release();
+        oldWorkspaceTabHolder.lockManager.release();
 
         for (WorkspaceEventListener workspaceEventListener : workspaceEventListeners) {
             workspaceEventListener.release(workspaceTab.getEntityID());
@@ -336,7 +336,7 @@ public class WorkspaceService implements ContextRefreshed {
         private final String tabId;
         private final EntityContext entityContext;
         private final Map<String, Scratch3ExtensionBlocks> scratch3Blocks;
-        private final BroadcastLockManagerImpl broadcastLockManager;
+        private final LockManagerImpl lockManager;
         private final Map<String, WorkspaceBlockImpl> blocks = new HashMap<>();
 
         public WorkspaceTabHolder(
@@ -346,7 +346,7 @@ public class WorkspaceService implements ContextRefreshed {
             this.tabId = tabId;
             this.scratch3Blocks = scratch3Blocks;
             this.entityContext = entityContext;
-            this.broadcastLockManager = new BroadcastLockManagerImpl(tabId);
+            this.lockManager = new LockManagerImpl(tabId);
         }
     }
 }

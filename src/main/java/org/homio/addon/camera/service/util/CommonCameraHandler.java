@@ -17,7 +17,7 @@ import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.onvif.util.Helper;
-import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.addon.camera.service.IpCameraService;
 
 // These methods handle the response from all camera brands, nothing specific to 1 brand.
 @Log4j2
@@ -33,7 +33,7 @@ public class CommonCameraHandler extends ChannelDuplexHandler {
     private String boundary = "";
     private @Setter String requestUrl = "ffmpeg";
 
-    private final OnvifCameraService service;
+    private final IpCameraService service;
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {

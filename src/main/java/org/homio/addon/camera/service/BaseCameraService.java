@@ -1,9 +1,9 @@
 package org.homio.addon.camera.service;
 
 import static java.lang.String.join;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.AudioAlarm;
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.MotionAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.MotionAlarm;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUDIO_THRESHOLD;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_MOTION_SCORE;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_MOTION_THRESHOLD;
 import static org.homio.addon.camera.CameraController.camerasOpenStreams;
 import static org.homio.addon.camera.entity.StreamMJPEG.mp4OutOptions;
@@ -19,6 +19,8 @@ import static org.homio.api.model.endpoint.DeviceEndpoint.ENDPOINT_LAST_SEEN;
 
 import com.pivovarit.function.ThrowingRunnable;
 import java.io.InputStream;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -96,6 +98,7 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
 
     private final @NotNull @Getter Map<String, CameraDeviceEndpoint> endpoints = new ConcurrentHashMap<>();
     private @Getter int communicationError;
+    private @Getter boolean alarmDetected;
 
     public @NotNull List<ConfigDeviceDefinition> findDevices() {
         return CONFIG_DEVICE_SERVICE.findDeviceDefinitionModels(entity.getModel(), Set.of());
@@ -130,7 +133,7 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
     }
 
     protected final @Nullable InputStream getFFMPEGLogInputStream(@Nullable FFMPEG ffmpeg) {
-        return FFMPEG.check(ffmpeg, f -> Files.newInputStream(f.getLogPath()), null);
+        return FFMPEG.check(ffmpeg, f -> f.getFileLogger().getFileInputStream(), null);
     }
 
     protected abstract void updateNotificationBlock();
@@ -152,7 +155,6 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
 
     protected ReentrantLock lockCurrentSnapshot = new ReentrantLock();
     protected @Getter byte[] latestSnapshot = new byte[0];
-    protected @Getter boolean motionDetected;
 
     private @Getter @Nullable FFMPEG ffmpegMainReStream;
     private @Getter @Nullable FFMPEG ffmpegSnapshot;
@@ -357,19 +359,16 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         CommonUtils.deletePath(ffmpegImageOutputPath);
     }
 
-    public void motionDetected(boolean on, @NotNull CameraConstants.AlarmEvents event) {
+    public void alarmDetected(boolean on, @NotNull CameraConstants.AlarmEvent event) {
         addEndpointOptional(event).setValue(OnOffType.of(on), true);
-        motionDetected = on;
+        this.alarmDetected = on;
     }
 
-    @Override
-    public void motionDetected(boolean on) {
-        motionDetected(on, MotionAlarm);
-    }
-
-    @Override
-    public void audioDetected(boolean on) {
-        addEndpointOptional(AudioAlarm).setValue(OnOffType.of(on), true);
+    public void motionDetected(@Nullable DecimalType score) {
+        alarmDetected(score != null, MotionAlarm);
+        DecimalType value = score == null ? DecimalType.ZERO : new DecimalType(BigDecimal.valueOf(score.floatValue() * 100).setScale(2, RoundingMode.HALF_UP));
+        addEndpoint(ENDPOINT_MOTION_SCORE, key -> new CameraDeviceEndpoint(entity, getEntityContext(), key, EndpointType.number, false), null)
+            .setValue(value);
     }
 
     public void processSnapshot(byte[] incomingSnapshot) {
@@ -488,16 +487,16 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         @NotNull String endpointId,
         @NotNull Function<String, CameraDeviceEndpoint> handler,
         @Nullable Consumer<State> updateHandler) {
-        CameraDeviceEndpoint deviceEndpoint = endpoints.computeIfAbsent(endpointId, key -> {
+        return endpoints.computeIfAbsent(endpointId, key -> {
             CameraDeviceEndpoint endpoint = handler.apply(key);
             endpoint.setUpdateHandler(updateHandler);
+
+            State attribute = getAttribute(endpointId);
+            if (attribute != null) {
+                endpoint.setInitialValue(attribute);
+            }
             return endpoint;
         });
-        State attribute = getAttribute(endpointId);
-        if (attribute != null) {
-            deviceEndpoint.setValue(attribute, false);
-        }
-        return deviceEndpoint;
     }
 
     public CameraDeviceEndpoint addEndpointSwitch(
@@ -739,7 +738,8 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
                     super.assembleUIAction(uiInputBuilder);
                 }
             };
-            videoEndpoint.writeValue(INITIALIZE.toString(), false);
+            videoEndpoint.setIgnoreDuplicates(true);
+            videoEndpoint.setInitialValue(new StringType(UNKNOWN.toString()));
             return videoEndpoint;
         }, null);
 
@@ -751,7 +751,7 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
                     uiInputBuilder.addDuration(getValue().longValue(), null);
                 }
             };
-            videoEndpoint.writeValue(System.currentTimeMillis(), false);
+            videoEndpoint.setInitialValue(new DecimalType(System.currentTimeMillis()));
             return videoEndpoint;
         }, null);
 
@@ -798,7 +798,7 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         return ffmpegMainReStream;
     }
 
-    private CameraDeviceEndpoint addEndpointOptional(@NotNull CameraConstants.AlarmEvents event) {
+    private CameraDeviceEndpoint addEndpointOptional(@NotNull CameraConstants.AlarmEvent event) {
         if (!endpoints.containsKey(event.getEndpoint())) {
             addEndpointSwitch(event.getEndpoint(), state -> {
             }, false);

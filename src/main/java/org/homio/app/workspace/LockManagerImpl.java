@@ -1,13 +1,5 @@
 package org.homio.app.workspace;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.tuple.Pair;
-import org.homio.api.EntityContextBGP.ThreadContext;
-import org.homio.api.workspace.BroadcastLock;
-import org.homio.api.workspace.BroadcastLockManager;
-import org.homio.api.workspace.WorkspaceBlock;
-
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,10 +7,17 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.tuple.Pair;
+import org.homio.api.EntityContextBGP.ThreadContext;
+import org.homio.api.workspace.Lock;
+import org.homio.api.workspace.LockManager;
+import org.homio.api.workspace.WorkspaceBlock;
 
 @Log4j2
 @RequiredArgsConstructor
-public class BroadcastLockManagerImpl implements BroadcastLockManager {
+public class LockManagerImpl implements LockManager {
 
     private final String workspaceTabId;
     private final WorkspaceWarehouseContext workspaceWarehouse = new WorkspaceWarehouseContext();
@@ -37,8 +36,8 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
      * Create lock with unique key or get existed.
      */
     @Override
-    public BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock, String key, Object expectedValue) {
-        BroadcastLockImpl lock = new BroadcastLockImpl(key, expectedValue);
+    public LockImpl getLock(WorkspaceBlock workspaceBlock, String key, Object expectedValue) {
+        LockImpl lock = new LockImpl(key, expectedValue);
         workspaceWarehouse.broadcastListeners.putIfAbsent(key, new ArrayList<>());
         workspaceWarehouse.broadcastListeners.get(key).add(lock);
         ((WorkspaceBlockImpl) workspaceBlock).addLock(lock);
@@ -46,18 +45,18 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
     }
 
     @Override
-    public BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock) {
-        return getOrCreateLock(workspaceBlock, workspaceBlock.getId(), null);
+    public LockImpl getLock(WorkspaceBlock workspaceBlock) {
+        return getLock(workspaceBlock, workspaceBlock.getId(), null);
     }
 
     @Override
-    public BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock, String key) {
-        return getOrCreateLock(workspaceBlock, key, null);
+    public LockImpl getLock(WorkspaceBlock workspaceBlock, String key) {
+        return getLock(workspaceBlock, key, null);
     }
 
     @Override
-    public BroadcastLock listenEvent(WorkspaceBlock workspaceBlock, Supplier<Boolean> supplier) {
-        BroadcastLockImpl lock = getOrCreateLock(workspaceBlock);
+    public Lock listenEvent(WorkspaceBlock workspaceBlock, Supplier<Boolean> supplier) {
+        LockImpl lock = getLock(workspaceBlock);
         workspaceWarehouse.broadcastListenersMap.put(workspaceBlock.getId(), Pair.of(lock, supplier));
 
         if (workspaceWarehouse.threadContext == null) {
@@ -68,7 +67,7 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
                     .interval(Duration.ofMillis(1000))
                     .tap(context -> workspaceWarehouse.threadContext = context)
                     .execute(() -> {
-                        for (Entry<String, Pair<BroadcastLockImpl, Supplier<Boolean>>> item : workspaceWarehouse.broadcastListenersMap.entrySet()) {
+                        for (Entry<String, Pair<LockImpl, Supplier<Boolean>>> item : workspaceWarehouse.broadcastListenersMap.entrySet()) {
                             if (item.getValue().getValue().get()) {
                                 item.getValue().getKey().signalAll();
                             }
@@ -80,14 +79,14 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
     }
 
     public void release() {
-        for (Pair<BroadcastLockImpl, Supplier<Boolean>> pair :
+        for (Pair<LockImpl, Supplier<Boolean>> pair :
                 workspaceWarehouse.broadcastListenersMap.values()) {
             pair.getKey().release();
         }
         workspaceWarehouse.broadcastListenersMap.clear();
 
-        for (List<BroadcastLockImpl> locks : workspaceWarehouse.broadcastListeners.values()) {
-            locks.forEach(BroadcastLockImpl::release);
+        for (List<LockImpl> locks : workspaceWarehouse.broadcastListeners.values()) {
+            locks.forEach(LockImpl::release);
         }
         workspaceWarehouse.broadcastListeners.clear();
 
@@ -99,8 +98,8 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
 
     private static class WorkspaceWarehouseContext {
 
-        private final Map<String, List<BroadcastLockImpl>> broadcastListeners = new ConcurrentHashMap<>();
-        private final Map<String, Pair<BroadcastLockImpl, Supplier<Boolean>>> broadcastListenersMap = new ConcurrentHashMap<>();
+        private final Map<String, List<LockImpl>> broadcastListeners = new ConcurrentHashMap<>();
+        private final Map<String, Pair<LockImpl, Supplier<Boolean>>> broadcastListenersMap = new ConcurrentHashMap<>();
         private ThreadContext<Object> threadContext;
     }
 }

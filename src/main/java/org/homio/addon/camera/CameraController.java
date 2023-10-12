@@ -26,13 +26,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.BaseCameraEntity;
-import org.homio.addon.camera.entity.OnvifCameraEntity;
+import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.addon.camera.entity.StreamHLS;
 import org.homio.addon.camera.entity.StreamHLS.Resolution;
 import org.homio.addon.camera.onvif.impl.InstarBrandHandler;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.service.BaseCameraService;
-import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.addon.camera.service.IpCameraService;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.exception.ServerException;
@@ -84,7 +84,7 @@ public class CameraController {
     @SneakyThrows
     @PostMapping("/{entityID}/OnvifEvent")
     public void postOnvifEvent(@PathVariable("entityID") String entityID, HttpServletRequest req) {
-        OnvifCameraEntity entity = entityContext.getEntityRequire(entityID);
+        IpCameraEntity entity = entityContext.getEntityRequire(entityID);
         entity.getService().getOnvifDeviceState().getEventDevices().fireEvent(req.getReader().toString());
     }
 
@@ -275,7 +275,7 @@ public class CameraController {
             int counter = 0;
             do {
                 try {
-                    if (service.isMotionDetected()) {
+                    if (service.isAlarmDetected()) {
                         output.sendSnapshotBasedFrame(service.getSnapshot());
                     } // every 8 seconds if no motion or the first three snapshots to fill any FIFO
                     else if (counter % 8 == 0 || counter < 3) {
@@ -301,7 +301,7 @@ public class CameraController {
 
     @GetMapping("/{entityID}/instar")
     public void requestCameraInstar(@PathVariable("entityID") String entityID, HttpServletRequest req) {
-        OnvifCameraEntity entity = (OnvifCameraEntity) getEntity(entityID);
+        IpCameraEntity entity = (IpCameraEntity) getEntity(entityID);
         InstarBrandHandler instar = (InstarBrandHandler) entity.getService().getBrandHandler();
         instar.alarmTriggered(req.getPathInfo() + "?" + req.getQueryString());
     }
@@ -333,8 +333,8 @@ public class CameraController {
         List<OptionModel> list = new ArrayList<>();
         for (BaseCameraEntity<?, ?> videoStreamEntity : entityContext.findAll(BaseCameraEntity.class)) {
             if (videoStreamEntity.getStatus() == Status.ONLINE && videoStreamEntity.isStart()) {
-                if (videoStreamEntity instanceof OnvifCameraEntity) {
-                    OnvifCameraService service = (OnvifCameraService) videoStreamEntity.getService();
+                if (videoStreamEntity instanceof IpCameraEntity) {
+                    IpCameraService service = (IpCameraService) videoStreamEntity.getService();
                     for (Profile profile : service.getOnvifDeviceState().getProfiles()) {
                         list.add(OptionModel.of(videoStreamEntity.getEntityID() + "/" + profile.getToken(),
                             videoStreamEntity.getTitle() + " (" + profile.getVideoEncoderConfiguration().getResolution().toString() + ")"));

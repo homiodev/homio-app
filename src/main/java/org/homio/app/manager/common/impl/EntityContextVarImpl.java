@@ -11,6 +11,7 @@ import com.pivovarit.function.ThrowingConsumer;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -34,6 +35,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.EntityContextService.MQTTEntityService;
 import org.homio.api.EntityContextVar;
 import org.homio.api.entity.widget.AggregationType;
+import org.homio.api.entity.widget.PeriodRequest;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.Icon;
 import org.homio.api.state.DecimalType;
@@ -282,8 +284,23 @@ public class EntityContextVarImpl implements EntityContextVar {
         return "";
     }
 
-    public List<Object[]> getTimeSeries(String variableId, Long from, Long to) {
-        return getOrCreateContext(variableId).storageService.getTimeSeries(from, to, null, null, "value");
+    public List<Object[]> getTimeSeries(String variableId, PeriodRequest request) {
+        DataStorageService<WorkspaceVariableMessage> service = getOrCreateContext(variableId).storageService;
+        List<Object[]> series = service.getTimeSeries(request.getFromTime(), request.getToTime(), null, null, "value", null, request.isSortAsc());
+        if (request.getFrom() != null || request.getTo() != null) {
+            if (request.getMinItemsCount() > series.size()) {
+                if (request.isForward()) {
+                    series = service.getTimeSeries(request.getFromTime(), null, null, null, "value", request.getMinItemsCount(), true);
+                } else {
+                    series = service.getTimeSeries(null, request.getToTime(), null, null, "value", request.getMinItemsCount(), false);
+                    request.setSortAsc(false);
+                }
+            }
+        }
+        if (!request.isSortAsc()) {
+            series.sort(Comparator.comparingLong(o -> (Long) o[0]));
+        }
+        return series;
     }
 
     public boolean isLinked(String variableEntityID) {
@@ -555,8 +572,7 @@ public class EntityContextVarImpl implements EntityContextVar {
 
         @Override
         public String toString() {
-            return format("%s. RO:[%s]. BP:[%s]. LL: [%s]", variable.getEntityID(), variable.isReadOnly(),
-                variable.isBackup(), linkListener != null);
+            return "%s. RO:[%s]. BP:[%s]. LL: [%s]".formatted(variable.getEntityID(), variable.isReadOnly(), variable.isBackup(), linkListener != null);
         }
     }
 

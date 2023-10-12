@@ -89,7 +89,7 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
         return count == 0 ? null : String.valueOf(count);
     }
 
-    @UIField(order = 6, hideInEdit = true, type = UIFieldType.HTML)
+    @UIField(order = 6, hideInEdit = true, type = UIFieldType.HTML, hideOnEmpty = true)
     @UIFieldGroup("GENERAL")
     public String getRunningCommands() {
         List<String> commands = new ArrayList<>();
@@ -506,6 +506,7 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
     @Override
     public void logBuilder(EntityLogBuilder entityLogBuilder) {
         entityLogBuilder.addTopicFilterByEntityID(CameraEntrypoint.class.getPackage());
+        entityLogBuilder.addTopicFilterByEntityID("de.onvif.soap");
     }
 
     @Override

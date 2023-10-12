@@ -37,7 +37,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
 import org.homio.addon.camera.onvif.util.Helper;
-import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.addon.camera.service.IpCameraService;
 import org.homio.api.EntityContext;
 
 /**
@@ -51,7 +51,7 @@ public class OnvifDiscovery {
     private final EntityContext entityContext;
 
     private static CameraBrandHandlerDescription checkForBrand(String response, EntityContext entityContext) {
-        for (CameraBrandHandlerDescription brandHandler : OnvifCameraService.getCameraBrands(entityContext).values()) {
+        for (CameraBrandHandlerDescription brandHandler : IpCameraService.getCameraBrands(entityContext).values()) {
             if (response.contains(brandHandler.getName())) {
                 return brandHandler;
             }

@@ -20,10 +20,10 @@ import lombok.NoArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.homio.addon.camera.entity.CameraActionsContext;
-import org.homio.addon.camera.entity.OnvifCameraEntity;
+import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.addon.camera.handler.BaseBrandCameraHandler;
 import org.homio.addon.camera.service.CameraDeviceEndpoint;
-import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.addon.camera.service.IpCameraService;
 import org.homio.api.EntityContext;
 import org.homio.api.state.State;
 import org.homio.api.ui.field.action.HasDynamicUIFields;
@@ -46,12 +46,12 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler
     protected String password;
     protected String ip;
     protected String entityID;
-    protected @Getter OnvifCameraService service;
+    protected @Getter IpCameraService service;
 
-    public BaseOnvifCameraBrandHandler(OnvifCameraService service) {
+    public BaseOnvifCameraBrandHandler(IpCameraService service) {
         this.service = service;
 
-        OnvifCameraEntity entity = getEntity();
+        IpCameraEntity entity = getEntity();
         this.entityID = entity.getEntityID();
         this.nvrChannel = entity.getNvrChannel();
         this.username = entity.getUser();
@@ -72,7 +72,7 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler
     }
 
     @Override
-    public OnvifCameraEntity getEntity() {
+    public IpCameraEntity getEntity() {
         return service.getEntity();
     }
 

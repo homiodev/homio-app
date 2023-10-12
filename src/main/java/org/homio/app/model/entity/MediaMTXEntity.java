@@ -9,7 +9,6 @@ import jakarta.persistence.Entity;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -23,7 +22,6 @@ import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.FileContentType;
 import org.homio.api.model.FileModel;
 import org.homio.api.model.Icon;
-import org.homio.api.model.OptionModel;
 import org.homio.api.model.endpoint.BaseDeviceEndpoint;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.repository.GitHubProject;
@@ -279,6 +277,11 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
             streams.put(node.toString(), new StreamEndpoint(node, this));
         }
         return streams;
+    }
+
+    @Override
+    public @Nullable String getIeeeAddress() {
+        return getEntityID();
     }
 
     public static class StreamEndpoint extends BaseDeviceEndpoint<MediaMTXEntity> {

@@ -4,7 +4,6 @@ import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LO
 
 import com.pivovarit.function.ThrowingRunnable;
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
@@ -19,16 +18,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.FileHandler;
-import java.util.logging.LogRecord;
-import java.util.logging.SimpleFormatter;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
-import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.Level;
 import org.homio.api.EntityContext;
+import org.homio.api.EntityContext.FileLogger;
 import org.homio.api.EntityContextHardware.ProcessStat;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
@@ -37,6 +33,7 @@ import org.homio.api.model.UpdatableValue;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.impl.EntityContextBGPImpl;
 import org.homio.app.manager.common.impl.EntityContextHardwareImpl.ProcessStatImpl;
+import org.homio.app.model.entity.FFMPEGEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -47,19 +44,10 @@ import org.json.JSONObject;
 @SuppressWarnings("unused")
 public class FFMPEGImpl implements FFMPEG {
 
-    public static final @NotNull Path FFMPEG_LOG_PATH;
     private static final Map<String, UpdatableValue<ProcessStat>> PROCESS_STAT_LOADING_CACHE = new ConcurrentHashMap<>();
 
-    static {
-        Path ffmpegLogPath = CommonUtils.getLogsPath().resolve("ffmpeg");
-        try {
-            FileUtils.deleteDirectory(ffmpegLogPath.toFile());
-        } catch (IOException ignore) {
-        }
-        FFMPEG_LOG_PATH = CommonUtils.createDirectoriesIfNotExists(ffmpegLogPath);
-    }
-
     public static Map<String, FFMPEGImpl> ffmpegMap = new HashMap<>();
+    public static FFMPEGEntity entity;
 
     private final @Getter Date creationDate = new Date();
     private final @Getter JSONObject metadata = new JSONObject();
@@ -70,12 +58,11 @@ public class FFMPEGImpl implements FFMPEG {
     private final @Getter @NotNull FFMPEGFormat format;
     private final @Getter String output;
     protected final @NotNull Map<String, ThrowingRunnable<Exception>> destroyListeners = new HashMap<>();
-    private final FileHandler fileHandler;
-    private final @Getter @NotNull Path logPath;
     private final @Getter String cmd;
     protected final String entityID;
     private final EntityContext entityContext;
     private final @Getter int commandHashCode;
+    private final @Getter FileLogger fileLogger;
     protected @Nullable Collection<ThrowingRunnable<Exception>> threadDestroyListeners;
     protected Process process = null;
     // this is indicator that tells if this ffmpeg command is still need by 3th part request
@@ -112,10 +99,7 @@ public class FFMPEGImpl implements FFMPEG {
         this.entityContext = entityContext;
         FFMPEGImpl.ffmpegMap.put(entityID + "_" + description, this);
 
-        this.logPath = FFMPEG_LOG_PATH.resolve(entityID + "_" + description + ".log");
-        this.fileHandler = new FileHandler(logPath.toString(), 1024 * 1024, 1, true);
-        this.fileHandler.setFormatter(new SimpleFormatter());
-
+        this.fileLogger = entityContext.getFileLogger(FFMPEGImpl.entity, description);
         this.entityID = entityID;
         this.description = description;
         this.format = format;
@@ -127,6 +111,7 @@ public class FFMPEGImpl implements FFMPEG {
         cmd = "ffmpeg " + String.join(" ", commandArrayList);
         // ffmpegLocation may have a space in its folder
         commandArrayList.add(0, FFMPEG_LOCATION);
+        entityContext.ui().updateItem(entity);
     }
 
     public static String buildCommand(
@@ -168,6 +153,7 @@ public class FFMPEGImpl implements FFMPEG {
             running.set(true);
             FFMPEGImpl.ffmpegMap.put(entityID + "_" + description, this);
             ffmpegThread.start();
+            entityContext.ui().updateItem(entity);
             return true;
         }
         return false;
@@ -229,18 +215,22 @@ public class FFMPEGImpl implements FFMPEG {
 
     @Override
     public synchronized boolean stopConverting(Duration duration) {
-        if (ffmpegThread.isAlive()) {
-            logWarn("Stopping '%s' ffmpeg %s now when keepalive is: %s".formatted(description, format, keepAlive));
-            if (process != null) {
-                EntityContextBGPImpl.stopProcess(process, description);
-                process.destroyForcibly();
+        try {
+            if (ffmpegThread.isAlive()) {
+                fileLogger.logWarn("Stopping '%s' ffmpeg %s now when keepalive is: %s".formatted(description, format, keepAlive));
+                if (process != null) {
+                    EntityContextBGPImpl.stopProcess(process, description);
+                    process.destroyForcibly();
+                }
+                if (duration != null) {
+                    waitRunningProcess(duration);
+                }
+                return true;
             }
-            if (duration != null) {
-                waitRunningProcess(duration);
-            }
-            return true;
+            return false;
+        } finally {
+            entityContext.ui().updateItem(entity);
         }
-        return false;
     }
 
     protected @NotNull Thread createFFMPEGThread() {
@@ -264,21 +254,22 @@ public class FFMPEGImpl implements FFMPEG {
         }
 
         FFMPEGImpl.ffmpegMap.remove(entityID + "_" + description, this);
+        entityContext.ui().updateItem(entity);
     }
 
     protected void logWarn(String message) {
         handler.ffmpegLog(Level.WARN, message);
-        fileHandler.publish(new LogRecord(java.util.logging.Level.WARNING, message));
+        fileLogger.logWarn(message);
     }
 
     protected void logInfo(String message) {
         handler.ffmpegLog(Level.INFO, message);
-        fileHandler.publish(new LogRecord(java.util.logging.Level.INFO, message));
+        fileLogger.logInfo(message);
     }
 
     protected void logDebug(String message) {
         handler.ffmpegLog(Level.DEBUG, message);
-        fileHandler.publish(new LogRecord(java.util.logging.Level.FINE, message));
+        fileLogger.logDebug(message);
     }
 
     protected class FFMPEGThread extends Thread {

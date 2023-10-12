@@ -14,9 +14,8 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
-import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.addon.camera.service.IpCameraService;
 import org.homio.api.EntityContext;
-import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
@@ -48,10 +47,10 @@ import org.onvif.ver10.device.wsdl.GetDeviceInformationResponse;
 @Getter
 @Entity
 @UISidebarChildren(icon = "fas fa-clapperboard", color = "#22A896")
-public class OnvifCameraEntity extends BaseCameraEntity<OnvifCameraEntity, OnvifCameraService>
+public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraService>
     implements
     HasDynamicContextMenuActions,
-    CameraPlaybackStorage, HasEntityLog,
+    CameraPlaybackStorage,
     HasDynamicUIFields {
 
     @UIField(order = 20)
@@ -61,7 +60,7 @@ public class OnvifCameraEntity extends BaseCameraEntity<OnvifCameraEntity, Onvif
         return getJsonData("cameraType", CameraBrandHandlerDescription.DEFAULT_BRAND.getID());
     }
 
-    public OnvifCameraEntity setCameraType(String cameraType) {
+    public IpCameraEntity setCameraType(String cameraType) {
         setJsonData("cameraType", cameraType);
         return this;
     }
@@ -98,7 +97,7 @@ public class OnvifCameraEntity extends BaseCameraEntity<OnvifCameraEntity, Onvif
         return getJsonData("ip");
     }
 
-    public OnvifCameraEntity setIp(String ip) {
+    public IpCameraEntity setIp(String ip) {
         setJsonData("ip", ip);
         return this;
     }
@@ -137,7 +136,7 @@ public class OnvifCameraEntity extends BaseCameraEntity<OnvifCameraEntity, Onvif
         return getJsonData("onvifPort", 8000);
     }
 
-    public OnvifCameraEntity setOnvifPort(int value) {
+    public IpCameraEntity setOnvifPort(int value) {
         setJsonData("onvifPort", value);
         return this;
     }
@@ -202,7 +201,7 @@ public class OnvifCameraEntity extends BaseCameraEntity<OnvifCameraEntity, Onvif
     }
 
     public boolean isSupportPtz() {
-        return optService().map(OnvifCameraService::isSupportPtz).orElse(false);
+        return optService().map(IpCameraService::isSupportPtz).orElse(false);
     }
 
     public void setPtzContinuous(boolean value) {
@@ -216,12 +215,12 @@ public class OnvifCameraEntity extends BaseCameraEntity<OnvifCameraEntity, Onvif
 
     @Override
     public String getDefaultName() {
-        return "Onvif camera";
+        return "Ip camera";
     }
 
     @Override
     public String toString() {
-        return "onvif:" + getIp() + ":" + getOnvifPort();
+        return "ipcam:%s:%d".formatted(getIp(), getOnvifPort());
     }
 
     @Override
@@ -237,7 +236,7 @@ public class OnvifCameraEntity extends BaseCameraEntity<OnvifCameraEntity, Onvif
 
     @Override
     protected @NotNull String getDevicePrefix() {
-        return "onvifcam";
+        return "ipcam";
     }
 
     @Override
@@ -334,13 +333,13 @@ public class OnvifCameraEntity extends BaseCameraEntity<OnvifCameraEntity, Onvif
     }
 
     @Override
-    public @NotNull Class<OnvifCameraService> getEntityServiceItemClass() {
-        return OnvifCameraService.class;
+    public @NotNull Class<IpCameraService> getEntityServiceItemClass() {
+        return IpCameraService.class;
     }
 
     @Override
-    public OnvifCameraService createService(@NotNull EntityContext entityContext) {
-        return new OnvifCameraService(entityContext, this);
+    public IpCameraService createService(@NotNull EntityContext entityContext) {
+        return new IpCameraService(entityContext, this);
     }
 
     public void setActiveLink(String value) {
@@ -367,7 +366,7 @@ public class OnvifCameraEntity extends BaseCameraEntity<OnvifCameraEntity, Onvif
 
         @Override
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
-            return OptionModel.list(OnvifCameraService.getCameraBrands(parameters.getEntityContext()).keySet());
+            return OptionModel.list(IpCameraService.getCameraBrands(parameters.getEntityContext()).keySet());
         }
     }
 

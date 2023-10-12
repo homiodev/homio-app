@@ -3,7 +3,7 @@ package org.homio.app.workspace.block.core;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.homio.api.EntityContext;
-import org.homio.api.workspace.BroadcastLock;
+import org.homio.api.workspace.Lock;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.springframework.stereotype.Component;
@@ -32,10 +32,10 @@ public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
         workspaceBlock.handleNext(
                 next -> {
                     String broadcastRefEntityID = workspaceBlock.getFieldId("BROADCAST_OPTION");
-                    BroadcastLock lock =
+                    Lock lock =
                             workspaceBlock
-                                    .getBroadcastLockManager()
-                                    .getOrCreateLock(workspaceBlock, broadcastRefEntityID);
+                                    .getLockManager()
+                                    .getLock(workspaceBlock, broadcastRefEntityID);
 
                     workspaceBlock.subscribeToLock(lock, next::handle);
                 });

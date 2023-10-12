@@ -997,10 +997,7 @@ public class UIFieldUtils {
 
         @Override
         public String toString() {
-            return "UIFieldFieldContext{" +
-                "name=" + getName() +
-                "type=" + getType() +
-                '}';
+            return "UIFieldFieldContext{name=%stype=%s}".formatted(getName(), getType());
         }
     }
 
@@ -1090,10 +1087,7 @@ public class UIFieldUtils {
 
         @Override
         public String toString() {
-            return "UIFieldMethodContext{" +
-                "name=" + getName() +
-                "type=" + getType() +
-                '}';
+            return "UIFieldMethodContext{name=%stype=%s}".formatted(getName(), getType());
         }
     }
 

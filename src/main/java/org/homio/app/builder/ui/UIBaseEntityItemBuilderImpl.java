@@ -1,6 +1,9 @@
 package org.homio.app.builder.ui;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import org.homio.api.model.Icon;
 import org.homio.api.ui.UIActionHandler;
@@ -8,10 +11,6 @@ import org.homio.api.ui.field.action.v1.UIEntityItemBuilder;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Getter
 public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
@@ -46,7 +45,7 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "{" + getEntityID() + ":" + getOrder() + "}";
+        return "%s{%s:%d}".formatted(getClass().getSimpleName(), getEntityID(), getOrder());
     }
 
     @Override

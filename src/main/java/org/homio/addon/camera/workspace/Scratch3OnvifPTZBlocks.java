@@ -15,8 +15,8 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.CameraEntrypoint;
-import org.homio.addon.camera.entity.OnvifCameraEntity;
-import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.addon.camera.entity.IpCameraEntity;
+import org.homio.addon.camera.service.IpCameraService;
 import org.homio.api.EntityContext;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.State;
@@ -43,7 +43,7 @@ public class Scratch3OnvifPTZBlocks extends Scratch3ExtensionBlocks {
         setParent("media");
 
         // Menu
-        this.menuOnvifCamera = menuServerItems("onvifCameraMenu", OnvifCameraEntity.class, "Onvif camera");
+        this.menuOnvifCamera = menuServerItems("onvifCameraMenu", IpCameraEntity.class, "Onvif camera");
         this.menuPanActionType = menuStatic("panActionTypeMenu", PanActionType.class, PanActionType.Left);
         this.menuTiltActionType = menuStatic("tiltActionTypeMenu", TiltActionType.class, TiltActionType.Up);
         this.menuZoomActionType = menuStatic("zoomActionTypeMenu", ZoomActionType.class, ZoomActionType.In);
@@ -136,11 +136,11 @@ public class Scratch3OnvifPTZBlocks extends Scratch3ExtensionBlocks {
         setEndpointValue(workspaceBlock, ENDPOINT_PAN, new DecimalType(workspaceBlock.getInputFloat(VALUE)));
     }
 
-    private OnvifCameraService getOnvifService(WorkspaceBlock workspaceBlock) {
+    private IpCameraService getOnvifService(WorkspaceBlock workspaceBlock) {
         return getOnvifEntity(workspaceBlock).getService();
     }
 
-    private OnvifCameraEntity getOnvifEntity(WorkspaceBlock workspaceBlock) {
+    private IpCameraEntity getOnvifEntity(WorkspaceBlock workspaceBlock) {
         return workspaceBlock.getMenuValueEntityRequired(Scratch3CameraBlocks.VIDEO_STREAM, menuOnvifCamera);
     }
 
@@ -166,6 +166,6 @@ public class Scratch3OnvifPTZBlocks extends Scratch3ExtensionBlocks {
         Tilt(camera -> new DecimalType(camera.getOnvifDeviceState().getPtzDevices().getCurrentTiltPercentage())),
         Pan(camera -> new DecimalType(camera.getOnvifDeviceState().getPtzDevices().getCurrentPanPercentage()));
 
-        private final Function<OnvifCameraService, State> handler;
+        private final Function<IpCameraService, State> handler;
     }
 }

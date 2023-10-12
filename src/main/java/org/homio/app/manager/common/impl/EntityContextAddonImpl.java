@@ -2,7 +2,6 @@ package org.homio.app.manager.common.impl;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.repeat;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import java.io.IOException;
 import java.net.URL;
@@ -17,8 +16,6 @@ import java.util.stream.Collectors;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextUI.NotificationBlockBuilder;
@@ -350,8 +347,8 @@ public class EntityContextAddonImpl {
         Icon icon = new Icon(addonContext.isLoaded() ? "fas fa-puzzle-piece" : "fas fa-bug", addonContext.isLoaded() ? Color.GREEN : Color.RED);
         String info = addonContext.getAddonFriendlyName() + (disabledAddon ? "(Disabled)" : "");
         PackageModel packageModel = getPackageModel(key);
-        List<String> versions = packageModel == null ? Collections.emptyList() :
-                GitHubProject.getReleasesSince(addonContext.getVersion(), packageModel.getVersions(), false);
+        List<OptionModel> versions = packageModel == null ? List.of() :
+            GitHubProject.getReleasesSince(addonContext.getVersion(), OptionModel.list(packageModel.getVersions()), false);
 
         if (versions.isEmpty()) {
             builder.addInfo(key, icon, info).setRightText(addonContext.getVersion());
@@ -361,7 +358,7 @@ public class EntityContextAddonImpl {
                 flex.addSelectBox("versions", (entityContext, params) ->
                                 handleUpdateAddon(addonContext, key, entityContext, params, versions, packageModel))
                         .setHighlightSelected(false)
-                        .setOptions(OptionModel.list(versions))
+                    .setOptions(versions)
                         .setAsButton(new Icon("fas fa-cloud-download-alt", Color.PRIMARY_COLOR), addonContext.getVersion())
                         .setHeight(20).setPrimary(true);
             });
@@ -369,11 +366,14 @@ public class EntityContextAddonImpl {
     }
 
     @Nullable
-    private ActionResponseModel handleUpdateAddon(@NotNull AddonContext addonContext, @NotNull String key,
-                                                  @NotNull EntityContext entityContext, @NotNull JSONObject params, @NotNull List<String> versions,
-                                                  @NotNull PackageModel packageModel) {
+    private ActionResponseModel handleUpdateAddon(@NotNull AddonContext addonContext,
+        @NotNull String key,
+        @NotNull EntityContext entityContext,
+        @NotNull JSONObject params,
+        @NotNull List<OptionModel> versions,
+        @NotNull PackageModel packageModel) {
         String newVersion = params.getString("value");
-        if (versions.contains(newVersion)) {
+        if (OptionModel.getByKey(versions, newVersion) != null) {
             String question = Lang.getServerMessage("PACKAGE_UPDATE_QUESTION",
                     FlowMap.of("NAME", addonContext.getPomFile().getName(), "VERSION", newVersion));
             entityContext.ui().sendConfirmation("update-" + key, "DIALOG.TITLE.UPDATE_PACKAGE", () ->

@@ -234,13 +234,17 @@ public final class InMemoryDB {
 
         @Override
         public @NotNull List<Object[]> getTimeSeries(@Nullable Long from, @Nullable Long to, @Nullable String field,
-                                                     @Nullable String value, @NotNull String aggregateField) {
+            @Nullable String value, @NotNull String aggregateField, @Nullable Integer limit, boolean sortAsc) {
             List<Bson> filterList = buildBsonFilter(from, to, field, value);
+            List<Bson> aggregates = new ArrayList<>();
+            aggregates.add(Aggregates.match(joinFilters(filterList)));
+            aggregates.add(Aggregates.sort(sortAsc ? ascending(CREATED) : descending(CREATED)));
+            aggregates.add(Aggregates.project(Projections.include(CREATED, aggregateField)));
+            if (limit != null) {
+                aggregates.add(Aggregates.limit(limit));
+            }
 
-            try (MongoCursor<Document> cursor = collection.aggregate(Arrays.asList(
-                    Aggregates.match(joinFilters(filterList)),
-                    Aggregates.sort(ascending(CREATED)),
-                    Aggregates.project(Projections.include(CREATED, aggregateField))), Document.class).cursor()) {
+            try (MongoCursor<Document> cursor = collection.aggregate(aggregates, Document.class).cursor()) {
                 return StreamSupport.stream(Spliterators.spliteratorUnknownSize(cursor, 0), false)
                         .map(doc -> new Object[]{doc.get(CREATED), toNumber(doc.get(aggregateField)).floatValue()})
                         .collect(Collectors.toList());

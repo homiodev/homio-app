@@ -3,7 +3,7 @@ package org.homio.addon.camera.onvif.brand;
 import lombok.SneakyThrows;
 import org.homio.addon.camera.onvif.impl.CameraBrandHandler;
 import org.homio.addon.camera.onvif.impl.OnvifBrandHandler;
-import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.addon.camera.service.IpCameraService;
 
 public class CameraBrandHandlerDescription {
 
@@ -27,7 +27,7 @@ public class CameraBrandHandlerDescription {
     }
 
     @SneakyThrows
-    public BaseOnvifCameraBrandHandler newInstance(OnvifCameraService service) {
-        return brandHandler.getConstructor(OnvifCameraService.class).newInstance(service);
+    public BaseOnvifCameraBrandHandler newInstance(IpCameraService service) {
+        return brandHandler.getConstructor(IpCameraService.class).newInstance(service);
     }
 }

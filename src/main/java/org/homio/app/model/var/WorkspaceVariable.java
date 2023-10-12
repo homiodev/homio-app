@@ -242,7 +242,7 @@ public class WorkspaceVariable extends BaseEntity
     @Override
     public @NotNull List<Object[]> getTimeValueSeries(PeriodRequest request) {
         return ((EntityContextVarImpl) request.getEntityContext().var())
-            .getTimeSeries(getEntityID(), request.getFromTime(), request.getToTime());
+            .getTimeSeries(getEntityID(), request);
     }
 
     @Override

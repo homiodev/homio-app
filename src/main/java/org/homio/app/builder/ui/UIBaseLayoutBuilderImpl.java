@@ -46,7 +46,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "{" + getEntityID() + ":" + getOrder() + "}";
+        return "%s{%s:%d}".formatted(getClass().getSimpleName(), getEntityID(), getOrder());
     }
 
     @Override

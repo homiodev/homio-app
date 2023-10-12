@@ -18,7 +18,6 @@ import static org.homio.addon.camera.CameraConstants.ENDPOINT_DATETIME_SHOW;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_DAY_NIGHT;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_DRC;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_PIR_ALARM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_EXPOSURE;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_HDD;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_HUE;
@@ -69,7 +68,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -85,11 +83,11 @@ import lombok.SneakyThrows;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 import org.homio.addon.camera.entity.CameraPlaybackStorage;
-import org.homio.addon.camera.entity.OnvifCameraEntity;
+import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.impl.ReolinkBrandHandler.SearchRequest.Search;
 import org.homio.addon.camera.service.CameraDeviceEndpoint;
-import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.addon.camera.service.IpCameraService;
 import org.homio.api.EntityContext;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
@@ -136,7 +134,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
     private final UpdatableValue<Boolean> fetchCameraPerformance = UpdatableValue.wrap(true, "reolink_fp");
     private final Map<String, State> attributes = new HashMap<>();
 
-    public ReolinkBrandHandler(OnvifCameraService service) {
+    public ReolinkBrandHandler(IpCameraService service) {
         super(service);
         fetchCameraPerformance.update(service.getEntity().getJsonData("reolink_fp", true));
     }
@@ -559,7 +557,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
 
     private void loginIfRequire() {
         if (this.tokenExpiration - System.currentTimeMillis() < 60000) {
-            OnvifCameraEntity entity = getEntity();
+            IpCameraEntity entity = getEntity();
             LoginRequest request = new LoginRequest(new LoginRequest.User(entity.getUser(), entity.getPassword().asString()));
             Root root = firePost("cmd=Login", false, new ReolinkCmd(0, "Login", OBJECT_MAPPER.valueToTree(request)))[0];
             if (root.getError() != null) {

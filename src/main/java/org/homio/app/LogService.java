@@ -6,6 +6,8 @@ import com.pivovarit.function.ThrowingConsumer;
 import com.sshtools.common.logger.DefaultLoggerContext;
 import com.sshtools.common.logger.Log;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
@@ -25,9 +27,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.logging.FileHandler;
+import java.util.logging.LogRecord;
+import java.util.logging.SimpleFormatter;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
@@ -47,6 +53,7 @@ import org.apache.logging.log4j.core.impl.DefaultLogEventFactory;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.message.MessageFactory;
 import org.apache.logging.log4j.spi.AbstractLogger;
+import org.homio.api.EntityContext.FileLogger;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.log.HasEntityLog.EntityLogBuilder;
@@ -59,6 +66,7 @@ import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEven
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
+@Log4j2
 @Component
 public class LogService implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, ContextCreated {
 
@@ -73,6 +81,8 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
                     "org.mongodb",
                     "com.zaxxer",
                     "org.hibernate");
+
+    private final Map<String, Map<String, FileLoggerImpl>> fileLoggers = new ConcurrentHashMap<>();
 
     static {
         Log.setDefaultContext(new DefaultLoggerContext() {
@@ -131,8 +141,27 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
     public void deleteEntityLogsFile(BaseEntity baseEntity) {
         LogConsumer logConsumer = globalAppender.logConsumers.get(baseEntity.getEntityID());
         if (logConsumer != null) {
-            FileUtils.deleteQuietly(logConsumer.logFile.toFile());
+            try {
+                Files.deleteIfExists(logConsumer.logFile);
+            } catch (IOException ex) {
+                log.error("Unable to delete entity log file: {}", CommonUtils.getErrorMessage(ex));
+            }
         }
+        Map<String, FileLoggerImpl> entityLoggers = fileLoggers.remove(baseEntity.getEntityID());
+        if (entityLoggers != null) {
+            for (FileLoggerImpl fileLogger : entityLoggers.values()) {
+                try {
+                    Files.deleteIfExists(fileLogger.logPath);
+                } catch (IOException ex) {
+                    log.error("Unable to delete entity file log handler: {}", CommonUtils.getErrorMessage(ex));
+                }
+            }
+        }
+    }
+
+    public FileLogger getFileLogger(BaseEntity baseEntity, String suffix) {
+        return fileLoggers.computeIfAbsent(baseEntity.getEntityID(), s -> new ConcurrentHashMap<>())
+                          .computeIfAbsent(suffix, file -> new FileLoggerImpl(suffix, baseEntity));
     }
 
     @SneakyThrows
@@ -224,8 +253,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
             LogConsumer logConsumer = new LogConsumer(
                 entity.getEntityID(),
                 entity.getClass(),
-                entity.getClass().getSimpleName(),
-                createLogFile(entity),
+                createLogFile(entity, ""),
                 ((HasEntityLog) entity).isDebug());
             EntityLogBuilderImpl entityLogBuilder = new EntityLogBuilderImpl(entity, logConsumer);
             ((HasEntityLog) entity).logBuilder(entityLogBuilder);
@@ -236,10 +264,10 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
         }
     }
 
-    private static Path createLogFile(BaseEntity entity) {
-        Path path = CommonUtils.getLogsPath().resolve("entities").resolve(entity.getClass().getSimpleName());
+    private static Path createLogFile(@NotNull BaseEntity entity, @NotNull String suffix) {
+        Path path = CommonUtils.getLogsPath().resolve("entities").resolve(entity.getType());
         CommonUtils.createDirectoriesIfNotExists(path);
-        Path file = path.resolve(entity.getEntityID() + ".log");
+        Path file = path.resolve(entity.getEntityID() + suffix + ".log");
         try {
             CommonUtils.writeToFile(file, new byte[0], false);
         } catch (Exception ex) {
@@ -365,7 +393,6 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
         private final List<Predicate<LogEvent>> logTopics = new ArrayList<>();
         private final @NotNull String entityID;
         private final @NotNull Class<?> targetClass;
-        private final @NotNull String className;
         private final @NotNull Path logFile;
         private boolean debug;
     }
@@ -380,6 +407,56 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
             logConsumer.logTopics.add(filterValue == null
                     ? logEvent -> logEvent.getLoggerName().startsWith(topic)
                     : logEvent -> logEvent.getLoggerName().startsWith(topic) && logEvent.getMessage().getFormattedMessage().contains(filterValue));
+        }
+    }
+
+    private static class FileLoggerImpl implements FileLogger {
+
+        private final Path logPath;
+        private final FileHandler fileHandler;
+
+        @SneakyThrows
+        public FileLoggerImpl(@NotNull String suffix, @NotNull BaseEntity entity) {
+            logPath = createLogFile(entity, suffix);
+            fileHandler = new FileHandler(logPath.toString(), 1024 * 1024, 1, true);
+            fileHandler.setFormatter(new SimpleFormatter());
+        }
+
+        @Override
+        public void logDebug(@Nullable String message) {
+            log(message, java.util.logging.Level.FINE);
+        }
+
+        @Override
+        public void logInfo(String message) {
+            log(message, java.util.logging.Level.INFO);
+        }
+
+        @Override
+        public void logWarn(String message) {
+            log(message, java.util.logging.Level.WARNING);
+        }
+
+        @Override
+        public void logError(String message) {
+            log(message, java.util.logging.Level.SEVERE);
+        }
+
+        @Override
+        @SneakyThrows
+        public @NotNull InputStream getFileInputStream() {
+            return Files.newInputStream(logPath);
+        }
+
+        @Override
+        public @NotNull String getName() {
+            return logPath.getFileName().toString();
+        }
+
+        private void log(String message, java.util.logging.Level level) {
+            if (message != null) {
+                fileHandler.publish(new LogRecord(level, message));
+            }
         }
     }
 }

@@ -38,12 +38,11 @@ import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Icon;
-import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.repository.GitHubProject;
+import org.homio.api.service.camera.VideoStreamScanner;
 import org.homio.api.service.scan.BeansItemsDiscovery;
 import org.homio.api.service.scan.ItemDiscoverySupport;
-import org.homio.api.service.scan.VideoStreamScanner;
 import org.homio.api.state.StringType;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
@@ -101,7 +100,7 @@ import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.ssh.SshTmateEntity;
 import org.homio.app.video.ffmpeg.FfmpegHardwareRepository;
-import org.homio.app.workspace.BroadcastLockManagerImpl;
+import org.homio.app.workspace.LockManagerImpl;
 import org.homio.app.workspace.WorkspaceService;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.homio.hquery.hardware.other.MachineHardwareRepository;
@@ -341,6 +340,11 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
+    public @NotNull FileLogger getFileLogger(BaseEntity baseEntity, String suffix) {
+        return getBean(LogService.class).getFileLogger(baseEntity, suffix);
+    }
+
+    @Override
     public @NotNull EntityContextMedia media() {
         return entityContextMedia;
     }
@@ -482,8 +486,10 @@ public class EntityContextImpl implements EntityContext {
         AbstractRepository repository = getRepository(entityID);
         BaseEntity deletedEntity = repository.deleteByEntityID(entityID);
         cacheService.clearCache();
-        getBean(LogService.class).deleteEntityLogsFile(deletedEntity);
-        runUpdateNotifyListeners(null, deletedEntity, this.event().getEntityRemoveListeners());
+        if (deletedEntity != null) {
+            getBean(LogService.class).deleteEntityLogsFile(deletedEntity);
+            runUpdateNotifyListeners(null, deletedEntity, this.event().getEntityRemoveListeners());
+        }
         return deletedEntity;
     }
 
@@ -649,8 +655,8 @@ public class EntityContextImpl implements EntityContext {
         return newEntity;
     }
 
-    public void fireAllBroadcastLock(Consumer<BroadcastLockManagerImpl> handler) {
-        this.workspaceService.fireAllBroadcastLock(handler);
+    public void fireAllLock(Consumer<LockManagerImpl> handler) {
+        this.workspaceService.fireAllLock(handler);
     }
 
     public void rebuildRepositoryByPrefixMap() {
@@ -694,7 +700,7 @@ public class EntityContextImpl implements EntityContext {
                             restartApplication();
                             return null;
                         }, null),
-                    OptionModel.list(appGitHub.getReleasesSince(installedVersion, false)));
+                    appGitHub.getReleasesSince(installedVersion, false));
             }
             builder.fireOnFetch(() -> {
                 long runDuration = TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - START_TIME);

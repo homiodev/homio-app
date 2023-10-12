@@ -11,6 +11,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.Getter;
@@ -21,7 +22,6 @@ import lombok.val;
 import org.apache.commons.lang3.tuple.Pair;
 import org.homio.api.EntityContextVar.TransformVariableSource;
 import org.homio.api.EntityContextVar.VariableType;
-import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.widget.AggregationType;
 import org.homio.api.entity.widget.PeriodRequest;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
@@ -41,7 +41,6 @@ import org.homio.app.rest.widget.EvaluateDatesAndValues;
 import org.homio.app.rest.widget.WidgetChartsController;
 import org.homio.app.rest.widget.WidgetChartsController.TimeSeriesChartData;
 import org.homio.app.utils.OptionUtil;
-import org.homio.app.utils.UIFieldSelectionUtil;
 import org.json.JSONObject;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -132,29 +131,66 @@ public class VariableController {
     @PostMapping("/source/chart")
     public WidgetChartsController.TimeSeriesChartData<ChartDataset> getSourceChart(@RequestBody SourceHistoryChartRequest request) {
         SelectionSource selection = DataSourceUtil.getSelection(request.dataSource);
-        BaseEntity source = selection.getValue(entityContext);
+        HasTimeValueSeries source = selection.getValue(entityContext);
+        if(request.minutes == -1) {
+            return getSourceChartSnapshot(source, request);
+        }
 
         WidgetChartsController.TimeSeriesChartData<ChartDataset> chartData = new TimeSeriesChartData<>();
-        if (source instanceof HasTimeValueSeries) {
-            PeriodRequest periodRequest = new PeriodRequest(entityContext, null, null).setParameters(request.getDynamicParameters());
-            val timeSeries = ((HasTimeValueSeries) source).getMultipleTimeValueSeries(periodRequest);
+        Date from = null, to = null;
+        boolean sortAsc = true;
+        if (request.minutes > 0) {
+            if (request.timestamp == 0) {
+                request.timestamp = System.currentTimeMillis();
+            }
+            if (request.forward) {
+                from = new Date(request.timestamp);
+                to = new Date(request.timestamp + TimeUnit.MINUTES.toMillis(request.minutes));
+            } else {
+                to = new Date(request.timestamp);
+                from = new Date(request.timestamp - TimeUnit.MINUTES.toMillis(request.minutes));
+                sortAsc = false;
+            }
+        }
+        PeriodRequest periodRequest = new PeriodRequest(entityContext, from, to).setParameters(request.getDynamicParameters());
+        periodRequest.setMinItemsCount(request.minItems);
+        periodRequest.setForward(request.forward);
+        periodRequest.setSortAsc(sortAsc);
+
+            val timeSeries = source.getMultipleTimeValueSeries(periodRequest);
             List<Object[]> rawValues = timeSeries.values().iterator().next();
 
             if (!timeSeries.isEmpty()) {
-                Pair<Long, Long> minMax = this.findMinAndMax(rawValues);
-                long min = minMax.getLeft(), max = minMax.getRight();
-                long delta = (max - min) / request.splitCount;
-                List<Date> dates = IntStream.range(0, request.splitCount)
-                                            .mapToObj(value -> new Date(min + delta * value))
-                                            .collect(Collectors.toList());
-                List<List<Float>> values = convertValuesToFloat(dates, rawValues);
-
-                chartData.setTimestamp(dates.stream().map(Date::getTime).collect(Collectors.toList()));
-
                 ChartDataset dataset = new ChartDataset(null, null);
-                dataset.setData(EvaluateDatesAndValues.aggregate(values, AggregationType.AverageNoZero));
+                chartData.setTimestamp(rawValues.stream().map(objects -> (long) objects[0]).collect(Collectors.toList()));
+                dataset.setData(rawValues.stream().map(objects -> (float) objects[1]).toList());
                 chartData.getDatasets().add(dataset);
             }
+        return chartData;
+    }
+
+    private TimeSeriesChartData<ChartDataset> getSourceChartSnapshot(HasTimeValueSeries source, SourceHistoryChartRequest request) {
+        WidgetChartsController.TimeSeriesChartData<ChartDataset> chartData = new TimeSeriesChartData<>();
+        PeriodRequest periodRequest = new PeriodRequest(entityContext, null, null).setParameters(request.getDynamicParameters());
+
+        val timeSeries = source.getMultipleTimeValueSeries(periodRequest);
+        List<Object[]> rawValues = timeSeries.values().iterator().next();
+
+        if (!timeSeries.isEmpty()) {
+            ChartDataset dataset = new ChartDataset(null, null);
+            chartData.setTimestamp(rawValues.stream().map(objects -> (long) objects[0]).collect(Collectors.toList()));
+            dataset.setData(rawValues.stream().map(objects -> (float) objects[1]).toList());
+
+            Pair<Long, Long> minMax = this.findMinAndMax(rawValues);
+            long min = minMax.getLeft(), max = minMax.getRight();
+            long delta = (max - min) / request.splitCount;
+            List<Date> dates = IntStream.range(0, request.splitCount)
+                                        .mapToObj(value -> new Date(min + delta * value))
+                                        .collect(Collectors.toList());
+            List<List<Float>> values = convertValuesToFloat(dates, rawValues);
+            chartData.setTimestamp(dates.stream().map(Date::getTime).collect(Collectors.toList()));
+            dataset.setData(EvaluateDatesAndValues.aggregate(values, AggregationType.Average));
+            chartData.getDatasets().add(dataset);
         }
         return chartData;
     }
@@ -200,7 +236,20 @@ public class VariableController {
 
         private String dataSource;
         private JSONObject dynamicParameters;
+        private int minutes; // show all data if -1
+        private long timestamp; // may be 0 to search from last available date
+        private boolean forward; // source from or to
+        private int minItems = 100; // minimum items to load if too few items in from..to range
+        private int splitCount = 100; // uses for full chart snapshot loading
+    }
+
+    @Getter
+    @Setter
+    public static class SourceHistorySnapshotRequest {
+
         private int splitCount;
+        private String dataSource;
+        private JSONObject dynamicParameters;
     }
 
     @Getter

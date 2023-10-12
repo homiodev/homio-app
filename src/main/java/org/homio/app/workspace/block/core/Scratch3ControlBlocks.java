@@ -1,18 +1,9 @@
 package org.homio.app.workspace.block.core;
 
-import com.pivovarit.function.ThrowingRunnable;
-import lombok.Getter;
-import lombok.SneakyThrows;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextBGP.ThreadContext;
-import org.homio.api.exception.ServerException;
-import org.homio.api.state.DecimalType;
-import org.homio.api.workspace.BroadcastLock;
-import org.homio.api.workspace.WorkspaceBlock;
-import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.homio.app.workspace.WorkspaceBlockImpl;
-import org.springframework.stereotype.Component;
+import static java.util.concurrent.TimeUnit.HOURS;
+import static org.homio.api.workspace.scratch.Scratch3Block.CONDITION;
 
+import com.pivovarit.function.ThrowingRunnable;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -21,9 +12,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
-
-import static java.util.concurrent.TimeUnit.HOURS;
-import static org.homio.api.workspace.scratch.Scratch3Block.CONDITION;
+import lombok.Getter;
+import lombok.SneakyThrows;
+import org.homio.api.EntityContext;
+import org.homio.api.EntityContextBGP.ThreadContext;
+import org.homio.api.exception.ServerException;
+import org.homio.api.state.DecimalType;
+import org.homio.api.workspace.Lock;
+import org.homio.api.workspace.WorkspaceBlock;
+import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.homio.app.workspace.WorkspaceBlockImpl;
+import org.springframework.stereotype.Component;
 
 @Getter
 @Component
@@ -209,7 +208,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
         workspaceBlock.handleChildOptional(
                 child -> {
                     if (workspaceBlock.hasInput(inputName)) {
-                        BroadcastLock lock = workspaceBlock.getBroadcastLockManager().listenEvent(workspaceBlock, supplier);
+                        Lock lock = workspaceBlock.getLockManager().listenEvent(workspaceBlock, supplier);
                         workspaceBlock.subscribeToLock(lock, child::handle);
                     }
                 });
@@ -233,7 +232,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
 
     @SneakyThrows
     private void waitUntilHandler(WorkspaceBlock workspaceBlock) {
-        BroadcastLock lock = workspaceBlock.getBroadcastLockManager().listenEvent(workspaceBlock, () -> workspaceBlock.getInputBoolean(CONDITION));
+        Lock lock = workspaceBlock.getLockManager().listenEvent(workspaceBlock, () -> workspaceBlock.getInputBoolean(CONDITION));
         lock.await(workspaceBlock);
     }
 

@@ -295,7 +295,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
                         }
                     }
                     globalEvenListeners.forEach(l -> l.accept(event.key, event.value));
-                    entityContext.fireAllBroadcastLock(broadcastLockManager -> broadcastLockManager.signalAll(event.key, event.value));
+                    entityContext.fireAllLock(lockManager -> lockManager.signalAll(event.key, event.value));
                 } catch (Exception ex) {
                     log.error("Error while execute event handler", ex);
                 }

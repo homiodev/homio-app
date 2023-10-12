@@ -2,7 +2,7 @@ package org.homio.addon.camera.onvif.impl;
 
 import lombok.NoArgsConstructor;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
-import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.addon.camera.service.IpCameraService;
 
 /**
  * responsible for handling commands for generic onvif thing types.
@@ -11,7 +11,7 @@ import org.homio.addon.camera.service.OnvifCameraService;
 @CameraBrandHandler("Onvif")
 public class OnvifBrandHandler extends BaseOnvifCameraBrandHandler {
 
-    public OnvifBrandHandler(OnvifCameraService service) {
+    public OnvifBrandHandler(IpCameraService service) {
         super(service);
     }
 

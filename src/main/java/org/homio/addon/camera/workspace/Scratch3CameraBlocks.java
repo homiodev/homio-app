@@ -1,8 +1,7 @@
 package org.homio.addon.camera.workspace;
 
-import static org.homio.addon.camera.CameraConstants.AlarmEvents.ExternalMotionAlarm;
+import static org.homio.addon.camera.CameraConstants.AlarmEvent.ExternalMotionAlarm;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUTO_LED;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_ENABLE_AUDIO_ALARM;
 
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
@@ -17,12 +16,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
-import org.homio.addon.camera.CameraConstants.AlarmEvents;
+import org.homio.addon.camera.CameraConstants.AlarmEvent;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.addon.camera.entity.CameraPlaybackStorage;
 import org.homio.addon.camera.entity.CameraPlaybackStorage.DownloadFile;
-import org.homio.addon.camera.entity.OnvifCameraEntity;
+import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.addon.camera.entity.storage.VideoBaseStorageService;
 import org.homio.addon.camera.service.BaseCameraService;
 import org.homio.addon.camera.service.CameraDeviceEndpoint;
@@ -33,7 +32,7 @@ import org.homio.api.state.OnOffType;
 import org.homio.api.state.RawType;
 import org.homio.api.state.State;
 import org.homio.api.util.CommonUtils;
-import org.homio.api.workspace.BroadcastLock;
+import org.homio.api.workspace.Lock;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.ArgumentType;
 import org.homio.api.workspace.scratch.MenuBlock;
@@ -94,7 +93,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
         this.menuIntParam = menuStaticKV("intParamMenu", SetCameraIntParamEnum.class, SetCameraIntParamEnum.MotionAlarm);
         this.menuBoolParam = menuStaticKV("boolParamMenu", SetCameraBoolParamEnum.class, SetCameraBoolParamEnum.IRLedValue);
         this.menuOnvifCameraHatType = menuStatic("onvifCameraHatType", OnvifCameraHatType.class, OnvifCameraHatType.FaceDetection);
-        this.menuOnvifCamera = menuServerItems("cameraMenu", OnvifCameraEntity.class, "Onvif camera");
+        this.menuOnvifCamera = menuServerItems("cameraMenu", IpCameraEntity.class, "Onvif camera");
 
         // Hats
         blockHat(10, "bool_hat", "[VALUE] [ON_OFF] of [VIDEO_STREAM]", this::listenBoolHat, block -> {
@@ -266,10 +265,10 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
         }),
 
         AudioAlarm("Audio alarm", (entity, onOffType, workspaceBlock) ->
-            entity.getService().audioDetected(onOffType.boolValue())),
+            entity.getService().alarmDetected(onOffType.boolValue(), AlarmEvent.AudioAlarm)),
 
         MotionAlarm("Motion alarm", (entity, onOffType, workspaceBlock) ->
-            entity.getService().motionDetected(onOffType.boolValue(), ExternalMotionAlarm));
+            entity.getService().alarmDetected(onOffType.boolValue(), ExternalMotionAlarm));
 
         @Getter
         private final String value;
@@ -285,17 +284,16 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
     @RequiredArgsConstructor
     private enum BoolHatMenuEnum implements KeyValueEnum {
         AudioAlarm("Audio alarm", (entity, onOffType, workspaceBlock, next) -> {
-            BroadcastLock audioAlarm = workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock,
-                ENDPOINT_ENABLE_AUDIO_ALARM + ":" + entity.getEntityID());
+            String event = entity.getIeeeAddress() + "_" + AlarmEvent.AudioAlarm.getEndpoint();
+            Lock audioAlarm = workspaceBlock.getLockManager().getLock(workspaceBlock, event);
             workspaceBlock.subscribeToLock(audioAlarm, state -> ((OnOffType) state).boolValue() == onOffType.boolValue(),
                     next::handle);
         }),
 
         MotionAlarm("Motion alarm", (entity, onOffType, workspaceBlock, next) -> {
-            BroadcastLock motionAlarm =
-                workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock, AlarmEvents.MotionAlarm + ":" + entity.getEntityID());
-            workspaceBlock.subscribeToLock(motionAlarm, state -> ((OnOffType) state).boolValue() == onOffType.boolValue(),
-                    next::handle);
+            String event = entity.getIeeeAddress() + "_" + AlarmEvent.MotionAlarm.getEndpoint();
+            Lock motionAlarm = workspaceBlock.getLockManager().getLock(workspaceBlock, event);
+            workspaceBlock.subscribeToLock(motionAlarm, state -> ((OnOffType) state).boolValue() == onOffType.boolValue(), next::handle);
         });
 
         @Getter
