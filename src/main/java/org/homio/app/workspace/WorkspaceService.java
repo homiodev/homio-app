@@ -163,7 +163,7 @@ public class WorkspaceService implements ContextRefreshed {
                         });
             } catch (Exception ex) {
                 log.error("Unable to initialize workspace: " + ex.getMessage(), ex);
-                entityContext.ui().sendErrorMessage("Unable to initialize workspace: " + ex.getMessage(), ex);
+                entityContext.ui().toastr().error("Unable to initialize workspace: " + ex.getMessage(), ex);
             }
         }
     }
@@ -176,7 +176,7 @@ public class WorkspaceService implements ContextRefreshed {
                 ((WorkspaceBlockImpl) workspaceBlock).handleOrEvaluate();
             } catch (Exception ex) {
                 log.warn("Error in workspace thread: <{}>, <{}>", name, CommonUtils.getErrorMessage(ex), ex);
-                entityContext.ui().sendErrorMessage("Error in workspace", ex);
+                entityContext.ui().toastr().error("Error in workspace", ex);
             }
             log.info("Workspace thread finished: <{}>", name);
         };

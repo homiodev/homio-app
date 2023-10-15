@@ -41,22 +41,12 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler
 
     protected final Logger log = LogManager.getLogger();
 
-    protected int nvrChannel;
-    protected String username;
-    protected String password;
-    protected String ip;
     protected String entityID;
     protected @Getter IpCameraService service;
 
     public BaseOnvifCameraBrandHandler(IpCameraService service) {
         this.service = service;
-
-        IpCameraEntity entity = getEntity();
-        this.entityID = entity.getEntityID();
-        this.nvrChannel = entity.getNvrChannel();
-        this.username = entity.getUser();
-        this.password = entity.getPassword().asString();
-        this.ip = entity.getIp();
+        this.entityID = service.getEntityID();
     }
 
     @Override

@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -22,6 +23,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.apache.commons.lang3.NotImplementedException;
@@ -34,6 +36,7 @@ import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.version.HasFirmwareVersion;
+import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
@@ -70,7 +73,6 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 @RequiredArgsConstructor
 public class EntityContextUIImpl implements EntityContextUI {
 
-    public static final Map<String, ConsolePlugin<?>> customConsolePlugins = new HashMap<>();
     public static final Map<String, ConsolePlugin<?>> consolePluginsMap = new HashMap<>();
 
     public static final Map<String, String> customConsolePluginNames = new HashMap<>();
@@ -81,10 +83,16 @@ public class EntityContextUIImpl implements EntityContextUI {
     private final Map<String, HeaderButtonNotification> headerButtonNotifications = new ConcurrentHashMap<>();
     private final Map<String, ProgressNotification> progressMap = new ConcurrentHashMap<>();
     // constructor parameters
-    @Getter
-    private final EntityContextImpl entityContext;
+    private final @Getter EntityContextImpl entityContext;
     private final SimpMessagingTemplate messagingTemplate;
     private final Map<String, SendUpdateContext> sendToUIMap = new ConcurrentHashMap<>();
+    private final @Getter @Accessors(fluent = true) EntityContextUIToastr toastr = new EntityContextUIToastrImpl();
+    private final @Getter @Accessors(fluent = true) EntityContextUINotification notification = new EntityContextUINotificationImpl();
+    private final @Getter @Accessors(fluent = true) EntityContextUIConsole console = new EntityContextUIConsoleImpl();
+    private final @Getter @Accessors(fluent = true) EntityContextUIDialog dialog = new EntityContextUIDialogImpl();
+    private final @Getter @Accessors(fluent = true) EntityContextUIProgress progress = new EntityContextUIProgressImpl();
+    private final Map<String, Object> refreshConsolePlugin = new ConcurrentHashMap<>();
+    private static final Object EMPTY = new Object();
 
     public void onContextCreated() {
         // run hourly script to drop not used dynamicUpdateRegisters
@@ -95,12 +103,20 @@ public class EntityContextUIImpl implements EntityContextUI {
             .execute(() ->
                 this.dynamicUpdateRegisters.values().removeIf(v -> TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - v.timeout) > 1));
 
-        Duration interval = entityContext.setting().getEnvRequire("interval-ui-send-updates", Duration.class, Duration.ofMillis(500), true);
-        entityContext.bgp().builder("send-ui-updates").interval(interval).execute(() -> {
+        entityContext.bgp().builder("send-ui-updates").interval(Duration.ofSeconds(1)).execute(() -> {
             for (Iterator<SendUpdateContext> iterator = sendToUIMap.values().iterator(); iterator.hasNext(); ) {
                 SendUpdateContext context = iterator.next();
 
                 sendDynamicUpdateSupplied(new DynamicUpdateRequest(context.dynamicUpdateID(), null), context.handler::get);
+                iterator.remove();
+            }
+            for (Iterator<Entry<String, Object>> iterator = refreshConsolePlugin.entrySet().iterator(); iterator.hasNext(); ) {
+                Entry<String, Object> entry = iterator.next();
+                ConsolePlugin<?> plugin = consolePluginsMap.get(entry.getKey());
+                if (plugin != null) {
+                    Object value = entry.getValue() == EMPTY ? plugin.getValue() : entry.getValue();
+                    sendGlobal(GlobalSendType.redrawConsole, entry.getKey(), value, null, null);
+                }
                 iterator.remove();
             }
         });
@@ -151,22 +167,6 @@ public class EntityContextUIImpl implements EntityContextUI {
     @Override
     public @NotNull UIInputBuilder inputBuilder() {
         return new UIInputBuilderImpl(entityContext);
-    }
-
-    @Override
-    public <T extends ConsolePlugin<?>> void openConsole(@NotNull T consolePlugin) {
-        sendGlobal(GlobalSendType.openConsole, consolePlugin.getEntityID(), null, null, null);
-    }
-
-    @Override
-    public void reloadWindow(@NotNull String reason, int timeoutToReload) {
-        if (timeoutToReload < 5) {
-            throw new IllegalArgumentException("TimeoutToReload must greater than 4 seconds");
-        }
-        if (timeoutToReload > 60) {
-            throw new IllegalArgumentException("TimeoutToReload must be lowe than 61 seconds");
-        }
-        sendGlobal(GlobalSendType.reload, reason, timeoutToReload, null, null);
     }
 
     @Override
@@ -257,91 +257,12 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
 
     @Override
-    public void progress(@NotNull String key, double progress, @Nullable String message, boolean cancellable) {
-        if (progress >= 100) {
-            progressMap.remove(key);
-        } else {
-            progressMap.put(key, new ProgressNotification(key, progress, message, cancellable));
-        }
-        sendGlobal(GlobalSendType.progress, key, Math.round(progress), message, cancellable ? OBJECT_MAPPER.createObjectNode().put("cancellable", true) : null);
-    }
-
-    @Override
-    public void sendDialogRequest(@NotNull DialogModel dialogModel) {
-        dialogRequest.computeIfAbsent(dialogModel.getEntityID(), key -> {
-            if (StringUtils.isNotEmpty(dialogModel.getHeaderButtonAttachTo())) {
-                HeaderButtonNotification notificationModel = headerButtonNotifications.get(dialogModel.getHeaderButtonAttachTo());
-                if (notificationModel != null) {
-                    notificationModel.getDialogs().add(dialogModel);
-                }
-            }
-
-            if (dialogModel.getMaxTimeoutInSec() > 0) {
-                entityContext
-                    .bgp()
-                    .builder(key + "-dialog-timeout")
-                    .delay(Duration.ofSeconds(dialogModel.getMaxTimeoutInSec()))
-                    .execute(() -> handleDialog(key, DialogResponseType.Timeout, null, null));
-            }
-
-            sendGlobal(GlobalSendType.dialog, key, dialogModel, null, null);
-
-            return dialogModel;
-        });
-        sendGlobal(GlobalSendType.dialog, dialogModel.getEntityID(), dialogModel, null, null);
-    }
-
-    @Override
-    public void removeEmptyNotificationBlock(@NotNull String entityID) {
-        NotificationBlock notificationBlock = blockNotifications.get(entityID);
-        if (notificationBlock != null && !notificationBlock.getInfoItems().isEmpty()) {
-            blockNotifications.remove(entityID);
-        }
-    }
-
-    @Override
-    public boolean isHasNotificationBlock(@NotNull String entityID) {
-        return blockNotifications.containsKey(entityID);
-    }
-
-    @Override
-    public void addNotificationBlock(@NotNull String entityID, @NotNull String name,
-        @Nullable Icon icon, @Nullable Consumer<NotificationBlockBuilder> builder) {
-        val notificationBlock = new NotificationBlock(entityID, name, icon);
-        if (builder != null) {
-            builder.accept(new NotificationBlockBuilderImpl(notificationBlock, entityContext));
-        }
-        if (notificationBlock.getUpdateHandler() != null) {
-            notificationBlock.setRefreshBlockBuilder(builder);
-        }
-        blockNotifications.put(entityID, notificationBlock);
-        sendGlobal(GlobalSendType.notification, entityID, notificationBlock, null, null);
-    }
-
-    @Override
-    public void updateNotificationBlock(@NotNull String entityID, @NotNull Consumer<NotificationBlockBuilder> builder) {
-        NotificationBlock notificationBlock = blockNotifications.get(entityID);
-        if (notificationBlock == null) {
-            throw new IllegalArgumentException("Unable to find notification block: " + entityID);
-        }
-        builder.accept(new NotificationBlockBuilderImpl(notificationBlock, entityContext));
-        sendGlobal(GlobalSendType.notification, entityID, notificationBlock, null, null);
-    }
-
-    @Override
-    public void removeNotificationBlock(@NotNull String entityID) {
-        if (blockNotifications.remove(entityID) != null) {
-            sendGlobal(GlobalSendType.notification, entityID, null, null, OBJECT_MAPPER.createObjectNode().put("action", "remove"));
-        }
-    }
-
-    @Override
-    public void sendNotification(@NotNull String destination, @NotNull String value) {
+    public void sendRawData(@NotNull String destination, @NotNull String value) {
         messagingTemplate.convertAndSend(WebSocketConfig.DESTINATION_PREFIX + destination, value);
     }
 
     @Override
-    public void sendNotification(@NotNull String destination, @NotNull ObjectNode param) {
+    public void sendRawData(@NotNull String destination, @NotNull ObjectNode param) {
         messagingTemplate.convertAndSend(WebSocketConfig.DESTINATION_PREFIX + destination, param);
     }
 
@@ -441,16 +362,6 @@ public class EntityContextUIImpl implements EntityContextUI {
         sendGlobal(GlobalSendType.json, null, json, title, null);
     }
 
-    @Override
-    public void sendMessage(
-        @Nullable String title, @Nullable String message, @Nullable NotificationLevel level) {
-        ObjectNode param = OBJECT_MAPPER.createObjectNode();
-        if (level != null) {
-            param.put("level", level.name());
-        }
-        sendGlobal(GlobalSendType.popup, null, message, title, param);
-    }
-
     public NotificationResponse getNotifications() {
         long time = System.currentTimeMillis();
         headerButtonNotifications.entrySet().removeIf(
@@ -495,32 +406,6 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
     }
 
-    @Override
-    public void registerConsolePluginName(@NotNull String name, @Nullable String resource) {
-        customConsolePluginNames.put(name, trimToEmpty(resource));
-    }
-
-    @Override
-    public <T extends ConsolePlugin> void registerConsolePlugin(@NotNull String name, @NotNull T plugin) {
-        customConsolePlugins.put(name, plugin);
-        consolePluginsMap.put(name, plugin);
-    }
-
-    @Override
-    public <T extends ConsolePlugin> T getRegisteredConsolePlugin(@NotNull String name) {
-        return (T) customConsolePlugins.get(name);
-    }
-
-    @Override
-    public boolean unRegisterConsolePlugin(@NotNull String name) {
-        if (customConsolePlugins.containsKey(name)) {
-            customConsolePlugins.remove(name);
-            consolePluginsMap.remove(name);
-            return true;
-        }
-        return false;
-    }
-
     public ActionResponseModel handleNotificationAction(String entityID, String actionEntityID, JSONObject params) throws Exception {
         HeaderButtonNotification headerButtonNotification = headerButtonNotifications.get(entityID);
         if (headerButtonNotification != null) {
@@ -534,10 +419,10 @@ public class EntityContextUIImpl implements EntityContextUI {
             return;
         }
         switch (response.getResponseAction()) {
-            case info -> this.sendInfoMessage(String.valueOf(response.getValue()));
-            case error -> this.sendErrorMessage(String.valueOf(response.getValue()));
-            case warning -> this.sendWarningMessage(String.valueOf(response.getValue()));
-            case success -> this.sendSuccessMessage(String.valueOf(response.getValue()));
+            case info -> toastr.info(String.valueOf(response.getValue()));
+            case error -> toastr.error(String.valueOf(response.getValue()));
+            case warning -> toastr.warn(String.valueOf(response.getValue()));
+            case success -> toastr.success(String.valueOf(response.getValue()));
             case files -> throw new NotImplementedException(); // not implemented yet
         }
     }
@@ -554,7 +439,7 @@ public class EntityContextUIImpl implements EntityContextUI {
             objectNode.put("title", title);
         }
 
-        sendNotification("-global", objectNode);
+        sendRawData("-global", objectNode);
     }
 
     private void sendHeaderButtonToUI(HeaderButtonNotification notification, Consumer<ObjectNode> additionalSupplier) {
@@ -641,6 +526,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         notification,
         headerButton,
         openConsole,
+        redrawConsole,
         reload,
         addItem,
         dialog,
@@ -800,5 +686,161 @@ public class EntityContextUIImpl implements EntityContextUI {
 
     private record SendUpdateContext(@NotNull String dynamicUpdateID, @NotNull Supplier<ObjectNode> handler) {
 
+    }
+
+    private class EntityContextUIToastrImpl implements EntityContextUIToastr {
+
+        @Override
+        public void sendMessage(@Nullable String title, @Nullable String message, @Nullable NotificationLevel level) {
+            ObjectNode param = OBJECT_MAPPER.createObjectNode();
+            if (level != null) {
+                param.put("level", level.name());
+            }
+            sendGlobal(GlobalSendType.popup, null, message, title, param);
+        }
+    }
+
+    private class EntityContextUINotificationImpl implements EntityContextUINotification {
+
+        @Override
+        public void removeEmptyBlock(@NotNull String entityID) {
+            NotificationBlock notificationBlock = blockNotifications.get(entityID);
+            if (notificationBlock != null && !notificationBlock.getInfoItems().isEmpty()) {
+                blockNotifications.remove(entityID);
+            }
+        }
+
+        @Override
+        public void addBlock(@NotNull String entityID, @NotNull String name, @Nullable Icon icon, @Nullable Consumer<NotificationBlockBuilder> builder) {
+            val notificationBlock = new NotificationBlock(entityID, name, icon);
+            if (builder != null) {
+                builder.accept(new NotificationBlockBuilderImpl(notificationBlock, entityContext));
+            }
+            if (notificationBlock.getUpdateHandler() != null) {
+                notificationBlock.setRefreshBlockBuilder(builder);
+            }
+            blockNotifications.put(entityID, notificationBlock);
+            sendGlobal(GlobalSendType.notification, entityID, notificationBlock, null, null);
+        }
+
+        @Override
+        public void updateBlock(@NotNull String entityID, @NotNull Consumer<NotificationBlockBuilder> builder) {
+            NotificationBlock notificationBlock = blockNotifications.get(entityID);
+            if (notificationBlock == null) {
+                throw new IllegalArgumentException("Unable to find notification block: " + entityID);
+            }
+            builder.accept(new NotificationBlockBuilderImpl(notificationBlock, entityContext));
+            sendGlobal(GlobalSendType.notification, entityID, notificationBlock, null, null);
+        }
+
+        @Override
+        public boolean isHasBlock(@NotNull String key) {
+            return blockNotifications.containsKey(key);
+        }
+
+        @Override
+        public void removeBlock(@NotNull String entityID) {
+            if (blockNotifications.remove(entityID) != null) {
+                sendGlobal(GlobalSendType.notification, entityID, null, null, OBJECT_MAPPER.createObjectNode().put("action", "remove"));
+            }
+        }
+    }
+
+    private class EntityContextUIConsoleImpl implements EntityContextUIConsole {
+
+        @Override
+        public void registerPluginName(@NotNull String name, @Nullable String resource) {
+            customConsolePluginNames.put(name, trimToEmpty(resource));
+        }
+
+        @Override
+        public <T extends ConsolePlugin> void registerPlugin(@NotNull String name, @NotNull T plugin) {
+            consolePluginsMap.put(name, plugin);
+        }
+
+        @Override
+        public <T extends ConsolePlugin> @Nullable T getRegisteredPlugin(@NotNull String name) {
+            return (T) consolePluginsMap.get(name);
+        }
+
+        @Override
+        public boolean unRegisterPlugin(@NotNull String name) {
+            if (consolePluginsMap.containsKey(name)) {
+                consolePluginsMap.remove(name);
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public <T extends ConsolePlugin<?>> void openConsole(@NotNull String name) {
+            if (consolePluginsMap.containsKey(name)) {
+                throw new ServerException("Console plugin: " + name + " not registered");
+            }
+            sendGlobal(GlobalSendType.openConsole, name, null, null, null);
+        }
+
+        @Override
+        public void refreshPluginContent(@NotNull String name) {
+            refreshConsolePlugin.put(name, EMPTY);
+        }
+
+        @Override
+        public void refreshPluginContent(@NotNull String name, Object value) {
+
+        }
+    }
+
+    private class EntityContextUIDialogImpl implements EntityContextUIDialog {
+
+        @Override
+        public void sendDialogRequest(@NotNull DialogModel dialogModel) {
+            dialogRequest.computeIfAbsent(dialogModel.getEntityID(), key -> {
+                if (StringUtils.isNotEmpty(dialogModel.getHeaderButtonAttachTo())) {
+                    HeaderButtonNotification notificationModel = headerButtonNotifications.get(dialogModel.getHeaderButtonAttachTo());
+                    if (notificationModel != null) {
+                        notificationModel.getDialogs().add(dialogModel);
+                    }
+                }
+
+                if (dialogModel.getMaxTimeoutInSec() > 0) {
+                    entityContext
+                        .bgp()
+                        .builder(key + "-dialog-timeout")
+                        .delay(Duration.ofSeconds(dialogModel.getMaxTimeoutInSec()))
+                        .execute(() -> handleDialog(key, DialogResponseType.Timeout, null, null));
+                }
+
+                sendGlobal(GlobalSendType.dialog, key, dialogModel, null, null);
+
+                return dialogModel;
+            });
+            sendGlobal(GlobalSendType.dialog, dialogModel.getEntityID(), dialogModel, null, null);
+        }
+
+        @Override
+        public void reloadWindow(@NotNull String reason, int timeoutToReload) {
+            if (timeoutToReload < 5) {
+                throw new IllegalArgumentException("TimeoutToReload must greater than 4 seconds");
+            }
+            if (timeoutToReload > 60) {
+                throw new IllegalArgumentException("TimeoutToReload must be lowe than 61 seconds");
+            }
+            sendGlobal(GlobalSendType.reload, reason, timeoutToReload, null, null);
+        }
+    }
+
+    private class EntityContextUIProgressImpl implements EntityContextUIProgress {
+
+        @Override
+        public void update(@NotNull String key, double progress, @Nullable String message, boolean cancellable) {
+            if (progress >= 100) {
+                progressMap.remove(key);
+            } else {
+                progressMap.put(key, new ProgressNotification(key, progress, message, cancellable));
+            }
+            sendGlobal(GlobalSendType.progress, key, Math.round(progress), message,
+                cancellable ? OBJECT_MAPPER.createObjectNode().put("cancellable", true) : null);
+        }
     }
 }

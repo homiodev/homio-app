@@ -28,6 +28,11 @@ import org.jetbrains.annotations.Nullable;
 public class UsbCameraEntity extends BaseCameraEntity<UsbCameraEntity, UsbCameraService> {
 
     @Override
+    public boolean isConfigured() {
+        return StringUtils.isNotEmpty(getIeeeAddress());
+    }
+
+    @Override
     @UIField(order = 1, label = "usbSource")
     @UIFieldSelectConfig(selectOnEmptyLabel = "SELECTION.VIDEO_SOURCE")
     @UIFieldDynamicSelection(value = SelectVideoSource.class, rawInput = true)
@@ -62,11 +67,6 @@ public class UsbCameraEntity extends BaseCameraEntity<UsbCameraEntity, UsbCamera
 
     public void setVideoMotionAlarmProvider(String value) {
         setJsonData("map", value);
-    }
-
-    @Override
-    public String getFolderName() {
-        return "camera";
     }
 
     @Override

@@ -129,13 +129,13 @@ public class PortService implements ContextCreated, ContextRefreshed {
 
     private void portAvailable(String portName) {
         log.info("Port became available: <{}>", portName);
-        entityContext.ui().updateNotificationBlock("PORTS", blockBuilder ->
+        entityContext.ui().notification().updateBlock("PORTS", blockBuilder ->
                 blockBuilder.removeInfo(portName));
     }
 
     private void addPortNotAvailableNotification(String portName) {
         log.warn("Port became not available: <{}>", portName);
-        entityContext.ui().addOrUpdateNotificationBlock("PORTS", "PORTS", new Icon("fab fa-usb", "#A18123"), blockBuilder ->
+        entityContext.ui().notification().addOrUpdateBlock("PORTS", "PORTS", new Icon("fab fa-usb", "#A18123"), blockBuilder ->
                 blockBuilder.addInfo(portName, new Icon("fas fa-square", Color.RED),
                         Lang.getServerMessage("ERROR.PORT_NOT_AVAILABLE", portName)));
     }

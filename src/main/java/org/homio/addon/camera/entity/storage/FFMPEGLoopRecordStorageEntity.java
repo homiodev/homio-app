@@ -158,7 +158,7 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
         String target = buildOutput(output);
         Path path = Paths.get(target);
         if (!path.isAbsolute()) {
-            path = CommonUtils.getMediaPath().resolve(videoStreamEntity.getFolderName() + "_" + profile)
+            path = CommonUtils.getMediaPath().resolve(BaseCameraEntity.FOLDER + "_" + profile)
                     .resolve("ffmpeg").resolve(target);
         }
         Path folder = path.getParent();

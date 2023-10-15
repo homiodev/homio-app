@@ -340,7 +340,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
                 if (playbackFile == null) {
                     return null;
                 }
-                Path path = CommonUtils.getMediaPath().resolve("camera").resolve(entity.getEntityID()).resolve("playback")
+                Path path = CommonUtils.getMediaPath().resolve(BaseCameraEntity.FOLDER).resolve(entity.getEntityID()).resolve("playback")
                         .resolve(playbackFile.id);
 
                 DownloadFile downloadFile;

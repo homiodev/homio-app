@@ -14,11 +14,11 @@ import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.ServerException;
-import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPlugin;
 import org.homio.api.setting.SettingPluginButton;
 import org.homio.api.setting.SettingPluginOptions;
+import org.homio.api.setting.SettingPluginOptionsEnumMulti;
 import org.homio.api.setting.SettingPluginOptionsRemovable;
 import org.homio.api.setting.SettingPluginToggle;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
@@ -66,11 +66,9 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
             entity.setOrder(plugin.order());
             entity.setAdvanced(plugin.isAdvanced());
             entity.setStorable(plugin.isStorable());
-            Icon icon = plugin.getIcon();
-            entity.setColor(icon == null ? null : icon.getColor());
-            entity.setIcon(icon == null ? null : icon.getIcon());
+            entity.setIcon(plugin.getIcon());
             if (plugin instanceof SettingPluginToggle) {
-                entity.setToggleIcon(((SettingPluginToggle) plugin).getToggleIcon().getIcon());
+                entity.setToggleIcon(((SettingPluginToggle) plugin).getToggleIcon());
             }
             if (plugin instanceof SettingPluginButton) {
                 entity.setValue(((SettingPluginButton) plugin).getText(entityContext));
@@ -83,6 +81,9 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
             entity.setRequired(plugin.isRequired());
             if (plugin instanceof SettingPluginOptions) {
                 entity.setLazyLoad(((SettingPluginOptions<?>) plugin).lazyLoad());
+            }
+            if (plugin instanceof SettingPluginOptionsEnumMulti<?>) {
+                entity.setMultiSelect(true);
             }
             if (entity.isStorable()) {
                 if (entity.getSettingType().equals(UIFieldType.SelectBoxButton.name())

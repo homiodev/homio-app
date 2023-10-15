@@ -41,6 +41,7 @@ import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.rest.ItemController.ActionModelRequest;
+import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.ssh.SshBaseEntity;
 import org.homio.app.ssh.SshProviderService;
@@ -60,22 +61,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/rest/console")
 @RequiredArgsConstructor
-public class ConsoleController implements ContextRefreshed {
+public class ConsoleController implements ContextCreated {
 
     private final LogService logService;
     private final EntityContextImpl entityContext;
     private final ItemController itemController;
     private final Map<String, ConsolePlugin<?>> logsConsolePluginsMap = new HashMap<>();
-    private List<ConsoleTab> logs;
+    private final List<ConsoleTab> logs = new ArrayList<>();
 
     @Getter
     private static final Map<String, SshSession<?>> sessions = new HashMap<>();
 
     @Override
-    public void onContextRefresh(EntityContext entityContext) {
-        EntityContextUIImpl.consolePluginsMap.clear();
-
-        logs = new ArrayList<>();
+    public void onContextCreated(EntityContextImpl entityContext) throws Exception {
         for (String tab : logService.getTabs()) {
             logs.add(new ConsoleTab(tab, ConsolePlugin.RenderType.lines, null));
             logsConsolePluginsMap.put(tab, new LogsConsolePlugin(this.entityContext, logService, tab));
@@ -86,7 +84,6 @@ public class ConsoleController implements ContextRefreshed {
         for (ConsolePlugin<?> consolePlugin : consolePlugins) {
             EntityContextUIImpl.consolePluginsMap.put(consolePlugin.getName(), consolePlugin);
         }
-        EntityContextUIImpl.consolePluginsMap.putAll(EntityContextUIImpl.customConsolePlugins);
     }
 
     @GetMapping("/tab/{tab}/content")

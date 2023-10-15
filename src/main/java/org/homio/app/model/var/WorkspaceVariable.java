@@ -145,7 +145,7 @@ public class WorkspaceVariable extends BaseEntity
     @UIFieldProgress
     public UIFieldProgress.Progress getUsedQuota() {
         int count = 0;
-        if (getEntityID() != null && getEntityContext().var().exists(getEntityID())) {
+        if (getEntityID() != null && getEntityContext() != null && getEntityContext().var().exists(getEntityID())) {
             count = (int) getEntityContext().var().count(getEntityID());
         }
         return UIFieldProgress.Progress.of(count, this.quota);

@@ -9,6 +9,8 @@ import org.jetbrains.annotations.NotNull;
 public class SystemAddonRepositoriesSetting
         implements CoreSettingPlugin<Set<String>>, SettingPluginTextSet {
 
+    public static List<String> BUILD_IN_ADDON_REPO = List.of("https://github.com/homiodev/addon-parent");
+
     @Override
     public @NotNull GroupKey getGroupKey() {
         return GroupKey.system;
@@ -26,6 +28,6 @@ public class SystemAddonRepositoriesSetting
 
     @Override
     public @NotNull List<String> getMandatoryValues() {
-        return List.of("https://github.com/homiodev/addon-parent");
+        return BUILD_IN_ADDON_REPO;
     }
 }

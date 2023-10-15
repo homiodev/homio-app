@@ -43,7 +43,7 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
         String scriptEntityId = workspaceBlock.getInputWorkspaceBlock("SCRIPT").getField("SCRIPT_REF");
         ScriptEntity scriptEntity = entityContext.getEntity(scriptEntityId);
         if (scriptEntity == null) {
-            entityContext.ui().sendErrorMessage("W.ERROR.SCRIPT_NOT_FOUND", scriptEntityId);
+            entityContext.ui().toastr().error("W.ERROR.SCRIPT_NOT_FOUND", scriptEntityId);
         } else {
             State lastValue = ((WorkspaceBlockImpl) workspaceBlock).getLastValue();
             Object result = scriptService.executeJavaScriptOnce(scriptEntity, null, false, lastValue);
@@ -71,6 +71,6 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
                         .put("value", rawType.stringValue())
                         .put("mimeType", rawType.getMimeType())
                         .put("name", rawType.getName());
-        entityContext.ui().sendNotification("-workspace-block-update", node);
+        entityContext.ui().sendRawData("-workspace-block-update", node);
     }
 }

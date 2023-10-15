@@ -129,7 +129,7 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler {
 
     @Override
     public @Nullable String getMjpegUri() {
-        return "/cgi-bin/mjpg/video.cgi?channel=" + nvrChannel + "&subtype=1";
+        return "/cgi-bin/mjpg/video.cgi?channel=" + getEntity().getNvrChannel() + "&subtype=1";
     }
 
     @Override
@@ -178,7 +178,7 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler {
 
     @Override
     public @Nullable String getSnapshotUri() {
-        return "/cgi-bin/snapshot.cgi?channel=" + nvrChannel;
+        return "/cgi-bin/snapshot.cgi?channel=" + getEntity().getNvrChannel();
     }
 
     @Override

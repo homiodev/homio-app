@@ -290,11 +290,11 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             throw new ServerException("Entity: %s already has version: %s".formatted(entity.getTitle(), version));
         }
         String key = "Update " + entity.getTitle() + "/" + version;
-        entityContext.ui().runWithProgress(key, false, progressBar ->
+        entityContext.ui().progress().runAndGet(key, false, progressBar ->
                 firmware.update(progressBar, version),
             ex -> {
                 if (ex != null) {
-                    entityContext.ui().sendErrorMessage(ex);
+                    entityContext.ui().toastr().error(ex);
                 }
                 entityContext.ui().updateItem(entity);
             });
@@ -490,7 +490,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             entity = entityContext.getEntity(entityID, false);
             if (entity == null) {
                 entityContext.getCacheService().clearCache();
-                entityContext.ui().reloadWindow("Clear cache");
+                entityContext.ui().dialog().reloadWindow("Clear cache");
                 return Collections.emptyList();
             }
         }

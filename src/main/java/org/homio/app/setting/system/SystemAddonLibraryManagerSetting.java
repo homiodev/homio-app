@@ -12,14 +12,17 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.cache.CachedValue;
 import org.homio.api.fs.archive.ArchiveUtil;
@@ -139,9 +142,15 @@ public class SystemAddonLibraryManagerSetting
     @SneakyThrows
     private static Collection<PackageModel> readAddons(EntityContext entityContext) {
         Collection<PackageModel> addons = new ArrayList<>();
-        for (String repoURL : entityContext.setting().getValue(SystemAddonRepositoriesSetting.class)) {
-            addons.addAll(getAddons(repoURL));
-        }
+        Set<String> urls = new HashSet<>(SystemAddonRepositoriesSetting.BUILD_IN_ADDON_REPO);
+        urls.addAll(entityContext.setting().getValue(SystemAddonRepositoriesSetting.class));
+        urls.stream().filter(url -> !StringUtils.isEmpty(url)).forEach(url -> {
+            try {
+                addons.addAll(getAddons(url));
+            } catch (Exception ex) {
+                log.warn("Unable to fetch addons from repository: {}. Msg: {}", url, CommonUtils.getErrorMessage(ex));
+            }
+        });
         OBJECT_MAPPER.writeValue(addonsCopy.toFile(), addons);
         return addons;
     }

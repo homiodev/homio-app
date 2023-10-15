@@ -56,6 +56,7 @@ import org.homio.app.model.var.WorkspaceVariable;
 import org.homio.app.model.var.WorkspaceVariable.VarType;
 import org.homio.app.model.var.WorkspaceVariableMessage;
 import org.homio.app.repository.VariableBackupRepository;
+import org.homio.app.repository.WorkspaceVariableRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -97,17 +98,23 @@ public class EntityContextVarImpl implements EntityContextVar {
             }
         });
         entityContext.event().addEntityRemovedListener(WorkspaceVariable.class, "var-delete",
-                workspaceVariable -> {
-                    VariableContext context = globalVarStorageMap.remove(workspaceVariable.getEntityID());
-                    context.storageService.deleteAll();
-                    if (context.variable.isBackup()) {
-                        variableBackupRepository.delete(context.variable);
-                    }
-                    Optional.ofNullable(context.transformVariableContext).ifPresent(TransformVariableContext::dispose);
-                });
+            this::onVariableRemoved);
+
+        entityContext.event().addEntityRemovedListener(WorkspaceGroup.class, "group-delete",
+            workspaceGroup -> workspaceGroup.getWorkspaceVariables().forEach(this::onVariableRemoved));
 
         entityContext.bgp().builder("var-backup").intervalWithDelay(Duration.ofSeconds(60))
                 .cancelOnError(false).execute(this::backupVariables);
+    }
+
+    private void onVariableRemoved(WorkspaceVariable workspaceVariable) {
+        VariableContext context = globalVarStorageMap.remove(workspaceVariable.getEntityID());
+        context.storageService.deleteAll();
+        /* Should be removed by hibernate
+        if (context.variable.isBackup()) {
+            variableBackupRepository.delete(context.variable);
+        }*/
+        Optional.ofNullable(context.transformVariableContext).ifPresent(TransformVariableContext::dispose);
     }
 
     public int backupCount(WorkspaceVariable variable) {
@@ -156,7 +163,7 @@ public class EntityContextVarImpl implements EntityContextVar {
         return set(getOrCreateContext(variableId), value, false);
     }
 
-    public Object set(String variableId, Object value, boolean logIfNoLinked) {
+    public Object set(@NotNull String variableId, Object value, boolean logIfNoLinked) {
         return set(getOrCreateContext(variableId), value, logIfNoLinked);
     }
 
@@ -303,8 +310,26 @@ public class EntityContextVarImpl implements EntityContextVar {
         return series;
     }
 
-    public boolean isLinked(String variableEntityID) {
+    public boolean isLinked(@NotNull String variableEntityID) {
         return getOrCreateContext(variableEntityID).linkListener != null;
+    }
+
+    public void deleteGroup(@Nullable String entityID) {
+        if (entityID != null) {
+            WorkspaceGroup group = entityContext.getEntity(WorkspaceGroup.class, entityID);
+            if (group != null) {
+                if (group.isDisableDelete()) {
+                    group.setLocked(false);
+                    group.setJsonData("dis_del", false);
+                    entityContext.save(group);
+                    Integer unlockedVariables = entityContext.getBean(WorkspaceVariableRepository.class).unlockVariablesByGroup(group);
+                    if (unlockedVariables > 0) {
+                        log.info("Unlocked {} variables of group {} for deletion", unlockedVariables, entityID);
+                    }
+                }
+                entityContext.delete(group);
+            }
+        }
     }
 
     /**
@@ -345,6 +370,7 @@ public class EntityContextVarImpl implements EntityContextVar {
                 builder.accept(new VariableMetaBuilderImpl(variable));
             }
         }, variableType)) {
+            entity.getWorkspaceGroup().getWorkspaceVariables().add(entity);
             entity = entityContext.save(entity);
         }
         return entity.getEntityID();
@@ -383,7 +409,7 @@ public class EntityContextVarImpl implements EntityContextVar {
         return entity;
     }
 
-    private VariableContext getOrCreateContext(String variableId) {
+    private VariableContext getOrCreateContext(@NotNull String variableId) {
         VariableContext context = globalVarStorageMap.get(variableId);
         if (context == null) {
             try {

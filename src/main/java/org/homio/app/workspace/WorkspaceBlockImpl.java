@@ -113,7 +113,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     public void logError(String message, Object... params) {
         log(Level.ERROR, message, params);
         String msg = log.getMessageFactory().newMessage(message, params).getFormattedMessage();
-        getEntityContext().ui().sendErrorMessage(msg);
+        getEntityContext().ui().toastr().error(msg);
     }
 
     @Override
@@ -127,7 +127,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     public void logWarn(String message, Object... params) {
         String msg = log.getMessageFactory().newMessage(message, params).getFormattedMessage();
         log(Level.WARN, msg);
-        getEntityContext().ui().sendWarningMessage(msg);
+        getEntityContext().ui().toastr().warn(msg);
     }
 
     @Override
@@ -247,7 +247,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
                         scratch3Block.getHandler().handle(this);
                     } catch (Exception ex) {
                         String err = "Workspace " + scratch3Block.getOpcode() + " scratch error\n" + CommonUtils.getErrorMessage(ex);
-                        getEntityContext().ui().sendErrorMessage(err, ex);
+                        getEntityContext().ui().toastr().error(err, ex);
                         log.error(err);
                         return null;
                     }
@@ -273,7 +273,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
                     try {
                         return this.setValue(scratch3Block.getEvaluateHandler().handle(this));
                     } catch (Exception ex) {
-                        getEntityContext().ui().sendErrorMessage("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
+                        getEntityContext().ui().toastr().error("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
                         throw new ServerException(ex);
                     }
                 });
@@ -579,13 +579,13 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     private String sendScratch3ExtensionNotFound(String extensionId) {
         String msg = "No scratch extension <" + extensionId + "> found";
-        getEntityContext().ui().sendErrorMessage(msg, extensionId);
+        getEntityContext().ui().toastr().error(msg, extensionId);
         return msg;
     }
 
     private String sendScratch3BlockNotFound(String extensionId, String opcode) {
         String msg = "No scratch block <" + opcode + "> found in extension <" + extensionId + ">";
-        getEntityContext().ui().sendErrorMessage("W.ERROR.SCRATCH_BLOCK_NOT_FOUND", opcode);
+        getEntityContext().ui().toastr().error("W.ERROR.SCRATCH_BLOCK_NOT_FOUND", opcode);
         return msg;
     }
 

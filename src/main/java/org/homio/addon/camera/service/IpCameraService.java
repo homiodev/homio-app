@@ -599,7 +599,7 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
     }
 
     public ActionResponseModel authenticate() {
-        entityContext.ui().sendDialogRequest("cam_auth", "AUTHENTICATE",
+        entityContext.ui().dialog().sendDialogRequest("cam_auth", "AUTHENTICATE",
             (responseType, pressedButton, parameters) ->
                 fireAuth(parameters),
             dialogModel -> {
@@ -727,9 +727,9 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
                 progressBar.progress(20, "Ping done");
                 entity.setInfo(onvifDeviceState, false);
                 entityContext.save(entity);
-                entityContext.ui().sendSuccessMessage("Onvif camera: " + getEntity() + " authenticated successfully");
+                entityContext.ui().toastr().success("Onvif camera: " + getEntity() + " authenticated successfully");
             } catch (Exception ex) {
-                entityContext.ui().sendErrorMessage("Camera fault: %s".formatted(ex.getMessage()));
+                entityContext.ui().toastr().error("Camera fault: %s".formatted(ex.getMessage()));
             } finally {
                 progressBar.done();
             }

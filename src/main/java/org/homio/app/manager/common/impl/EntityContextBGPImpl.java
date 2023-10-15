@@ -603,7 +603,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                         }
 
                         log.error("Exception in thread: <{}>. Message: <{}>", threadContext.name, CommonUtils.getErrorMessage(ex), ex);
-                        entityContext.ui().sendErrorMessage(ex);
+                        entityContext.ui().toastr().error(ex);
                         if (threadContext.errorListener != null) {
                             try {
                                 threadContext.errorListener.accept(ex);
@@ -643,7 +643,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         private @NotNull
         final String key;
         private boolean cancellable;
-        private boolean logToConsole = true;
+        private @Setter boolean logToConsole = true;
         private @Nullable Consumer<Exception> onFinally;
         private @Nullable Runnable onError;
         private @Nullable Exception errorIfExists;
@@ -672,7 +672,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                     if (logToConsole) {
                         log.info("Progress: {}", message);
                     }
-                    getEntityContext().ui().progress(key, progress, message, cancellable);
+                    getEntityContext().ui().progress().update(key, progress, message, cancellable);
                 };
                 progressBar.progress(0, key);
                 Exception exception = null;

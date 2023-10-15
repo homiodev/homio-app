@@ -83,6 +83,7 @@ import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
 import org.homio.app.repository.AbstractRepository;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.repository.VariableBackupRepository;
+import org.homio.app.repository.WorkspaceVariableRepository;
 import org.homio.app.repository.device.AllDeviceRepository;
 import org.homio.app.repository.widget.WidgetRepository;
 import org.homio.app.repository.widget.WidgetSeriesRepository;
@@ -141,10 +142,10 @@ public class EntityContextImpl implements EntityContext {
         BEAN_CONTEXT_CREATED.add(ScriptService.class);
         BEAN_CONTEXT_CREATED.add(JwtTokenProvider.class);
         BEAN_CONTEXT_CREATED.add(CloudService.class);
+        BEAN_CONTEXT_CREATED.add(ConsoleController.class);
 
         BEAN_CONTEXT_REFRESH.add(FileSystemService.class);
         BEAN_CONTEXT_REFRESH.add(AddonService.class);
-        BEAN_CONTEXT_REFRESH.add(ConsoleController.class);
         BEAN_CONTEXT_REFRESH.add(SettingRepository.class);
         BEAN_CONTEXT_REFRESH.add(SettingController.class);
         BEAN_CONTEXT_REFRESH.add(WorkspaceService.class);
@@ -279,7 +280,7 @@ public class EntityContextImpl implements EntityContext {
         event().fireEventIfNotSame("app-status", new StringType(Status.ONLINE.toString()));
         setting().listenValue(SystemClearCacheButtonSetting.class, "im-clear-cache", () -> {
             cacheService.clearCache();
-            ui().sendSuccessMessage("Cache has been cleared successfully");
+            ui().toastr().success("Cache has been cleared successfully");
         });
         setting().listenValue(SystemSoftRestartButtonSetting.class, "soft-restart", () -> SystemSoftRestartButtonSetting.restart(this));
         setting().listenValue(ScanDevicesSetting.class, "scan-devices", () ->
@@ -682,7 +683,7 @@ public class EntityContextImpl implements EntityContext {
     }
 
     private void updateAppNotificationBlock() {
-        ui().addNotificationBlock("app", "App", new Icon("fas fa-house", "#E65100"), builder -> {
+        ui().notification().addBlock("app", "App", new Icon("fas fa-house", "#E65100"), builder -> {
             builder.setBorderColor("#FF4400");
             String installedVersion = appGitHub.getInstalledVersion(this);
             builder.setUpdating(appGitHub.isUpdating());
@@ -695,7 +696,7 @@ public class EntityContextImpl implements EntityContext {
                             Path archiveAppPath = jarLocation.resolve("homio-app.zip");
                             Files.deleteIfExists(archiveAppPath);
                             projectUpdate.downloadReleaseFile(version, archiveAppPath.getFileName().toString(), archiveAppPath);
-                            ui().reloadWindow("Finish update", 60);
+                            ui().dialog().reloadWindow("Finish update", 60);
                             log.info("Exit app to restart it after update");
                             restartApplication();
                             return null;
@@ -772,9 +773,9 @@ public class EntityContextImpl implements EntityContext {
 
     @AllArgsConstructor
     public enum ItemAction {
-        Insert(context -> context.ui().sendInfoMessage("TOASTR.ENTITY_INSERTED")),
-        Update(context -> context.ui().sendInfoMessage("TOASTR.ENTITY_UPDATED")),
-        Remove(context -> context.ui().sendWarningMessage("TOASTR.ENTITY_REMOVED"));
+        Insert(context -> context.ui().toastr().info("TOASTR.ENTITY_INSERTED")),
+        Update(context -> context.ui().toastr().info("TOASTR.ENTITY_UPDATED")),
+        Remove(context -> context.ui().toastr().warn("TOASTR.ENTITY_REMOVED"));
 
         private final Consumer<EntityContextImpl> messageEvent;
     }

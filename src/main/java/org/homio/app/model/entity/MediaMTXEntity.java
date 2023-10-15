@@ -245,7 +245,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
 
     @SneakyThrows
     @UIContextMenuAction(value = "MEDIAMTX_RESET_CONFIG",
-                         confirmMessage = "",
+                         confirmMessage = "MEDIAMTX_RESET_CONFIG",
                          confirmMessageDialogColor = DANGER_COLOR,
                          icon = "fas fa-clock-rotate-left",
                          iconColor = "#91293E")

@@ -1,5 +1,7 @@
 package org.homio.addon.camera.entity;
 
+import static org.homio.api.util.Constants.DANGER_COLOR;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.onvif.soap.OnvifDeviceState;
 import de.onvif.soap.devices.InitialDevices;
@@ -209,11 +211,6 @@ public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraSer
     }
 
     @Override
-    public String getFolderName() {
-        return "camera";
-    }
-
-    @Override
     public String getDefaultName() {
         return "Ip camera";
     }
@@ -254,14 +251,16 @@ public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraSer
             if (!getIp().equals(ip)) {
                 log.info("[{}]: Onvif camera <{}> changed ip address from <{}> to <{}>", getEntityID(), this, getIp(), ip);
             }
-            if (!getIp().equals(ip)) {
+            if (getOnvifPort() != port) {
                 log.info("[{}]: Onvif camera <{}> changed port from <{}> to <{}>", getEntityID(), this, getOnvifPort(), port);
             }
-            entityContext.updateDelayed(this, entity -> entity.setIp(ip).setOnvifPort(port));
+            entityContext.save(setIp(ip).setOnvifPort(port));
         }
     }
 
-    @UIContextMenuAction(value = "RESTART", icon = "fas fa-power-off", iconColor = Color.RED)
+    @UIContextMenuAction(value = "RESTART_CAMERA", icon = "fas fa-power-off", iconColor = Color.RED,
+                         confirmMessage = "W.CONFIRM.RESTART_CAMERA",
+                         confirmMessageDialogColor = DANGER_COLOR)
     public ActionResponseModel reboot() {
         String response = getService().getOnvifDeviceState().getInitialDevices().reboot();
         return ActionResponseModel.showSuccess(response);

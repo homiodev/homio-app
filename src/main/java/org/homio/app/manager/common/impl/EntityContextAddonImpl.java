@@ -153,9 +153,9 @@ public class EntityContextAddonImpl {
         entityContext.rebuildRepositoryByPrefixMap();
 
         if (deleteFile) {
-            entityContext.ui().updateNotificationBlock("addons", builder -> builder.removeInfo(addonContext.getAddonID()));
+            entityContext.ui().notification().updateBlock("addons", builder -> builder.removeInfo(addonContext.getAddonID()));
         } else {
-            entityContext.ui().updateNotificationBlock("addons", builder -> {
+            entityContext.ui().notification().updateBlock("addons", builder -> {
                 builder.removeInfo(addonContext.getAddonID());
                 addAddonNotificationRow(addonContext, builder, true);
             });
@@ -206,7 +206,7 @@ public class EntityContextAddonImpl {
      * Load context from specific file 'contextFile' and wraps logging info
      */
     public void onContextCreated() throws Exception {
-        entityContext.ui().addNotificationBlock("addons", "Addons", new Icon("fas fa-file-zipper", "#FF4400"),
+        entityContext.ui().notification().addBlock("addons", "Addons", new Icon("fas fa-file-zipper", "#FF4400"),
                 block -> block.setBorderColor("#FF4400"));
         Path addonPath = CommonUtils.getAddonPath();
         int appVersion = entityContext.setting().getApplicationMajorVersion();
@@ -252,7 +252,7 @@ public class EntityContextAddonImpl {
                     // copy resource only if size not match or if not exists
                     HardwareUtils.copyResources(externalFiles);
 
-                    entityContext.ui().updateNotificationBlock("addons",
+                    entityContext.ui().notification().updateBlock("addons",
                             builder -> addAddonNotificationRow(context, builder, false));
 
                     log.info("Addon context <{}> registered successfully.", context.getPomFile().getArtifactId());
@@ -261,7 +261,7 @@ public class EntityContextAddonImpl {
                     log.info("Addon context <{}> already registered before.", context.getPomFile().getArtifactId());
                 }
             } catch (Exception ex) {
-                entityContext.ui().updateNotificationBlock("addons",
+                entityContext.ui().notification().updateBlock("addons",
                         builder -> addAddonNotificationRow(context, builder, true));
                 addonContextMap.remove(context.getAddonID());
                 log.error("Unable to load addon context <{}>.", context.getPomFile().getArtifactId(), ex);
@@ -376,7 +376,7 @@ public class EntityContextAddonImpl {
         if (OptionModel.getByKey(versions, newVersion) != null) {
             String question = Lang.getServerMessage("PACKAGE_UPDATE_QUESTION",
                     FlowMap.of("NAME", addonContext.getPomFile().getName(), "VERSION", newVersion));
-            entityContext.ui().sendConfirmation("update-" + key, "DIALOG.TITLE.UPDATE_PACKAGE", () ->
+            entityContext.ui().dialog().sendConfirmation("update-" + key, "DIALOG.TITLE.UPDATE_PACKAGE", () ->
                     entityContext.getBean(AddonService.class).installPackage(
                             new SystemAddonLibraryManagerSetting(),
                             new PackageRequest().setName(packageModel.getName())

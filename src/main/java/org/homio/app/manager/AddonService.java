@@ -95,18 +95,18 @@ public class AddonService implements ContextCreated, ContextRefreshed {
         if (!packagesInProgress.containsKey(packageRequest.getName())) {
             packagesInProgress.put(packageRequest.getName(), true);
             String key = "Install " + packageRequest.getName() + "/" + packageRequest.getVersion();
-            entityContext.ui().runWithProgress(key, false, progressBar ->
+            entityContext.ui().progress().run(key, false, progressBar ->
                             settingPlugin.installPackage(entityContext, packageRequest, progressBar),
                     ex -> packagesInProgress.remove(packageRequest.getName()));
         } else {
-            entityContext.ui().sendErrorMessage("W.ERROR.UPDATE_IN_PROGRESS");
+            entityContext.ui().toastr().error("W.ERROR.UPDATE_IN_PROGRESS");
         }
     }
 
     public void unInstallPackage(SettingPluginPackageInstall settingPlugin, PackageRequest packageRequest) {
         if (!packagesInProgress.containsKey(packageRequest.getName())) {
             packagesInProgress.put(packageRequest.getName(), false);
-            entityContext.ui().runWithProgress("Uninstall " + packageRequest.getName() + "/" + packageRequest.getVersion(), false,
+            entityContext.ui().progress().run("Uninstall " + packageRequest.getName() + "/" + packageRequest.getVersion(), false,
                     progressBar -> settingPlugin.unInstallPackage(entityContext, packageRequest, progressBar),
                     ex -> packagesInProgress.remove(packageRequest.getName()));
         }

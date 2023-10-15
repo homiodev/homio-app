@@ -96,8 +96,8 @@ public class AuthController {
 
     private void addUserNotificationBlock(String entityID, String email, boolean replace) {
         String key = "user-" + entityID;
-        if (replace || !entityContext.ui().isHasNotificationBlock(key)) {
-            entityContext.ui().addNotificationBlock(key, email, new Icon("fas fa-user", "#AAAC2C"), builder ->
+        if (replace || !entityContext.ui().notification().isHasBlock(key)) {
+            entityContext.ui().notification().addBlock(key, email, new Icon("fas fa-user", "#AAAC2C"), builder ->
                     builder.visibleForUser(email)
                             .linkToEntity(entityContext.getEntityRequire(entityID))
                             .setBorderColor("#AAAC2C")

@@ -18,6 +18,7 @@ import org.homio.api.ui.field.UIField;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.config.TransactionManagerContext;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
+import org.homio.app.model.var.WorkspaceGroup;
 import org.homio.app.model.var.WorkspaceVariable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -134,6 +135,10 @@ public class AbstractRepository<T extends BaseEntity> {
                     wse.getWidgetEntity().getSeries().remove(entity);
                 } else if (entity instanceof WorkspaceVariable wv) {
                     wv.getWorkspaceGroup().getWorkspaceVariables().remove(entity);
+                } else if (entity instanceof WorkspaceGroup wg) {
+                    if(wg.getParent() != null) {
+                        wg.getParent().getChildrenGroups().remove(wg);
+                    }
                 }
                 log.warn("Entity <{}> was removed", entity);
             }

@@ -105,7 +105,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
     public void updateNotificationBlock(@Nullable Exception ex) {
         // login if no private key found
         String name = format("Cloud: ${SELECTION.%s}", StringUtils.uncapitalize(getClass().getSimpleName()));
-        entityContext.ui().addNotificationBlock("cloud", name, new Icon("fas fa-cloud", "#5C7DAC"), builder -> {
+        entityContext.ui().notification().addBlock("cloud", name, new Icon("fas fa-cloud", "#5C7DAC"), builder -> {
             builder.setStatus(entity.getStatus()).linkToEntity(entity);
             if (!entity.getStatus().isOnline()) {
                 String info = defaultIfEmpty(entity.getStatusMessage(), defaultIfEmpty(CommonUtils.getErrorMessage(ex), "Unknown error"));
@@ -152,13 +152,13 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
             }
         } catch (RestClientResponseException ce) {
             log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ce));
-            entityContext.ui().sendErrorMessage(getClientError(ce));
+            entityContext.ui().toastr().error(getClientError(ce));
         } catch (Exception ex) {
             log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ex));
             if (ex.getCause() instanceof UnknownHostException) {
-                entityContext.ui().sendErrorMessage(Lang.getServerMessage("ERROR.CLOUD_UNKNOWN_HOST", ex.getCause().getMessage()));
+                entityContext.ui().toastr().error(Lang.getServerMessage("ERROR.CLOUD_UNKNOWN_HOST", ex.getCause().getMessage()));
             } else {
-                entityContext.ui().sendErrorMessage("W.ERROR.SYNC");
+                entityContext.ui().toastr().error("W.ERROR.SYNC");
             }
         }
     }
@@ -184,7 +184,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
     }
 
     public ActionResponseModel openSyncDialog() {
-        entityContext.ui().sendDialogRequest("cloud_sync", "CLOUD.SYNC_TITLE",
+        entityContext.ui().dialog().sendDialogRequest("cloud_sync", "CLOUD.SYNC_TITLE",
                 (responseType, pressedButton, parameters) ->
                         handleSync(entityContext, parameters),
                 dialogModel -> {

@@ -319,7 +319,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
 
     @Override
     public @Nullable String getSnapshotUri() {
-        return "/cgi-bin/api.cgi?cmd=Snap&channel=%s&rs=homio".formatted(nvrChannel);
+        return "/cgi-bin/api.cgi?cmd=Snap&channel=%s&rs=homio".formatted(getEntity().getNvrChannel());
     }
 
     @Override
@@ -552,7 +552,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
         if (requireAuth) {
             url = updateURL(url);
         }
-        return "http://" + this.ip + ":" + getEntity().getRestPort() + "/cgi-bin/api.cgi?" + url;
+        return "http://" + getEntity().getIp() + ":" + getEntity().getRestPort() + "/cgi-bin/api.cgi?" + url;
     }
 
     private void loginIfRequire() {
@@ -577,7 +577,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
         if (root.getError() == null) {
             return true;
         }
-        getEntityContext().ui().sendErrorMessage("Error while updating reolink settings. " + root.getError().getDetail());
+        getEntityContext().ui().toastr().error("Error while updating reolink settings. " + root.getError().getDetail());
         return false;
     }
 
@@ -594,7 +594,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
         ReolinkCommand command = ReolinkCommand.valueOf("Set" + configuration.group);
         if (firePostGetCode(command,
             new ReolinkCmd(0, command.name(), request))) {
-            getEntityContext().ui().sendSuccessMessage("Reolink '" + configuration.key + "' changed  successfully");
+            getEntityContext().ui().toastr().success("Reolink '" + configuration.key + "' changed  successfully");
         }
     }*/
 
@@ -614,7 +614,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
         ReolinkCommand command = ReolinkCommand.valueOf("Set" + configuration.group);
         if (firePostGetCode(command,
             new ReolinkCmd(0, command.name(), request))) {
-            getEntityContext().ui().sendSuccessMessage("Reolink '" + configuration.key + "' changed  successfully");
+            getEntityContext().ui().toastr().success("Reolink '" + configuration.key + "' changed  successfully");
         }
     }
 
@@ -647,10 +647,10 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
         sendCameraRequest(cmd, param, root -> {
             try {
                 testForErrors(root);
-                getEntityContext().ui().sendSuccessMessage("Reolink set " + cmd + " applied successfully");
+                getEntityContext().ui().toastr().success("Reolink set " + cmd + " applied successfully");
             } catch (Exception ex) {
                 log.error("[{}]: Cmd: {}. Error: {}", entityID, cmd, ex.getMessage());
-                getEntityContext().ui().sendErrorMessage("Error while updating reolink param. " + ex.getMessage());
+                getEntityContext().ui().toastr().error("Error while updating reolink param. " + ex.getMessage());
             }
         });
     }

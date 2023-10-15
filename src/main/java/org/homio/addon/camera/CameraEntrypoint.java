@@ -29,7 +29,7 @@ public class CameraEntrypoint implements AddonEntrypoint {
     public void init() {
         entityContext.event().runOnceOnInternetUp("scan-cameras", () -> {
             // fire rescan whole possible items to see if ip address has been changed
-            entityContext.getBean(OnvifCameraHttpScanner.class).executeScan(entityContext, null, null, true);
+            entityContext.getBean(OnvifCameraHttpScanner.class).executeScan(entityContext, null, null);
         });
     }
 
@@ -39,7 +39,7 @@ public class CameraEntrypoint implements AddonEntrypoint {
             @Nullable Supplier<String> titleSupplier,
             @NotNull Icon icon,
             @Nullable Consumer<UILayoutBuilder> settingsBuilder) {
-        entityContext.ui().addOrUpdateNotificationBlock("CAMERA", "CAMERA", new Icon("fas fa-video", "#367387"),
+        entityContext.ui().notification().addOrUpdateBlock("CAMERA", "CAMERA", new Icon("fas fa-video", "#367387"),
                 builder -> {
                     String text = titleSupplier == null ? entity.getTitle() : titleSupplier.get();
                     NotificationInfoLineBuilder info = builder.addInfo(text, icon);

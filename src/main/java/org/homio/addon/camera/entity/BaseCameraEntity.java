@@ -56,6 +56,7 @@ import org.homio.api.ui.field.action.UIActionButton;
 import org.homio.api.ui.field.action.UIActionInput;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.ui.field.condition.UIFieldDisableEditOnCondition;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.api.ui.field.image.UIFieldImage;
 import org.homio.api.util.CommonUtils;
@@ -81,6 +82,7 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
     EntityService<S, T> {
 
     public static final String RUN_CMD = "<span class=\"chip\" style=\"color:%s;border-color: %s;\">%s</span>";
+    public static final String FOLDER = "camera";
 
     @UIField(order = 6, hideOnEmpty = true, hideInEdit = true, color = Color.RED)
     @UIFieldGroup("GENERAL")
@@ -176,8 +178,6 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
         return EntityService.super.getService();
     }
 
-    public abstract String getFolderName();
-
     @UIContextMenuAction(value = "RECORD_MP4", icon = "fas fa-file-video", inputs = {
         @UIActionInput(name = "fileName", value = "record_${timestamp}", min = 4, max = 30),
         @UIActionInput(name = "secondsToRecord", type = UIActionInput.Type.number, value = "10", min = 5, max = 100)
@@ -193,6 +193,7 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
     }
 
     @UIField(order = 15, inlineEdit = true)
+    @UIFieldDisableEditOnCondition("return !context.get('configured')")
     @UIFieldGroup("GENERAL")
     public boolean isStart() {
         return getJsonData("start", false);
@@ -201,6 +202,10 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
     public BaseCameraEntity<?, ?> setStart(boolean start) {
         setJsonData("start", start);
         return this;
+    }
+
+    public boolean isConfigured() {
+        return true;
     }
 
     @UIContextMenuAction(value = "RECORD_GIF", icon = "fas fa-magic", inputs = {
@@ -402,7 +407,7 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
 
     @Override
     public void afterDelete() {
-        Path path = CommonUtils.getMediaPath().resolve(getFolderName()).resolve(getEntityID());
+        Path path = CommonUtils.getMediaPath().resolve(FOLDER).resolve(getEntityID());
         if (Files.exists(path)) {
             try {
                 FileUtils.deleteDirectory(path.toFile());
@@ -410,6 +415,11 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
                 log.error("Error during delete video directory: {}", path, ex);
             }
         }
+    }
+
+    @Override
+    public void afterUpdate() {
+        super.afterUpdate();
     }
 
     @JsonIgnore
@@ -437,7 +447,7 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
 
     @JsonIgnore
     public @NotNull String getGroupID() {
-        return Objects.requireNonNull(getIeeeAddress());
+        return Objects.requireNonNull(StringUtils.defaultIfEmpty(getIeeeAddress(), getEntityID()));
     }
 
     public static class UpdateSnapshotActionHandler implements UIActionHandler {
@@ -500,7 +510,7 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
 
     @Override
     public @NotNull List<ConfigDeviceDefinition> findMatchDeviceConfigurations() {
-        return getService().findDevices();
+        return optService().map(s->s.findDevices()).orElse(List.of());
     }
 
     @Override

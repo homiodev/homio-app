@@ -93,6 +93,7 @@ public class WorkspaceGroup extends BaseEntity
 
     @UIField(order = 15, hideInEdit = true)
     public int getVarCount() {
+        if (workspaceVariables == null) {return 0;}
         return workspaceVariables.size() +
             (childrenGroups == null ? 0 : childrenGroups
                 .stream()

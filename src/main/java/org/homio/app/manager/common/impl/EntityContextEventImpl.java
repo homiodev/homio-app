@@ -44,6 +44,7 @@ import org.homio.api.EntityContextBGP;
 import org.homio.api.EntityContextEvent;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.BaseEntityIdentifier;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
@@ -254,7 +255,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
                 });
                 scheduleFuture.setDescription("Listen udp: " + hostPortKey);
             } catch (Exception ex) {
-                entityContext.ui().addOrUpdateNotificationBlock("UPD", "UDP", new Icon("fas fa-kip-sign", "#482594"), blockBuilder -> {
+                entityContext.ui().notification().addOrUpdateBlock("UPD", "UDP", new Icon("fas fa-kip-sign", "#482594"), blockBuilder -> {
                     String info = Lang.getServerMessage("UDP_ERROR", FlowMap.of("key", hostPortKey, "msg", ex.getMessage()));
                     blockBuilder.addInfo(info, new Icon("fas fa-triangle-exclamation"));
                 });
@@ -378,7 +379,6 @@ public class EntityContextEventImpl implements EntityContextEvent {
                 super.onPostDelete(event);
                 if (event.getEntity() instanceof BaseEntity baseEntity) {
                     baseEntity.setEntityContext(entityContext);
-                    baseEntity.afterDelete();
                     updateCacheEntity(entityContext, event.getEntity(), ItemAction.Remove);
                 }
                 entityUpdatesQueue.add(new EntityUpdate(event.getEntity(), EntityUpdateAction.Delete));
@@ -405,16 +405,20 @@ public class EntityContextEventImpl implements EntityContextEvent {
 
     // Try to instantiate service associated with entity
     private static void loadEntityService(EntityContextImpl entityContext, Object entity) {
-        if (entity instanceof EntityService) {
-            Optional<?> serviceOptional = ((EntityService<?, ?>) entity).getOrCreateService(entityContext);
-            // Update entity into service
-            if (serviceOptional.isPresent()) {
-                try {
-                    EntityService.ServiceInstance service = (ServiceInstance) serviceOptional.get();
-                    service.entityUpdated((EntityService) entity);
-                } catch (Exception ex) {
-                    ((EntityService<?, ?>) entity).setStatusError(ex);
+        if (entity instanceof EntityService es) {
+            try {
+                Optional<?> serviceOptional = ((EntityService<?, ?>) entity).getOrCreateService(entityContext);
+                // Update entity into service
+                if (serviceOptional.isPresent()) {
+                    try {
+                        EntityService.ServiceInstance service = (ServiceInstance) serviceOptional.get();
+                        service.entityUpdated((EntityService) entity);
+                    } catch (Exception ex) {
+                        ((EntityService<?, ?>) entity).setStatusError(ex);
+                    }
                 }
+            } catch (Exception ex) {
+                log.error("[{}]: Unable to create EntityService for entity: {}.Msg: {}", es.getEntityID(), es, CommonUtils.getErrorMessage(ex));
             }
         }
     }
@@ -437,34 +441,39 @@ public class EntityContextEventImpl implements EntityContextEvent {
         Insert((context, entity) -> {
             postInsertUpdate(context, entity, true);
             if (entity instanceof BaseEntity) {
-                context.ui().sendSuccessMessage(Lang.getServerMessage("ENTITY_CREATED", ((BaseEntity) entity).getEntityID()));
+                context.ui().toastr().success(Lang.getServerMessage("ENTITY_CREATED", ((BaseEntity) entity).getEntityID()));
             }
         }),
         Update((context, entity) -> postInsertUpdate(context, entity, false)),
         Delete((context, entity) -> {
-            if (entity instanceof BaseEntity) {
+            if (entity instanceof BaseEntity be) {
                 // execute in separate thread
-                context.bgp().builder("delete-delay-entity-" + ((BaseEntity) entity).getEntityID())
+                context.bgp().builder("delete-delay-entity-" + be.getEntityID())
                        .execute(() -> {
+                           be.afterDelete();
+                           context.var().deleteGroup(be.getEntityID());
+                           if (be instanceof DeviceBaseEntity dbe) {
+                               context.var().deleteGroup(dbe.getIeeeAddress());
+                           }
                            // destroy any additional services
-                           if (entity instanceof EntityService) {
+                           if (be instanceof EntityService) {
                                try {
-                                   ((EntityService<?, ?>) entity).destroyService();
+                                   ((EntityService<?, ?>) be).destroyService();
                                } catch (Exception ex) {
                                    log.warn("Unable to destroy service for entity: {}", getTitle());
                                }
                            }
-                           ((BaseEntity) entity).afterDelete();
+                           be.afterDelete();
 
-                           String entityID = ((BaseEntity) entity).getEntityID();
+                           String entityID = be.getEntityID();
                            // remove all status for entity
                            EntityContextStorageImpl.ENTITY_MEMORY_MAP.remove(entityID);
                            // remove in-memory data if any exists
                            InMemoryDB.removeService(entityID);
                            // clear all registered console plugins if any exists
-                           context.ui().unRegisterConsolePlugin(entityID);
+                           context.ui().console().unRegisterPlugin(entityID);
                            // remove any registered notifications/notification block
-                           context.ui().removeNotificationBlock(entityID);
+                           context.ui().notification().removeBlock(entityID);
                            // remove in-memory data
                            context.getEntityContextStorageImpl().remove(entityID);
                        });

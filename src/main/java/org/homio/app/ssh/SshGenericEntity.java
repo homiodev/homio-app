@@ -207,9 +207,9 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         entityContext.bgp().runWithProgress("generate-ssh")
                 .onFinally(exception -> {
                     if (exception != null) {
-                        entityContext.ui().sendErrorMessage("ERROR.SSH_GENERATE");
+                        entityContext.ui().toastr().error("ERROR.SSH_GENERATE");
                     } else {
-                        entityContext.ui().sendSuccessMessage("ACTION.RESPONSE.SUCCESS_SSH_GENERATE");
+                        entityContext.ui().toastr().success("ACTION.RESPONSE.SUCCESS_SSH_GENERATE");
                     }
                 })
                 .execute(progressBar -> {

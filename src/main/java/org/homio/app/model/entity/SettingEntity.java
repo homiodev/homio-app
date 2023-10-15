@@ -14,6 +14,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
+import org.homio.api.model.Icon;
 import org.homio.api.model.JSON;
 import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPlugin;
@@ -34,9 +35,6 @@ public class SettingEntity extends BaseEntity {
 
     @Column(length = 65535)
     private String value;
-
-    @Transient
-    private String color;
 
     @Transient
     private String defaultValue;
@@ -75,10 +73,10 @@ public class SettingEntity extends BaseEntity {
     private Collection<OptionModel> availableValues;
 
     @Transient
-    private String icon;
+    private Icon icon;
 
     @Transient
-    private String toggleIcon;
+    private Icon toggleIcon;
 
     @Transient
     private String settingType;
@@ -97,6 +95,9 @@ public class SettingEntity extends BaseEntity {
 
     @Transient
     private boolean primary;
+
+    @Transient
+    private boolean multiSelect;
 
     @Getter
     @JsonIgnore

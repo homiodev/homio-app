@@ -110,10 +110,10 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
 
     @RequiredArgsConstructor
     private enum PopupType {
-        INFO((context, msg) -> context.ui().sendInfoMessage(msg), NotificationLevel.info),
-        WARN((context, msg) -> context.ui().sendWarningMessage(msg), NotificationLevel.warning),
-        ERROR((context, msg) -> context.ui().sendErrorMessage(msg), NotificationLevel.error),
-        SUCCESS((context, msg) -> context.ui().sendSuccessMessage(msg), NotificationLevel.success);
+        INFO((context, msg) -> context.ui().toastr().info(msg), NotificationLevel.info),
+        WARN((context, msg) -> context.ui().toastr().warn(msg), NotificationLevel.warning),
+        ERROR((context, msg) -> context.ui().toastr().error(msg), NotificationLevel.error),
+        SUCCESS((context, msg) -> context.ui().toastr().success(msg), NotificationLevel.success);
 
         private final BiConsumer<EntityContext, String> popupHandler;
         private final NotificationLevel level;

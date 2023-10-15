@@ -55,6 +55,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler {
         try {
             int debounce = 3;
             String content = msg.toString();
+            int nvrChannel = getEntity().getNvrChannel();
             log.debug("[{}]: HTTP Result back from camera is \t:{}:", entityID, content);
             if (content.contains("--boundary")) {// Alarm checking goes in here//
                 if (content.contains("<EventNotificationAlert version=\"")) {
@@ -308,24 +309,25 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler {
 
     @Override
     public @Nullable String getSnapshotUri() {
-        return "/ISAPI/Streaming/channels/" + nvrChannel + "01" + "/picture";
+        return "/ISAPI/Streaming/channels/" + getEntity().getNvrChannel() + "01" + "/picture";
     }
 
     @Override
     public @Nullable String getMjpegUri() {
-        return "/ISAPI/Streaming/channels/" + nvrChannel + "02" + "/httppreview";
+        return "/ISAPI/Streaming/channels/" + getEntity().getNvrChannel() + "02" + "/httppreview";
     }
 
     @Override
     public void postInitializeCamera(EntityContext entityContext) {
         if (service.lowPriorityRequests.isEmpty()) {
-            service.addLowRequestGet("/ISAPI/System/IO/inputs/" + nvrChannel + "/status");
+            service.addLowRequestGet("/ISAPI/System/IO/inputs/" + getEntity().getNvrChannel() + "/status");
         }
     }
 
     @Override
     public void onCameraConnected() {
         addEndpoints();
+        int nvrChannel = getEntity().getNvrChannel();
         service.sendHttpGET("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "01/motionDetection");
         service.sendHttpGET("/ISAPI/Smart/LineDetection/" + nvrChannel + "01");
         service.sendHttpGET("/ISAPI/Smart/AudioDetection/channels/" + nvrChannel + "01");
@@ -335,40 +337,40 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler {
 
     private void addEndpoints() {
         service.addEndpointSwitch(ENDPOINT_ENABLE_LINE_CROSSING_ALARM, state ->
-            hikChangeSetting("/ISAPI/Smart/LineDetection/" + nvrChannel + "01", "enabled",
+            hikChangeSetting("/ISAPI/Smart/LineDetection/" + getEntity().getNvrChannel() + "01", "enabled",
                 "<enabled>" + state.boolValue() + "</enabled>"));
 
         service.addEndpointSwitch(ENDPOINT_ENABLE_MOTION_ALARM, state ->
-            hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "01/motionDetection",
+            hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + getEntity().getNvrChannel() + "01/motionDetection",
                 "enabled", "<enabled>" + state.boolValue() + "</enabled>"));
 
         service.addEndpointSwitch(ENDPOINT_ENABLE_FIELD_DETECTION_ALARM, state ->
-            hikChangeSetting("/ISAPI/Smart/FieldDetection/" + nvrChannel + "01", "enabled",
+            hikChangeSetting("/ISAPI/Smart/FieldDetection/" + getEntity().getNvrChannel() + "01", "enabled",
                 "<enabled>" + state.boolValue() + "</enabled>"));
 
         service.addEndpointSwitch(ENDPOINT_ACTIVATE_ALARM_OUTPUT, state ->
-            hikSendXml("/ISAPI/System/IO/outputs/" + nvrChannel + "/trigger",
+            hikSendXml("/ISAPI/System/IO/outputs/" + getEntity().getNvrChannel() + "/trigger",
                 "<IOPortData version=\"1.0\" xmlns=\"http://www.hikvision.com/ver10/XMLSchema\">\r\n    <outputState>" +
                     (state.boolValue() ? "high" : "low") + "</outputState>\r\n</IOPortData>\r\n"));
 
         service.addEndpointInput(ENDPOINT_TEXT_OVERLAY, state -> {
             if (state.stringValue().isEmpty()) {
-                hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1",
+                hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + getEntity().getNvrChannel() + "/overlays/text/1",
                     "enabled", "<enabled>false</enabled>");
             } else {
-                hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1",
+                hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + getEntity().getNvrChannel() + "/overlays/text/1",
                     "displayText", "<displayText>" + state.stringValue() + "</displayText>");
-                hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1",
+                hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + getEntity().getNvrChannel() + "/overlays/text/1",
                     "enabled", "<enabled>true</enabled>");
             }
         });
 
         service.addEndpointSwitch(ENDPOINT_ENABLE_EXTERNAL_ALARM, state ->
-            hikChangeSetting("/ISAPI/System/IO/inputs/" + nvrChannel,
+            hikChangeSetting("/ISAPI/System/IO/inputs/" + getEntity().getNvrChannel(),
                 "enabled", "<enabled>" + state.boolValue() + "</enabled>"));
 
         service.addEndpointSwitch(ENDPOINT_TRIGGER_EXTERNAL_ALARM_INPUT, state ->
-            hikChangeSetting("/ISAPI/System/IO/inputs/" + nvrChannel, "triggering",
+            hikChangeSetting("/ISAPI/System/IO/inputs/" + getEntity().getNvrChannel(), "triggering",
                 "<triggering>" + (state.boolValue() ? "high" : "low") + "</triggering>"));
 
         service.addEndpointSwitch(ENDPOINT_ENABLE_PIR_ALARM, state ->

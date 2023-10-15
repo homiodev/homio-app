@@ -149,7 +149,13 @@
             <version>1.70</version>
         </dependency>
 
-        <dependency>
+      <dependency>
+        <artifactId>addon-ipscanner</artifactId>
+        <groupId>org.homio.addon</groupId>
+        <version>1.0.2-SNAPSHOT</version>
+      </dependency>
+
+      <dependency>
             <artifactId>addon-camera</artifactId>
             <groupId>org.homio.addon</groupId>
             <version>${homio-primary-addons.version}</version>

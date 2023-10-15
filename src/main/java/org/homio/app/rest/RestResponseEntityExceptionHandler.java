@@ -84,7 +84,7 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
             msg += ". src: " + ex.getStackTrace()[0].toString();
         }
         if (ex instanceof ServerException) {
-            entityContext.ui().sendErrorMessage(ex);
+            entityContext.ui().toastr().error(ex);
         }
         log.error("Error <{}>", msg, ex);
         Objects.requireNonNull(((ServletWebRequest) request).getResponse())

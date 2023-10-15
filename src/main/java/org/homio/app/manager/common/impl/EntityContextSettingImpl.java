@@ -331,7 +331,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
                     try {
                         consumer.accept(value);
                     } catch (Exception ex) {
-                        entityContext.ui().sendErrorMessage(ex);
+                        entityContext.ui().toastr().error(ex);
                         log.error("Error while fire listener for setting <{}>. Value: <{}>", settingPluginClazz.getSimpleName(), value, ex);
                     }
                 }
@@ -343,7 +343,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
                 try {
                     consumer.accept(value);
                 } catch (Exception ex) {
-                    entityContext.ui().sendErrorMessage(ex);
+                    entityContext.ui().toastr().error(ex);
                     log.error("Error while fire listener for setting <{}>. Value: <{}>", settingPluginClazz.getSimpleName(), value, ex);
                 }
             }

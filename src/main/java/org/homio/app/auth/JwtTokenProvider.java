@@ -74,8 +74,8 @@ public class JwtTokenProvider implements ContextCreated {
                 });
                 if (removed) {
                     user.logInfo("logged out");
-                    entityContext.ui().removeNotificationBlock("user-" + user.getEmail());
-                    entityContext.ui().reloadWindow("sys.auth_changed");
+                    entityContext.ui().notification().removeBlock("user-" + user.getEmail());
+                    entityContext.ui().dialog().reloadWindow("sys.auth_changed");
                 }
             }
         });
@@ -135,7 +135,7 @@ public class JwtTokenProvider implements ContextCreated {
     private void regenerateSecurityID(EntityContextImpl entityContext) {
         this.securityId = buildSecurityId();
         this.jwtParser = Jwts.parser().setSigningKey(securityId);
-        entityContext.ui().reloadWindow("sys.auth_changed");
+        entityContext.ui().dialog().reloadWindow("sys.auth_changed");
     }
 
     private void removeOutdatedTokens() {

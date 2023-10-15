@@ -98,7 +98,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         EntityContextBGP.cancel(processContext);
         log.warn("Dispose mediamtx", ex);
 
-        entityContext.ui().sendWarningMessage("Dispose mediamtx");
+        entityContext.ui().toastr().warn("Dispose mediamtx");
     }
 
     @Override
@@ -185,7 +185,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
             try {
                 projectUpdate.getGitHubProject().deleteProject();
             } catch (Exception ex) {
-                getEntityContext().ui().sendErrorMessage(
+                getEntityContext().ui().toastr().error(
                     Lang.getServerMessage("ZIGBEE.ERROR.DELETE",
                         projectUpdate.getGitHubProject().getLocalProjectPath().toString()));
                 throw ex;
@@ -280,7 +280,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     }
 
     /*private void updateNotificationBlock() {
-        entityContext.ui().addNotificationBlock(entityID, "MediaMTX", new Icon("fas fa-square-rss", "#308BB3"), builder -> {
+        entityContext.ui().notification().addBlock(entityID, "MediaMTX", new Icon("fas fa-square-rss", "#308BB3"), builder -> {
             builder.setStatus(entity.getStatus());
             builder.linkToEntity(entity);
             builder.setUpdatable(entity);

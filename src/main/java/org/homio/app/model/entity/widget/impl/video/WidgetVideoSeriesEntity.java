@@ -12,6 +12,7 @@ import org.homio.api.ui.field.UIFieldIgnoreParent;
 import org.homio.api.ui.field.selection.UIFieldTreeNodeSelection;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
+import org.homio.api.util.DataSourceUtil;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 
@@ -94,7 +95,9 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
             List<OptionModel> list = new ArrayList<>();
             String entityID = parameters.getBaseEntity().getEntityID();
-            list.add(OptionModel.of("$DEVICE_URL/rest/media/video/%s/snapshot.jpg".formatted(entityID), "snapshot.jpg"));
+            WidgetVideoSeriesEntity entity = (WidgetVideoSeriesEntity) parameters.getBaseEntity();
+            String videoEntityID = DataSourceUtil.getSelection(entity.getValueDataSource()).getEntityID();
+            list.add(OptionModel.of("$DEVICE_URL/rest/media/video/%s/snapshot.jpg".formatted(videoEntityID), "snapshot.jpg"));
             return list;
         }
     }

@@ -200,7 +200,7 @@ public abstract class UserBaseEntity extends IdentityEntity
         setPassword(newPassword, passwordEncoder);
         entityContext.save(this);
 
-        entityContext.ui().reloadWindow("USER.ALTERED_RELOAD");
+        entityContext.ui().dialog().reloadWindow("USER.ALTERED_RELOAD");
         return ActionResponseModel.showSuccess("USER.ALTERED");
     }
 

@@ -186,7 +186,6 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
     public BaseCameraService(T entity, EntityContext entityContext) {
         super(entityContext, entity, true);
         camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer(entity));
-        addPrimaryEndpoint();
     }
 
     private void createConnectionJob() {
@@ -253,6 +252,7 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
     public final void initializeCamera() {
         this.urls.clear();
         createOrUpdateDeviceGroup();
+        addPrimaryEndpoint();
         updateEntityStatus(INITIALIZE, null);
         log.info("[{}]: Initialize camera: <{}>", entityID, getEntity());
         camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer(entity));
@@ -273,7 +273,7 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
             resetAndRetryConnecting();
 
             if (status == Status.ERROR || status == REQUIRE_AUTH) {
-                entityContext.ui().sendErrorMessage("DISPOSE_VIDEO",
+                entityContext.ui().toastr().error("DISPOSE_VIDEO",
                     FlowMap.of("TITLE", entity.getTitle(), "REASON", reason));
             }
         }
@@ -388,7 +388,7 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
 
     public void ffmpegError(@NotNull String error) {
         log.error("[{}]: FFMPEG error: {}", entityID, error);
-        entityContext.ui().sendErrorMessage("FFMPEG error: ''" + entityID + ". " + error);
+        entityContext.ui().toastr().error("FFMPEG error: ''" + entityID + ". " + error);
     }
 
     public void assertOnline() {
@@ -407,7 +407,7 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
     @Override
     protected void firstInitialize() {
         log.info("[{}]: Initialize", entityID);
-        ffmpegOutputPath = CommonUtils.getMediaPath().resolve(entity.getFolderName()).resolve(entityID);
+        ffmpegOutputPath = CommonUtils.getMediaPath().resolve(BaseCameraEntity.FOLDER).resolve(entityID);
         ffmpegImageOutputPath = CommonUtils.createDirectoriesIfNotExists(ffmpegOutputPath.resolve("images"));
         ffmpegGifOutputPath = CommonUtils.createDirectoriesIfNotExists(ffmpegOutputPath.resolve("gif"));
         ffmpegMP4OutputPath = CommonUtils.createDirectoriesIfNotExists(ffmpegOutputPath.resolve("mp4"));
@@ -445,7 +445,7 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
     @Override
     @SneakyThrows
     protected final void initialize() {
-        if (!entity.isStart()) {
+        if (!entity.isStart() || !entity.isConfigured()) {
             dispose();
         } else if (videoStreamParametersHashCode != entity.getVideoParametersHashCode()) {
             dispose();
@@ -533,6 +533,9 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
     }
 
     private synchronized void dispose() {
+        if (entity.getStatus() == DONE) {
+            return;
+        }
         entity.setStatus(DONE);
         videoStreamParametersHashCode = entity.getVideoParametersHashCode();
         log.info("[{}]: Dispose camera: <{}>", entityID, getEntity());

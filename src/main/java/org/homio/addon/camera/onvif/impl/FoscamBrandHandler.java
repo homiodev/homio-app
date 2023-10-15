@@ -107,18 +107,20 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler {
     public void setAudioAlarmThreshold(int audioThreshold) {
         if (audioThreshold != this.audioThreshold) {
             this.audioThreshold = audioThreshold;
+            String user = getEntity().getUser();
+            String password = getEntity().getPassword().asString();
             if (audioThreshold == 0) {
                 service.sendHttpGET(CG + "setAudioAlarmConfig&isEnable=0&usr="
-                        + username + "&pwd=" + password);
+                        + user + "&pwd=" + password);
             } else if (audioThreshold <= 33) {
                 service.sendHttpGET(CG + "setAudioAlarmConfig&isEnable=1&sensitivity=0&usr="
-                        + username + "&pwd=" + password);
+                        + user + "&pwd=" + password);
             } else if (audioThreshold <= 66) {
                 service.sendHttpGET(CG + "setAudioAlarmConfig&isEnable=1&sensitivity=1&usr="
-                        + username + "&pwd=" + password);
+                        + user + "&pwd=" + password);
             } else {
                 service.sendHttpGET(CG + "setAudioAlarmConfig&isEnable=1&sensitivity=2&usr="
-                        + username + "&pwd=" + password);
+                        + user + "&pwd=" + password);
             }
         }
     }
@@ -130,16 +132,18 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler {
 
     @Override
     public void setMotionAlarmThreshold(int threshold) {
+        String user = getEntity().getUser();
+        String password = getEntity().getPassword().asString();
         if (threshold > 0) {
             if (getEntity().getCustomAudioAlarmUrl().isEmpty()) {
                 service.sendHttpGET(CG + "setAudioAlarmConfig&isEnable=1&usr="
-                        + username + "&pwd=" + password);
+                        + user + "&pwd=" + password);
             } else {
                 service.sendHttpGET(getEntity().getCustomAudioAlarmUrl());
             }
         } else {
             service.sendHttpGET(CG + "setAudioAlarmConfig&isEnable=0&usr="
-                    + username + "&pwd=" + password);
+                    + user + "&pwd=" + password);
         }
     }
 
@@ -160,8 +164,10 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler {
     @Override
     public void onCameraConnected() {
         addEndpoints();
-        service.sendHttpGET(CG + "getDevState&usr=" + username + "&pwd=" + password);
-        service.sendHttpGET(CG + "getAudioAlarmConfig&usr=" + username + "&pwd=" + password);
+        String user = getEntity().getUser();
+        String password = getEntity().getPassword().asString();
+        service.sendHttpGET(CG + "getDevState&usr=" + user + "&pwd=" + password);
+        service.sendHttpGET(CG + "getAudioAlarmConfig&usr=" + user + "&pwd=" + password);
     }
 
     private void addEndpoints() {
@@ -177,16 +183,20 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler {
             /*service.sendHttpGET(CG + "setInfraLedConfig&mode=1&usr=" + username + "&pwd=" + password);
             se tAttribute(ENDPOINT_AUTO_LED, OnOffType.OFF);
             */
+            String user = getEntity().getUser();
+            String password = getEntity().getPassword().asString();
             if (state.boolValue()) {
-                service.sendHttpGET(CG + "openInfraLed&usr=" + username + "&pwd=" + password);
+                service.sendHttpGET(CG + "openInfraLed&usr=" + user + "&pwd=" + password);
             } else {
-                service.sendHttpGET(CG + "closeInfraLed&usr=" + username + "&pwd=" + password);
+                service.sendHttpGET(CG + "closeInfraLed&usr=" + user + "&pwd=" + password);
             }
         });
 
         service.addEndpointSwitch(ENDPOINT_ENABLE_MOTION_ALARM, state -> {
-            String prefix = CG + "setMotionDetectConfig&isEnable=%s&usr=" + username + "&pwd=" + password;
-            String prefix1 = CG + "setMotionDetectConfig1&isEnable=%s&usr=" + username + "&pwd=" + password;
+            String user = getEntity().getUser();
+            String password = getEntity().getPassword().asString();
+            String prefix = CG + "setMotionDetectConfig&isEnable=%s&usr=" + user + "&pwd=" + password;
+            String prefix1 = CG + "setMotionDetectConfig1&isEnable=%s&usr=" + user + "&pwd=" + password;
             if (state.boolValue()) {
                 if (getEntity().getCustomMotionAlarmUrl().isEmpty()) {
                     service.sendHttpGET(prefix.formatted("1"));

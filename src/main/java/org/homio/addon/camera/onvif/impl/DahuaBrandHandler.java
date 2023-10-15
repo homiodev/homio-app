@@ -65,7 +65,7 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
             // determine if the motion detection is turned on or off.
             if (content.contains("table.MotionDetect[0].Enable=true")) {
                 getEndpointRequire(ENDPOINT_ENABLE_MOTION_ALARM).setValue(OnOffType.ON);
-            } else if (content.contains("table.MotionDetect[" + nvrChannel + "].Enable=false")) {
+            } else if (content.contains("table.MotionDetect[" + getEntity().getNvrChannel() + "].Enable=false")) {
                 getEndpointRequire(ENDPOINT_ENABLE_MOTION_ALARM).setValue(OnOffType.OFF);
             }
 
@@ -142,7 +142,7 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
 
     @Override
     public @Nullable String getMjpegUri() {
-        return "/cgi-bin/mjpg/video.cgi?channel=" + nvrChannel + "&subtype=1";
+        return "/cgi-bin/mjpg/video.cgi?channel=" + getEntity().getNvrChannel() + "&subtype=1";
     }
 
     @Override
@@ -155,7 +155,7 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
 
     @Override
     public @Nullable String getSnapshotUri() {
-        return "/cgi-bin/snapshot.cgi?channel=" + nvrChannel;
+        return "/cgi-bin/snapshot.cgi?channel=" + getEntity().getNvrChannel();
     }
 
     @Override

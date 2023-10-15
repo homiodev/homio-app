@@ -105,7 +105,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler {
                         && content.contains("response=\"200\";")) {// new
                         newApi = true;
                         log.debug("Alarm server successfully setup for a 2k+ Instar camera");
-                        service.urls.setRtspUri("rtsp://%s/livestream/12".formatted(ip));
+                        service.urls.setRtspUri("rtsp://%s/livestream/12".formatted(getEntity().getIp()));
                         service.urls.setMjpegUri("/livestream/12?action=play&media=mjpeg");
                         service.urls.setSnapshotUri("/snap.cgi?chn=12");
                     } else if (requestUrl.startsWith("/param.cgi?cmd=setmdalarm&-aname=server2&-switch=on&-interval=1")
