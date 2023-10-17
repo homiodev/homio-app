@@ -62,7 +62,7 @@ public final class OptionUtil {
         return filterAndGroupingOptions(options);
     }
 
-    public static List<OptionModel> buildOptions(List<? extends BaseEntity> entities, EntityContextImpl entityContext) {
+    public static List<OptionModel> buildOptions(Collection<? extends BaseEntity> entities, EntityContext entityContext) {
         List<OptionModel> options = new ArrayList<>();
         assembleItemsToOptions(options, null, entities, entityContext, null);
         return groupingOptions(filterOptions(options));
@@ -176,10 +176,9 @@ public final class OptionUtil {
     public static void assembleItemsToOptions(
         @NotNull List<OptionModel> list,
         @Nullable Class<? extends HasEntityIdentifier> sourceClassType,
-        @NotNull List<? extends BaseEntity> items,
+        @NotNull Collection<? extends BaseEntity> items,
         @NotNull EntityContext entityContext,
         @Nullable Object classEntityForDynamicOptionLoader) {
-        Collections.sort(items);
 
         for (BaseEntity baseEntity : items) {
             String lastValue = tryFetchCurrentValueFromEntity(baseEntity, entityContext);
@@ -210,6 +209,7 @@ public final class OptionUtil {
             updateSelectedOptionModel(baseEntity, classEntityForDynamicOptionLoader, sourceClassType, optionModel);
             list.add(optionModel);
         }
+        Collections.sort(list);
     }
 
     public static void updateSelectedOptionModel(Object target, Object requestedEntity, Class<?> sourceClassType, OptionModel optionModel) {

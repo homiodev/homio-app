@@ -24,8 +24,7 @@ import org.homio.addon.camera.setting.onvif.ScanOnvifHttpDefaultUserAuthSetting;
 import org.homio.addon.camera.setting.onvif.ScanOnvifHttpMaxPingTimeoutSetting;
 import org.homio.addon.camera.setting.onvif.ScanOnvifPortsSetting;
 import org.homio.api.EntityContext;
-import org.homio.api.service.camera.VideoStreamScanner;
-import org.homio.api.service.scan.BaseItemsDiscovery;
+import org.homio.api.service.discovery.VideoStreamScanner;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.HardwareUtils;
 import org.homio.api.util.Lang;
@@ -40,7 +39,7 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
 
     private static final int THREAD_COUNT = 8;
     private final EntityContext entityContext;
-    private BaseItemsDiscovery.DeviceScannerResult result;
+    private DeviceScannerResult result;
     private String headerConfirmButtonKey;
 
     @Override
@@ -50,16 +49,16 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
 
     @SneakyThrows
     @Override
-    public synchronized BaseItemsDiscovery.DeviceScannerResult scan(EntityContext entityContext,
+    public synchronized DeviceScannerResult scan(EntityContext entityContext,
                                                                     ProgressBar progressBar,
                                                                     String headerConfirmButtonKey) {
         return executeScan(entityContext, progressBar, headerConfirmButtonKey);
     }
 
-    public BaseItemsDiscovery.DeviceScannerResult executeScan(EntityContext entityContext, ProgressBar progressBar,
+    public DeviceScannerResult executeScan(EntityContext entityContext, ProgressBar progressBar,
         String headerConfirmButtonKey) {
         this.headerConfirmButtonKey = headerConfirmButtonKey;
-        this.result = new BaseItemsDiscovery.DeviceScannerResult();
+        this.result = new DeviceScannerResult();
         List<IpCameraEntity> allSavedCameraEntities = entityContext.findAll(IpCameraEntity.class);
         Map<String, IpCameraEntity> existsCameraByIpPort = allSavedCameraEntities.stream().collect(
             Collectors.toMap(e -> e.getIp() + ":" + e.getOnvifPort(), Function.identity()));

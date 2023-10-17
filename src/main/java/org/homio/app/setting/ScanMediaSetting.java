@@ -1,13 +1,13 @@
 package org.homio.app.setting;
 
-import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.types.MediaEntity;
+import org.homio.api.entity.types.MicroControllerBaseEntity;
 import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPluginButton;
-import org.jetbrains.annotations.NotNull;
 
-public class ScanVideoStreamSourcesSetting implements SettingPluginButton {
+public class ScanMediaSetting implements SettingPluginButton {
 
     @Override
     public int order() {
@@ -15,13 +15,13 @@ public class ScanVideoStreamSourcesSetting implements SettingPluginButton {
     }
 
     @Override
-    public @NotNull Icon getIcon() {
-        return new Icon("fas fa-qrcode", "#ED703E");
+    public Icon getIcon() {
+        return new Icon("fas fa-qrcode", "#A629A4");
     }
 
     @Override
     public String getConfirmMsg() {
-        return "TITLE.SCAN_VIDEO_STREAMS";
+        return "TITLE.SCAN_MEDIA";
     }
 
     @Override
@@ -31,6 +31,6 @@ public class ScanVideoStreamSourcesSetting implements SettingPluginButton {
 
     @Override
     public Class<? extends BaseEntity> availableForEntity() {
-        return BaseCameraEntity.class;
+        return MediaEntity.class;
     }
 }

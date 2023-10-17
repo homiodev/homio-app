@@ -139,7 +139,7 @@ public class SettingController implements ContextRefreshed {
 
     @GetMapping("/name")
     public List<OptionModel> getSettingNames() {
-        return OptionUtil.buildOptions(entityContext.findAll(SettingEntity.class), entityContext);
+        return entityContext.toOptionModels(entityContext.findAll(SettingEntity.class));
     }
 
     public List<SettingEntity> getSettings() {

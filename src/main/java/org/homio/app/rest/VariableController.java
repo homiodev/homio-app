@@ -112,7 +112,7 @@ public class VariableController {
     // show all read/write variables
     @GetMapping("/options")
     public List<OptionModel> getWorkspaceVariableValues() {
-        return OptionUtil.buildOptions(getAllVariables(), entityContext);
+        return entityContext.toOptionModels(getAllVariables());
     }
 
     @GetMapping("/{type}")

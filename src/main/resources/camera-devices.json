@@ -514,28 +514,28 @@
       "stateless": true,
       "order": 510,
       "icon": "fa-sort",
-      "iconColor": "#8035A6"
+      "iconColor": "#B0922E"
     },
     {
       "name": "tilt_cmd",
       "stateless": true,
       "order": 511,
       "icon": "fa-sort",
-      "iconColor": "#8035A6"
+      "iconColor": "#B0922E"
     },
     {
       "name": "zoom",
       "stateless": true,
       "order": 520,
       "icon": "fa-magnifying-glass-plus",
-      "iconColor": "#8035A6"
+      "iconColor": "#32A15E"
     },
     {
       "name": "zoom_cmd",
       "stateless": true,
       "order": 521,
       "icon": "fa-magnifying-glass-plus",
-      "iconColor": "#8035A6"
+      "iconColor": "#32A15E"
     },
     {
       "name": "activate_alarm_output",

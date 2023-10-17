@@ -59,12 +59,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -93,6 +90,7 @@ import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.HardwareUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.onvif.ver10.schema.PTZPreset;
 import org.onvif.ver10.schema.Profile;
 import org.onvif.ver10.schema.VideoResolution;
 
@@ -349,7 +347,7 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
         }
     }
 
-    private Profile getProfile() {
+    public Profile getProfile() {
         List<Profile> profiles = onvifDeviceState.getProfiles();
         if (profiles.isEmpty()) {
             throw new IllegalStateException("No onvif profiles found");
@@ -492,27 +490,39 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
         brandHandler.postInitializeCamera(entityContext);
     }
 
-    public void gotoPreset(int preset) {
-        onvifDeviceState.getPtzDevices().gotoPreset(preset, getProfile());
-    }
-
     @Override
     protected void onCameraConnected() {
         addEndpoints();
         brandHandler.onCameraConnected();
     }
 
+    public @NotNull List<OptionModel> getPtzPresets() {
+        List<PTZPreset> ptzPresets = onvifDeviceState.getPtzDevices().getPresets();
+        if (ptzPresets != null) {
+            return ptzPresets
+                .stream()
+                .map(p -> OptionModel.of(p.getToken(), p.getName()).setDescription(p.getPTZPosition().toString()))
+                .sorted()
+                .toList();
+        }
+        return List.of();
+    }
+
     private void addEndpoints() {
         if (isSupportPtz()) {
-            addTiltEndpoint();
-            addZoomEndpoint();
-            addPanEndpoint();
+            if (onvifDeviceState.getPtzDevices().isMoveSupported()) {
+                addTiltEndpoint();
+                addPanEndpoint();
+            }
+            if (onvifDeviceState.getPtzDevices().isZoomSupported()) {
+                addZoomEndpoint();
+            }
 
-            Set<String> presets = IntStream.range(1, 26).boxed().map(id -> "Preset " + id).collect(Collectors.toCollection(TreeSet::new));
-            addEndpointEnum(ENDPOINT_GOTO_PRESET, presets, state -> {
-                int preset = Integer.parseInt(state.stringValue().substring("Preset ".length()));
-                gotoPreset(preset);
-            });
+            List<OptionModel> presets = getPtzPresets();
+            if (!presets.isEmpty()) {
+                addEndpointEnum(ENDPOINT_GOTO_PRESET, presets, state ->
+                    onvifDeviceState.getPtzDevices().gotoPreset(state.stringValue(), getProfile()));
+            }
         }
     }
 
@@ -606,7 +616,7 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
                 dialogModel.disableKeepOnUi();
                 dialogModel.appearance(new Icon("fas fa-camera"), null);
                 List<ActionInputParameter> inputs = new ArrayList<>();
-                inputs.add(ActionInputParameter.text("user", entity.getUser()));
+                inputs.add(ActionInputParameter.text("user", entity.getUser(), "min:3"));
                 inputs.add(ActionInputParameter.text("password", entity.getPassword().asString()));
 
                 dialogModel.submitButton("AUTHENTICATE", button ->

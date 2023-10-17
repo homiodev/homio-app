@@ -19,7 +19,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.homio.addon.camera.entity.CameraActionsContext;
 import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.addon.camera.handler.BaseBrandCameraHandler;
 import org.homio.addon.camera.service.CameraDeviceEndpoint;
@@ -35,7 +34,6 @@ import org.springframework.http.MediaType;
 @NoArgsConstructor
 public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler
     implements
-    CameraActionsContext,
     BaseBrandCameraHandler,
     HasDynamicUIFields {
 
@@ -61,7 +59,6 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler
         return service.getEntityContext();
     }
 
-    @Override
     public IpCameraEntity getEntity() {
         return service.getEntity();
     }
@@ -69,10 +66,6 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler
     @Override
     public boolean isSharable() {
         return true;
-    }
-
-    public State getAttribute(String name) {
-        return service.getAttributes().getOrDefault(name, null);
     }
 
     public void assembleActions(UIInputBuilder uiInputBuilder) {

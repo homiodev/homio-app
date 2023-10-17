@@ -13,8 +13,7 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.UsbCameraEntity;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.VideoInputDevice;
-import org.homio.api.service.camera.VideoStreamScanner;
-import org.homio.api.service.scan.BaseItemsDiscovery;
+import org.homio.api.service.discovery.VideoStreamScanner;
 import org.homio.api.util.Lang;
 import org.homio.hquery.ProgressBar;
 import org.springframework.stereotype.Component;
@@ -30,9 +29,9 @@ public class UsbCameraScanner implements VideoStreamScanner {
     }
 
     @Override
-    public BaseItemsDiscovery.DeviceScannerResult scan(EntityContext entityContext, ProgressBar progressBar,
+    public DeviceScannerResult scan(EntityContext entityContext, ProgressBar progressBar,
                                                        String headerConfirmButtonKey) {
-        BaseItemsDiscovery.DeviceScannerResult result = new BaseItemsDiscovery.DeviceScannerResult();
+        DeviceScannerResult result = new DeviceScannerResult();
         List<VideoInputDevice> foundUsbVideoCameraDevices = new ArrayList<>();
 
         for (String deviceName : entityContext.media().getVideoDevices()) {

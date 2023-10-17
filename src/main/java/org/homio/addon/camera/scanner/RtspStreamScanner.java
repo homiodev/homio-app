@@ -35,7 +35,7 @@ public class RtspStreamScanner /*implements VideoStreamScanner*/ {
             }
         }
     };
-    private BaseItemsDiscovery.DeviceScannerResult result;
+    private DeviceScannerResult result;
     private String headerConfirmButtonKey;
     private final BiConsumer<String, SdpMessage> DISCOVERY_HANDLER = new BiConsumer<>() {
         @Override
@@ -90,10 +90,10 @@ public class RtspStreamScanner /*implements VideoStreamScanner*/ {
 
     @SneakyThrows
     @Override
-    public synchronized BaseItemsDiscovery.DeviceScannerResult scan(EntityContext entityContext, ProgressBar progressBar,
+    public synchronized DeviceScannerResult scan(EntityContext entityContext, ProgressBar progressBar,
                                                                     String headerConfirmButtonKey) {
         this.headerConfirmButtonKey = headerConfirmButtonKey;
-        this.result = new BaseItemsDiscovery.DeviceScannerResult();
+        this.result = new DeviceScannerResult();
         this.existsRtspStreamEntity = entityContext.findAll(CommonVideoStreamEntity.class)
                 .stream().collect(Collectors.toMap(CommonVideoStreamEntity::getIeeeAddress, Function.identity()));
         this.rtspAliveHandler = DISCOVERY_HANDLER;

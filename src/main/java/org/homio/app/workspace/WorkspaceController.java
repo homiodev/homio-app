@@ -16,7 +16,6 @@ import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.WorkspaceEntity;
 import org.homio.app.model.var.WorkspaceGroup;
 import org.homio.app.model.var.WorkspaceVariable;
-import org.homio.app.utils.OptionUtil;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -94,7 +93,7 @@ public class WorkspaceController {
 
     @GetMapping("/tab")
     public List<OptionModel> getWorkspaceTabs() {
-        return OptionUtil.buildOptions(entityContext.findAll(WorkspaceEntity.class), entityContext);
+        return entityContext.toOptionModels(entityContext.findAll(WorkspaceEntity.class));
     }
 
     @SneakyThrows

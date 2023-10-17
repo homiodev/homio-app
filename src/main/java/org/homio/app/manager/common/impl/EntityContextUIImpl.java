@@ -28,6 +28,7 @@ import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.homio.api.EntityContextUI;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.entity.BaseEntity;
@@ -86,11 +87,11 @@ public class EntityContextUIImpl implements EntityContextUI {
     private final @Getter EntityContextImpl entityContext;
     private final SimpMessagingTemplate messagingTemplate;
     private final Map<String, SendUpdateContext> sendToUIMap = new ConcurrentHashMap<>();
-    private final @Getter @Accessors(fluent = true) EntityContextUIToastr toastr = new EntityContextUIToastrImpl();
-    private final @Getter @Accessors(fluent = true) EntityContextUINotification notification = new EntityContextUINotificationImpl();
-    private final @Getter @Accessors(fluent = true) EntityContextUIConsole console = new EntityContextUIConsoleImpl();
-    private final @Getter @Accessors(fluent = true) EntityContextUIDialog dialog = new EntityContextUIDialogImpl();
-    private final @Getter @Accessors(fluent = true) EntityContextUIProgress progress = new EntityContextUIProgressImpl();
+    private final @Getter @Accessors(fluent = true) EntityContextUIToastrImpl toastr = new EntityContextUIToastrImpl();
+    private final @Getter @Accessors(fluent = true) EntityContextUINotificationImpl notification = new EntityContextUINotificationImpl();
+    private final @Getter @Accessors(fluent = true) EntityContextUIConsoleImpl console = new EntityContextUIConsoleImpl();
+    private final @Getter @Accessors(fluent = true) EntityContextUIDialogImpl dialog = new EntityContextUIDialogImpl();
+    private final @Getter @Accessors(fluent = true) EntityContextUIProgressImpl progress = new EntityContextUIProgressImpl();
     private final Map<String, Object> refreshConsolePlugin = new ConcurrentHashMap<>();
     private static final Object EMPTY = new Object();
 
@@ -114,7 +115,7 @@ public class EntityContextUIImpl implements EntityContextUI {
                 Entry<String, Object> entry = iterator.next();
                 ConsolePlugin<?> plugin = consolePluginsMap.get(entry.getKey());
                 if (plugin != null) {
-                    Object value = entry.getValue() == EMPTY ? plugin.getValue() : entry.getValue();
+                    Object value = entry.getValue() == EMPTY ? null : entry.getValue();
                     sendGlobal(GlobalSendType.redrawConsole, entry.getKey(), value, null, null);
                 }
                 iterator.remove();
@@ -688,7 +689,7 @@ public class EntityContextUIImpl implements EntityContextUI {
 
     }
 
-    private class EntityContextUIToastrImpl implements EntityContextUIToastr {
+    public class EntityContextUIToastrImpl implements EntityContextUIToastr {
 
         @Override
         public void sendMessage(@Nullable String title, @Nullable String message, @Nullable NotificationLevel level) {
@@ -700,7 +701,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
     }
 
-    private class EntityContextUINotificationImpl implements EntityContextUINotification {
+    public class EntityContextUINotificationImpl implements EntityContextUINotification {
 
         @Override
         public void removeEmptyBlock(@NotNull String entityID) {
@@ -746,7 +747,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
     }
 
-    private class EntityContextUIConsoleImpl implements EntityContextUIConsole {
+    public class EntityContextUIConsoleImpl implements EntityContextUIConsole {
 
         @Override
         public void registerPluginName(@NotNull String name, @Nullable String resource) {
@@ -787,11 +788,11 @@ public class EntityContextUIImpl implements EntityContextUI {
 
         @Override
         public void refreshPluginContent(@NotNull String name, Object value) {
-
+            refreshConsolePlugin.put(name, value);
         }
     }
 
-    private class EntityContextUIDialogImpl implements EntityContextUIDialog {
+    public class EntityContextUIDialogImpl implements EntityContextUIDialog {
 
         @Override
         public void sendDialogRequest(@NotNull DialogModel dialogModel) {
@@ -830,17 +831,46 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
     }
 
-    private class EntityContextUIProgressImpl implements EntityContextUIProgress {
+    public class EntityContextUIProgressImpl implements EntityContextUIProgress {
+
+        private final Map<String, Pair<ProgressBar, Runnable>> simpleProgressBars = new ConcurrentHashMap<>();
+
+        @Override
+        public ProgressBar createProgressBar(@NotNull String key, boolean dummy, @Nullable Runnable cancelHandler) {
+            ProgressBar progressBar = new ProgressBar() {
+                @Override
+                public void progress(double progress, @Nullable String message, boolean error) {
+                    getEntityContext().ui().progress().update(key, progress, message, cancelHandler != null);
+                }
+
+                @Override
+                public boolean isCancelled() {
+                    return cancelHandler != null && !simpleProgressBars.containsKey(key);
+                }
+            };
+            if (cancelHandler != null) {
+                simpleProgressBars.put(key, Pair.of(progressBar, cancelHandler));
+            }
+            return progressBar;
+        }
 
         @Override
         public void update(@NotNull String key, double progress, @Nullable String message, boolean cancellable) {
             if (progress >= 100) {
                 progressMap.remove(key);
+                cancel(key);
             } else {
                 progressMap.put(key, new ProgressNotification(key, progress, message, cancellable));
             }
             sendGlobal(GlobalSendType.progress, key, Math.round(progress), message,
                 cancellable ? OBJECT_MAPPER.createObjectNode().put("cancellable", true) : null);
+        }
+
+        public void cancel(String name) {
+            Pair<ProgressBar, Runnable> removed = simpleProgressBars.remove(name);
+            if (removed != null) {
+                removed.getValue().run();
+            }
         }
     }
 }

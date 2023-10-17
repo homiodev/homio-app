@@ -21,6 +21,7 @@ public class BackgroundProcessController {
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void cancelProcess(@PathVariable("name") String name) {
         entityContext.bgp().cancelThread(name);
+        entityContext.ui().progress().cancel(name);
     }
 
     @GetMapping

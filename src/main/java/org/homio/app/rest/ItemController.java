@@ -398,7 +398,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 entities.add(entity);
             }
         }
-        return OptionUtil.buildOptions(entities, entityContext);
+        return entityContext.toOptionModels(entities);
     }
 
     @PostMapping(value = "/{entityID}/context/action")

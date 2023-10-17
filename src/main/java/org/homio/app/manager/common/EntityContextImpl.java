@@ -32,17 +32,18 @@ import org.homio.api.EntityContextHardware;
 import org.homio.api.EntityContextMedia;
 import org.homio.api.EntityContextStorage;
 import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.BaseEntityIdentifier;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Icon;
+import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.repository.GitHubProject;
-import org.homio.api.service.camera.VideoStreamScanner;
-import org.homio.api.service.scan.BeansItemsDiscovery;
-import org.homio.api.service.scan.ItemDiscoverySupport;
+import org.homio.api.service.discovery.ItemDiscoverySupport;
+import org.homio.api.service.discovery.VideoStreamScanner;
 import org.homio.api.state.StringType;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
@@ -83,7 +84,6 @@ import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
 import org.homio.app.repository.AbstractRepository;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.repository.VariableBackupRepository;
-import org.homio.app.repository.WorkspaceVariableRepository;
 import org.homio.app.repository.device.AllDeviceRepository;
 import org.homio.app.repository.widget.WidgetRepository;
 import org.homio.app.repository.widget.WidgetSeriesRepository;
@@ -92,14 +92,16 @@ import org.homio.app.rest.ItemController;
 import org.homio.app.rest.SettingController;
 import org.homio.app.service.FileSystemService;
 import org.homio.app.service.cloud.CloudService;
+import org.homio.app.service.scan.BeansItemsDiscovery;
 import org.homio.app.setting.ScanDevicesSetting;
-import org.homio.app.setting.ScanVideoStreamSourcesSetting;
+import org.homio.app.setting.ScanMediaSetting;
 import org.homio.app.setting.system.SystemClearCacheButtonSetting;
 import org.homio.app.setting.system.SystemShowEntityStateSetting;
 import org.homio.app.setting.system.SystemSoftRestartButtonSetting;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.ssh.SshTmateEntity;
+import org.homio.app.utils.OptionUtil;
 import org.homio.app.video.ffmpeg.FfmpegHardwareRepository;
 import org.homio.app.workspace.LockManagerImpl;
 import org.homio.app.workspace.WorkspaceService;
@@ -285,7 +287,7 @@ public class EntityContextImpl implements EntityContext {
         setting().listenValue(SystemSoftRestartButtonSetting.class, "soft-restart", () -> SystemSoftRestartButtonSetting.restart(this));
         setting().listenValue(ScanDevicesSetting.class, "scan-devices", () ->
                 ui().handleResponse(new BeansItemsDiscovery(ItemDiscoverySupport.class).handleAction(this, null)));
-        setting().listenValue(ScanVideoStreamSourcesSetting.class, "scan-video-sources", () ->
+        setting().listenValue(ScanMediaSetting.class, "scan-video-sources", () ->
                 ui().handleResponse(new BeansItemsDiscovery(VideoStreamScanner.class).handleAction(this, null)));
         INSTANCE = this;
     }
@@ -480,6 +482,11 @@ public class EntityContextImpl implements EntityContext {
     public <T extends BaseEntity> @NotNull List<T> findAllByPrefix(@NotNull String prefix) {
         AbstractRepository<? extends BaseEntity> repository = getRepositoryByPrefix(prefix);
         return findAllByRepository((Class<BaseEntity>) repository.getEntityClass());
+    }
+
+    @Override
+    public @NotNull List<OptionModel> toOptionModels(@Nullable Collection<? extends BaseEntity> entities) {
+        return OptionUtil.buildOptions(entities, this);
     }
 
     @Override

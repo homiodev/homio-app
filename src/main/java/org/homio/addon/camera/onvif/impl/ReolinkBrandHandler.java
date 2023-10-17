@@ -64,7 +64,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -92,6 +91,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
+import org.homio.api.model.OptionModel;
 import org.homio.api.model.UpdatableValue;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.state.DecimalType;
@@ -494,7 +494,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
             });
             return endpoint;
         }, state -> {
-        }).setValue(new JsonType(objectNode.value.withArray("HddInfo").path(0)));
+        }).setInitialValue(new JsonType(objectNode.value.withArray("HddInfo").path(0)));
     }
 
     private void handleGetLocalLinkCommand(Root objectNode) {
@@ -514,7 +514,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
         service.addEndpointSwitch(ENDPOINT_AUTO_LED, state ->
             sendCameraPushRequest("SetIrLights", OBJECT_MAPPER.createObjectNode().set("IrLights",
                 OBJECT_MAPPER.createObjectNode().put("state", state.boolValue("Auto", "Off")))))
-            .setValue(OnOffType.of("auto".equals(objectNode.value.get("IrLights").get("state").asText())));
+            .setInitialValue(OnOffType.of("auto".equals(objectNode.value.get("IrLights").get("state").asText())));
     }
 
     @Override
@@ -600,7 +600,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
 
     private void setSetting(String endpointID, State state) {
         EndpointConfiguration configuration = configurations.get(endpointID);
-        JsonType setting = (JsonType) getAttribute(configuration.group);
+        JsonType setting = (JsonType) attributes.get(configuration.group);
         if (setting == null) {
             return;
         }
@@ -755,14 +755,14 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
         number((rangeNode, initialNode, c, handler) -> {
             Consumer<State> setter = state -> handler.setSetting(c.endpointId, state);
             Supplier<State> getter = () -> {
-                JsonType group = (JsonType) handler.getAttribute(c.group);
+                JsonType group = (JsonType) handler.attributes.get(c.group);
                 return group == null ? null : new DecimalType(group.getJsonNode().path(c.key).asInt());
             };
             JsonNode numConfigPath = JsonUtils.getJsonPath(rangeNode, c.key);
             Float min = numConfigPath.has("min") ? (float)numConfigPath.path("min").asInt() : null;
             Float max = numConfigPath.has("max") ? (float)numConfigPath.path("max").asInt() : null;
             CameraDeviceEndpoint endpoint = handler.service.addEndpointSlider(c.endpointId, min, max, setter, c.writable);
-            endpoint.setValue(getter.get(), true);
+            endpoint.setInitialValue(getter.get());
             JsonNode initPath = JsonUtils.getJsonPath(initialNode, c.key);
             if (!initPath.isMissingNode()) {
                 float defaultValue = initPath.floatValue();
@@ -773,26 +773,26 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
         bool((rangeNode, initialNode, c, handler) -> {
             Consumer<State> setter = state -> handler.setSetting(c.endpointId, state);
             Supplier<State> getter = () -> {
-                JsonType group = (JsonType) handler.getAttribute(c.group);
+                JsonType group = (JsonType) handler.attributes.get(c.group);
                 return group == null ? null : OnOffType.of(JsonUtils.getJsonPath(group.getJsonNode(), c.key).asInt() == 1);
             };
             CameraDeviceEndpoint endpoint = handler.service.addEndpointSwitch(c.endpointId, setter, c.writable);
-            endpoint.setValue(getter.get(), true);
+            endpoint.setInitialValue(getter.get());
             return endpoint;
         }),
         select((rangeNode, initialNode, c, handler) -> {
-            Set<String> range = new LinkedHashSet<>();
+            List<OptionModel> range = new ArrayList<>();
             if (c.rangeConverter != null) {
                 rangeNode = c.rangeConverter.apply(rangeNode);
             }
-            JsonUtils.getJsonPath(rangeNode, c.key).forEach(jsonNode -> range.add(jsonNode.asText()));
+            JsonUtils.getJsonPath(rangeNode, c.key).forEach(jsonNode -> range.add(OptionModel.of(jsonNode.asText())));
             Consumer<State> setter = state -> handler.setSetting(c.endpointId, state);
             Supplier<State> getter = () -> {
-                JsonType group = (JsonType) handler.getAttribute(c.group);
+                JsonType group = (JsonType) handler.attributes.get(c.group);
                 return group == null ? null : new StringType(JsonUtils.getJsonPath(group.getJsonNode(), c.key).asText());
             };
             CameraDeviceEndpoint endpoint = handler.service.addEndpointEnum(c.endpointId, range, setter);
-            endpoint.setValue(getter.get(), true);
+            endpoint.setInitialValue(getter.get());
             JsonNode initPath = JsonUtils.getJsonPath(initialNode, c.key);
             if (!initPath.isMissingNode()) {
                 String defaultValue = initPath.toString();

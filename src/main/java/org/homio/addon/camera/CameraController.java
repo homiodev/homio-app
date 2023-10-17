@@ -16,11 +16,13 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -40,6 +42,7 @@ import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.onvif.ver10.schema.PTZPreset;
 import org.onvif.ver10.schema.Profile;
 import org.springframework.cloud.gateway.mvc.ProxyExchange;
 import org.springframework.core.io.Resource;
@@ -55,6 +58,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Log4j2
@@ -65,6 +69,31 @@ public class CameraController {
 
     private final EntityContext entityContext;
     public static final Map<String, OpenStreamsContainer> camerasOpenStreams = new ConcurrentHashMap<>();
+
+    @GetMapping("/devices/pan")
+    public List<OptionModel> getPanDevices() {
+        return filterCameraDevices(ipCameraService -> ipCameraService.getOnvifDeviceState().getPtzDevices().isMoveSupported());
+    }
+
+    @GetMapping("/devices/zoom")
+    public List<OptionModel> getZoomDevices() {
+        return filterCameraDevices(ipCameraService -> ipCameraService.getOnvifDeviceState().getPtzDevices().isZoomSupported());
+    }
+
+    @GetMapping("/devices/presets")
+    public List<OptionModel> getPresetsDevices() {
+        return filterCameraDevices(ipCameraService -> {
+            List<PTZPreset> presets = ipCameraService.getOnvifDeviceState().getPtzDevices().getPresets();
+            return presets != null && !presets.isEmpty();
+        });
+    }
+
+    @GetMapping("/presets")
+    public @NotNull Collection<OptionModel> getCameraPresets(
+        @RequestParam(value = "onvifCameraMenu") @NotNull String cameraEntityID) {
+        IpCameraEntity entity = entityContext.getEntityRequire(cameraEntityID);
+        return entity.getService().getPtzPresets();
+    }
 
     /**
      * Consume mjpeg/image from ffmpeg. See ffmpegMjpeg/ffmpegSnapshot
@@ -471,5 +500,12 @@ public class CameraController {
         return ResponseEntity.status(response.getStatusCode())
                              .headers(responseHeaders)
                              .body(response.getBody());
+    }
+
+    private @NotNull List<OptionModel> filterCameraDevices(Predicate<IpCameraService> filter) {
+        return entityContext.toOptionModels(entityContext
+            .findAll(IpCameraEntity.class)
+            .stream()
+            .filter(ipCameraEntity -> filter.test(ipCameraEntity.getService())).toList());
     }
 }

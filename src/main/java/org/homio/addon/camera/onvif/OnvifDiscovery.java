@@ -1,5 +1,7 @@
 package org.homio.addon.camera.onvif;
 
+import static org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription.DEFAULT_ONVIF_BRAND;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -39,6 +41,8 @@ import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.IpCameraService;
 import org.homio.api.EntityContext;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * responsible for finding cameras that are ONVIF using UDP multicast.
@@ -56,7 +60,7 @@ public class OnvifDiscovery {
                 return brandHandler;
             }
         }
-        return CameraBrandHandlerDescription.DEFAULT_BRAND;
+        return DEFAULT_ONVIF_BRAND;
     }
 
     public static CameraBrandHandlerDescription getBrandFromLoginPage(String hostname, EntityContext entityContext) {
@@ -77,7 +81,7 @@ public class OnvifDiscovery {
             }
         } catch (Exception ignore) {
         }
-        return CameraBrandHandlerDescription.DEFAULT_BRAND;
+        return DEFAULT_ONVIF_BRAND;
     }
 
     public void discoverCameras(CameraFoundHandler cameraFoundHandler) throws UnknownHostException, InterruptedException {
@@ -87,7 +91,7 @@ public class OnvifDiscovery {
             return;
         }
         NetworkInterface networkInterface = nics.get(0);
-        SimpleChannelInboundHandler<DatagramPacket> handler = new SimpleChannelInboundHandler<DatagramPacket>() {
+        SimpleChannelInboundHandler<DatagramPacket> handler = new SimpleChannelInboundHandler<>() {
             @Override
             protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) {
                 msg.retain(1);
@@ -166,10 +170,20 @@ public class OnvifDiscovery {
             ipAddress = temp.substring(beginIndex, endIndex);
         }
         CameraBrandHandlerDescription brand = checkForBrand(xml, entityContext);
-        if (brand.getID().equals(CameraBrandHandlerDescription.DEFAULT_BRAND.getID())) {
+        if (brand.getID().equals(DEFAULT_ONVIF_BRAND.getID())) {
             brand = getBrandFromLoginPage(ipAddress, entityContext);
         }
-        cameraFoundHandler.handle(brand, ipAddress, onvifPort.intValue());
+        cameraFoundHandler.handle(brand, ipAddress, onvifPort.intValue(), getHardwareID(xml));
+    }
+
+    @Nullable
+    private static String getHardwareID(String xml) {
+        String hardwareID = null;
+        int hardwareIndex = xml.indexOf("onvif://www.onvif.org/hardware/");
+        if (hardwareIndex >= 0) {
+            hardwareID = xml.substring(hardwareIndex + "onvif://www.onvif.org/hardware/".length(), xml.indexOf(" ", hardwareIndex));
+        }
+        return hardwareID;
     }
 
     private void processCameraRepays(CameraFoundHandler cameraFoundHandler) {
@@ -178,11 +192,11 @@ public class OnvifDiscovery {
 
             log.trace("Device replied to discovery with:{}", packet.toString());
             String xAddr = Helper.fetchXML(xml, "", "<d:XAddrs>");
-            if (!xAddr.equals("")) {
+            if (!xAddr.isEmpty()) {
                 searchReply(cameraFoundHandler, xAddr, xml);
             } else if (xml.contains("onvif")) {
                 log.info("Possible ONVIF camera found at:{}", packet.sender().getHostString());
-                cameraFoundHandler.handle(CameraBrandHandlerDescription.DEFAULT_BRAND, packet.sender().getHostString(), 80);
+                cameraFoundHandler.handle(DEFAULT_ONVIF_BRAND, packet.sender().getHostString(), 80, getHardwareID(xml));
             }
         }
     }
@@ -202,6 +216,6 @@ public class OnvifDiscovery {
 
     public interface CameraFoundHandler {
 
-        void handle(CameraBrandHandlerDescription brand, String ipAddress, int onvifPort);
+        void handle(@NotNull CameraBrandHandlerDescription brand, @NotNull String ipAddress, int onvifPort, @Nullable String hardwareID);
     }
 }

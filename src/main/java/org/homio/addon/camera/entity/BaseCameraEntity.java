@@ -488,11 +488,6 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
             defaultIfEmpty(getPlace(), "W.ERROR.PLACE_NOT_SET"));
     }
 
-    @UIContextMenuAction(value = "SET_CLOUD_PRIMARY", icon = "fas fa-star", iconColor = Color.PRIMARY_COLOR)
-    public ActionResponseModel setPrimary(EntityContext entityContext) {
-        return ActionResponseModel.showJson("Info", getService().getAttributes());
-    }
-
     @Override
     public @NotNull Map<String, ? extends DeviceEndpoint> getDeviceEndpoints() {
         return optService().map(BaseCameraService::getEndpoints).orElse(Map.of());

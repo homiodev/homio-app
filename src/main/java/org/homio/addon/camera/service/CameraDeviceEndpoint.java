@@ -1,5 +1,6 @@
 package org.homio.addon.camera.service;
 
+import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -8,6 +9,7 @@ import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.api.EntityContext;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
+import org.homio.api.model.OptionModel;
 import org.homio.api.model.device.ConfigDeviceEndpoint;
 import org.homio.api.model.endpoint.BaseDeviceEndpoint;
 import org.homio.api.state.DecimalType;
@@ -35,7 +37,8 @@ public class CameraDeviceEndpoint extends BaseDeviceEndpoint<BaseCameraEntity<?,
         @NotNull BaseCameraEntity<?, ?> device,
         @NotNull EntityContext entityContext,
         @NotNull String endpointEntityID,
-        Set<String> range, boolean writable) {
+        @NotNull List<OptionModel> range,
+        boolean writable) {
         this(writable, device, entityContext, endpointEntityID, EndpointType.select, null, null, range, false);
     }
 
@@ -57,7 +60,7 @@ public class CameraDeviceEndpoint extends BaseDeviceEndpoint<BaseCameraEntity<?,
         @NotNull EndpointType endpointType,
         @Nullable Float min,
         @Nullable Float max,
-        @Nullable Set<String> range,
+        @Nullable List<OptionModel> range,
         boolean dbValueStorable) {
         super("VIDEO", entityContext);
         ConfigDeviceEndpoint configEndpoint = BaseCameraService.CONFIG_DEVICE_SERVICE.getDeviceEndpoints().get(endpointEntityID);

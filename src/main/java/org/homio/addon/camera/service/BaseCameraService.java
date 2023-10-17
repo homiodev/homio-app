@@ -36,7 +36,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -50,7 +49,6 @@ import org.homio.addon.camera.CameraController;
 import org.homio.addon.camera.CameraController.OpenStreamsContainer;
 import org.homio.addon.camera.ConfigurationException;
 import org.homio.addon.camera.entity.BaseCameraEntity;
-import org.homio.addon.camera.entity.CameraActionsContext;
 import org.homio.addon.camera.entity.StreamHLS;
 import org.homio.addon.camera.entity.VideoMotionAlarmProvider;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
@@ -85,8 +83,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 
 @SuppressWarnings({"unused"})
 public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S extends BaseCameraService<T, S>>
-    extends EntityService.ServiceInstance<T> implements CameraActionsContext<T>,
-    FFMPEGHandler {
+    extends EntityService.ServiceInstance<T> implements FFMPEGHandler {
 
     @Getter
     public static final Logger log = LogManager.getLogger();
@@ -150,8 +147,6 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
     private @Getter Path ffmpegGifOutputPath;
     private @Getter Path ffmpegMP4OutputPath;
     private @Getter Path ffmpegImageOutputPath;
-
-    private @Getter final Map<String, State> attributes = new ConcurrentHashMap<>();
 
     protected ReentrantLock lockCurrentSnapshot = new ReentrantLock();
     protected @Getter byte[] latestSnapshot = new byte[0];
@@ -348,11 +343,6 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         });
     }
 
-    @Override
-    public State getAttribute(String key) {
-        return attributes.get(key);
-    }
-
     public void deleteDirectories() {
         CommonUtils.deletePath(ffmpegGifOutputPath);
         CommonUtils.deletePath(ffmpegMP4OutputPath);
@@ -491,10 +481,10 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
             CameraDeviceEndpoint endpoint = handler.apply(key);
             endpoint.setUpdateHandler(updateHandler);
 
-            State attribute = getAttribute(endpointId);
+            /*State attribute = getAttribute(endpointId);
             if (attribute != null) {
                 endpoint.setInitialValue(attribute);
-            }
+            }*/
             return endpoint;
         });
     }
@@ -668,12 +658,11 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
     }
 
     public CameraDeviceEndpoint addEndpointButtons(String endpointId, List<OptionModel> buttons, Consumer<State> updateHandler) {
-        Set<String> range = buttons.stream().map(OptionModel::getKey).collect(Collectors.toSet());
-        return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, getEntityContext(), key, range, true) {
+        return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, getEntityContext(), key, buttons, true) {
             @Override
             public UIInputBuilder createSelectActionBuilder(@NotNull UIInputBuilder uiInputBuilder) {
                 uiInputBuilder.addMultiButton(getEntityID(), (entityContext, params) -> {
-                    updateHandler.accept(new StringType(params.getString("key")));
+                    updateHandler.accept(new StringType(params.getString("value")));
                     return null;
                 }, 0).addButtons(buttons);
                 return uiInputBuilder;
@@ -719,7 +708,7 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         }, updateHandler);
     }
 
-    public CameraDeviceEndpoint addEndpointEnum(String endpointId, Set<String> range, Consumer<State> updateHandler) {
+    public CameraDeviceEndpoint addEndpointEnum(String endpointId, List<OptionModel> range, Consumer<State> updateHandler) {
         return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, getEntityContext(), key, range, true), updateHandler);
     }
 
@@ -732,7 +721,7 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
 
     private void addPrimaryEndpoint() {
         addEndpoint(ENDPOINT_DEVICE_STATUS, key -> {
-            Set<String> range = Status.set(ONLINE, ERROR, OFFLINE, REQUIRE_AUTH, UNKNOWN, INITIALIZE);
+            List<OptionModel> range = OptionModel.list(Status.set(ONLINE, ERROR, OFFLINE, REQUIRE_AUTH, UNKNOWN, INITIALIZE));
             CameraDeviceEndpoint videoEndpoint = new CameraDeviceEndpoint(entity, getEntityContext(), key, range, false) {
                 @Override
                 public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {

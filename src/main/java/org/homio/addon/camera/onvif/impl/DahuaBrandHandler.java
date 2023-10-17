@@ -278,12 +278,10 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
                         }
                     }
                 }
-                case "LensMaskOpen" -> {
+                case "LensMaskOpen" ->
                     getEndpointRequire(ENDPOINT_ENABLE_PRIVACY_MODE).setValue(OnOffType.ON);
-                }
-                case "LensMaskClose" -> {
+                case "LensMaskClose" ->
                     getEndpointRequire(ENDPOINT_ENABLE_PRIVACY_MODE).setValue(OnOffType.OFF);
-                }
                 case "TimeChange", "NTPAdjustTime", "StorageChange", "Reboot", "NewFile", "VideoMotionInfo", "RtspSessionDisconnect", "LeFunctionStatusSync", "RecordDelete" -> {
                 }
                 default -> log.debug("[{}]: Unrecognised Dahua event, Code={}, action={}", entityID, code, action);
@@ -311,9 +309,8 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler {
             }
         });
 
-        service.addEndpointSwitch(ENDPOINT_ENABLE_LINE_CROSSING_ALARM, state -> {
-            service.sendHttpGET(CM + "setConfig&VideoAnalyseRule[0][1].Enable=" + state.boolValue());
-        });
+        service.addEndpointSwitch(ENDPOINT_ENABLE_LINE_CROSSING_ALARM, state ->
+            service.sendHttpGET(CM + "setConfig&VideoAnalyseRule[0][1].Enable=" + state.boolValue()));
 
         service.addEndpointSwitch(ENDPOINT_AUTO_LED, state -> {
             service.sendHttpGET(CM + "setConfig&Lighting[0][0].Mode=" + state.boolValue("Auto", "Off"));

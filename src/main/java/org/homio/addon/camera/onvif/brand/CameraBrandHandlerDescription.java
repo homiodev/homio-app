@@ -7,7 +7,7 @@ import org.homio.addon.camera.service.IpCameraService;
 
 public class CameraBrandHandlerDescription {
 
-    public static CameraBrandHandlerDescription DEFAULT_BRAND = new CameraBrandHandlerDescription(OnvifBrandHandler.class);
+    public static CameraBrandHandlerDescription DEFAULT_ONVIF_BRAND = new CameraBrandHandlerDescription(OnvifBrandHandler.class);
 
     private final Class<? extends BaseOnvifCameraBrandHandler> brandHandler;
     private final CameraBrandHandler cameraBrandHandler;

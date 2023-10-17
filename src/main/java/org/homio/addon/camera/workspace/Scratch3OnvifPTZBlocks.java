@@ -7,12 +7,9 @@ import static org.homio.addon.camera.CameraConstants.ENDPOINT_TILT_COMMAND;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ZOOM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ZOOM_COMMAND;
 
-import java.util.Map;
+import de.onvif.soap.devices.PtzDevices;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.entity.IpCameraEntity;
@@ -23,6 +20,7 @@ import org.homio.api.state.State;
 import org.homio.api.state.StringType;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.MenuBlock;
+import org.homio.api.workspace.scratch.MenuBlock.ServerMenuBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.springframework.stereotype.Component;
 
@@ -31,121 +29,123 @@ import org.springframework.stereotype.Component;
 @Component
 public class Scratch3OnvifPTZBlocks extends Scratch3ExtensionBlocks {
 
-    private final MenuBlock.ServerMenuBlock menuOnvifCamera;
     private final MenuBlock.StaticMenuBlock<PanActionType> menuPanActionType;
     private final MenuBlock.StaticMenuBlock<TiltActionType> menuTiltActionType;
     private final MenuBlock.StaticMenuBlock<ZoomActionType> menuZoomActionType;
-    private final MenuBlock.StaticMenuBlock<String> menuPreset;
-    private final MenuBlock.StaticMenuBlock<GetPTZValueType> menuPtzValueType;
+    private final MenuBlock.ServerMenuBlock menuPreset;
+    private final ServerMenuBlock menuPanTiltCamera;
+    private final ServerMenuBlock menuZoomCamera;
+    private final ServerMenuBlock menuPresetCamera;
 
     public Scratch3OnvifPTZBlocks(EntityContext entityContext, CameraEntrypoint cameraEntrypoint) {
         super("#4F4BA6", entityContext, cameraEntrypoint, "onvifptz");
         setParent("media");
 
         // Menu
-        this.menuOnvifCamera = menuServerItems("onvifCameraMenu", IpCameraEntity.class, "Onvif camera");
+        this.menuPanTiltCamera = menuServer("panMenu", "rest/media/video/devices/pan", "Tilt/Pan camera");
+        this.menuZoomCamera = menuServer("zoomMenu", "rest/media/video/devices/zoom", "Zoom camera");
+        this.menuPresetCamera = menuServer("presetMenu", "rest/media/video/devices/presets", "Presets camera");
+
         this.menuPanActionType = menuStatic("panActionTypeMenu", PanActionType.class, PanActionType.Left);
         this.menuTiltActionType = menuStatic("tiltActionTypeMenu", TiltActionType.class, TiltActionType.Up);
         this.menuZoomActionType = menuStatic("zoomActionTypeMenu", ZoomActionType.class, ZoomActionType.In);
-        this.menuPtzValueType = menuStatic("ptzValueTypeMenu", GetPTZValueType.class, GetPTZValueType.Pan);
-        Map<String, String> presets = IntStream.range(1, 25).boxed().collect(Collectors.toMap(String::valueOf, num -> "Preset " + num));
-        this.menuPreset = menuStaticList("presetMenu", presets, "1");
+        this.menuPreset = menuServer("presets", "rest/media/video/presets", "-")
+            .setDependency(menuPresetCamera);
 
-        blockReporter(50, "value_info", "Get [VALUE] of [VIDEO_STREAM]", this::getPTZValue,
-                block -> {
-                    block.addArgument(Scratch3CameraBlocks.VIDEO_STREAM, menuOnvifCamera);
-                    block.addArgument(VALUE, menuPtzValueType);
-                });
+        buildReport(50, "ptz_tilt_pct", "tilt", menuPanTiltCamera, PtzDevices::getCurrentPanPercentage);
+        buildReport(55, "ptz_pan_pct", "pan", menuPanTiltCamera, PtzDevices::getCurrentPanPercentage);
+        buildReport(60, "ptz_zoom_pct", "zoom", menuZoomCamera, PtzDevices::getCurrentZoomPercentage);
 
         blockCommand(200, "pan", "Pan [VALUE] of [VIDEO_STREAM]", this::firePanCommand,
                 block -> {
                     block.addArgument(VALUE, 0);
-                    block.addArgument(Scratch3CameraBlocks.VIDEO_STREAM, menuOnvifCamera);
+                    block.addArgument(Scratch3CameraBlocks.VIDEO_STREAM, menuPanTiltCamera);
                 });
 
         blockCommand(210, "pan_cmd", "Pan [VALUE] of [VIDEO_STREAM]", this::firePanActionCommand,
                 block -> {
-                    block.addArgument(Scratch3CameraBlocks.VIDEO_STREAM, menuOnvifCamera);
+                    block.addArgument(Scratch3CameraBlocks.VIDEO_STREAM, menuPanTiltCamera);
                     block.addArgument(VALUE, this.menuPanActionType);
                 });
 
         blockCommand(220, "tilt", "Tilt [VALUE] of [VIDEO_STREAM]", this::fireTiltCommand, block -> {
             block.addArgument(VALUE, 0);
-            block.addArgument(Scratch3CameraBlocks.VIDEO_STREAM, menuOnvifCamera);
+            block.addArgument(Scratch3CameraBlocks.VIDEO_STREAM, menuPanTiltCamera);
         });
 
         blockCommand(230, "tilt_cmd", "Tilt [VALUE] of [VIDEO_STREAM]", this::fireTiltActionCommand,
                 block -> {
-                    block.addArgument(Scratch3CameraBlocks.VIDEO_STREAM, menuOnvifCamera);
+                    block.addArgument(Scratch3CameraBlocks.VIDEO_STREAM, menuPanTiltCamera);
                     block.addArgument(VALUE, this.menuTiltActionType);
                 });
 
         blockCommand(240, "zoom", "Zoom [VALUE] of [VIDEO_STREAM]", this::fireZoomCommand,
                 block -> {
                     block.addArgument(VALUE, 0);
-                    block.addArgument(Scratch3CameraBlocks.VIDEO_STREAM, menuOnvifCamera);
+                    block.addArgument(Scratch3CameraBlocks.VIDEO_STREAM, menuZoomCamera);
                 });
 
         blockCommand(250, "zoom_cmd", "Zoom [VALUE] of [VIDEO_STREAM]", this::fireZoomActionCommand,
                 block -> {
-                    block.addArgument(Scratch3CameraBlocks.VIDEO_STREAM, menuOnvifCamera);
+                    block.addArgument(Scratch3CameraBlocks.VIDEO_STREAM, menuZoomCamera);
                     block.addArgument(VALUE, this.menuZoomActionType);
                 });
 
         blockCommand(260, "to_preset", "Go to preset [PRESET] of [VIDEO_STREAM]", this::fireGoToPresetCommand,
                 block -> {
-                    block.addArgument(Scratch3CameraBlocks.VIDEO_STREAM, menuOnvifCamera);
+                    block.addArgument(Scratch3CameraBlocks.VIDEO_STREAM, menuPresetCamera);
                     block.addArgument("PRESET", this.menuPreset);
                 });
     }
 
-    private State getPTZValue(WorkspaceBlock workspaceBlock) {
-        GetPTZValueType menu = workspaceBlock.getMenuValue(VALUE, this.menuPtzValueType);
-        return menu.handler.apply(getOnvifService(workspaceBlock));
+    private void buildReport(int order, String opcode, String text, ServerMenuBlock menu, Function<PtzDevices, Float> fetcher) {
+        blockReporter(order, opcode, text + " of [VIDEO_STREAM]", workspaceBlock -> {
+                IpCameraService service = getOnvifService(workspaceBlock, menu);
+                return new DecimalType(fetcher.apply(service.getOnvifDeviceState().getPtzDevices()));
+            },
+            block -> block.addArgument(Scratch3CameraBlocks.VIDEO_STREAM, menuPanTiltCamera));
     }
 
     private void fireGoToPresetCommand(WorkspaceBlock workspaceBlock) {
-        int preset = Integer.parseInt(workspaceBlock.getMenuValue("PRESET", this.menuPreset));
-        getOnvifService(workspaceBlock).gotoPreset(preset);
+        String token = workspaceBlock.getMenuValue("presets", this.menuPreset);
+        IpCameraService service = getOnvifService(workspaceBlock, menuPresetCamera);
+        service.getOnvifDeviceState().getPtzDevices().gotoPreset(token, service.getProfile());
     }
 
     private void fireZoomActionCommand(WorkspaceBlock workspaceBlock) {
         String command = workspaceBlock.getMenuValue(VALUE, this.menuZoomActionType).name().toUpperCase();
-        setEndpointValue(workspaceBlock, ENDPOINT_ZOOM_COMMAND, new StringType(command));
+        setEndpointValue(menuZoomCamera, workspaceBlock, ENDPOINT_ZOOM_COMMAND, new StringType(command));
     }
 
     private void fireZoomCommand(WorkspaceBlock workspaceBlock) {
-        setEndpointValue(workspaceBlock, ENDPOINT_ZOOM, new DecimalType(workspaceBlock.getInputFloat(VALUE)));
+        setEndpointValue(menuZoomCamera, workspaceBlock, ENDPOINT_ZOOM, new DecimalType(workspaceBlock.getInputFloat(VALUE)));
     }
 
     private void fireTiltActionCommand(WorkspaceBlock workspaceBlock) {
         String command = workspaceBlock.getMenuValue(VALUE, this.menuTiltActionType).name().toUpperCase();
-        setEndpointValue(workspaceBlock, ENDPOINT_TILT_COMMAND, new StringType(command));
+        setEndpointValue(menuPanTiltCamera, workspaceBlock, ENDPOINT_TILT_COMMAND, new StringType(command));
     }
 
     private void fireTiltCommand(WorkspaceBlock workspaceBlock) {
-        setEndpointValue(workspaceBlock, ENDPOINT_TILT, new DecimalType(workspaceBlock.getInputFloat(VALUE)));
+        setEndpointValue(menuPanTiltCamera, workspaceBlock, ENDPOINT_TILT, new DecimalType(workspaceBlock.getInputFloat(VALUE)));
     }
 
     private void firePanActionCommand(WorkspaceBlock workspaceBlock) {
         String command = workspaceBlock.getMenuValue(VALUE, this.menuPanActionType).name().toUpperCase();
-        setEndpointValue(workspaceBlock, ENDPOINT_PAN_COMMAND, new StringType(command));
+        setEndpointValue(menuPanTiltCamera, workspaceBlock, ENDPOINT_PAN_COMMAND, new StringType(command));
     }
 
     private void firePanCommand(WorkspaceBlock workspaceBlock) {
-        setEndpointValue(workspaceBlock, ENDPOINT_PAN, new DecimalType(workspaceBlock.getInputFloat(VALUE)));
+        setEndpointValue(menuPanTiltCamera, workspaceBlock, ENDPOINT_PAN, new DecimalType(workspaceBlock.getInputFloat(VALUE)));
     }
 
-    private IpCameraService getOnvifService(WorkspaceBlock workspaceBlock) {
-        return getOnvifEntity(workspaceBlock).getService();
+    private IpCameraService getOnvifService(WorkspaceBlock workspaceBlock, ServerMenuBlock menu) {
+        IpCameraEntity entity = workspaceBlock.getMenuValueEntityRequired(Scratch3CameraBlocks.VIDEO_STREAM, menu);
+        return entity.getService();
     }
 
-    private IpCameraEntity getOnvifEntity(WorkspaceBlock workspaceBlock) {
-        return workspaceBlock.getMenuValueEntityRequired(Scratch3CameraBlocks.VIDEO_STREAM, menuOnvifCamera);
-    }
-
-    private void setEndpointValue(WorkspaceBlock workspaceBlock, String endpoint, State state) {
-        getOnvifService(workspaceBlock).getEndpoints().get(endpoint).setValue(state, true);
+    private void setEndpointValue(ServerMenuBlock menu, WorkspaceBlock workspaceBlock, String endpoint, State state) {
+        getOnvifService(workspaceBlock, menu).getEndpoints().get(endpoint).setValue(state, true);
     }
 
     private enum PanActionType {
@@ -158,14 +158,5 @@ public class Scratch3OnvifPTZBlocks extends Scratch3ExtensionBlocks {
 
     private enum ZoomActionType {
         In, Out, Off
-    }
-
-    @RequiredArgsConstructor
-    private enum GetPTZValueType {
-        Zoom(camera -> new DecimalType(camera.getOnvifDeviceState().getPtzDevices().getCurrentZoomPercentage())),
-        Tilt(camera -> new DecimalType(camera.getOnvifDeviceState().getPtzDevices().getCurrentTiltPercentage())),
-        Pan(camera -> new DecimalType(camera.getOnvifDeviceState().getPtzDevices().getCurrentPanPercentage()));
-
-        private final Function<IpCameraService, State> handler;
     }
 }

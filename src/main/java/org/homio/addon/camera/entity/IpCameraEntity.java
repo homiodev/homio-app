@@ -16,6 +16,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
+import org.homio.addon.camera.onvif.impl.UnknownBrandHandler;
 import org.homio.addon.camera.service.IpCameraService;
 import org.homio.api.EntityContext;
 import org.homio.api.model.ActionResponseModel;
@@ -59,7 +60,7 @@ public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraSer
     @UIFieldDynamicSelection(SelectCameraBrand.class)
     @UIFieldGroup("GENERAL")
     public String getCameraType() {
-        return getJsonData("cameraType", CameraBrandHandlerDescription.DEFAULT_BRAND.getID());
+        return getJsonData("cameraType", UnknownBrandHandler.class.getSimpleName());
     }
 
     public IpCameraEntity setCameraType(String cameraType) {
