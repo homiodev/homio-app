@@ -4,6 +4,7 @@ import static org.apache.commons.lang3.StringUtils.defaultString;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.function.Function;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,7 +17,8 @@ public class VideoUrls {
 
     private @NotNull ProfileUrls defaultProfile = new ProfileUrls();
 
-    private final Map<String, ProfileUrls> urls = new ConcurrentHashMap<>();
+    // natural ordered to preserve onvif profile orders
+    private final Map<String, ProfileUrls> urls = new ConcurrentSkipListMap<>();
     private @Nullable @Setter Function<String, String> uriConverter;
 
     public @NotNull String getMjpegUri() {

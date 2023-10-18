@@ -26,9 +26,8 @@ import static org.homio.api.util.CommonUtils.getErrorMessage;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pivovarit.function.ThrowingRunnable;
 import de.onvif.soap.OnvifDeviceState;
+import de.onvif.soap.OnvifUrl;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
@@ -39,7 +38,6 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpClientCodec;
@@ -48,12 +46,13 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import java.awt.Dimension;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -74,7 +73,7 @@ import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
 import org.homio.addon.camera.onvif.impl.UnknownBrandHandler;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
-import org.homio.addon.camera.onvif.util.MyNettyAuthHandler;
+import org.homio.addon.camera.onvif.util.NettyAuthHandler;
 import org.homio.addon.camera.service.util.CameraUtils;
 import org.homio.addon.camera.service.util.CommonCameraHandler;
 import org.homio.api.EntityContext;
@@ -103,14 +102,14 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
     private final @NotNull BaseOnvifCameraBrandHandler brandHandler;
 
     private final @NotNull EventLoopGroup mainEventLoopGroup = new NioEventLoopGroup(1);
+    private Bootstrap mainBootstrap;
+    private NettyAuthHandler nettyAuthHandler;
+
     @Getter
     private final @NotNull OnvifDeviceState onvifDeviceState;
     private final FileLogger onvifEventsLogger;
-    public boolean useDigestAuth = false;
 
-    private Bootstrap mainBootstrap;
     private @NotNull FullHttpRequest putRequestWithBody = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod("PUT"), "");
-    private String basicAuth = "";
 
     public List<LowRequest> lowPriorityRequests = new ArrayList<>(0);
     private byte lowPriorityCounter = 0;
@@ -214,36 +213,6 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
         return (CameraPlaybackStorage) brandHandler;
     }
 
-    // false clears the stored user/pass hash, true creates the hash
-    public boolean setBasicAuth(boolean useBasic) {
-        if (!useBasic) {
-            log.debug("[{}]: Clearing out the stored BASIC auth now.", getEntityID());
-            basicAuth = "";
-            return false;
-        } else if (!basicAuth.isEmpty()) {
-            // due to camera may have been sent multiple requests before the auth was set, this may trigger falsely.
-            log.warn("[{}]: Camera is reporting your username and/or password is wrong.", getEntityID());
-            return false;
-        }
-        IpCameraEntity entity = getEntity();
-        if (!entity.getUser().isEmpty() && !entity.getPassword().isEmpty()) {
-            String authString = entity.getUser() + ":" + entity.getPassword().asString();
-            ByteBuf byteBuf = null;
-            try {
-                byteBuf = Base64.encode(Unpooled.wrappedBuffer(authString.getBytes(CharsetUtil.UTF_8)));
-                basicAuth = byteBuf.getCharSequence(0, byteBuf.capacity(), CharsetUtil.UTF_8).toString();
-            } finally {
-                if (byteBuf != null) {
-                    byteBuf.release();
-                }
-            }
-            return true;
-        } else {
-            disposeAndSetStatus(Status.ERROR, "Camera is asking for Basic Auth when you have not provided a username and/or password.");
-        }
-        return false;
-    }
-
     public void sendHttpPUT(String httpRequestURL, FullHttpRequest request) {
         putRequestWithBody = request; // use Global so the auth handler can use it when resent with DIGEST.
         sendHttpRequest("PUT", httpRequestURL, null);
@@ -262,6 +231,7 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
         String httpRequestURL = getTinyUrl(httpRequestURLFull);
 
         if (mainBootstrap == null) {
+            nettyAuthHandler = new NettyAuthHandler(this);
             mainBootstrap = new Bootstrap();
             mainBootstrap.group(mainEventLoopGroup);
             mainBootstrap.channel(NioSocketChannel.class);
@@ -278,8 +248,7 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
                     // HIK Alarm stream needs > 9sec idle to stop stream closing
                     socketChannel.pipeline().addLast(new IdleStateHandler(18, 0, 0));
                     socketChannel.pipeline().addLast(new HttpClientCodec());
-                    socketChannel.pipeline().addLast(MyNettyAuthHandler.AUTH_HANDLER,
-                        new MyNettyAuthHandler(entity, IpCameraService.this));
+                    socketChannel.pipeline().addLast(NettyAuthHandler.AUTH_HANDLER, nettyAuthHandler);
                     socketChannel.pipeline().addLast(CommonCameraHandler.COMMON_HANDLER, new CommonCameraHandler(IpCameraService.this));
 
                     socketChannel.pipeline().addLast(brandHandler.getClass().getSimpleName(), brandHandler.asBootstrapHandler());
@@ -288,7 +257,7 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
         }
 
         FullHttpRequest request;
-        if ("GET".equals(httpMethod) || (useDigestAuth && digestString == null)) {
+        if ("GET".equals(httpMethod) || (nettyAuthHandler.isUseDigestAuth() && digestString == null)) {
             request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod(httpMethod), httpRequestURL);
             request.headers().set(HttpHeaderNames.HOST, entity.getIp() + ":" + port);
             request.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
@@ -298,20 +267,7 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
             throw new IllegalStateException("Http method: " + httpMethod + " not implemented");
         }
 
-        if (!basicAuth.isEmpty()) {
-            if (useDigestAuth) {
-                log.warn("[{}]: Camera at IP:{} had both Basic and Digest set to be used", getEntityID(), entity.getIp());
-                setBasicAuth(false);
-            } else {
-                request.headers().set(HttpHeaderNames.AUTHORIZATION, "Basic " + basicAuth);
-            }
-        }
-
-        if (useDigestAuth) {
-            if (digestString != null) {
-                request.headers().set(HttpHeaderNames.AUTHORIZATION, "Digest " + digestString);
-            }
-        }
+        nettyAuthHandler.authenticateRequest(request, digestString);
 
         mainBootstrap.connect(new InetSocketAddress(entity.getIp(), port))
                      .addListener((ChannelFutureListener) future -> {
@@ -328,7 +284,7 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
 
                              CommonCameraHandler commonHandler = (CommonCameraHandler) ch.pipeline().get(CommonCameraHandler.COMMON_HANDLER);
                              commonHandler.setRequestUrl(httpRequestURLFull);
-                             MyNettyAuthHandler authHandler = (MyNettyAuthHandler) ch.pipeline().get(MyNettyAuthHandler.AUTH_HANDLER);
+                             NettyAuthHandler authHandler = (NettyAuthHandler) ch.pipeline().get(NettyAuthHandler.AUTH_HANDLER);
                              authHandler.setURL(httpMethod, httpRequestURL);
 
                              brandHandler.handleSetURL(ch.pipeline(), httpRequestURL);
@@ -395,11 +351,13 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
         if ("ffmpeg".equals(snapshotUri)) {
             super.takeSnapshotAsync();
         } else {
+            // snapshotUri must be without ip address and port!
             mainEventLoopGroup.schedule(() -> sendHttpGET(snapshotUri), 0, TimeUnit.MILLISECONDS);
         }
     }
 
     @Override
+    @SneakyThrows
     protected void takeSnapshotSync(@Nullable String profile, @NotNull Path output) {
         String snapshotUri = urls.getSnapshotUri(profile);
         if (snapshotUri.equals("ffmpeg")) {
@@ -408,7 +366,10 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
             if (snapshotUri.startsWith("/")) {
                 snapshotUri = "http://%s:%s%s".formatted(getEntity().getIp(), getEntity().getRestPort(), snapshotUri);
             }
-            CameraUtils.downloadImage(snapshotUri, entity.getUser(), entity.getPassword().asString(), output);
+            try (InputStream inputStream = CameraUtils.sendRequest(getEntityID(), snapshotUri, entity.getUser(), entity.getPassword().asString())
+                                                      .get(10, TimeUnit.SECONDS)) {
+                Files.copy(inputStream, output, StandardCopyOption.REPLACE_EXISTING);
+            }
         }
     }
 
@@ -604,8 +565,9 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
 
     @Override
     protected void dispose0() {
-        basicAuth = ""; // clear out stored Password hash
-        useDigestAuth = false;
+        if(nettyAuthHandler != null) {
+            nettyAuthHandler.dispose();
+        }
     }
 
     public ActionResponseModel authenticate() {
@@ -683,8 +645,14 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
             onvifDeviceState.getEventDevices().initFully(subscribeUrl);
         }
         for (Profile profile : onvifDeviceState.getProfiles()) {
-            urls.setRtspUri(onvifDeviceState.getMediaDevices().getRTSPStreamUri(profile.getToken()), profile.getName());
-            urls.setSnapshotUri(onvifDeviceState.getMediaDevices().getSnapshotUri(profile.getToken()), profile.getName());
+            OnvifUrl rtspStreamUri = onvifDeviceState.getMediaDevices().getRTSPStreamUri(profile.getToken());
+            if (rtspStreamUri != null) {
+                urls.setRtspUri(rtspStreamUri.getFullUrl(), profile.getName());
+            }
+            OnvifUrl snapshotUri = onvifDeviceState.getMediaDevices().getSnapshotUri(profile.getToken());
+            if (snapshotUri != null) {
+                urls.setSnapshotUri(snapshotUri.getXAddr(), profile.getName());
+            }
         }
         List<Dimension> resolutions = onvifDeviceState
             .getProfiles().stream()

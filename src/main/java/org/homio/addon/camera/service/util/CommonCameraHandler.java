@@ -149,18 +149,6 @@ public class CommonCameraHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) {
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) {
-    }
-
-    @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) {
-    }
-
-    @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         if (cause == null || ctx == null) {
             return;

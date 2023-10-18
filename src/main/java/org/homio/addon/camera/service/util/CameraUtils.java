@@ -17,10 +17,13 @@ import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -40,31 +43,48 @@ import org.springframework.http.HttpHeaders;
 @Log4j2
 public class CameraUtils {
 
-    private static Map<String, AuthHandler> imageAuthHandler = new ConcurrentHashMap<>();
+    private static Map<String, AuthHandler> authHandlerMap = new ConcurrentHashMap<>();
 
     @SneakyThrows
-    public static void downloadImage(@NotNull String snapshotUri, @Nullable String user, @Nullable String password, @NotNull Path output) {
-        Builder request = HttpRequest.newBuilder().uri(new URI(snapshotUri)).GET();
-        AuthHandler authHandler = imageAuthHandler.get(snapshotUri);
+    public static CompletableFuture<InputStream> sendRequest(
+        @NotNull String entityID,
+        @NotNull String uri,
+        @Nullable String user,
+        @Nullable String password) {
+        CompletableFuture<InputStream> future = new CompletableFuture<>();
+        Builder request = HttpRequest.newBuilder().uri(new URI(uri)).GET();
+        AuthHandler authHandler = CameraUtils.authHandlerMap.get(entityID);
         if (authHandler != null) {
             authHandler.run(request, user, password);
         }
-        HttpResponse<InputStream> response = HttpClient.newHttpClient().send(request.build(), BodyHandlers.ofInputStream());
-        if (response.statusCode() == 401) {
+        HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+        client.sendAsync(request.build(), BodyHandlers.ofInputStream()).thenAccept(response ->
+            handleResponse(entityID, uri, user, password, response, request, future));
+        return future;
+    }
+
+    @SneakyThrows
+    private static void handleResponse(
+        @NotNull String entityID,
+        @NotNull String uri,
+        @Nullable String user,
+        @Nullable String password,
+        @NotNull HttpResponse<InputStream> response,
+        @NotNull Builder request,
+        CompletableFuture<InputStream> future) {
+        if(response.statusCode() == 401) {
             String authenticate = response.headers().firstValue(WWW_AUTHENTICATE).orElse(null);
             if(StringUtils.isNotEmpty(authenticate)) {
-                authHandler = (requestBuilder, user1, password1) -> {
+                AuthHandler authHandler = (requestBuilder, user1, password1) -> {
                     DigestScheme md5Auth = new DigestScheme();
                     md5Auth.processChallenge(new BasicHeader(WWW_AUTHENTICATE, authenticate));
                     Header solution = md5Auth.authenticate(
-                        new UsernamePasswordCredentials(user1, password1),
-                        new BasicHttpRequest("GET", new URL(snapshotUri).getPath()), new HttpClientContext());
+                        new UsernamePasswordCredentials(Objects.requireNonNull(user1), password1),
+                        new BasicHttpRequest("GET", new URL(uri).getPath()), new HttpClientContext());
                     requestBuilder.header(solution.getName(), solution.getValue());
                 };
-            }
-            //authHandler = buildAuthHandler(response, user, password, snapshotUri);
-            if (authHandler != null) {
-                imageAuthHandler.put(snapshotUri, authHandler);
+
+                CameraUtils.authHandlerMap.put(entityID, authHandler);
                 authHandler.run(request, user, password);
                 response = HttpClient.newHttpClient().send(request.build(), BodyHandlers.ofInputStream());
             }
@@ -74,12 +94,9 @@ public class CameraUtils {
             try (InputStream stream = response.body()) {
                 body = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
             }
-            throw new RuntimeException("Error while download snapshot <" + snapshotUri + ">. Code: " +
-                response.statusCode() + ". Msg: " + body);
+            future.completeExceptionally(new RuntimeException("Error while call <%s>. Code: %d. Msg: %s".formatted(uri, response.statusCode(), body)));
         }
-        try (InputStream inputStream = response.body()) {
-            Files.copy(inputStream, output, StandardCopyOption.REPLACE_EXISTING);
-        }
+        future.complete(response.body());
     }
 
     private static @Nullable AuthHandler buildAuthHandler(HttpResponse<InputStream> response, String user,

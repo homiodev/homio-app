@@ -2,11 +2,18 @@ package org.homio.addon.camera.onvif.util;
 
 import static org.homio.addon.camera.service.util.CameraUtils.calcMD5Hash;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.base64.Base64;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.util.CharsetUtil;
 import java.security.SecureRandom;
 import java.util.Random;
+import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.addon.camera.service.IpCameraService;
@@ -16,7 +23,7 @@ import org.homio.api.model.Status;
  * responsible for handling the basic and digest auths
  */
 @Log4j2
-public class MyNettyAuthHandler extends ChannelDuplexHandler {
+public class NettyAuthHandler extends ChannelDuplexHandler {
     public static final String AUTH_HANDLER = "authorizationHandler";
 
     private final String username;
@@ -28,10 +35,13 @@ public class MyNettyAuthHandler extends ChannelDuplexHandler {
     private String nonce = "", opaque = "", qop = "";
     private String realm = "";
 
-    public MyNettyAuthHandler(IpCameraEntity entity, IpCameraService service) {
+    private @Getter String basicAuth = "";
+    private @Getter boolean useDigestAuth = false;
+
+    public NettyAuthHandler(IpCameraService service) {
         this.service = service;
-        username = entity.getUser();
-        password = entity.getPassword().asString();
+        username = service.getEntity().getUser();
+        password = service.getEntity().getPassword().asString();
     }
 
     public void setURL(String method, String url) {
@@ -45,12 +55,12 @@ public class MyNettyAuthHandler extends ChannelDuplexHandler {
     // nonce is reused if authenticate is null so the NC needs to increment to allow this//
     public void processAuth(String authenticate, String httpMethod, String requestURI, boolean reSend) {
         if (authenticate.contains("Basic realm=\"")) {
-            if (service.useDigestAuth) {
+            if (useDigestAuth) {
                 // Possible downgrade authenticate attack avoided.
                 return;
             }
             log.debug("Setting up the camera to use Basic Auth and resending last request with correct auth.");
-            if (service.setBasicAuth(true)) {
+            if (setBasicAuth(true)) {
                 service.sendHttpRequest(httpMethod, requestURI, null);
             }
             return;
@@ -67,7 +77,7 @@ public class MyNettyAuthHandler extends ChannelDuplexHandler {
         qop = Helper.searchString(authenticate, "qop=\"");
 
         if (!qop.isEmpty() && !realm.isEmpty()) {
-            service.useDigestAuth = true;
+            useDigestAuth = true;
         } else {
             log.warn(
                     "!!!! Something is wrong with the reply back from the camera. WWW-Authenticate header: qop:{}, realm:{}",
@@ -108,6 +118,36 @@ public class MyNettyAuthHandler extends ChannelDuplexHandler {
         }
     }
 
+    // false clears the stored user/pass hash, true creates the hash
+    public boolean setBasicAuth(boolean useBasic) {
+        if (!useBasic) {
+            log.debug("[{}]: Clearing out the stored BASIC auth now.", service.getEntityID());
+            basicAuth = "";
+            return false;
+        } else if (!basicAuth.isEmpty()) {
+            // due to camera may have been sent multiple requests before the auth was set, this may trigger falsely.
+            log.warn("[{}]: Camera is reporting your username and/or password is wrong.", service.getEntityID());
+            return false;
+        }
+        IpCameraEntity entity = service.getEntity();
+        if (!entity.getUser().isEmpty() && !entity.getPassword().isEmpty()) {
+            String authString = entity.getUser() + ":" + entity.getPassword().asString();
+            ByteBuf byteBuf = null;
+            try {
+                byteBuf = Base64.encode(Unpooled.wrappedBuffer(authString.getBytes(CharsetUtil.UTF_8)));
+                basicAuth = byteBuf.getCharSequence(0, byteBuf.capacity(), CharsetUtil.UTF_8).toString();
+            } finally {
+                if (byteBuf != null) {
+                    byteBuf.release();
+                }
+            }
+            return true;
+        } else {
+            service.disposeAndSetStatus(Status.ERROR, "Camera is asking for Basic Auth when you have not provided a username and/or password.");
+        }
+        return false;
+    }
+
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg == null || ctx == null) {
@@ -115,8 +155,7 @@ public class MyNettyAuthHandler extends ChannelDuplexHandler {
         }
         boolean closeConnection = true;
         String authenticate = "";
-        if (msg instanceof HttpResponse) {
-            HttpResponse response = (HttpResponse) msg;
+        if (msg instanceof HttpResponse response) {
             if (response.status().code() == 401) {
                 if (!response.headers().isEmpty()) {
                     for (CharSequence name : response.headers().names()) {
@@ -149,5 +188,27 @@ public class MyNettyAuthHandler extends ChannelDuplexHandler {
         }
         // Pass the Message back to the pipeline for the next handler to process//
         super.channelRead(ctx, msg);
+    }
+
+    public void authenticateRequest(FullHttpRequest request, String digestString) {
+        if (!basicAuth.isEmpty()) {
+            if (useDigestAuth) {
+                log.warn("[{}]: Camera at IP:{} had both Basic and Digest set to be used", service.getEntityID(), service.getEntity().getIp());
+                setBasicAuth(false);
+            } else {
+                request.headers().set(HttpHeaderNames.AUTHORIZATION, "Basic " + basicAuth);
+            }
+        }
+
+        if (useDigestAuth) {
+            if (digestString != null) {
+                request.headers().set(HttpHeaderNames.AUTHORIZATION, "Digest " + digestString);
+            }
+        }
+    }
+
+    public void dispose() {
+        basicAuth = ""; // clear out stored Password hash
+        useDigestAuth = false;
     }
 }
