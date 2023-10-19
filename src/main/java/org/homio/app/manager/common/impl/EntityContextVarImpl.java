@@ -247,7 +247,7 @@ public class EntityContextVarImpl implements EntityContextVar {
         if (parentGroup == null) {
             throw new IllegalArgumentException("Parent group '" + parentGroupId + "' not exists");
         }
-        return saveOrUpdateGroup(groupId, groupName, groupBuilder, wg -> wg.setHidden(true).setParent(parentGroup));
+        return saveOrUpdateGroup(parentGroupId + "-" + groupId, groupName, groupBuilder, wg -> wg.setHidden(true).setParent(parentGroup));
     }
 
     @Override

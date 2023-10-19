@@ -1,7 +1,6 @@
 package org.homio.addon.camera.service;
 
 import java.util.List;
-import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import lombok.Setter;
@@ -69,6 +68,7 @@ public class CameraDeviceEndpoint extends BaseDeviceEndpoint<BaseCameraEntity<?,
         setMin(min);
         setMax(max);
         setRange(range);
+        setUnit(configEndpoint == null ? null : configEndpoint.getUnit());
         setIcon(new Icon(
             "fa " + (configEndpoint == null ? "fa-camera" : configEndpoint.getIcon()),
             configEndpoint == null ? "#3894B5" : configEndpoint.getIconColor()));
@@ -77,7 +77,6 @@ public class CameraDeviceEndpoint extends BaseDeviceEndpoint<BaseCameraEntity<?,
             BaseCameraService.CONFIG_DEVICE_SERVICE,
             endpointEntityID,
             device,
-            configEndpoint == null ? null : configEndpoint.getUnit(),
             true,
             writable,
             endpointEntityID,
@@ -133,5 +132,10 @@ public class CameraDeviceEndpoint extends BaseDeviceEndpoint<BaseCameraEntity<?,
 
     public void setValue(@Nullable State value, boolean externalUpdate) {
         super.setValue(valueConverter.apply(value), externalUpdate);
+    }
+
+    @Override
+    public String getVariableGroupID() {
+        return "video-" + getDeviceID();
     }
 }

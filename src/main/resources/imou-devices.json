@@ -1,0 +1,314 @@
+{
+  "version": "1",
+  "devices": [
+  ],
+  "endpoints": [
+    {
+      "type": "switch",
+      "name": "motionDetect",
+      "icon": "fa-star-half-stroke",
+      "iconColor": "#56AB26"
+    },
+    {
+      "type": "switch",
+      "name": "localRecord",
+      "icon": "fa-circle-down",
+      "iconColor": "#27608C"
+    },
+    {
+      "type": "switch",
+      "name": "faceCapture",
+      "icon": "fa-plug-circle-bolt",
+      "iconColor": "#A69A2D"
+    },
+    {
+      "type": "switch",
+      "name": "speechRecognition",
+      "icon": "fa-bolt",
+      "iconColor": "#9357EF"
+    },
+    {
+      "type": "switch",
+      "name": "breathingLight",
+      "icon": "fa-plug-circle-bolt",
+      "iconColor": "#9357EF"
+    },
+    {
+      "type": "switch",
+      "name": "smartLocate",
+      "icon": "fa-truck-ramp-box",
+      "iconColor": "#299974"
+    },
+    {
+      "type": "switch",
+      "name": "smartTrack",
+      "icon": "fa-vials",
+      "iconColor": "#A095F7"
+    },
+    {
+      "type": "switch",
+      "name": "localAlarmRecord",
+      "icon": "fa-cash-register",
+      "iconColor": "#B06C51"
+    },
+    {
+      "type": "switch",
+      "name": "regularCruise",
+      "icon": "fa-dice-d20",
+      "iconColor": "#5172B0"
+    },
+    {
+      "type": "switch",
+      "name": "headerDetect",
+      "icon": "fa-tower-observation",
+      "iconColor": "#563AB0"
+    },
+    {
+      "type": "switch",
+      "name": "numberStat",
+      "icon": "fa-gopuram",
+      "iconColor": "#A82F9E"
+    },
+    {
+      "type": "switch",
+      "name": "manNumDec",
+      "icon": "fa-plug-circle-exclamation",
+      "iconColor": "#DD5F24"
+    },
+    {
+      "type": "switch",
+      "name": "alarmPIR",
+      "icon": "fa-shuffle",
+      "iconColor": "#538273"
+    },
+    {
+      "type": "switch",
+      "name": "autoZoomFocus",
+      "icon": "fa-person-booth",
+      "iconColor": "#AB2200"
+    },
+    {
+      "type": "switch",
+      "name": "audioEncodeControl",
+      "icon": "fa-stopwatch",
+      "iconColor": "#618750"
+    },
+    {
+      "type": "switch",
+      "name": "aecv3",
+      "icon": "fa-lock",
+      "iconColor": "#AB2631"
+    },
+    {
+      "type": "switch",
+      "name": "faceDetect",
+      "icon": "fa-stopwatch-20",
+      "iconColor": "#7C2D9C"
+    },
+    {
+      "type": "switch",
+      "name": "localStorageEnable",
+      "icon": "fa-truck-ramp-box",
+      "iconColor": "#95A346"
+    },
+    {
+      "type": "switch",
+      "name": "whiteLight",
+      "icon": "fa-truck-ramp-box",
+      "iconColor": "#299974"
+    },
+    {
+      "type": "switch",
+      "name": "linkageWhiteLight",
+      "icon": "fa-eye",
+      "iconColor": "#2D9C2C"
+    },
+    {
+      "type": "switch",
+      "name": "linkageSiren",
+      "icon": "fa-globe",
+      "iconColor": "#42B52D"
+    },
+    {
+      "type": "switch",
+      "name": "infraredLight",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "searchLight",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "hoveringAlarm",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "beOpenedDoor",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "closeCamera",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "mobileDetect",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "rtFaceDetect",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "rtFaceCompa",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "closeDormant",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "heatMap",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "tlsEnable",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "aiHumanCar",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "aiHuman",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "aiCar",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "openDoorByFace",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "openDoorByTouch",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "linkDevAlarm",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "linkAccDevAlarm",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "abAlarmSound",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "playSound",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "wideDynamic",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "smdHuman",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "smdVehicle",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "instantDisAlarm",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "periodDisAlarm",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "ccss",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "inll",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "ledsw",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "type": "switch",
+      "name": "pushNotifications",
+      "icon": "fa-globe",
+      "iconColor": "#FF00FF"
+    },
+    {
+      "name": "battery",
+      "icon": "battery-full",
+      "iconColor": "5082C4",
+      "min": 0,
+      "max": 100
+    }
+  ]
+}

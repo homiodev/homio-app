@@ -5,6 +5,7 @@ import static org.homio.addon.camera.service.util.CameraUtils.calcMD5Hash;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -14,6 +15,7 @@ import io.netty.util.CharsetUtil;
 import java.security.SecureRandom;
 import java.util.Random;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.addon.camera.service.IpCameraService;
@@ -23,26 +25,19 @@ import org.homio.api.model.Status;
  * responsible for handling the basic and digest auths
  */
 @Log4j2
+@Sharable // Maybe need create 'prototype' instance because 'httpMethod and httpUrl' is shareable
+@RequiredArgsConstructor
 public class NettyAuthHandler extends ChannelDuplexHandler {
     public static final String AUTH_HANDLER = "authorizationHandler";
 
-    private final String username;
-    private final String password;
     private final IpCameraService service;
 
-    private String httpMethod = "", httpUrl = "";
+    private String httpMethod = "";
+    private String httpUrl = "";
     private byte ncCounter = 0;
-    private String nonce = "", opaque = "", qop = "";
-    private String realm = "";
 
     private @Getter String basicAuth = "";
     private @Getter boolean useDigestAuth = false;
-
-    public NettyAuthHandler(IpCameraService service) {
-        this.service = service;
-        username = service.getEntity().getUser();
-        password = service.getEntity().getPassword().asString();
-    }
 
     public void setURL(String method, String url) {
         httpUrl = url;
@@ -67,27 +62,30 @@ public class NettyAuthHandler extends ChannelDuplexHandler {
         }
 
         /////// Fresh Digest Authenticate method follows as Basic is already handled and returned ////////
-        realm = Helper.searchString(authenticate, "realm=\"");
+        String realm = Helper.searchString(authenticate, "realm=\"");
         if (realm.isEmpty()) {
             log.warn("Could not find a valid WWW-Authenticate response in :{}", authenticate);
             return;
         }
-        nonce = Helper.searchString(authenticate, "nonce=\"");
-        opaque = Helper.searchString(authenticate, "opaque=\"");
-        qop = Helper.searchString(authenticate, "qop=\"");
+        String nonce = Helper.searchString(authenticate, "nonce=\"");
+        String opaque = Helper.searchString(authenticate, "opaque=\"");
+        String qop = Helper.searchString(authenticate, "qop=\"");
 
-        if (!qop.isEmpty() && !realm.isEmpty()) {
+        if (!qop.isEmpty()) {
             useDigestAuth = true;
         } else {
             log.warn(
                     "!!!! Something is wrong with the reply back from the camera. WWW-Authenticate header: qop:{}, realm:{}",
-                    qop, realm);
+                qop, realm);
         }
 
         String stale = Helper.searchString(authenticate, "stale=\"");
         if (stale.equalsIgnoreCase("true")) {
             log.debug("Camera reported stale=true which normally means the NONCE has expired.");
         }
+
+        String username = service.getEntity().getUser();
+        String password = service.getEntity().getPassword().asString();
 
         if (password.isEmpty()) {
             service.disposeAndSetStatus(Status.ERROR, "Camera gave a 401 reply: You need to provide a password.");
