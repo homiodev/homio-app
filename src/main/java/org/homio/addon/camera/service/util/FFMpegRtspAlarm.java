@@ -12,8 +12,8 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.CameraConstants.AlarmEvent;
 import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.addon.camera.entity.VideoMotionAlarmProvider;
-import org.homio.api.EntityContextMedia.FFMPEG;
-import org.homio.api.EntityContextMedia.FFMPEGFormat;
+import org.homio.api.ContextMedia.FFMPEG;
+import org.homio.api.ContextMedia.FFMPEGFormat;
 import org.homio.api.state.DecimalType;
 import org.homio.app.video.ffmpeg.FFMPEGImpl;
 import org.jetbrains.annotations.NotNull;
@@ -112,7 +112,7 @@ public class FFMpegRtspAlarm implements VideoMotionAlarmProvider {
                 ffmpegRtspHelper = new FFMpegRtspAlarmImpl(entity, command);
                 // add destroy handle in case if you need restart
                 ffmpegRtspHelper.addDestroyListener("restart-on-failure", () ->
-                    entity.getEntityContext().bgp()
+                    entity.context().bgp()
                           .builder("restart-rtsp-alarm-" + entity.getEntityID())
                           .delay(Duration.ofSeconds(10)).execute(this::startIfRequires));
                 commandHashCode = ffmpegRtspHelper.getCommandHashCode();
@@ -147,7 +147,7 @@ public class FFMpegRtspAlarm implements VideoMotionAlarmProvider {
 
         public FFMpegRtspAlarmImpl(BaseCameraEntity<?, ?> entity, String command) {
             super(entity.getEntityID(), "RTSP ALARM", entity.getService(), FFMPEGFormat.RTSP_ALARMS,
-                "-", command, entity.getEntityContext());
+                "-", command, entity.context());
             this.entity = entity;
         }
 

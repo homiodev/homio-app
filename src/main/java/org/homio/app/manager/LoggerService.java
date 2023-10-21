@@ -1,5 +1,30 @@
 package org.homio.app.manager;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.nio.charset.Charset;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Scanner;
+import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -11,22 +36,14 @@ import org.apache.logging.log4j.message.ParameterizedNoReferenceMessageFactory;
 import org.apache.logging.log4j.simple.SimpleLogger;
 import org.apache.logging.log4j.util.PropertiesUtil;
 import org.apache.logging.log4j.util.Strings;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.ServerException;
 import org.homio.api.util.CommonUtils;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.spring.ContextCreated;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.StringUtils;
-
-import java.io.*;
-import java.nio.charset.Charset;
-import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.function.Consumer;
 
 /**
  * TODO: refactor code
@@ -36,10 +53,10 @@ import java.util.function.Consumer;
 @RequiredArgsConstructor
 public class LoggerService implements ContextCreated {
 
-    public final EntityContext entityContext;
+    public final Context context;
 
     @Override
-    public void onContextCreated(EntityContextImpl entityContext) throws Exception {
+    public void onContextCreated(ContextImpl context) throws Exception {
         Files.walkFileTree(CommonUtils.getLogsPath(), new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
@@ -60,7 +77,7 @@ public class LoggerService implements ContextCreated {
     }
 
     public Path getOrCreateLogFile(String key, BaseEntity entity, boolean allowCreate) {
-        BaseEntity targetEntity = entityContext.getEntity(entity);
+        BaseEntity targetEntity = context.db().getEntity(entity);
         return getOrCreateLogFile(targetEntity.getType(), "log_" + escapeName(key), allowCreate);
     }
 

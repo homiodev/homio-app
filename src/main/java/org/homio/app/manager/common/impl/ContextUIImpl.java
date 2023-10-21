@@ -29,7 +29,7 @@ import lombok.val;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.homio.api.EntityContextUI;
+import org.homio.api.ContextUI;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.BaseEntityIdentifier;
@@ -56,7 +56,7 @@ import org.homio.api.util.NotificationLevel;
 import org.homio.app.builder.ui.UIInputBuilderImpl;
 import org.homio.app.builder.ui.UIInputEntityActionHandler;
 import org.homio.app.config.WebSocketConfig;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.rest.DynamicUpdateRequest;
 import org.homio.app.notification.HeaderButtonNotification;
@@ -72,7 +72,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 @Log4j2
 @RequiredArgsConstructor
-public class EntityContextUIImpl implements EntityContextUI {
+public class ContextUIImpl implements ContextUI {
 
     public static final Map<String, ConsolePlugin<?>> consolePluginsMap = new HashMap<>();
 
@@ -84,7 +84,7 @@ public class EntityContextUIImpl implements EntityContextUI {
     private final Map<String, HeaderButtonNotification> headerButtonNotifications = new ConcurrentHashMap<>();
     private final Map<String, ProgressNotification> progressMap = new ConcurrentHashMap<>();
     // constructor parameters
-    private final @Getter EntityContextImpl entityContext;
+    private final @Getter @Accessors(fluent = true) ContextImpl context;
     private final SimpMessagingTemplate messagingTemplate;
     private final Map<String, SendUpdateContext> sendToUIMap = new ConcurrentHashMap<>();
     private final @Getter @Accessors(fluent = true) EntityContextUIToastrImpl toastr = new EntityContextUIToastrImpl();
@@ -97,14 +97,14 @@ public class EntityContextUIImpl implements EntityContextUI {
 
     public void onContextCreated() {
         // run hourly script to drop not used dynamicUpdateRegisters
-        entityContext
+        context
             .bgp()
             .builder("drop-outdated-dynamicContext")
             .intervalWithDelay(Duration.ofHours(1))
             .execute(() ->
                 this.dynamicUpdateRegisters.values().removeIf(v -> TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - v.timeout) > 1));
 
-        entityContext.bgp().builder("send-ui-updates").interval(Duration.ofSeconds(1)).execute(() -> {
+        context.bgp().builder("send-ui-updates").interval(Duration.ofSeconds(1)).execute(() -> {
             for (Iterator<SendUpdateContext> iterator = sendToUIMap.values().iterator(); iterator.hasNext(); ) {
                 SendUpdateContext context = iterator.next();
 
@@ -124,14 +124,14 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
 
     public void registerForUpdates(DynamicUpdateRequest request) {
-        DynamicUpdateContext context = dynamicUpdateRegisters.get(request);
-        if (context == null) {
+        DynamicUpdateContext duc = dynamicUpdateRegisters.get(request);
+        if (duc == null) {
             dynamicUpdateRegisters.put(request, new DynamicUpdateContext());
         } else {
-            context.timeout = System.currentTimeMillis(); // refresh timer
-            context.registerCounter.incrementAndGet();
+            duc.timeout = System.currentTimeMillis(); // refresh timer
+            duc.registerCounter.incrementAndGet();
         }
-        entityContext.event().addEventListener(request.getDynamicUpdateId(), o -> this.sendDynamicUpdateSupplied(request, () -> o));
+        context.event().addEventListener(request.getDynamicUpdateId(), o -> this.sendDynamicUpdateSupplied(request, () -> o));
     }
 
     public void unRegisterForUpdates(DynamicUpdateRequest request) {
@@ -167,7 +167,7 @@ public class EntityContextUIImpl implements EntityContextUI {
 
     @Override
     public @NotNull UIInputBuilder inputBuilder() {
-        return new UIInputBuilderImpl(entityContext);
+        return new UIInputBuilderImpl(context);
     }
 
     @Override
@@ -314,7 +314,7 @@ public class EntityContextUIImpl implements EntityContextUI {
             public @NotNull HeaderButtonBuilder clickAction(@NotNull Class<? extends SettingPluginButton> clickAction) {
                 builder.setClickAction(
                     () -> {
-                        entityContext.setting().setValue(clickAction, null);
+                        context.setting().setValue(clickAction, null);
                         return null;
                     });
                 return this;
@@ -373,7 +373,7 @@ public class EntityContextUIImpl implements EntityContextUI {
 
         NotificationResponse notificationResponse = new NotificationResponse();
         notificationResponse.dialogs = dialogRequest.values();
-        UserEntity user = entityContext.getUser();
+        UserEntity user = context.getUser();
         notificationResponse.notifications = blockNotifications.values();
         if (user != null) {
             for (NotificationBlock notification : notificationResponse.notifications) {
@@ -395,7 +395,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         if (model != null) {
             model.getActionHandler().handle(dialogResponseType, pressedButton, params);
             if (dialogResponseType != DialogResponseType.Timeout && model.getMaxTimeoutInSec() > 0) {
-                entityContext.bgp().cancelThread(entityID + "dialog-timeout");
+                context.bgp().cancelThread(entityID + "dialog-timeout");
             }
 
             for (HeaderButtonNotification notificationModel : headerButtonNotifications.values()) {
@@ -462,11 +462,11 @@ public class EntityContextUIImpl implements EntityContextUI {
                                  .filter(i -> Objects.equals(actionEntityID, i.getKey()))
                                  .findAny().orElse(null);
             if (info != null) {
-                return info.getHandler().handleAction(entityContext, null);
+                return info.getHandler().handleAction(context, null);
             }
             UIActionHandler actionHandler = findNotificationAction(actionEntityID, notificationBlock);
             if (actionHandler != null) {
-                return actionHandler.handleAction(entityContext, params);
+                return actionHandler.handleAction(context, params);
             }
         }
         throw new IllegalArgumentException("Unable to find header notification: <" + entityID + ">");
@@ -477,7 +477,7 @@ public class EntityContextUIImpl implements EntityContextUI {
             throw new IllegalArgumentException("Version must be specified for update: " + entityID);
         }
         notificationBlock.setUpdating(true);
-        entityContext.bgp()
+        context.bgp()
                      .runWithProgress("update-" + entityID)
                      .execute(progressBar -> {
                          val handler = notificationBlock.getUpdateHandler();
@@ -489,7 +489,7 @@ public class EntityContextUIImpl implements EntityContextUI {
                          } finally {
                              if (notificationBlock.getRefreshBlockBuilder() != null) {
                                  notificationBlock.getRefreshBlockBuilder().accept(
-                                     new NotificationBlockBuilderImpl(notificationBlock, entityContext));
+                                     new NotificationBlockBuilderImpl(notificationBlock, context));
                                  sendGlobal(GlobalSendType.notification, entityID, notificationBlock, null, null);
                              }
                          }
@@ -553,7 +553,7 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
 
     private record NotificationBlockBuilderImpl(NotificationBlock notificationBlock,
-                                                EntityContextImpl entityContext) implements NotificationBlockBuilder {
+                                                ContextImpl context) implements NotificationBlockBuilder {
 
         @Override
         public @NotNull NotificationBlockBuilder linkToEntity(@NotNull BaseEntity entity) {
@@ -570,7 +570,7 @@ public class EntityContextUIImpl implements EntityContextUI {
 
         @Override
         public @NotNull NotificationBlockBuilder blockActionBuilder(Consumer<UIInputBuilder> builder) {
-            UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
+            UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
             builder.accept(uiInputBuilder);
             notificationBlock.getKeyValueActions().put("general", uiInputBuilder.buildAll());
             return this;
@@ -578,7 +578,7 @@ public class EntityContextUIImpl implements EntityContextUI {
 
         @Override
         public @NotNull NotificationBlockBuilder addFlexAction(@NotNull String name, @NotNull Consumer<UIFlexLayoutBuilder> builder) {
-            UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
+            UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
             uiInputBuilder.addFlex(name, builder);
             notificationBlock.getKeyValueActions().put(name, uiInputBuilder.buildAll());
             return this;
@@ -586,7 +586,7 @@ public class EntityContextUIImpl implements EntityContextUI {
 
         @Override
         public @NotNull NotificationBlockBuilder contextMenuActionBuilder(Consumer<UIInputBuilder> builder) {
-            UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
+            UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
             builder.accept(uiInputBuilder);
             if (notificationBlock.getContextMenuActions() == null) {
                 notificationBlock.setContextMenuActions(new ArrayList<>());
@@ -689,7 +689,7 @@ public class EntityContextUIImpl implements EntityContextUI {
 
     }
 
-    public class EntityContextUIToastrImpl implements EntityContextUIToastr {
+    public class EntityContextUIToastrImpl implements ContextUIToastr {
 
         @Override
         public void sendMessage(@Nullable String title, @Nullable String message, @Nullable NotificationLevel level) {
@@ -701,7 +701,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
     }
 
-    public class EntityContextUINotificationImpl implements EntityContextUINotification {
+    public class EntityContextUINotificationImpl implements ContextUINotification {
 
         @Override
         public void removeEmptyBlock(@NotNull String entityID) {
@@ -715,7 +715,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         public void addBlock(@NotNull String entityID, @NotNull String name, @Nullable Icon icon, @Nullable Consumer<NotificationBlockBuilder> builder) {
             val notificationBlock = new NotificationBlock(entityID, name, icon);
             if (builder != null) {
-                builder.accept(new NotificationBlockBuilderImpl(notificationBlock, entityContext));
+                builder.accept(new NotificationBlockBuilderImpl(notificationBlock, context));
             }
             if (notificationBlock.getUpdateHandler() != null) {
                 notificationBlock.setRefreshBlockBuilder(builder);
@@ -730,7 +730,7 @@ public class EntityContextUIImpl implements EntityContextUI {
             if (notificationBlock == null) {
                 throw new IllegalArgumentException("Unable to find notification block: " + entityID);
             }
-            builder.accept(new NotificationBlockBuilderImpl(notificationBlock, entityContext));
+            builder.accept(new NotificationBlockBuilderImpl(notificationBlock, context));
             sendGlobal(GlobalSendType.notification, entityID, notificationBlock, null, null);
         }
 
@@ -747,7 +747,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
     }
 
-    public class EntityContextUIConsoleImpl implements EntityContextUIConsole {
+    public class EntityContextUIConsoleImpl implements ContextUIConsole {
 
         @Override
         public void registerPluginName(@NotNull String name, @Nullable String resource) {
@@ -792,7 +792,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
     }
 
-    public class EntityContextUIDialogImpl implements EntityContextUIDialog {
+    public class EntityContextUIDialogImpl implements ContextUIDialog {
 
         @Override
         public void sendDialogRequest(@NotNull DialogModel dialogModel) {
@@ -805,7 +805,7 @@ public class EntityContextUIImpl implements EntityContextUI {
                 }
 
                 if (dialogModel.getMaxTimeoutInSec() > 0) {
-                    entityContext
+                    context
                         .bgp()
                         .builder(key + "-dialog-timeout")
                         .delay(Duration.ofSeconds(dialogModel.getMaxTimeoutInSec()))
@@ -831,7 +831,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
     }
 
-    public class EntityContextUIProgressImpl implements EntityContextUIProgress {
+    public class EntityContextUIProgressImpl implements ContextUIProgress {
 
         private final Map<String, Pair<ProgressBar, Runnable>> simpleProgressBars = new ConcurrentHashMap<>();
 
@@ -840,7 +840,7 @@ public class EntityContextUIImpl implements EntityContextUI {
             ProgressBar progressBar = new ProgressBar() {
                 @Override
                 public void progress(double progress, @Nullable String message, boolean error) {
-                    getEntityContext().ui().progress().update(key, progress, message, cancelHandler != null);
+                    context().ui().progress().update(key, progress, message, cancelHandler != null);
                 }
 
                 @Override

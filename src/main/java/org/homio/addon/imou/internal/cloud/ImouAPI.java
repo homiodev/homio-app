@@ -10,8 +10,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,8 +26,12 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.imou.ImouProjectEntity;
+import org.homio.addon.imou.internal.cloud.dto.ImouDeviceAlarmMessageDTO;
+import org.homio.addon.imou.internal.cloud.dto.ImouDeviceCallbackUrlDTO;
 import org.homio.addon.imou.internal.cloud.dto.ImouDeviceDTO;
+import org.homio.addon.imou.internal.cloud.dto.ImouDeviceEmptyDTO;
 import org.homio.addon.imou.internal.cloud.dto.ImouDeviceListDTO;
+import org.homio.addon.imou.internal.cloud.dto.ImouDeviceLiveBindDTO;
 import org.homio.addon.imou.internal.cloud.dto.ImouDeviceNightVisionModeDTO;
 import org.homio.addon.imou.internal.cloud.dto.ImouDeviceOnlineStatusDTO;
 import org.homio.addon.imou.internal.cloud.dto.ImouSDCardDTO;
@@ -88,12 +94,32 @@ public class ImouAPI {
         return dto.getDevices();
     }
 
-    public ImouDeviceOnlineStatusDTO getDeviceStatus(String deviceID) {
+    public ImouDeviceOnlineStatusDTO getDeviceStatus(String deviceId) {
         Map<String, Object> params = Map.of(
-            "deviceId", deviceID,
+            "deviceId", deviceId,
             "token", login());
         String response = request("deviceOnline", params);
         return processResponse(response, ImouDeviceOnlineStatusDTO.class, null);
+    }
+
+    public ImouDeviceAlarmMessageDTO getAlarmMessages(String deviceId) {
+        Calendar beginTime = Calendar.getInstance();
+        beginTime.add(Calendar.DAY_OF_MONTH, -30);
+        Calendar endTime = Calendar.getInstance();
+        endTime.add(Calendar.DAY_OF_MONTH, 1);
+
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+        Map<String, Object> params = Map.of(
+            "deviceId", deviceId,
+            "count", "10",
+            "channelId", "0",
+            "beginTime", dateFormat.format(beginTime.getTime()),
+            "endTime", dateFormat.format(endTime.getTime()),
+            "token", login());
+        String response = request("getAlarmMessage", params);
+        return processResponse(response, ImouDeviceAlarmMessageDTO.class, null);
+
     }
 
     public ImouDeviceNightVisionModeDTO getNightVisionMode(String deviceID) {
@@ -104,11 +130,62 @@ public class ImouAPI {
         request("restartDevice", Map.of("deviceId", deviceId, "token", login()));
     }
 
-    public @Nullable ImouSDCardStatusDTO getDeviceSDCardStatus(String deviceId) {
-        if("normal".equals(request("deviceSdcardStatus", deviceId, ImouSDCardDTO.class).getStatus())) {
+    public ImouSDCardStatusDTO getDeviceSDCardStatus(String deviceId) {
+        String status = request("deviceSdcardStatus", deviceId, ImouSDCardDTO.class).getStatus();
+        if ("normal".equals(status)) {
             return request("deviceStorage", deviceId, ImouSDCardStatusDTO.class);
         }
-        return null;
+        throw new RuntimeException(status);
+    }
+
+    public ImouDeviceCallbackUrlDTO getMessageCallback(String deviceId) {
+        return request("getMessageCallback", deviceId, ImouDeviceCallbackUrlDTO.class);
+    }
+
+    public void setDeviceCameraStatus(String deviceId, String endpointEntityID, boolean on) {
+        Map<String, Object> params = Map.of(
+            "deviceId", deviceId,
+            "enableType", endpointEntityID,
+            "enable", on,
+            "token", login());
+        String response = request("setDeviceCameraStatus", params);
+        processResponse(response, ImouDeviceEmptyDTO.class, projectEntity);
+    }
+
+    public void setMessageCallback(String url) {
+        Map<String, Object> params = Map.of(
+            "callbackUrl", url,
+            "callbackFlag", "alarm,deviceStatus,numberstat,faceAnalysis",
+            "status", url.isEmpty() ? "off" : "on",
+            "token", login());
+        String response = request("setMessageCallback", params);
+        processResponse(response, ImouDeviceEmptyDTO.class, projectEntity);
+    }
+
+    @SneakyThrows
+    public byte[] getSnapshot(String deviceId) {
+        Map<String, Object> params = Map.of(
+            "deviceId", deviceId,
+            "channelId", "0",
+            "token", login());
+        String response = request("setDeviceSnapEnhanced", params);
+        DeviceSnapEnhancedDTO dto = processResponse(response, DeviceSnapEnhancedDTO.class, null);
+        Thread.sleep(1000);
+        return Curl.download(dto.url).getBytes();
+    }
+
+    public Object getBindDeviceLive(String deviceId, CameraProfile profile) {
+        Map<String, Object> params = Map.of(
+            "deviceId", deviceId,
+            "channelId", "0",
+            "streamId", profile.ordinal(),
+            "token", login());
+        String response = request("bindDeviceLive", params);
+        return processResponse(response, ImouDeviceLiveBindDTO.class, null);
+    }
+
+    public enum CameraProfile {
+        HD, SD
     }
 
     private static @NotNull ImouProjectEntity assertApiReady() {
@@ -206,5 +283,11 @@ public class ImouAPI {
         map.put("params", paramsMap);
         map.put("id", id);
         return map;
+    }
+
+    @Getter
+    private static class DeviceSnapEnhancedDTO {
+
+        private String url;
     }
 }

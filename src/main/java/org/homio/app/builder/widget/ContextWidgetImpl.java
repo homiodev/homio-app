@@ -1,11 +1,17 @@
 package org.homio.app.builder.widget;
 
+import static org.homio.app.model.entity.widget.WidgetTabEntity.MAIN_TAB_ID;
+
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextWidget;
+import org.homio.api.Context;
+import org.homio.api.ContextWidget;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
@@ -16,7 +22,7 @@ import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
 import org.homio.api.widget.template.TemplateWidgetBuilder;
 import org.homio.api.widget.template.WidgetDefinition;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.WidgetTabEntity;
 import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
@@ -37,36 +43,18 @@ import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntity;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
-import java.util.List;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
-import static org.homio.app.model.entity.widget.WidgetTabEntity.MAIN_TAB_ID;
-
 @Log4j2
 @RequiredArgsConstructor
-public class EntityContextWidgetImpl implements EntityContextWidget {
+public class ContextWidgetImpl implements ContextWidget {
 
-    @Getter
-    private final EntityContextImpl entityContext;
+    private final @Getter @Accessors(fluent = true) ContextImpl context;
 
-    @NotNull
-    private static ActionResponseModel fireCreateTemplateWidget(@NotNull DeviceEndpointsBehaviourContract entity, WidgetDefinition widgetDefinition,
-                                                                TemplateWidgetBuilder widgetBuilder, EntityContext entityContext, JSONObject params) {
-        String tab = params.getString("SELECTION.DASHBOARD_TAB");
-        val includeEndpoints = widgetDefinition.getEndpoints(entity).stream()
-                .filter(pd -> params.getBoolean(pd.getEndpointEntityID()))
-                .collect(Collectors.toList());
-        List<WidgetDefinition.Requests> requests = widgetDefinition.getRequests();
-        if (requests != null) {
-            for (WidgetDefinition.Requests request : requests) {
-                Object value = params.get(request.getName());
-                WidgetDefinition.replaceField(request.getTarget(), value, widgetDefinition);
-            }
-        }
-
-        widgetBuilder.buildWidget(new TemplateWidgetBuilder.WidgetRequest(entityContext, entity, tab, widgetDefinition, includeEndpoints));
-        return ActionResponseModel.success();
+    @Override
+    public void createLayoutWidget(@NotNull String entityID, @NotNull Consumer<LayoutWidgetBuilder> widgetBuilder) {
+        WidgetLayoutEntity widget = createStubWidget(entityID, new WidgetLayoutEntity());
+        LayoutBuilderImpl builder = new LayoutBuilderImpl(widget, context);
+        widgetBuilder.accept(builder);
+        context.db().save(builder.getWidget());
     }
 
     private static void addPropertyDefinitions(
@@ -122,71 +110,63 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
     }
 
     @Override
-    public void createLayoutWidget(@NotNull String entityID, @NotNull Consumer<LayoutWidgetBuilder> widgetBuilder) {
-        WidgetLayoutEntity widget = createStubWidget(entityID, new WidgetLayoutEntity());
-        LayoutBuilderImpl builder = new LayoutBuilderImpl(widget, entityContext);
-        widgetBuilder.accept(builder);
-        entityContext.save(builder.getWidget());
-    }
-
-    @Override
     public void createDisplayWidget(@NotNull String entityID, @NotNull Consumer<DisplayWidgetBuilder> widgetBuilder) {
         WidgetDisplayEntity widget = createStubWidget(entityID, new WidgetDisplayEntity());
-        DisplayBuilderImpl builder = new DisplayBuilderImpl(widget, entityContext);
+        DisplayBuilderImpl builder = new DisplayBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        WidgetDisplayEntity savedWidget = entityContext.save(builder.getWidget());
+        WidgetDisplayEntity savedWidget = context.db().save(builder.getWidget());
         for (WidgetDisplaySeriesEntity entity : builder.getSeries()) {
             entity.setWidgetEntity(savedWidget);
-            entityContext.save(entity);
+            context.db().save(entity);
         }
     }
 
     @Override
     public void createSimpleValueWidget(@NotNull String entityID, @NotNull Consumer<SimpleValueWidgetBuilder> widgetBuilder) {
         WidgetSimpleValueEntity widget = createStubWidget(entityID, new WidgetSimpleValueEntity());
-        SimpleValueBuilderImpl builder = new SimpleValueBuilderImpl(widget, entityContext);
+        SimpleValueBuilderImpl builder = new SimpleValueBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        entityContext.save(builder.getWidget());
+        context.db().save(builder.getWidget());
     }
 
     @Override
     public void createToggleWidget(@NotNull String entityID, @NotNull Consumer<ToggleWidgetBuilder> widgetBuilder) {
         WidgetToggleEntity widget = createStubWidget(entityID, new WidgetToggleEntity());
-        ToggleBuilderImpl builder = new ToggleBuilderImpl(widget, entityContext);
+        ToggleBuilderImpl builder = new ToggleBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        WidgetToggleEntity savedWidget = entityContext.save(builder.getWidget());
+        WidgetToggleEntity savedWidget = context.db().save(builder.getWidget());
         for (WidgetToggleSeriesEntity entity : builder.getSeries()) {
             entity.setWidgetEntity(savedWidget);
-            entityContext.save(entity);
+            context.db().save(entity);
         }
     }
 
     @Override
     public void createSimpleToggleWidget(@NotNull String entityID, @NotNull Consumer<SimpleToggleWidgetBuilder> widgetBuilder) {
         WidgetSimpleToggleEntity widget = createStubWidget(entityID, new WidgetSimpleToggleEntity());
-        SimpleToggleBuilderImpl builder = new SimpleToggleBuilderImpl(widget, entityContext);
+        SimpleToggleBuilderImpl builder = new SimpleToggleBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        entityContext.save(builder.getWidget());
+        context.db().save(builder.getWidget());
     }
 
     @Override
     public void createSliderWidget(@NotNull String entityID, @NotNull Consumer<SliderWidgetBuilder> widgetBuilder) {
         WidgetSliderEntity widget = createStubWidget(entityID, new WidgetSliderEntity());
-        SliderBuilderImpl builder = new SliderBuilderImpl(widget, entityContext);
+        SliderBuilderImpl builder = new SliderBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        WidgetSliderEntity savedWidget = entityContext.save(builder.getWidget());
+        WidgetSliderEntity savedWidget = context.db().save(builder.getWidget());
         for (WidgetSliderSeriesEntity entity : builder.getSeries()) {
             entity.setWidgetEntity(savedWidget);
-            entityContext.save(entity);
+            context.db().save(entity);
         }
     }
 
     @Override
     public void createSimpleColorWidget(@NotNull String entityID, @NotNull Consumer<SimpleColorWidgetBuilder> widgetBuilder) {
         WidgetSimpleColorEntity widget = createStubWidget(entityID, new WidgetSimpleColorEntity());
-        SimpleColorBuilderImpl builder = new SimpleColorBuilderImpl(widget, entityContext);
+        SimpleColorBuilderImpl builder = new SimpleColorBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        entityContext.save(builder.getWidget());
+        context.db().save(builder.getWidget());
     }
 
     @Override
@@ -195,20 +175,20 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
             @NotNull Consumer<ColorWidgetBuilder> widgetBuilder) {
 
         WidgetColorEntity widget = createStubWidget(entityID, new WidgetColorEntity());
-        ColorWidgetBuilderImpl builder = new ColorWidgetBuilderImpl(widget, entityContext);
+        ColorWidgetBuilderImpl builder = new ColorWidgetBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        entityContext.save(builder.getWidget());
+        context.db().save(builder.getWidget());
     }
 
     @Override
     public void createBarTimeChartWidget(@NotNull String entityID, @NotNull Consumer<BarTimeChartBuilder> widgetBuilder) {
         WidgetBarTimeChartEntity widget = createStubWidget(entityID, new WidgetBarTimeChartEntity());
-        BarTimeChartBuilderImpl builder = new BarTimeChartBuilderImpl(widget, entityContext);
+        BarTimeChartBuilderImpl builder = new BarTimeChartBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        WidgetBarTimeChartEntity savedWidget = entityContext.save(builder.getWidget());
+        WidgetBarTimeChartEntity savedWidget = context.db().save(builder.getWidget());
         for (WidgetBarTimeChartSeriesEntity entity : builder.getSeries()) {
             entity.setWidgetEntity(savedWidget);
-            entityContext.save(entity);
+            context.db().save(entity);
         }
     }
 
@@ -217,33 +197,13 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
             @NotNull String entityID,
             @NotNull Consumer<LineChartBuilder> widgetBuilder) {
         WidgetLineChartEntity widget = createStubWidget(entityID, new WidgetLineChartEntity());
-        LineChartBuilderImpl builder = new LineChartBuilderImpl(widget, entityContext);
+        LineChartBuilderImpl builder = new LineChartBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        WidgetLineChartEntity savedWidget = entityContext.save(builder.getWidget());
+        WidgetLineChartEntity savedWidget = context.db().save(builder.getWidget());
         for (WidgetLineChartSeriesEntity entity : builder.getSeries()) {
             entity.setWidgetEntity(savedWidget);
-            entityContext.save(entity);
+            context.db().save(entity);
         }
-    }
-
-    private String ensureWidgetNotExists(@NotNull String entityID, String prefix) {
-        if (!entityID.startsWith(prefix)) {
-            entityID = prefix + entityID;
-        }
-        if (entityContext.getEntity(entityID) != null) {
-            throw new IllegalArgumentException("Widget with such entityID already exists");
-        }
-        return entityID;
-    }
-
-    @SuppressWarnings("rawtypes")
-    private <T extends WidgetBaseEntity> T createStubWidget(@NotNull String entityID, T widget) {
-        entityID = ensureWidgetNotExists(entityID, widget.getEntityPrefix());
-
-        WidgetTabEntity generalTabEntity = entityContext.getEntity(MAIN_TAB_ID);
-        widget.setEntityID(entityID);
-        widget.setWidgetTabEntity(generalTabEntity);
-        return widget;
     }
 
     @Override
@@ -261,14 +221,14 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
             String title = "WIDGET.CREATE_" + widgetDefinition.getName();
             uiInputBuilder
                     .addOpenDialogSelectableButton(title, icon, null,
-                            (entityContext, params) ->
-                                    fireCreateTemplateWidget(entity, widgetDefinition, widgetBuilder, entityContext, params))
+                        (context, params) ->
+                            fireCreateTemplateWidget(entity, widgetDefinition, widgetBuilder, context, params))
                     .editDialog(dialogBuilder -> {
                         dialogBuilder.setTitle(title, icon);
                         dialogBuilder.addFlex("main", flex -> {
                             flex.addSelectBox("SELECTION.DASHBOARD_TAB", null)
-                                    .setSelected(getEntityContext().widget().getDashboardDefaultID())
-                                    .addOptions(getEntityContext().widget().getDashboardTabs());
+                                .setSelected(context().widget().getDashboardDefaultID())
+                                .addOptions(context().widget().getDashboardTabs());
                             addPropertyDefinitions(widgetDefinition, flex, entity);
                             addRequests(widgetDefinition, flex, entity);
                         });
@@ -278,6 +238,45 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
 
     @Override
     public @NotNull List<OptionModel> getDashboardTabs() {
-        return OptionModel.entityList(entityContext.findAll(WidgetTabEntity.class));
+        return OptionModel.entityList(context.db().findAll(WidgetTabEntity.class));
+    }
+
+    @NotNull
+    private static ActionResponseModel fireCreateTemplateWidget(@NotNull DeviceEndpointsBehaviourContract entity, WidgetDefinition widgetDefinition,
+        TemplateWidgetBuilder widgetBuilder, Context context, JSONObject params) {
+        String tab = params.getString("SELECTION.DASHBOARD_TAB");
+        val includeEndpoints = widgetDefinition.getEndpoints(entity).stream()
+                .filter(pd -> params.getBoolean(pd.getEndpointEntityID()))
+                .collect(Collectors.toList());
+        List<WidgetDefinition.Requests> requests = widgetDefinition.getRequests();
+        if (requests != null) {
+            for (WidgetDefinition.Requests request : requests) {
+                Object value = params.get(request.getName());
+                WidgetDefinition.replaceField(request.getTarget(), value, widgetDefinition);
+            }
+        }
+
+        widgetBuilder.buildWidget(new TemplateWidgetBuilder.WidgetRequest(context, entity, tab, widgetDefinition, includeEndpoints));
+        return ActionResponseModel.success();
+    }
+
+    private String ensureWidgetNotExists(@NotNull String entityID, String prefix) {
+        if (!entityID.startsWith(prefix)) {
+            entityID = prefix + entityID;
+        }
+        if (context.db().getEntity(entityID) != null) {
+            throw new IllegalArgumentException("Widget with such entityID already exists");
+        }
+        return entityID;
+    }
+
+    @SuppressWarnings("rawtypes")
+    private <T extends WidgetBaseEntity> T createStubWidget(@NotNull String entityID, T widget) {
+        entityID = ensureWidgetNotExists(entityID, widget.getEntityPrefix());
+
+        WidgetTabEntity generalTabEntity = context.db().getEntity(MAIN_TAB_ID);
+        widget.setEntityID(entityID);
+        widget.setWidgetTabEntity(generalTabEntity);
+        return widget;
     }
 }

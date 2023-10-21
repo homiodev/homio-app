@@ -1,13 +1,17 @@
 package org.homio.app.rest;
 
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.app.json.BgpProcessResponse;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @Log4j2
 @RestController
@@ -15,18 +19,18 @@ import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 @RequiredArgsConstructor
 public class BackgroundProcessController {
 
-    private final EntityContextImpl entityContext;
+    private final ContextImpl context;
 
     @DeleteMapping("/{name}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void cancelProcess(@PathVariable("name") String name) {
-        entityContext.bgp().cancelThread(name);
-        entityContext.ui().progress().cancel(name);
+        context.bgp().cancelThread(name);
+        context.ui().progress().cancel(name);
     }
 
     @GetMapping
     public BgpProcessResponse getProcesses() {
-        return entityContext.bgp().getProcesses();
+        return context.bgp().getProcesses();
     }
 
     /* @GetMapping("/dynamic/stop/{url}")
@@ -65,7 +69,7 @@ public class BackgroundProcessController {
             String entityID = entityIDAndKey.substring(0, i);
             String scriptDescriptor = entityIDAndKey.substring(i + 1);
 
-            BaseEntity baseEntity = entityContext.getEntity(entityID);
+            BaseEntity baseEntity = context.db().getEntity(entityID);
             if (baseEntity instanceof HasBackgroundProcesses) {
                 ScriptEntity scriptEntity = ((HasBackgroundProcesses) baseEntity).getBackgroundProcessScript(scriptDescriptor);
                 if (scriptEntity != null) {

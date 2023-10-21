@@ -2,7 +2,6 @@ package org.homio.app.manager.bgp;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -12,15 +11,15 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.LogManager;
 import org.homio.api.service.EntityService.WatchdogService;
-import org.homio.app.manager.common.impl.EntityContextBGPImpl;
+import org.homio.app.manager.common.impl.ContextBGPImpl;
 
 @Log4j2
 public class WatchdogBgpService {
 
     private final Map<String, WatchdogService> watchdogServiceMap = new ConcurrentHashMap<>();
 
-    public WatchdogBgpService(EntityContextBGPImpl entityContextBGP) {
-        entityContextBGP.builder("watchdog")
+    public WatchdogBgpService(ContextBGPImpl ContextBGP) {
+        ContextBGP.builder("watchdog")
                 .intervalWithDelay(Duration.ofMinutes(1))
                 .execute(this::runWatchDogService);
     }

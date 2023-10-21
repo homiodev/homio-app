@@ -2,7 +2,7 @@ package org.homio.app.setting.system;
 
 import static org.homio.api.util.Constants.DANGER_COLOR;
 
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPluginButton;
@@ -31,8 +31,8 @@ public class SystemLogoutButtonSetting
     }
 
     @Override
-    public String getText(EntityContext entityContext) {
-        UserEntity user = entityContext.getUser();
+    public String getText(Context context) {
+        UserEntity user = context.getUser();
         if (user != null) {
             return user.getEmail();
         }
@@ -55,7 +55,7 @@ public class SystemLogoutButtonSetting
     }
 
     @Override
-    public void assertUserAccess(@NotNull EntityContext entityContext, @Nullable UserEntity user) {
+    public void assertUserAccess(@NotNull Context context, @Nullable UserEntity user) {
         // allow logout for everyone
     }
 }

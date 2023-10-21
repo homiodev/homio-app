@@ -19,7 +19,7 @@ import org.homio.api.model.Icon;
 import org.homio.api.model.JSON;
 import org.homio.api.ui.field.selection.SelectionConfiguration;
 import org.homio.api.util.Lang;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.jetbrains.annotations.NotNull;
 
 @Getter
@@ -55,15 +55,15 @@ public final class WidgetTabEntity extends BaseEntity implements
         return true;
     }
 
-    public static void ensureMainTabExists(EntityContextImpl entityContext) {
-        if (entityContext.getEntity(WidgetTabEntity.class, PRIMARY_DEVICE) == null) {
+    public static void ensureMainTabExists(ContextImpl context) {
+        if (context.db().getEntity(WidgetTabEntity.class, PRIMARY_DEVICE) == null) {
             String name = Lang.getServerMessage("MAIN_TAB_NAME");
             WidgetTabEntity mainTab = new WidgetTabEntity();
             mainTab.setEntityID(PRIMARY_DEVICE);
             mainTab.setName(name);
             mainTab.setLocked(true);
             mainTab.setOrder(0);
-            entityContext.save(mainTab);
+            context.db().save(mainTab);
         }
     }
 
@@ -107,10 +107,10 @@ public final class WidgetTabEntity extends BaseEntity implements
     @Override
     public void afterDelete() {
         // shift all higher order <<
-        for (WidgetTabEntity tabEntity : getEntityContext().findAll(WidgetTabEntity.class)) {
+        for (WidgetTabEntity tabEntity : context().db().findAll(WidgetTabEntity.class)) {
             if (tabEntity.getOrder() > getOrder()) {
                 tabEntity.setOrder(tabEntity.getOrder() - 1);
-                getEntityContext().save(tabEntity, false);
+                context().db().save(tabEntity, false);
             }
         }
     }

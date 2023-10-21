@@ -69,13 +69,6 @@
       "iconColor": "#2D9C2C"
     },
     {
-      "name": "device_status",
-      "quota": 10,
-      "order": 60,
-      "icon": "fa-globe",
-      "iconColor": "#42B52D"
-    },
-    {
       "name": "motion_score",
       "order": 99,
       "min": 0,

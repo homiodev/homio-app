@@ -43,7 +43,7 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
     public String getBorderColor() {
-        return getJsonData("bc", getEntityContext().setting().getValue(WidgetBorderColorMenuSetting.class));
+        return getJsonData("bc", context().setting().getValue(WidgetBorderColorMenuSetting.class));
     }
 
     public void setBorderColor(String value) {
@@ -52,9 +52,9 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
 
     @Override
     public void afterDelete() {
-        for (WidgetBaseEntity entity : getEntityContext().findAll(WidgetBaseEntity.class)) {
+        for (WidgetBaseEntity entity : context().db().findAll(WidgetBaseEntity.class)) {
             if (getEntityID().equals(entity.getParent())) {
-                getEntityContext().delete(entity);
+                context().db().delete(entity);
             }
         }
     }

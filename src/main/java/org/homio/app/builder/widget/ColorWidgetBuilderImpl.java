@@ -2,16 +2,16 @@ package org.homio.app.builder.widget;
 
 import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 
-import org.homio.api.EntityContextWidget.ColorWidgetBuilder;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.api.ContextWidget.ColorWidgetBuilder;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.impl.color.WidgetColorEntity;
 import org.jetbrains.annotations.NotNull;
 
 public final class ColorWidgetBuilderImpl extends WidgetBaseBuilderImpl<ColorWidgetBuilder, WidgetColorEntity>
         implements ColorWidgetBuilder {
 
-    public ColorWidgetBuilderImpl(WidgetColorEntity widget, EntityContextImpl entityContext) {
-        super(widget, entityContext);
+    public ColorWidgetBuilderImpl(WidgetColorEntity widget, ContextImpl context) {
+        super(widget, context);
     }
 
     @Override

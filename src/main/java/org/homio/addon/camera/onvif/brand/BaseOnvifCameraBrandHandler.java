@@ -23,8 +23,7 @@ import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.addon.camera.handler.BaseBrandCameraHandler;
 import org.homio.addon.camera.service.CameraDeviceEndpoint;
 import org.homio.addon.camera.service.IpCameraService;
-import org.homio.api.EntityContext;
-import org.homio.api.state.State;
+import org.homio.api.Context;
 import org.homio.api.ui.field.action.HasDynamicUIFields;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.jetbrains.annotations.NotNull;
@@ -55,8 +54,8 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler
         ReferenceCountUtil.release(msg);
     }
 
-    public EntityContext getEntityContext() {
-        return service.getEntityContext();
+    public Context context() {
+        return service.context();
     }
 
     public IpCameraEntity getEntity() {
@@ -89,7 +88,7 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler
     public void pollCameraRunnable() {
     }
 
-    public void postInitializeCamera(EntityContext entityContext) {
+    public void postInitializeCamera(Context context) {
 
     }
 

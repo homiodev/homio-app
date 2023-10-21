@@ -4,8 +4,8 @@ import static org.homio.hquery.hardware.other.MachineHardwareRepository.osBean;
 
 import java.time.Duration;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextVar.VariableType;
+import org.homio.api.Context;
+import org.homio.api.ContextVar.VariableType;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Icon;
 import org.homio.api.service.EntityService.ServiceInstance;
@@ -23,30 +23,30 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
     private String memID;
     private int cpuFetchInterval;
 
-    public LocalBoardService(@NotNull EntityContext entityContext, @NotNull LocalBoardEntity entity) {
-        super(entityContext, entity, true);
+    public LocalBoardService(@NotNull Context context, @NotNull LocalBoardEntity entity) {
+        super(context, entity, true);
     }
 
     @Override
     protected void firstInitialize() {
-        entityContext.var().createGroup("hardware", "Hardware", builder ->
+        context.var().createGroup("hardware", "Hardware", builder ->
             builder.setLocked(true).setDescription("sys.hardware").setIcon(new Icon("fas fa-microchip", "#31BDB6")));
 
-        this.cpuUsageID = entityContext.var().createVariable("hardware", "sys_cpu_load", "sys.cpu_load",
+        this.cpuUsageID = context.var().createVariable("hardware", "sys_cpu_load", "sys.cpu_load",
             VariableType.Float, builder ->
                 builder.setDescription("sys.cpu_load_description")
                        .setLocked(true)
                        .setIcon(new Icon("fas fa-microchip", "#A65535"))
                        .setNumberRange(0, 100).setUnit("%").setColor("#7B37B0"));
 
-        this.javaCpuUsageID = entityContext.var().createVariable("hardware", "java_cpu_load", "sys.java_cpu_load",
+        this.javaCpuUsageID = context.var().createVariable("hardware", "java_cpu_load", "sys.java_cpu_load",
             VariableType.Float, builder ->
                 builder.setDescription("sys.java_cpu_load_description")
                        .setLocked(true)
                        .setIcon(new Icon("fas fa-microchip", "#35A680"))
                        .setNumberRange(0, 100).setUnit("%").setColor("#B03780"));
 
-        this.memID = entityContext.var().createVariable("hardware", "sys_mem_load", "sys.mem_load",
+        this.memID = context.var().createVariable("hardware", "sys_mem_load", "sys.mem_load",
             VariableType.Float, builder ->
                 builder.setDescription("sys.mem_load_description")
                        .setIcon(new Icon("fas fa-memory", "#7B37B0"))
@@ -60,14 +60,14 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
         if (cpuFetchInterval != entity.getCpuFetchInterval()) {
             cpuFetchInterval = entity.getCpuFetchInterval();
 
-            entityContext
+            context
                 .bgp().builder("hardware-cpu")
                 .interval(Duration.ofSeconds(cpuFetchInterval))
                 .execute(() -> {
-                    entityContext.var().set(cpuUsageID, round100((float) (osBean.getCpuLoad() * 100F)));
-                    entityContext.var().set(javaCpuUsageID, round100((float) (osBean.getProcessCpuLoad() * 100F)));
+                    context.var().set(cpuUsageID, round100((float) (osBean.getCpuLoad() * 100F)));
+                    context.var().set(javaCpuUsageID, round100((float) (osBean.getProcessCpuLoad() * 100F)));
                     float memPercent = (TOTAL_MEMORY - osBean.getFreeMemorySize()) / (float) TOTAL_MEMORY * 100F;
-                    entityContext.var().set(memID, round100(memPercent));
+                    context.var().set(memID, round100(memPercent));
                 });
         }
     }

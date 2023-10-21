@@ -1,30 +1,33 @@
 package org.homio.app.console;
 
-import lombok.*;
-import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContextBGP;
-import org.homio.api.console.ConsolePluginTable;
-import org.homio.api.model.ActionResponseModel;
-import org.homio.api.model.HasEntityIdentifier;
-import org.homio.api.model.Status;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.action.UIContextMenuAction;
-import org.homio.app.manager.common.EntityContextImpl;
-import org.homio.app.manager.common.impl.EntityContextBGPImpl;
-import org.jetbrains.annotations.NotNull;
-
 import java.nio.file.Files;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Date;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.Accessors;
+import org.apache.commons.lang3.StringUtils;
+import org.homio.api.ContextBGP;
+import org.homio.api.console.ConsolePluginTable;
+import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.HasEntityIdentifier;
+import org.homio.api.model.Status;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.action.UIContextMenuAction;
+import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.manager.common.impl.ContextBGPImpl;
+import org.jetbrains.annotations.NotNull;
 
 @RequiredArgsConstructor
 public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<BaseProcessesConsolePlugin.BackgroundProcessJSON> {
 
-    @Getter
-    private final EntityContextImpl entityContext;
+    private final @Getter @Accessors(fluent = true) ContextImpl context;
 
     @Override
     public String getParentTab() {
@@ -38,16 +41,16 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
 
     @Override
     public Collection<BackgroundProcessJSON> getValue() {
-        Collection<BackgroundProcessJSON> result = entityContext
+        Collection<BackgroundProcessJSON> result = context
                 .bgp().getSchedulers().values()
                 .stream()
-                .filter(EntityContextBGPImpl.ThreadContextImpl::isShowOnUI)
+                .filter(ContextBGPImpl.ThreadContextImpl::isShowOnUI)
                 .filter(threadContext -> {
                     if (BaseProcessesConsolePlugin.this.handleThreads()) {
                         return threadContext.getPeriod() == null;
                     }
                     return threadContext.getPeriod() != null &&
-                            threadContext.getScheduleType() != EntityContextBGPImpl.ScheduleType.SINGLE;
+                        threadContext.getScheduleType() != ContextBGPImpl.ScheduleType.SINGLE;
                 })
                 .map(e -> {
                     BackgroundProcessJSON bgp = new BackgroundProcessJSON();
@@ -73,9 +76,9 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
                     return bgp;
                 }).collect(Collectors.toList());
 
-        EntityContextBGP.ThreadPuller threadPuller = new EntityContextBGP.ThreadPuller() {
+        ContextBGP.ThreadPuller threadPuller = new ContextBGP.ThreadPuller() {
             @Override
-            public EntityContextBGP.ThreadPuller addThread(@NotNull String name, String description, @NotNull Date creationTime,
+            public ContextBGP.ThreadPuller addThread(@NotNull String name, String description, @NotNull Date creationTime,
                                                            String state, String errorMessage, String bigDescription) {
                 if (BaseProcessesConsolePlugin.this.handleThreads()) {
                     result.add(new BackgroundProcessJSON(name, name, description, creationTime, null, null,
@@ -85,18 +88,18 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
             }
 
             @Override
-            public EntityContextBGP.@NotNull ThreadPuller addScheduler(@NotNull String name, String description, @NotNull Date creationTime, String state,
+            public ContextBGP.@NotNull ThreadPuller addScheduler(@NotNull String name, String description, @NotNull Date creationTime, String state,
                                                                        String errorMessage, Duration period, int runCount,
                                                                        String bigDescription) {
                 if (!BaseProcessesConsolePlugin.this.handleThreads()) {
                     result.add(new BackgroundProcessJSON(name, name, description, creationTime, state,
-                            EntityContextBGPImpl.ScheduleType.DELAY.name(), null, null, errorMessage,
+                        ContextBGPImpl.ScheduleType.DELAY.name(), null, null, errorMessage,
                             period.toString(), runCount, bigDescription));
                 }
                 return this;
             }
         };
-        for (Consumer<EntityContextBGP.ThreadPuller> pullerConsumer : entityContext.bgp().getThreadsPullers().values()) {
+        for (Consumer<ContextBGP.ThreadPuller> pullerConsumer : context.bgp().getThreadsPullers().values()) {
             pullerConsumer.accept(threadPuller);
         }
 

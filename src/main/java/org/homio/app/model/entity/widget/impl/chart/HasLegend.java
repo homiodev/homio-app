@@ -1,7 +1,7 @@
 package org.homio.app.model.entity.widget.impl.chart;
 
-import org.homio.api.EntityContextWidget.LegendAlign;
-import org.homio.api.EntityContextWidget.LegendPosition;
+import org.homio.api.ContextWidget.LegendAlign;
+import org.homio.api.ContextWidget.LegendPosition;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;

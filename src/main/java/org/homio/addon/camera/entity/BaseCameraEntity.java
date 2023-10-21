@@ -4,7 +4,7 @@ import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_MOTION_THRESHOLD;
-import static org.homio.api.EntityContextSetting.SERVER_PORT;
+import static org.homio.api.ContextSetting.SERVER_PORT;
 import static org.homio.api.model.OptionModel.of;
 import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
@@ -28,9 +28,9 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.service.BaseCameraService;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextMedia.FFMPEG;
-import org.homio.api.EntityContextMedia.FFMPEGFormat;
+import org.homio.api.Context;
+import org.homio.api.ContextMedia.FFMPEG;
+import org.homio.api.ContextMedia.FFMPEGFormat;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.log.HasEntitySourceLog;
@@ -234,7 +234,7 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
     @UIActionButton(name = "get", icon = "fas fa-camera",
                     actionHandler = BaseCameraEntity.GetSnapshotActionHandler.class)
     public byte[] getSnapshot() {
-        return optService().map(BaseCameraService::getSnapshot).orElse(null);
+        return optService().map(BaseCameraService::getLastSnapshot).orElse(null);
     }
 
     // not all entity has username
@@ -317,7 +317,7 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
     @JsonIgnore
     public List<OptionModel> getVideoSources() {
         List<OptionModel> videoSources = new ArrayList<>();
-        boolean mediaMTXReady = getEntityContext().media().getMediaMTXInfo(getEntityID()).isReady();
+        boolean mediaMTXReady = context().media().getMediaMTXInfo(getEntityID()).isReady();
         assembleStream("hls", "Hls streams(.m3u8)", m3u8 -> {
             m3u8.setIcon(new Icon(FFMPEGFormat.HLS.getIcon()));
             m3u8.addChild(of("video.m3u8", "HLS [default]")
@@ -383,13 +383,13 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
     public @NotNull VideoMotionAlarmProvider getVideoMotionAlarmProviderImpl() {
         if (StringUtils.isNotEmpty(getVideoMotionAlarmProvider())) {
             try {
-                return getEntityContext().getBean(DataSourceUtil.getSelection(getVideoMotionAlarmProvider()).getValue(),
+                return context().getBean(DataSourceUtil.getSelection(getVideoMotionAlarmProvider()).getValue(),
                     VideoMotionAlarmProvider.class);
             } catch (Exception ne) {
                 log.warn("Unable to find video motion alarm provider: {}", getVideoMotionAlarmProvider());
             }
         }
-        return getEntityContext().getBean(VideoMotionAlarmProvider.class);
+        return context().getBean(VideoMotionAlarmProvider.class);
     }
 
     private void assembleStream(String key, String title, Consumer<OptionModel> consumer, List<OptionModel> videoSources) {
@@ -453,8 +453,8 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
     public static class UpdateSnapshotActionHandler implements UIActionHandler {
 
         @Override
-        public ActionResponseModel handleAction(EntityContext entityContext, JSONObject params) {
-            BaseCameraEntity<?, ?> entity = entityContext.getEntityRequire(params.getString("entityID"));
+        public ActionResponseModel handleAction(Context context, JSONObject params) {
+            BaseCameraEntity<?, ?> entity = context.db().getEntityRequire(params.getString("entityID"));
             BaseCameraService<?, ?> service = entity.getService();
             service.assertOnline();
             service.takeSnapshotAsync();
@@ -465,10 +465,10 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
     public static class GetSnapshotActionHandler implements UIActionHandler {
 
         @Override
-        public ActionResponseModel handleAction(EntityContext entityContext, JSONObject params) {
-            BaseCameraEntity<?, ?> entity = entityContext.getEntityRequire(params.getString("entityID"));
+        public ActionResponseModel handleAction(Context context, JSONObject params) {
+            BaseCameraEntity<?, ?> entity = context.db().getEntityRequire(params.getString("entityID"));
             entity.getService().assertOnline();
-            byte[] image = entity.getService().getSnapshot();
+            byte[] image = entity.getService().getLastSnapshot();
             String encodedValue = "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(image);
             FileModel snapshot = new FileModel("Snapshot", encodedValue, FileContentType.image);
             return ActionResponseModel.showFile(snapshot);

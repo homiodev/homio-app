@@ -10,7 +10,7 @@ import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.tuple.Pair;
-import org.homio.api.EntityContextBGP.ThreadContext;
+import org.homio.api.ContextBGP.ThreadContext;
 import org.homio.api.workspace.Lock;
 import org.homio.api.workspace.LockManager;
 import org.homio.api.workspace.WorkspaceBlock;
@@ -61,7 +61,7 @@ public class LockManagerImpl implements LockManager {
 
         if (workspaceWarehouse.threadContext == null) {
             workspaceBlock
-                    .getEntityContext()
+                .context()
                     .bgp()
                     .builder("BroadcastListenEvent-" + workspaceTabId)
                     .interval(Duration.ofMillis(1000))

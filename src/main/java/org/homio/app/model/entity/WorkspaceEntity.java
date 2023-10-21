@@ -72,7 +72,7 @@ public final class WorkspaceEntity extends BaseEntity implements
 
     @Override
     public boolean isDisableDelete() {
-        return super.isDisableDelete() || isLocked() || !getEntityContext().getBean(WorkspaceService.class).isEmpty(content);
+        return super.isDisableDelete() || isLocked() || !context().getBean(WorkspaceService.class).isEmpty(content);
     }
 
     @Override

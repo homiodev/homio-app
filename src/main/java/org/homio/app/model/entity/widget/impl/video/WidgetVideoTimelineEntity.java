@@ -80,7 +80,7 @@ public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimel
         @Override
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
             List<OptionModel> list = new ArrayList<>();
-            for (IpCameraEntity entity : parameters.getEntityContext().findAll(IpCameraEntity.class)) {
+            for (IpCameraEntity entity : parameters.context().db().findAll(IpCameraEntity.class)) {
                 if (entity.getService().getBrandHandler() instanceof CameraPlaybackStorage) {
                     list.add(OptionModel.of(entity.getEntityID(), entity.getTitle()));
                 }

@@ -25,14 +25,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -53,12 +51,12 @@ import org.homio.addon.camera.entity.StreamHLS;
 import org.homio.addon.camera.entity.VideoMotionAlarmProvider;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.service.util.VideoUrls;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextBGP;
-import org.homio.api.EntityContextBGP.ThreadContext;
-import org.homio.api.EntityContextMedia.FFMPEG;
-import org.homio.api.EntityContextMedia.FFMPEGFormat;
-import org.homio.api.EntityContextMedia.FFMPEGHandler;
+import org.homio.api.Context;
+import org.homio.api.ContextBGP;
+import org.homio.api.ContextBGP.ThreadContext;
+import org.homio.api.ContextMedia.FFMPEG;
+import org.homio.api.ContextMedia.FFMPEGFormat;
+import org.homio.api.ContextMedia.FFMPEGHandler;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
@@ -73,8 +71,8 @@ import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
 import org.homio.api.ui.UI;
+import org.homio.api.ui.UI.Image.Snapshot;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.api.ui.field.action.v1.item.UIInfoItemBuilder.InfoType;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
 import org.jetbrains.annotations.NotNull;
@@ -148,9 +146,6 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
     private @Getter Path ffmpegMP4OutputPath;
     private @Getter Path ffmpegImageOutputPath;
 
-    protected ReentrantLock lockCurrentSnapshot = new ReentrantLock();
-    protected @Getter byte[] latestSnapshot = new byte[0];
-
     private @Getter @Nullable FFMPEG ffmpegMainReStream;
     private @Getter @Nullable FFMPEG ffmpegSnapshot;
     private @Getter @Nullable FFMPEG ffmpegMjpeg;
@@ -168,44 +163,25 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
 
     protected long videoStreamParametersHashCode;
 
-    private Instant lastSnapshotRequest = Instant.now();
-    protected @Getter Instant currentSnapshotTime = Instant.now();
-
     protected @Setter boolean streamingAutoFps = false;
 
     private @Getter
     @Setter
     @NotNull String mjpegContentType = "";
     public final @Getter VideoUrls urls = new VideoUrls();
+    private final @Getter Snapshot snapshot = new Snapshot(30);
 
-    public BaseCameraService(T entity, EntityContext entityContext) {
-        super(entityContext, entity, true);
+    public BaseCameraService(T entity, Context context) {
+        super(context, entity, true);
         camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer(entity));
     }
 
-    private void createConnectionJob() {
-        cameraConnectionJob = entityContext
-            .bgp().builder("video-connect-" + entityID)
-            .intervalWithDelay(Duration.ofSeconds(30))
-            .execute(() -> {
-                try {
-                    if (!entity.getStatus().isOnline()) {
-                        pollCameraConnection();
-                    }
-                    if (entity.getStatus().isOnline() && EntityContextBGP.cancel(cameraConnectionJob)) {
-                        cameraConnectionJob = null;
-                    }
-                } catch (Exception ex) {
-                    String message = CommonUtils.getErrorMessage(ex);
-                    if (ex instanceof ConfigurationException
-                        || ex instanceof BadCredentialsException) {
-                        val status = ex instanceof BadCredentialsException ? REQUIRE_AUTH : ERROR;
-                        disposeAndSetStatus(status, message);
-                    } else {
-                        updateEntityStatus(OFFLINE, message);
-                    }
-                }
-            });
+    public void cameraCommunicationError(String reason) {
+        if (communicationError++ > MAX_PING_ERRORS) {
+            updateEntityStatus(ERROR, reason);
+            resetAndRetryConnecting();
+        }
+        context.ui().updateItem(entity);
     }
 
     protected void pollCameraConnection() throws Exception {
@@ -214,23 +190,43 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         bringCameraOnline();
     }
 
-    protected void keepMjpegRunning() {
-        OpenStreamsContainer container = camerasOpenStreams.get(entityID);
-        if (!container.getOpenStreams().isEmpty()) {
-            String mjpegUri = urls.getMjpegUri();
-            if (!mjpegUri.isEmpty() && !"ffmpeg".equals(mjpegUri)) {
-                container.getOpenStreams().queueFrame(("--" + container.getOpenStreams().boundary + "\r\n\r\n").getBytes());
+    public final void disposeAndSetStatus(@NotNull Status status, @Nullable String reason) {
+        if (updateEntityStatus(status, reason)) {
+            log.warn("[{}]: Set video <{}> to status <{}>. Msg: <{}>", entityID, entity, status, reason);
+            resetAndRetryConnecting();
+
+            if (status == Status.ERROR || status == REQUIRE_AUTH) {
+                context.ui().toastr().error("DISPOSE_VIDEO",
+                    FlowMap.of("TITLE", entity.getTitle(), "REASON", reason));
             }
-            container.getOpenStreams().queueFrame(getSnapshot());
         }
     }
 
-    public void cameraCommunicationError(String reason) {
-        if (communicationError++ > MAX_PING_ERRORS) {
-            updateEntityStatus(ERROR, reason);
-            resetAndRetryConnecting();
+    public final void bringCameraOnline() {
+        communicationError = 0;
+        if (!entity.isStart()) {
+            return;
         }
-        entityContext.ui().updateItem(entity);
+        updateLastSeen();
+
+        if (!entity.getStatus().isOnline()) {
+            updateEntityStatus(ONLINE, null);
+            entity.getVideoMotionAlarmProviderImpl().resumeMotionAlarmListeners(entity);
+            onCameraConnected();
+
+            pollCameraJob = context.bgp().builder("video-poll-" + entityID)
+                                         .delay(Duration.ofSeconds(8))
+                                         .interval(Duration.ofSeconds(8))
+                                         .execute(this::pollCameraRunnable);
+
+            // auto restart mjpeg stream now camera is back online.
+            OpenStreamsContainer container = camerasOpenStreams.get(entityID);
+            if (container != null) {
+                if (!container.getOpenStreams().isEmpty()) {
+                    CameraController.startMjpegStream(this);
+                }
+            }
+        }
     }
 
     protected void resetAndRetryConnecting() {
@@ -262,58 +258,28 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         }
     }
 
-    public final void disposeAndSetStatus(@NotNull Status status, @Nullable String reason) {
-        if (updateEntityStatus(status, reason)) {
-            log.warn("[{}]: Set video <{}> to status <{}>. Msg: <{}>", entityID, entity, status, reason);
-            resetAndRetryConnecting();
-
-            if (status == Status.ERROR || status == REQUIRE_AUTH) {
-                entityContext.ui().toastr().error("DISPOSE_VIDEO",
-                    FlowMap.of("TITLE", entity.getTitle(), "REASON", reason));
-            }
-        }
+    // assemble camera actions and cache every minute
+    public UIInputBuilder assembleActions() {
+        return uiInputBuilder.getFreshValue(Duration.ofSeconds(60), () -> {
+            UIInputBuilder builder = context.ui().inputBuilder();
+            assembleAdditionalVideoActions(builder);
+            return builder;
+        });
     }
 
-    private boolean updateEntityStatus(Status status, String reason) {
-        if (entity.getStatus() != status || !Objects.equals(reason, entity.getStatusMessage())) {
-            entity.setStatus(status, reason);
-            CameraDeviceEndpoint endpoint = getEndpoints().get(ENDPOINT_DEVICE_STATUS);
-            if (endpoint != null) {
-                endpoint.setValue(new StringType(status.toString()), false);
-            }
-            // fully update entity due status/message/etc.. may be changed
-            entityContext.ui().updateItem(entity);
-            updateNotificationBlock();
-            return true;
-        }
-        return false;
+    public void motionDetected(@Nullable DecimalType score) {
+        alarmDetected(score != null, MotionAlarm);
+        DecimalType value = score == null ? DecimalType.ZERO : new DecimalType(BigDecimal.valueOf(score.floatValue() * 100).setScale(2, RoundingMode.HALF_UP));
+        addEndpoint(ENDPOINT_MOTION_SCORE, key -> new CameraDeviceEndpoint(entity, context(), key, EndpointType.number, false), null)
+            .setValue(value);
     }
 
-    public final void bringCameraOnline() {
-        communicationError = 0;
-        if (!entity.isStart()) {
-            return;
+    public void processSnapshot(byte[] incomingSnapshot) {
+        log.debug("[{}]: Gеt video snapshot: <{}>", getEntityID(), getEntity());
+        if (!snapshot.setSnapshot(incomingSnapshot)) {
+            context.ui().updateItem(getEntity(), "snapshot", incomingSnapshot);
         }
         updateLastSeen();
-
-        if (!entity.getStatus().isOnline()) {
-            updateEntityStatus(ONLINE, null);
-            entity.getVideoMotionAlarmProviderImpl().resumeMotionAlarmListeners(entity);
-            onCameraConnected();
-
-            pollCameraJob = entityContext.bgp().builder("video-poll-" + entityID)
-                                         .delay(Duration.ofSeconds(8))
-                                         .interval(Duration.ofSeconds(8))
-                                         .execute(this::pollCameraRunnable);
-
-            // auto restart mjpeg stream now camera is back online.
-            OpenStreamsContainer container = camerasOpenStreams.get(entityID);
-            if (container != null) {
-                if (!container.getOpenStreams().isEmpty()) {
-                    CameraController.startMjpegStream(this);
-                }
-            }
-        }
     }
 
     protected void onCameraConnected() {
@@ -334,13 +300,9 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         return false;
     }
 
-    // assemble camera actions and cache every minute
-    public UIInputBuilder assembleActions() {
-        return uiInputBuilder.getFreshValue(Duration.ofSeconds(60), () -> {
-            UIInputBuilder builder = entityContext.ui().inputBuilder();
-            assembleAdditionalVideoActions(builder);
-            return builder;
-        });
+    public void ffmpegError(@NotNull String error) {
+        log.error("[{}]: FFMPEG error: {}", entityID, error);
+        context.ui().toastr().error("FFMPEG error: ''" + entityID + ". " + error);
     }
 
     public void deleteDirectories() {
@@ -354,31 +316,30 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         this.alarmDetected = on;
     }
 
-    public void motionDetected(@Nullable DecimalType score) {
-        alarmDetected(score != null, MotionAlarm);
-        DecimalType value = score == null ? DecimalType.ZERO : new DecimalType(BigDecimal.valueOf(score.floatValue() * 100).setScale(2, RoundingMode.HALF_UP));
-        addEndpoint(ENDPOINT_MOTION_SCORE, key -> new CameraDeviceEndpoint(entity, getEntityContext(), key, EndpointType.number, false), null)
-            .setValue(value);
-    }
-
-    public void processSnapshot(byte[] incomingSnapshot) {
-        log.debug("[{}]: Gеt video snapshot: <{}>", getEntityID(), getEntity());
-        lockCurrentSnapshot.lock();
-        try {
-            if (!Arrays.equals(latestSnapshot, incomingSnapshot)) {
-                latestSnapshot = incomingSnapshot;
-                entityContext.ui().updateItem(getEntity(), "snapshot", latestSnapshot);
+    public byte[] getLastSnapshot() {
+        return snapshot.getSnapshot(() -> {
+            if (!entity.isStart() || !entity.getStatus().isOnline() || ffmpegSnapshot == null) {
+                throw new RuntimeException();
             }
-        } finally {
-            updateLastSeen();
-            currentSnapshotTime = Instant.now();
-            lockCurrentSnapshot.unlock();
-        }
+            if (!ffmpegSnapshot.isRunning()) {
+                takeSnapshotAsync();
+            }
+            return null;
+        });
     }
 
-    public void ffmpegError(@NotNull String error) {
-        log.error("[{}]: FFMPEG error: {}", entityID, error);
-        entityContext.ui().toastr().error("FFMPEG error: ''" + entityID + ". " + error);
+    public final void takeSnapshotAsync() {
+        snapshot.setLastSnapshotRequest(Instant.now());
+        takeSnapshotAsyncInternal();
+    }
+
+    public void recordGifAsync(Path filePath, @Nullable String profile, int secondsToRecord) {
+        String gifInputOptions = "-y -t " + secondsToRecord + " -hide_banner";
+        FFMPEG ffmpegGIF = context.media().buildFFMPEG(entityID, "FFMPEG GIF", new FFMPEGHandler() {}, FFMPEGFormat.GIF,
+            gifInputOptions, urls.getRtspUri(profile),
+            gifOutOptions, filePath.toString(), entity.getUser(),
+            entity.getPassword().asString());
+        FFMPEG.run(ffmpegGIF, FFMPEG::startConverting);
     }
 
     public void assertOnline() {
@@ -447,30 +408,17 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
 
     }
 
-    public byte[] getSnapshot() {
-        if (!entity.isStart() || !entity.getStatus().isOnline() || ffmpegSnapshot == null) {
-            // Single gray pixel JPG to keep streams open when the camera goes offline, so they don't stop.
-            return new byte[]{(byte) 0xff, (byte) 0xd8, (byte) 0xff, (byte) 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
-                0x00, 0x01, 0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, (byte) 0xff, (byte) 0xdb, 0x00, 0x43,
-                0x00, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x03, 0x02, 0x02, 0x02, 0x03, 0x03, 0x03, 0x03, 0x04,
-                0x06, 0x04, 0x04, 0x04, 0x04, 0x04, 0x08, 0x06, 0x06, 0x05, 0x06, 0x09, 0x08, 0x0a, 0x0a, 0x09,
-                0x08, 0x09, 0x09, 0x0a, 0x0c, 0x0f, 0x0c, 0x0a, 0x0b, 0x0e, 0x0b, 0x09, 0x09, 0x0d, 0x11, 0x0d,
-                0x0e, 0x0f, 0x10, 0x10, 0x11, 0x10, 0x0a, 0x0c, 0x12, 0x13, 0x12, 0x10, 0x13, 0x0f, 0x10, 0x10,
-                0x10, (byte) 0xff, (byte) 0xc9, 0x00, 0x0b, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x11, 0x00,
-                (byte) 0xff, (byte) 0xcc, 0x00, 0x06, 0x00, 0x10, 0x10, 0x05, (byte) 0xff, (byte) 0xda, 0x00, 0x08,
-                0x01, 0x01, 0x00, 0x00, 0x3f, 0x00, (byte) 0xd2, (byte) 0xcf, 0x20, (byte) 0xff, (byte) 0xd9};
-        }
-        long lastUpdatedMs = Duration.between(lastSnapshotRequest, Instant.now()).toMillis();
-
-        if (!ffmpegSnapshot.isRunning() && lastUpdatedMs >= Duration.ofSeconds(30).toMillis()) {
-            takeSnapshotAsync();
-        }
-        lockCurrentSnapshot.lock();
-        try {
-            return latestSnapshot;
-        } finally {
-            lockCurrentSnapshot.unlock();
-        }
+    public CameraDeviceEndpoint addEndpointButtons(String endpointId, List<OptionModel> buttons, Consumer<State> updateHandler) {
+        return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, context(), key, buttons, true) {
+            @Override
+            public UIInputBuilder createSelectActionBuilder(@NotNull UIInputBuilder uiInputBuilder) {
+                uiInputBuilder.addMultiButton(getEntityID(), (context, params) -> {
+                    updateHandler.accept(new StringType(params.getString("value")));
+                    return null;
+                }, 0).addButtons(buttons);
+                return uiInputBuilder;
+            }
+        }, updateHandler);
     }
 
     public CameraDeviceEndpoint addEndpoint(
@@ -507,19 +455,8 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         return entity.isHasAudioStream();
     }
 
-    protected void offline() {
-        if (EntityContextBGP.cancel(pollCameraJob)) {
-            pollCameraJob = null;
-        }
-        if (EntityContextBGP.cancel(cameraConnectionJob)) {
-            cameraConnectionJob = null;
-        }
-
-        FFMPEG.run(ffmpegMainReStream, FFMPEG::stopConverting);
-        FFMPEG.run(ffmpegMjpeg, FFMPEG::stopConverting);
-        FFMPEG.run(ffmpegSnapshot, FFMPEG::stopConverting);
-
-        entity.getVideoMotionAlarmProviderImpl().suspendMotionAlarmListeners(entity);
+    public CameraDeviceEndpoint addEndpointInput(String endpointId, Consumer<State> updateHandler) {
+        return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, context(), key, EndpointType.string, true), updateHandler);
     }
 
     private synchronized void dispose() {
@@ -544,20 +481,11 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         }
     }
 
-    @SneakyThrows
-    private void fireFfmpegSync(@Nullable String profile, @NotNull Path output, @NotNull String inputArguments, @NotNull String outOptions, int maxTimeout) {
-        String input = urls.getSnapshotUri(profile);
-        if (input.equals("ffmpeg")) {
-            input = urls.getRtspUri(profile);
-            if (input.equals("ffmpeg")) {
-                throw new IllegalStateException("Unable to take snapshot without snapshot/rtsp urls");
-            }
-        }
-        Set<String> inputs = new HashSet<>();
-        inputs.add("-y");
-        inputs.add("-hide_banner");
-        inputs.add(inputArguments);
-        entityContext.media().fireFfmpeg(join(" ", inputs), input, outOptions + " " + output, maxTimeout);
+    public CameraDeviceEndpoint addEndpointSwitch(
+        @NotNull String endpointId,
+        @NotNull Consumer<State> updateHandler,
+        boolean writable) {
+        return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, context(), key, EndpointType.bool, writable), updateHandler);
     }
 
     protected void pollCameraRunnable() {
@@ -575,9 +503,28 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         }
     }
 
-    public final void takeSnapshotAsync() {
-        lastSnapshotRequest = Instant.now();
-        takeSnapshotAsyncInternal();
+    public CameraDeviceEndpoint addEndpointTrigger(
+        @NotNull String endpointId,
+        @NotNull Icon buttonIcon,
+        @Nullable String text,
+        @Nullable String confirmMessage,
+        @Nullable String confirmDialogColor,
+        @NotNull Consumer<State> updateHandler) {
+        return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, context(),
+            key, EndpointType.trigger, true) {
+            @Override
+            public UIInputBuilder createTriggerActionBuilder(@NotNull UIInputBuilder uiInputBuilder) {
+                uiInputBuilder.addButton(getEntityID(), buttonIcon, (context, params) -> {
+                                  updateHandler.accept(null);
+                                  return null;
+                              })
+                              .setText(StringUtils.trimToEmpty(text))
+                              .setConfirmMessage(confirmMessage)
+                              .setConfirmMessageDialogColor(confirmDialogColor)
+                              .setDisabled(!getDevice().getStatus().isOnline());
+                return uiInputBuilder;
+            }
+        }, updateHandler);
     }
 
     protected void takeSnapshotAsyncInternal() {
@@ -613,13 +560,8 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         entity.recordMp4Async(filePath, profile, secondsToRecord, this);
     }
 
-    public void recordGifAsync(Path filePath, @Nullable String profile, int secondsToRecord) {
-        String gifInputOptions = "-y -t " + secondsToRecord + " -hide_banner";
-        FFMPEG ffmpegGIF = entityContext.media().buildFFMPEG(entityID, "FFMPEG GIF", new FFMPEGHandler() {}, FFMPEGFormat.GIF,
-            gifInputOptions, urls.getRtspUri(profile),
-            gifOutOptions, filePath.toString(), entity.getUser(),
-            entity.getPassword().asString());
-        FFMPEG.run(ffmpegGIF, FFMPEG::startConverting);
+    public CameraDeviceEndpoint addEndpointEnum(String endpointId, List<OptionModel> range, Consumer<State> updateHandler) {
+        return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, context(), key, range, true), updateHandler);
     }
 
     public void updateLastSeen() {
@@ -638,16 +580,8 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         ffmpegSnapshot = entity.buildSnapshotFFMPEG(this);
     }
 
-    private void createOrUpdateDeviceGroup() {
-        List<ConfigDeviceDefinition> devices = findDevices();
-        Icon icon = new Icon(
-            CONFIG_DEVICE_SERVICE.getDeviceIcon(devices, "fas fa-video"),
-            CONFIG_DEVICE_SERVICE.getDeviceIconColor(devices, UI.Color.random())
-        );
-        entityContext.var().createGroup("video", "Video", builder ->
-            builder.setLocked(true).setIcon(new Icon("fas fa-video", "#0E578F")));
-        entityContext.var().createSubGroup("video", entity.getGroupID(), entity.getDeviceFullName(), builder ->
-            builder.setLocked(true).setDescription(getGroupDescription()).setIcon(icon));
+    public CameraDeviceEndpoint addEndpointSlider(String endpointId, Float min, Float max, Consumer<State> updateHandler, boolean writable) {
+        return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, context(), key, min, max, writable), updateHandler);
     }
 
     private String getGroupDescription() {
@@ -657,63 +591,101 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         return "${%s} [%s]".formatted(entity.getName(), entity.getIeeeAddress());
     }
 
-    public CameraDeviceEndpoint addEndpointButtons(String endpointId, List<OptionModel> buttons, Consumer<State> updateHandler) {
-        return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, getEntityContext(), key, buttons, true) {
-            @Override
-            public UIInputBuilder createSelectActionBuilder(@NotNull UIInputBuilder uiInputBuilder) {
-                uiInputBuilder.addMultiButton(getEntityID(), (entityContext, params) -> {
-                    updateHandler.accept(new StringType(params.getString("value")));
-                    return null;
-                }, 0).addButtons(buttons);
-                return uiInputBuilder;
+    protected void keepMjpegRunning() {
+        OpenStreamsContainer container = camerasOpenStreams.get(entityID);
+        if (!container.getOpenStreams().isEmpty()) {
+            String mjpegUri = urls.getMjpegUri();
+            if (!mjpegUri.isEmpty() && !"ffmpeg".equals(mjpegUri)) {
+                container.getOpenStreams().queueFrame(("--" + container.getOpenStreams().boundary + "\r\n\r\n").getBytes());
             }
-        }, updateHandler);
+            container.getOpenStreams().queueFrame(getLastSnapshot());
+        }
     }
 
-    public CameraDeviceEndpoint addEndpointInput(String endpointId, Consumer<State> updateHandler) {
-        return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, getEntityContext(), key, EndpointType.string, true), updateHandler);
+    protected void offline() {
+        if (ContextBGP.cancel(pollCameraJob)) {
+            pollCameraJob = null;
+        }
+        if (ContextBGP.cancel(cameraConnectionJob)) {
+            cameraConnectionJob = null;
+        }
+
+        FFMPEG.run(ffmpegMainReStream, FFMPEG::stopConverting);
+        FFMPEG.run(ffmpegMjpeg, FFMPEG::stopConverting);
+        FFMPEG.run(ffmpegSnapshot, FFMPEG::stopConverting);
+
+        entity.getVideoMotionAlarmProviderImpl().suspendMotionAlarmListeners(entity);
     }
 
-    public CameraDeviceEndpoint addEndpointSwitch(
-        @NotNull String endpointId,
-        @NotNull Consumer<State> updateHandler,
-        boolean writable) {
-        return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, getEntityContext(), key, EndpointType.bool, writable), updateHandler);
+    private void createConnectionJob() {
+        cameraConnectionJob = context
+            .bgp().builder("video-connect-" + entityID)
+            .intervalWithDelay(Duration.ofSeconds(30))
+            .execute(() -> {
+                try {
+                    if (!entity.getStatus().isOnline()) {
+                        pollCameraConnection();
+                    }
+                    if (entity.getStatus().isOnline() && ContextBGP.cancel(cameraConnectionJob)) {
+                        cameraConnectionJob = null;
+                    }
+                } catch (Exception ex) {
+                    String message = CommonUtils.getErrorMessage(ex);
+                    if (ex instanceof ConfigurationException
+                        || ex instanceof BadCredentialsException) {
+                        val status = ex instanceof BadCredentialsException ? REQUIRE_AUTH : ERROR;
+                        disposeAndSetStatus(status, message);
+                    } else {
+                        updateEntityStatus(OFFLINE, message);
+                    }
+                }
+            });
     }
 
     protected void setMotionAlarmThreshold(int threshold) {
     }
 
-    public CameraDeviceEndpoint addEndpointTrigger(
-        @NotNull String endpointId,
-        @NotNull Icon buttonIcon,
-        @Nullable String text,
-        @Nullable String confirmMessage,
-        @Nullable String confirmDialogColor,
-        @NotNull Consumer<State> updateHandler) {
-        return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, getEntityContext(),
-            key, EndpointType.trigger, true) {
-            @Override
-            public UIInputBuilder createTriggerActionBuilder(@NotNull UIInputBuilder uiInputBuilder) {
-                uiInputBuilder.addButton(getEntityID(), buttonIcon, (entityContext, params) -> {
-                                  updateHandler.accept(null);
-                                  return null;
-                              })
-                              .setText(StringUtils.trimToEmpty(text))
-                              .setConfirmMessage(confirmMessage)
-                              .setConfirmMessageDialogColor(confirmDialogColor)
-                              .setDisabled(!getDevice().getStatus().isOnline());
-                return uiInputBuilder;
+    private boolean updateEntityStatus(Status status, String reason) {
+        if (entity.getStatus() != status || !Objects.equals(reason, entity.getStatusMessage())) {
+            entity.setStatus(status, reason);
+            CameraDeviceEndpoint endpoint = getEndpoints().get(ENDPOINT_DEVICE_STATUS);
+            if (endpoint != null) {
+                endpoint.setValue(new StringType(status.toString()), false);
             }
-        }, updateHandler);
+            // fully update entity due status/message/etc.. may be changed
+            context.ui().updateItem(entity);
+            updateNotificationBlock();
+            return true;
+        }
+        return false;
     }
 
-    public CameraDeviceEndpoint addEndpointEnum(String endpointId, List<OptionModel> range, Consumer<State> updateHandler) {
-        return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, getEntityContext(), key, range, true), updateHandler);
+    @SneakyThrows
+    private void fireFfmpegSync(@Nullable String profile, @NotNull Path output, @NotNull String inputArguments, @NotNull String outOptions, int maxTimeout) {
+        String input = urls.getSnapshotUri(profile);
+        if (input.equals("ffmpeg")) {
+            input = urls.getRtspUri(profile);
+            if (input.equals("ffmpeg")) {
+                throw new IllegalStateException("Unable to take snapshot without snapshot/rtsp urls");
+            }
+        }
+        Set<String> inputs = new HashSet<>();
+        inputs.add("-y");
+        inputs.add("-hide_banner");
+        inputs.add(inputArguments);
+        context.media().fireFfmpeg(join(" ", inputs), input, outOptions + " " + output, maxTimeout);
     }
 
-    public CameraDeviceEndpoint addEndpointSlider(String endpointId, Float min, Float max, Consumer<State> updateHandler, boolean writable) {
-        return addEndpoint(endpointId, key -> new CameraDeviceEndpoint(entity, getEntityContext(), key, min, max, writable), updateHandler);
+    private void createOrUpdateDeviceGroup() {
+        List<ConfigDeviceDefinition> devices = findDevices();
+        Icon icon = new Icon(
+            CONFIG_DEVICE_SERVICE.getDeviceIcon(devices, "fas fa-video"),
+            CONFIG_DEVICE_SERVICE.getDeviceIconColor(devices, UI.Color.random())
+        );
+        context.var().createGroup("video", "Video", builder ->
+            builder.setLocked(true).setIcon(new Icon("fas fa-video", "#0E578F")));
+        context.var().createSubGroup("video", entity.getGroupID(), entity.getDeviceFullName(), builder ->
+            builder.setLocked(true).setDescription(getGroupDescription()).setIcon(icon));
     }
 
     protected void setAudioAlarmThreshold(int threshold) {
@@ -722,21 +694,11 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
     private void addPrimaryEndpoint() {
         addEndpoint(ENDPOINT_DEVICE_STATUS, key -> {
             List<OptionModel> range = OptionModel.list(Status.set(ONLINE, ERROR, OFFLINE, REQUIRE_AUTH, UNKNOWN, INITIALIZE));
-            CameraDeviceEndpoint videoEndpoint = new CameraDeviceEndpoint(entity, getEntityContext(), key, range, false) {
-                @Override
-                public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
-                    Status status = Status.valueOf(getValue().stringValue());
-                    uiInputBuilder.addInfo(status.name(), InfoType.Text).setColor(status.getColor());
-                    super.assembleUIAction(uiInputBuilder);
-                }
-            };
-            videoEndpoint.setIgnoreDuplicates(true);
-            videoEndpoint.setInitialValue(new StringType(UNKNOWN.toString()));
-            return videoEndpoint;
+            return new CameraDeviceEndpoint(entity, context(), key, range, false);
         }, null);
 
         addEndpoint(ENDPOINT_LAST_SEEN, key -> {
-            CameraDeviceEndpoint videoEndpoint = new CameraDeviceEndpoint(entity, getEntityContext(), key, EndpointType.number, false) {
+            CameraDeviceEndpoint videoEndpoint = new CameraDeviceEndpoint(entity, context(), key, EndpointType.number, false) {
 
                 @Override
                 public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
@@ -749,7 +711,7 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
 
         addEndpointSlider(ENDPOINT_MOTION_THRESHOLD, 0F, 50F, state -> {
             if (entity.setMotionThreshold(state.intValue())) {
-                entityContext.save(entity);
+                context.db().save(entity);
                 setMotionAlarmThreshold(state.intValue());
                 refreshVideoMotionAlarmProviders();
             }
@@ -757,7 +719,7 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
 
         addEndpointSlider(ENDPOINT_AUDIO_THRESHOLD, 0F, 50F, state -> {
             if (entity.setAudioThreshold(state.intValue())) {
-                entityContext.save(entity);
+                context.db().save(entity);
                 setAudioAlarmThreshold(state.intValue());
                 refreshVideoMotionAlarmProviders();
             }
@@ -799,7 +761,7 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
     }
 
     private void refreshVideoMotionAlarmProviders() {
-        for (VideoMotionAlarmProvider provider : entityContext.getBeansOfType(VideoMotionAlarmProvider.class)) {
+        for (VideoMotionAlarmProvider provider : context.getBeansOfType(VideoMotionAlarmProvider.class)) {
             provider.entityUpdated(entity);
         }
     }

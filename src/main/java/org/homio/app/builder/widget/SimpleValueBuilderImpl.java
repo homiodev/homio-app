@@ -1,8 +1,13 @@
 package org.homio.app.builder.widget;
 
-import org.homio.api.EntityContextWidget.SimpleValueWidgetBuilder;
-import org.homio.app.builder.widget.hasBuilder.*;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.api.ContextWidget.SimpleValueWidgetBuilder;
+import org.homio.app.builder.widget.hasBuilder.HasActionOnClickBuilder;
+import org.homio.app.builder.widget.hasBuilder.HasAlignBuilder;
+import org.homio.app.builder.widget.hasBuilder.HasIconColorThresholdBuilder;
+import org.homio.app.builder.widget.hasBuilder.HasPaddingBuilder;
+import org.homio.app.builder.widget.hasBuilder.HasValueConverterBuilder;
+import org.homio.app.builder.widget.hasBuilder.HasValueTemplateBuilder;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.impl.WidgetSimpleValueEntity;
 import org.jetbrains.annotations.NotNull;
 
@@ -15,8 +20,8 @@ public class SimpleValueBuilderImpl extends WidgetBaseBuilderImpl<SimpleValueWid
         HasIconColorThresholdBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder>,
         HasValueTemplateBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder> {
 
-    SimpleValueBuilderImpl(WidgetSimpleValueEntity widget, EntityContextImpl entityContext) {
-        super(widget, entityContext);
+    SimpleValueBuilderImpl(WidgetSimpleValueEntity widget, ContextImpl context) {
+        super(widget, context);
     }
 
     @Override

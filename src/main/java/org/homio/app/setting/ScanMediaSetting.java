@@ -1,9 +1,8 @@
 package org.homio.app.setting;
 
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.types.MediaEntity;
-import org.homio.api.entity.types.MicroControllerBaseEntity;
 import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPluginButton;
 
@@ -25,7 +24,7 @@ public class ScanMediaSetting implements SettingPluginButton {
     }
 
     @Override
-    public boolean isVisible(EntityContext entityContext) {
+    public boolean isVisible(Context context) {
         return false;
     }
 

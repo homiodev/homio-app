@@ -1,10 +1,22 @@
 package org.homio.app.console;
 
+import static java.lang.String.format;
+
 import com.fazecast.jSerialComm.SerialPort;
 import com.pivovarit.function.ThrowingSupplier;
-import lombok.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import lombok.experimental.Accessors;
 import org.apache.commons.lang3.SystemUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.console.ConsolePluginTable;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.ui.field.UIField;
@@ -14,16 +26,12 @@ import org.homio.hquery.hardware.other.MachineInfo;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
-
-import static java.lang.String.format;
-
 @Component
 @RequiredArgsConstructor
 public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePlugin.HardwarePluginEntity> {
 
     @Getter
-    private final EntityContext entityContext;
+    private final @Accessors(fluent = true) Context context;
 
     private final MachineHardwareRepository machineHardwareRepository;
     private final NetworkHardwareRepository networkHardwareRepository;
@@ -39,8 +47,8 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
         List<HardwarePluginEntity> list = new ArrayList<>();
 
         list.add(new HardwarePluginEntity("Database", format("Type: (%s). Url: (%s)",
-                entityContext.setting().getEnv("databaseType"),
-                entityContext.setting().getEnv("spring.datasource.url"))));
+            context.setting().getEnv("databaseType"),
+            context.setting().getEnv("spring.datasource.url"))));
         list.add(new HardwarePluginEntity("Cpu load", machineHardwareRepository.getCpuLoad()));
         list.add(new HardwarePluginEntity("Cpu temperature", onLinux(machineHardwareRepository::getCpuTemperature)));
         list.add(new HardwarePluginEntity("Ram memory", machineHardwareRepository.getRamMemory()));

@@ -5,7 +5,7 @@ import java.util.function.BiFunction;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.state.State;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.api.workspace.Lock;
@@ -18,8 +18,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
 
-    public Scratch3DataBlocks(EntityContext entityContext) {
-        super("data", entityContext);
+    public Scratch3DataBlocks(Context context) {
+        super("data", context);
 
         blockReporter("prev_variable", this::getPreviousValue);
 
@@ -54,7 +54,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     }
 
     /*private JSONObject getJsonVariableToReporter(WorkspaceBlock workspaceBlock) {
-        WorkspaceJsonVariableEntity entity = entityContext.getEntity(WorkspaceJsonVariableEntity.PREFIX
+        WorkspaceJsonVariableEntity entity = context.db().getEntity(WorkspaceJsonVariableEntity.PREFIX
                 + workspaceBlock.getFieldId("json_variables"));
         String query = workspaceBlock.getInputString("ITEM");
         return Scratch3MutatorBlocks.reduceJSON(entity.getValue().toString(), query);
@@ -62,7 +62,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
 
     private State variableReporter(WorkspaceBlock workspaceBlock) {
         String variable = getVariable(workspaceBlock);
-        return variable == null ? null : State.of(entityContext.var().get(variable));
+        return variable == null ? null : State.of(context.var().get(variable));
     }
 
     private void changeVariableHandler(WorkspaceBlock workspaceBlock) {
@@ -70,7 +70,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         Float value = workspaceBlock.getInputFloat("ITEM");
 
         if (value != null) {
-            entityContext.var().inc(variable, value);
+            context.var().inc(variable, value);
         }
     }
 
@@ -78,7 +78,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         String variable = getVariable(workspaceBlock);
         Object value = workspaceBlock.getInput("ITEM", true);
         if (value != null) {
-            entityContext.var().set(variable, value);
+            context.var().set(variable, value);
         }
     }
 

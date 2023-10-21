@@ -17,7 +17,7 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
@@ -121,13 +121,13 @@ public class ScriptEntity extends BaseEntity implements HasJsonData {
         return functionsWithPrefix.isEmpty() ? null : functionsWithPrefix.iterator().next();
     }
 
-    public String getFormattedJavaScript(EntityContext entityContext, Compilable engine) {
+    public String getFormattedJavaScript(Context context, Compilable engine) {
         String jsonParams = StringUtils.defaultIfEmpty(javaScriptParameters, "{}");
         long hash = StringUtils.defaultIfEmpty(javaScript, "").hashCode() + jsonParams.hashCode();
         if (this.formattedJavaScriptHash != hash) {
             this.formattedJavaScriptHash = hash;
 
-            Environment env = entityContext.getBean(Environment.class);
+            Environment env = context.getBean(Environment.class);
             JSONObject params = new JSONObject(jsonParams);
             String envFormattedJavaScript = SpringUtils.replaceEnvValues(javaScript,
                     (key, defValue, prefix) -> {

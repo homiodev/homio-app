@@ -1,6 +1,6 @@
 package org.homio.app.builder.widget.hasBuilder;
 
-import org.homio.api.EntityContextWidget.HasActionOnClick;
+import org.homio.api.ContextWidget.HasActionOnClick;
 import org.homio.api.entity.BaseEntity;
 import org.jetbrains.annotations.Nullable;
 

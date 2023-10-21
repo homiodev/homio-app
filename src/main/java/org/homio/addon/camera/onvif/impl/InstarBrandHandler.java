@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.IpCameraService;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.StringType;
@@ -200,7 +200,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler {
     }
 
     @Override
-    public void postInitializeCamera(EntityContext entityContext) {
+    public void postInitializeCamera(Context context) {
         if (service.lowPriorityRequests.isEmpty()) {
             service.addLowRequestGet("/param.cgi?cmd=getaudioalarmattr");
             service.addLowRequestGet("/cgi-bin/hi3510/param.cgi?cmd=getmdattr");

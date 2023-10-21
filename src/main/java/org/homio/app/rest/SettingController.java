@@ -1,36 +1,53 @@
 package org.homio.app.rest;
 
-import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
-import org.apache.commons.lang3.StringUtils;
-import org.homio.api.AddonEntrypoint;
-import org.homio.api.EntityContext;
-import org.homio.api.console.ConsolePlugin;
-import org.homio.api.exception.ServerException;
-import org.homio.api.model.OptionModel;
-import org.homio.api.setting.*;
-import org.homio.api.setting.console.ConsoleSettingPlugin;
-import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
-import org.homio.api.util.Lang;
-import org.homio.app.manager.AddonService;
-import org.homio.app.manager.common.EntityContextImpl;
-import org.homio.app.manager.common.impl.EntityContextSettingImpl;
-import org.homio.app.manager.common.impl.EntityContextUIImpl;
-import org.homio.app.model.entity.SettingEntity;
-import org.homio.app.repository.SettingRepository;
-import org.homio.app.spring.ContextRefreshed;
-import org.homio.app.utils.OptionUtil;
-import org.json.JSONObject;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.*;
-import java.util.stream.Collectors;
-
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 import static org.homio.app.model.entity.SettingEntity.getKey;
 import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;
 import static org.springframework.util.MimeTypeUtils.APPLICATION_JSON_VALUE;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import org.apache.commons.lang3.StringUtils;
+import org.homio.api.AddonEntrypoint;
+import org.homio.api.Context;
+import org.homio.api.console.ConsolePlugin;
+import org.homio.api.exception.ServerException;
+import org.homio.api.model.OptionModel;
+import org.homio.api.setting.SettingPlugin;
+import org.homio.api.setting.SettingPluginOptions;
+import org.homio.api.setting.SettingPluginOptionsRemovable;
+import org.homio.api.setting.SettingPluginPackageInstall;
+import org.homio.api.setting.SettingType;
+import org.homio.api.setting.console.ConsoleSettingPlugin;
+import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
+import org.homio.api.util.Lang;
+import org.homio.app.manager.AddonService;
+import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.manager.common.impl.ContextSettingImpl;
+import org.homio.app.manager.common.impl.ContextUIImpl;
+import org.homio.app.model.entity.SettingEntity;
+import org.homio.app.repository.SettingRepository;
+import org.homio.app.spring.ContextRefreshed;
+import org.json.JSONObject;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping(value = "/rest/setting", produces = APPLICATION_JSON_VALUE)
@@ -38,15 +55,15 @@ import static org.springframework.util.MimeTypeUtils.APPLICATION_JSON_VALUE;
 public class SettingController implements ContextRefreshed {
 
     private final AddonService addonService;
-    private final EntityContextImpl entityContext;
+    private final ContextImpl context;
     private Map<String, Set<String>> settingToPages;
     private Set<SettingEntity> descriptionSettings;
     private Map<Class<? extends SettingPlugin<?>>, SettingEntity> transientSettings;
 
     @Override
-    public void onContextRefresh(EntityContext entityContext) {
+    public void onContextRefresh(Context context) {
         this.transientSettings = new HashMap<>();
-        for (SettingPlugin<?> settingPlugin : EntityContextSettingImpl.settingPluginsByPluginKey.values()) {
+        for (SettingPlugin<?> settingPlugin : ContextSettingImpl.settingPluginsByPluginKey.values()) {
             if (settingPlugin.transientState()) {
                 SettingEntity entity = new SettingEntity();
                 entity.setEntityID(getKey(settingPlugin));
@@ -62,16 +79,16 @@ public class SettingController implements ContextRefreshed {
     @GetMapping("/{entityID}/options")
     public Collection<OptionModel> loadSettingAvailableValues(@PathVariable("entityID") String entityID,
                                                               @RequestParam(value = "param0", required = false) String param0) {
-        SettingPluginOptions<?> settingPlugin = (SettingPluginOptions<?>) EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
-        return SettingRepository.getOptions(settingPlugin, entityContext, new JSONObject().put("param0", param0));
+        SettingPluginOptions<?> settingPlugin = (SettingPluginOptions<?>) ContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+        return SettingRepository.getOptions(settingPlugin, context, new JSONObject().put("param0", param0));
     }
 
     @GetMapping("/{entityID}/package/all")
     public SettingPluginPackageInstall.PackageContext loadAllPackages(@PathVariable("entityID") String entityID) throws Exception {
-        SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+        SettingPlugin<?> settingPlugin = ContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
             SettingPluginPackageInstall.PackageContext packageContext =
-                    ((SettingPluginPackageInstall) settingPlugin).allPackages(entityContext);
+                ((SettingPluginPackageInstall) settingPlugin).allPackages(context);
             for (Map.Entry<String, Boolean> entry : addonService.getPackagesInProgress().entrySet()) {
                 SettingPluginPackageInstall.PackageModel singlePackage =
                         packageContext.getPackages().stream()
@@ -93,9 +110,9 @@ public class SettingController implements ContextRefreshed {
 
     @GetMapping("/{entityID}/package")
     public SettingPluginPackageInstall.PackageContext loadInstalledPackages(@PathVariable("entityID") String entityID) throws Exception {
-        SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+        SettingPlugin<?> settingPlugin = ContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
-            return ((SettingPluginPackageInstall) settingPlugin).installedPackages(entityContext);
+            return ((SettingPluginPackageInstall) settingPlugin).installedPackages(context);
         }
         return null;
     }
@@ -103,7 +120,7 @@ public class SettingController implements ContextRefreshed {
     @DeleteMapping("/{entityID}/package")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void unInstallPackage(@PathVariable("entityID") String entityID, @RequestBody SettingPluginPackageInstall.PackageRequest packageRequest) {
-        SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+        SettingPlugin<?> settingPlugin = ContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
             addonService.unInstallPackage((SettingPluginPackageInstall) settingPlugin, packageRequest);
         }
@@ -112,7 +129,7 @@ public class SettingController implements ContextRefreshed {
     @PostMapping("/{entityID}/package")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void installPackage(@PathVariable("entityID") String entityID, @RequestBody SettingPluginPackageInstall.PackageRequest packageRequest) {
-        SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+        SettingPlugin<?> settingPlugin = ContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
             addonService.installPackage((SettingPluginPackageInstall) settingPlugin, packageRequest);
         }
@@ -121,35 +138,35 @@ public class SettingController implements ContextRefreshed {
     @SneakyThrows
     @PostMapping(value = "/{entityID}", consumes = "text/plain")
     public <T> void updateSetting(@PathVariable("entityID") String entityID, @RequestBody(required = false) String value) {
-        SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+        SettingPlugin<?> settingPlugin = ContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin != null) {
-            settingPlugin.assertUserAccess(entityContext, entityContext.getUser());
-            entityContext.setting().setValueRaw((Class<? extends SettingPlugin<T>>) settingPlugin.getClass(), value, false);
+            settingPlugin.assertUserAccess(context, context.getUser());
+            context.setting().setValueRaw((Class<? extends SettingPlugin<T>>) settingPlugin.getClass(), value, false);
         }
     }
 
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     @DeleteMapping(value = "/{entityID}", consumes = "text/plain")
     public void removeSettingValue(@PathVariable("entityID") String entityID, @RequestBody String value) throws Exception {
-        SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+        SettingPlugin<?> settingPlugin = ContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginOptionsRemovable) {
-            ((SettingPluginOptionsRemovable<?>) settingPlugin).removeOption(entityContext, value);
+            ((SettingPluginOptionsRemovable<?>) settingPlugin).removeOption(context, value);
         }
     }
 
     @GetMapping("/name")
     public List<OptionModel> getSettingNames() {
-        return entityContext.toOptionModels(entityContext.findAll(SettingEntity.class));
+        return context.toOptionModels(context.db().findAll(SettingEntity.class));
     }
 
     public List<SettingEntity> getSettings() {
-        List<SettingEntity> settings = entityContext.findAll(SettingEntity.class);
+        List<SettingEntity> settings = context.db().findAll(SettingEntity.class);
         assembleTransientSettings(settings);
         for (SettingEntity setting : settings) {
-            fulfillEntityFromPlugin(setting, entityContext, null);
+            fulfillEntityFromPlugin(setting, context, null);
         }
 
-        boolean isAdmin = entityContext.isAdmin();
+        boolean isAdmin = context.isAdmin();
 
         if (settingToPages == null) {
             settingToPages = new HashMap<>();
@@ -158,7 +175,7 @@ public class SettingController implements ContextRefreshed {
 
         for (Iterator<SettingEntity> iterator = settings.iterator(); iterator.hasNext(); ) {
             SettingEntity settingEntity = iterator.next();
-            SettingPlugin<?> plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(
+            SettingPlugin<?> plugin = ContextSettingImpl.settingPluginsByPluginKey.get(
                     settingEntity.getEntityID());
             if (plugin != null) {
 
@@ -171,7 +188,7 @@ public class SettingController implements ContextRefreshed {
                 if (plugin.isSecuredValue() && !isAdmin) {
                     settingEntity.setValue("********");
                 }
-                settingEntity.setVisible(plugin.isVisible(entityContext));
+                settingEntity.setVisible(plugin.isVisible(context));
             } else {
                 iterator.remove();
             }
@@ -191,10 +208,10 @@ public class SettingController implements ContextRefreshed {
         for (Map.Entry<Class<? extends SettingPlugin<?>>, SettingEntity> entry :
                 transientSettings.entrySet()) {
             SettingEntity settingEntity = entry.getValue();
-            settingEntity.setValue(entityContext.setting().getRawValue((Class) entry.getKey()));
+            settingEntity.setValue(context.setting().getRawValue((Class) entry.getKey()));
             if (DynamicConsoleHeaderContainerSettingPlugin.class.isAssignableFrom(entry.getKey())) {
                 settingEntity.setSettingTypeRaw("Container");
-                List<SettingEntity> options = EntityContextSettingImpl.dynamicHeaderSettings.get(entry.getKey());
+                List<SettingEntity> options = ContextSettingImpl.dynamicHeaderSettings.get(entry.getKey());
                 settingEntity.getParameters().put("dynamicOptions", options);
             } else if (SettingPluginPackageInstall.class.isAssignableFrom(entry.getKey())) {
                 settingEntity.setSettingTypeRaw("AddonInstaller");
@@ -210,10 +227,10 @@ public class SettingController implements ContextRefreshed {
     private void updateSettingToPages(List<SettingEntity> settings) {
         // fulfill console pages
         for (SettingEntity settingEntity : settings) {
-            SettingPlugin<?> plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(settingEntity.getEntityID());
+            SettingPlugin<?> plugin = ContextSettingImpl.settingPluginsByPluginKey.get(settingEntity.getEntityID());
             if (plugin instanceof ConsoleSettingPlugin) {
                 for (Map.Entry<String, ConsolePlugin<?>> entry :
-                        EntityContextUIImpl.consolePluginsMap.entrySet()) {
+                    ContextUIImpl.consolePluginsMap.entrySet()) {
                     if (((ConsoleSettingPlugin<?>) plugin)
                             .acceptConsolePluginPage(entry.getValue())) {
                         settingToPages
@@ -231,8 +248,8 @@ public class SettingController implements ContextRefreshed {
     private void updateSettingDescription(List<SettingEntity> settings) {
         Set<String> addonSettings =
                 settings.stream().map(e -> {
-                            SettingPlugin<?> plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(e.getEntityID());
-                            return SettingRepository.getSettingAddonName(entityContext, plugin.getClass());
+                            SettingPlugin<?> plugin = ContextSettingImpl.settingPluginsByPluginKey.get(e.getEntityID());
+                            return SettingRepository.getSettingAddonName(context, plugin.getClass());
                         })
                         .filter(Objects::nonNull)
                         .collect(Collectors.toSet());

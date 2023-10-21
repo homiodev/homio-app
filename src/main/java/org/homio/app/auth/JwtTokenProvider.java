@@ -1,11 +1,21 @@
 package org.homio.app.auth;
 
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.JwtParser;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import java.util.Base64;
+import java.util.Date;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.entity.UserEntity;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.setting.system.SystemClearCacheButtonSetting;
 import org.homio.app.setting.system.SystemLogoutButtonSetting;
 import org.homio.app.setting.system.auth.SystemDisableAuthTokenOnRestartSetting;
@@ -15,13 +25,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
-
-import java.util.Base64;
-import java.util.Date;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 @Log4j2
 @Component
@@ -42,28 +45,28 @@ public class JwtTokenProvider implements ContextCreated {
     private String appId;
 
     @Override
-    public void onContextCreated(EntityContextImpl entityContext) throws Exception {
-        this.appId = entityContext.setting().getEnv("appId", String.valueOf(System.currentTimeMillis()), true);
-        RUN_COUNT = entityContext.setting().getEnv("runCount", 1, true);
-        entityContext.setting().setEnv("runCount", RUN_COUNT + 1);
+    public void onContextCreated(ContextImpl context) throws Exception {
+        this.appId = context.setting().getEnv("appId", String.valueOf(System.currentTimeMillis()), true);
+        RUN_COUNT = context.setting().getEnv("runCount", 1, true);
+        context.setting().setEnv("runCount", RUN_COUNT + 1);
 
-        entityContext.setting().listenValue(SystemClearCacheButtonSetting.class, "jwt-clear-cache", () -> {
+        context.setting().listenValue(SystemClearCacheButtonSetting.class, "jwt-clear-cache", () -> {
             userCache.clear();
             blockedTokens.clear();
         });
 
-        entityContext.setting().listenValueAndGet(SystemJWTTokenValidSetting.class, "jwt-valid", value -> {
+        context.setting().listenValueAndGet(SystemJWTTokenValidSetting.class, "jwt-valid", value -> {
             this.jwtValidityTimeout = value;
-            regenerateSecurityID(entityContext);
+            regenerateSecurityID(context);
             log.info("Generated securityID: {} on change timeout: {}", securityId, value);
         });
-        entityContext.setting().listenValueAndGet(SystemDisableAuthTokenOnRestartSetting.class, "jwt-req-app", value -> {
+        context.setting().listenValueAndGet(SystemDisableAuthTokenOnRestartSetting.class, "jwt-req-app", value -> {
             this.regenerateSecurityIdOnRestart = value;
-            regenerateSecurityID(entityContext);
+            regenerateSecurityID(context);
             log.info("Generated securityID: {} on disable auth on restart: {}", securityId, value);
         });
-        entityContext.setting().listenValue(SystemLogoutButtonSetting.class, "logout", () -> {
-            UserEntity user = entityContext.getUser();
+        context.setting().listenValue(SystemLogoutButtonSetting.class, "logout", () -> {
+            UserEntity user = context.getUser();
             if (user != null) {
                 boolean removed = userCache.entrySet().removeIf(entry -> {
                     if (user.getEntityID().equals(UserEntityDetailsService.getEntityID(entry.getValue()))) {
@@ -74,8 +77,8 @@ public class JwtTokenProvider implements ContextCreated {
                 });
                 if (removed) {
                     user.logInfo("logged out");
-                    entityContext.ui().notification().removeBlock("user-" + user.getEmail());
-                    entityContext.ui().dialog().reloadWindow("sys.auth_changed");
+                    context.ui().notification().removeBlock("user-" + user.getEmail());
+                    context.ui().dialog().reloadWindow("sys.auth_changed");
                 }
             }
         });
@@ -132,10 +135,10 @@ public class JwtTokenProvider implements ContextCreated {
         return token;
     }
 
-    private void regenerateSecurityID(EntityContextImpl entityContext) {
+    private void regenerateSecurityID(ContextImpl context) {
         this.securityId = buildSecurityId();
         this.jwtParser = Jwts.parser().setSigningKey(securityId);
-        entityContext.ui().dialog().reloadWindow("sys.auth_changed");
+        context.ui().dialog().reloadWindow("sys.auth_changed");
     }
 
     private void removeOutdatedTokens() {

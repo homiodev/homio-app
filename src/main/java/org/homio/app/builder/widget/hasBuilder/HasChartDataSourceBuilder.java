@@ -1,6 +1,6 @@
 package org.homio.app.builder.widget.hasBuilder;
 
-import org.homio.api.EntityContextWidget.HasChartDataSource;
+import org.homio.api.ContextWidget.HasChartDataSource;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.widget.AggregationType;
 

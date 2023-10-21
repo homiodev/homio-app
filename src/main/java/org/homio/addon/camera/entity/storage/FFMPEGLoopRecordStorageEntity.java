@@ -1,6 +1,6 @@
 package org.homio.addon.camera.entity.storage;
 
-import static org.homio.api.EntityContextMedia.FFMPEGFormat.RECORD;
+import static org.homio.api.ContextMedia.FFMPEGFormat.RECORD;
 
 import jakarta.persistence.Entity;
 import java.nio.file.Path;
@@ -14,9 +14,9 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
 import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.addon.camera.service.BaseCameraService;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextMedia.FFMPEG;
-import org.homio.api.EntityContextMedia.FFMPEGHandler;
+import org.homio.api.Context;
+import org.homio.api.ContextMedia.FFMPEG;
+import org.homio.api.ContextMedia.FFMPEGHandler;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.model.Icon;
 import org.homio.api.ui.UISidebarChildren;
@@ -130,7 +130,7 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
 
     @SneakyThrows
     @Override
-    public void startRecord(String id, String output, String profile, DeviceBaseEntity deviceEntity, EntityContext entityContext) {
+    public void startRecord(String id, String output, String profile, DeviceBaseEntity deviceEntity, Context context) {
         stopRecord(id, output, deviceEntity);
         if (!(deviceEntity instanceof BaseCameraEntity)) {
             throw new IllegalArgumentException("Unable to start video record for non ffmpeg compatible source");
@@ -166,7 +166,7 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
 
         String source = service.urls.getSnapshotUri(profile);
         log.info("[{}]: Start ffmpeg video recording from source: <{}> to: <{}>", getEntityID(), source, path);
-        FFMPEG ffmpeg = entityContext.media().buildFFMPEG(getEntityID(), "FFMPEG loop record", ffmpegHandler,
+        FFMPEG ffmpeg = context.media().buildFFMPEG(getEntityID(), "FFMPEG loop record", ffmpegHandler,
                 RECORD, getVerbose() ? "" : "-hide_banner", source,
                 buildFFMPEGRecordCommand(folder), path.toString(),
                 videoStreamEntity.getUser(), videoStreamEntity.getPassword().asString());

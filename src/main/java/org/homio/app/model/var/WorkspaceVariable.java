@@ -27,10 +27,10 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextVar;
-import org.homio.api.EntityContextVar.TransformVariableSource;
-import org.homio.api.EntityContextVar.VariableType;
+import org.homio.api.Context;
+import org.homio.api.ContextVar;
+import org.homio.api.ContextVar.TransformVariableSource;
+import org.homio.api.ContextVar.VariableType;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
@@ -51,7 +51,7 @@ import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.api.ui.field.selection.SelectionConfiguration;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent.SelectionParent;
-import org.homio.app.manager.common.impl.EntityContextVarImpl;
+import org.homio.app.manager.common.impl.ContextVarImpl;
 import org.homio.app.repository.VariableBackupRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -84,7 +84,7 @@ public class WorkspaceVariable extends BaseEntity
     @UIField(order = 20, label = "format")
     @Enumerated(EnumType.STRING)
     @UIFieldShowOnCondition("return context.getParent('groupId') !== 'broadcasts'")
-    private EntityContextVar.VariableType restriction = EntityContextVar.VariableType.Any;
+    private ContextVar.VariableType restriction = ContextVar.VariableType.Any;
 
     @UIField(order = 25)
     @UIFieldSlider(min = 500, max = 100000, step = 500)
@@ -131,7 +131,7 @@ public class WorkspaceVariable extends BaseEntity
     }
 
     public int getBackupStorageCount() {
-        return backup ? getEntityContext().getBean(VariableBackupRepository.class).count(this) : 0;
+        return backup ? context().getBean(VariableBackupRepository.class).count(this) : 0;
     }
 
     @Override
@@ -145,8 +145,8 @@ public class WorkspaceVariable extends BaseEntity
     @UIFieldProgress
     public UIFieldProgress.Progress getUsedQuota() {
         int count = 0;
-        if (getEntityID() != null && getEntityContext() != null && getEntityContext().var().exists(getEntityID())) {
-            count = (int) getEntityContext().var().count(getEntityID());
+        if (getEntityID() != null && context() != null && context().var().exists(getEntityID())) {
+            count = (int) context().var().count(getEntityID());
         }
         return UIFieldProgress.Progress.of(count, this.quota);
     }
@@ -167,7 +167,7 @@ public class WorkspaceVariable extends BaseEntity
 
     @Override
     public boolean isDisableDelete() {
-        return locked || getJsonData("dis_del", false) || getEntityContext().event().getEventCount(getEntityID()) > 0;
+        return locked || getJsonData("dis_del", false) || context().event().getEventCount(getEntityID()) > 0;
     }
 
     @Override
@@ -187,8 +187,8 @@ public class WorkspaceVariable extends BaseEntity
     }
 
     @Override
-    public void addUpdateValueListener(EntityContext entityContext, String discriminator, JSONObject dynamicParameters, Consumer<State> listener) {
-        entityContext.event().addEventListener(getEntityID(), discriminator, listener);
+    public void addUpdateValueListener(Context context, String discriminator, JSONObject dynamicParameters, Consumer<State> listener) {
+        context.event().addEventListener(getEntityID(), discriminator, listener);
     }
 
     public String getParentId() {
@@ -241,18 +241,18 @@ public class WorkspaceVariable extends BaseEntity
 
     @Override
     public @NotNull List<Object[]> getTimeValueSeries(PeriodRequest request) {
-        return ((EntityContextVarImpl) request.getEntityContext().var())
+        return ((ContextVarImpl) request.context().var())
             .getTimeSeries(getEntityID(), request);
     }
 
     @Override
     public Object getStatusValue(GetStatusValueRequest request) {
-        return request.getEntityContext().var().get(getEntityID());
+        return request.context().var().get(getEntityID());
     }
 
     @Override
     public SourceHistory getSourceHistory(GetStatusValueRequest request) {
-        SourceHistory sourceHistory = ((EntityContextVarImpl) request.getEntityContext().var())
+        SourceHistory sourceHistory = ((ContextVarImpl) request.context().var())
             .getSourceHistory(getEntityID())
                 .setIcon(new Icon(icon, iconColor))
                 .setName(getName())
@@ -263,7 +263,7 @@ public class WorkspaceVariable extends BaseEntity
                 "Quota:" + quota,
                 "Type:" + restriction.name().toLowerCase(),
                 "Locked:" + locked,
-                "Listeners:" + getEntityContext().event().getEventCount(getEntityID()),
+            "Listeners:" + context().event().getEventCount(getEntityID()),
                 "Writable:" + !readOnly)));
         if (unit != null) {
             sourceHistory.getAttributes().add("Unit: " + unit);
@@ -283,18 +283,18 @@ public class WorkspaceVariable extends BaseEntity
 
     @Override
     public List<SourceHistoryItem> getSourceHistoryItems(GetStatusValueRequest request, int from, int count) {
-        return ((EntityContextVarImpl) request.getEntityContext().var()).getSourceHistoryItems(getEntityID(), from, count);
+        return ((ContextVarImpl) request.context().var()).getSourceHistoryItems(getEntityID(), from, count);
     }
 
     @Override
     public void setStatusValue(SetStatusValueRequest request) {
-        ((EntityContextVarImpl) request.getEntityContext().var())
+        ((ContextVarImpl) request.context().var())
             .set(getEntityID(), request.getValue(), true);
     }
 
     @Override
-    public String getStatusValueRepresentation(EntityContext entityContext) {
-        Object value = entityContext.var().get(getEntityID());
+    public String getStatusValueRepresentation(Context context) {
+        Object value = context.var().get(getEntityID());
         String str = value == null ? null : formatVariableValue(value);
         if (isEmpty(unit)) {
             return str;

@@ -53,12 +53,13 @@ import org.apache.logging.log4j.core.impl.DefaultLogEventFactory;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.message.MessageFactory;
 import org.apache.logging.log4j.spi.AbstractLogger;
-import org.homio.api.EntityContext.FileLogger;
+import org.homio.api.Context;
+import org.homio.api.Context.FileLogger;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.log.HasEntityLog.EntityLogBuilder;
 import org.homio.api.util.CommonUtils;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.spring.ContextCreated;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -128,9 +129,9 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
     }
 
     @Override
-    public void onContextCreated(EntityContextImpl entityContext) throws Exception {
-        LogService.scanEntityLogs(entityContext);
-        globalAppender.setEntityContext(entityContext);
+    public void onContextCreated(ContextImpl context) throws Exception {
+        LogService.scanEntityLogs(context);
+        globalAppender.setContext(context);
     }
 
     public @Nullable Path getEntityLogsFile(BaseEntity baseEntity) {
@@ -225,23 +226,23 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
         return false;
     }
 
-    private static void scanEntityLogs(EntityContextImpl entityContext) {
-        for (BaseEntity entity : entityContext.findAllBaseEntities()) {
+    private static void scanEntityLogs(ContextImpl context) {
+        for (BaseEntity entity : context.db().findAllBaseEntities()) {
             if (entity instanceof HasEntityLog) {
                 addLogEntity(entity);
             }
         }
-        entityContext.event().addEntityUpdateListener(BaseEntity.class, "log-entity", baseEntity -> {
+        context.event().addEntityUpdateListener(BaseEntity.class, "log-entity", baseEntity -> {
             if (baseEntity instanceof HasEntityLog && globalAppender.logConsumers.containsKey(baseEntity.getEntityID())) {
                 globalAppender.logConsumers.get(baseEntity.getEntityID()).debug = ((HasEntityLog) baseEntity).isDebug();
             }
         });
-        entityContext.event().addEntityRemovedListener(BaseEntity.class, "log-entity", baseEntity -> {
+        context.event().addEntityRemovedListener(BaseEntity.class, "log-entity", baseEntity -> {
             if (baseEntity instanceof HasEntityLog) {
                 globalAppender.logConsumers.remove(baseEntity.getEntityID());
             }
         });
-        entityContext.event().addEntityCreateListener(BaseEntity.class, "log-entity", baseEntity -> {
+        context.event().addEntityCreateListener(BaseEntity.class, "log-entity", baseEntity -> {
             if (baseEntity instanceof HasEntityLog) {
                 addLogEntity(baseEntity);
             }
@@ -322,7 +323,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
         private final Map<String, LogConsumer> logConsumers = new ConcurrentHashMap<>();
         private final Map<String, DefinedAppenderConsumer> definedAppender = new HashMap<>();
 
-        // keep all logs in memory until we switch strategy via setEntityContext(...) method
+        // keep all logs in memory until we switch strategy via setContext(...) method
         private List<LogEvent> bufferedLogEvents = new CopyOnWriteArrayList<>();
         protected Consumer<LogEvent> logStrategy = event -> bufferedLogEvents.add(event);
 
@@ -331,8 +332,8 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
             start();
         }
 
-        public synchronized void setEntityContext(EntityContextImpl entityContext) {
-            this.logStrategy = event -> sendLogs(entityContext, event);
+        public synchronized void setContext(ContextImpl context) {
+            this.logStrategy = event -> sendLogs(context, event);
             flushBufferedLogs();
         }
 
@@ -351,12 +352,12 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
         }
 
         // Scan LogConsumers and send to ui if match
-        private void sendLogs(EntityContextImpl entityContext, LogEvent event) {
+        private void sendLogs(Context context, LogEvent event) {
             if (event.getLevel().intLevel() <= Level.DEBUG.intLevel()) {
                 for (Entry<String, DefinedAppenderConsumer> entry : definedAppender.entrySet()) {
                     if (entry.getValue().accept(event.getLoggerName())) {
                         sendLogEvent(event, message ->
-                                entityContext.ui().sendDynamicUpdate("appender-log-" + entry.getKey(), message));
+                            context.ui().sendDynamicUpdate("appender-log-" + entry.getKey(), message));
                     }
                 }
             }
@@ -367,7 +368,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
                 if (logConsumer.logTopics.stream().anyMatch(l -> l.test(event))) {
                     sendLogEvent(event, message -> {
                         Files.writeString(logConsumer.logFile, message + System.lineSeparator(), StandardOpenOption.APPEND);
-                        entityContext.ui().sendDynamicUpdate("entity-log-" + logConsumer.entityID, message);
+                        context.ui().sendDynamicUpdate("entity-log-" + logConsumer.entityID, message);
                     });
                 }
             }

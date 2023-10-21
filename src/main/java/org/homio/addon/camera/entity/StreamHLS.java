@@ -8,8 +8,8 @@ import java.util.regex.Pattern;
 import lombok.SneakyThrows;
 import org.aspectj.util.FileUtil;
 import org.homio.addon.camera.service.BaseCameraService;
-import org.homio.api.EntityContextMedia.FFMPEG;
-import org.homio.api.EntityContextMedia.FFMPEGFormat;
+import org.homio.api.ContextMedia.FFMPEG;
+import org.homio.api.ContextMedia.FFMPEGFormat;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
@@ -153,7 +153,7 @@ public interface StreamHLS extends HasJsonData {
             throw new IllegalArgumentException("Unable to find video service hls url");
         }
         String streamPrefix = "%s_hls_%s".formatted(service.getEntityID(), resolution);
-        return service.getEntityContext().media().buildFFMPEG(
+        return service.context().media().buildFFMPEG(
                           service.getEntityID() + "_" + resolution,
                           "HLS[%s]".formatted(resolution),
                           service, FFMPEGFormat.HLS,

@@ -1,6 +1,6 @@
 package org.homio.app.builder.widget.hasBuilder;
 
-import org.homio.api.EntityContextWidget.HasName;
+import org.homio.api.ContextWidget.HasName;
 import org.homio.api.entity.BaseEntity;
 import org.jetbrains.annotations.Nullable;
 

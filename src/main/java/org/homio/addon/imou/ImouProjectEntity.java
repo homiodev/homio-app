@@ -13,7 +13,7 @@ import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.imou.service.ImouDiscoveryService;
 import org.homio.addon.imou.service.ImouProjectService;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.MicroControllerBaseEntity;
@@ -27,6 +27,7 @@ import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldLinkToEntity;
+import org.homio.api.ui.field.UIFieldLinkToEntity.NavEntityTitle;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.color.UIFieldColorRef;
@@ -49,7 +50,7 @@ public final class ImouProjectEntity extends MicroControllerBaseEntity
     @UIField(order = 9999, disableEdit = true, hideInEdit = true)
     @UIFieldInlineEntities(bg = "#27FF000D")
     public List<ImouDeviceInlineEntity> getCoordinatorDevices() {
-        return getEntityContext().findAll(ImouDeviceEntity.class)
+        return context().db().findAll(ImouDeviceEntity.class)
                                  .stream()
                                  .sorted()
                                  .map(ImouDeviceInlineEntity::new)
@@ -61,7 +62,7 @@ public final class ImouProjectEntity extends MicroControllerBaseEntity
         boolean reloadItem = !getStatus().equals(status) || (status == Status.ERROR && !Objects.equals(getStatusMessage(), msg));
         super.setStatus(status, msg);
         if (reloadItem) {
-            getEntityContext().ui().updateItem(this);
+            context().ui().updateItem(this);
         }
     }
 
@@ -120,8 +121,8 @@ public final class ImouProjectEntity extends MicroControllerBaseEntity
     }
 
     @Override
-    public @NotNull ImouProjectService createService(@NotNull EntityContext entityContext) {
-        return new ImouProjectService(entityContext, this);
+    public @NotNull ImouProjectService createService(@NotNull Context context) {
+        return new ImouProjectService(context, this);
     }
 
     @Override
@@ -139,25 +140,19 @@ public final class ImouProjectEntity extends MicroControllerBaseEntity
     }
 
     @UIContextMenuAction(value = "IMOU.SCAN_DEVICES", icon = "fas fa-barcode", iconColor = Color.PRIMARY_COLOR)
-    public ActionResponseModel scanDevices(EntityContext entityContext) {
-        entityContext.bgp().runWithProgress("imou-scan-devices").execute(progressBar -> {
-            entityContext.getBean(ImouDiscoveryService.class)
-                    .scan(entityContext, progressBar, null);
+    public ActionResponseModel scanDevices(Context context) {
+        context.bgp().runWithProgress("imou-scan-devices").execute(progressBar -> {
+            context.getBean(ImouDiscoveryService.class)
+                   .scan(context, progressBar, null);
         });
         return ActionResponseModel.fired();
     }
 
     @UIContextMenuAction(value = "IMOU.GET_DEVICE_LIST", icon = "fas fa-tape")
-    public ActionResponseModel getDevicesList(EntityContext entityContext) {
+    public ActionResponseModel getDevicesList(Context context) {
         return ActionResponseModel.showJson("Imou device list",
-            entityContext.getBean(ImouDiscoveryService.class).getDeviceList(entityContext));
+            context.getBean(ImouDiscoveryService.class).getDeviceList(context));
     }
-
-    /*@UIContextMenuAction(value = "IMOU.GET_USER_INFO", icon = "fas fa-tape")
-    public ActionResponseModel getUserInfo(EntityContext entityContext) {
-        return ActionResponseModel.showJson("Tuya device list",
-            entityContext.getBean(TuyaOpenAPI.class).getUserInfo());
-    }*/
 
     @Override
     @JsonIgnore
@@ -178,7 +173,7 @@ public final class ImouProjectEntity extends MicroControllerBaseEntity
         @UIField(order = 1)
         @UIFieldInlineEntityWidth(35)
         @UIFieldLinkToEntity(ImouDeviceEntity.class)
-        private String ieeeAddress;
+        private NavEntityTitle ieeeAddress;
 
         @UIField(order = 2)
         @UIFieldColorRef("color")
@@ -196,7 +191,7 @@ public final class ImouProjectEntity extends MicroControllerBaseEntity
             if (StringUtils.isEmpty(name) || name.equalsIgnoreCase(entity.getIeeeAddress())) {
                 name = entity.getDescription();
             }
-            ieeeAddress = entity.getEntityID() + "~~~" + entity.getIeeeAddress();
+            ieeeAddress = new NavEntityTitle(entity.getEntityID(), entity.getIeeeAddress());
             endpointsCount = entity.getService().getEndpoints().size();
         }
     }

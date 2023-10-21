@@ -1,37 +1,36 @@
 package org.homio.app.manager;
 
-import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
-import org.homio.api.AddonEntrypoint;
-import org.homio.api.EntityContext;
-import org.homio.api.exception.NotFoundException;
-import org.homio.api.util.CommonUtils;
-import org.homio.app.model.entity.LocalBoardEntity;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Component;
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
+import org.homio.api.AddonEntrypoint;
+import org.homio.api.Context;
+import org.homio.api.exception.NotFoundException;
+import org.homio.api.util.CommonUtils;
+import org.homio.app.model.entity.LocalBoardEntity;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
 
 @Log4j2
 @Component
 @RequiredArgsConstructor
 public class ImageService {
 
-    private final EntityContext entityContext;
+    private final Context context;
     private final AddonService addonService;
 
     @SneakyThrows
     public ImageResponse getImage(String entityID) {
         Path filePath = CommonUtils.getImagePath().resolve(entityID);
         if (!Files.exists(filePath)) {
-            LocalBoardEntity localBoardEntity = this.entityContext.getEntityRequire(LocalBoardEntity.class, PRIMARY_DEVICE);
+            LocalBoardEntity localBoardEntity = this.context.db().getEntityRequire(LocalBoardEntity.class, PRIMARY_DEVICE);
             filePath = Paths.get(localBoardEntity.getFileSystemRoot(), entityID);
         }
         if (Files.exists(filePath)) {

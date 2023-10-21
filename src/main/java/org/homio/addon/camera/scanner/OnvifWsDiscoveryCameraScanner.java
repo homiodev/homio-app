@@ -8,7 +8,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.addon.camera.onvif.OnvifDiscovery;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.service.discovery.VideoStreamScanner;
 import org.homio.api.util.Lang;
 import org.homio.hquery.ProgressBar;
@@ -24,11 +24,11 @@ public class OnvifWsDiscoveryCameraScanner implements VideoStreamScanner {
     }
 
     @Override
-    public DeviceScannerResult scan(EntityContext entityContext, ProgressBar progressBar, String headerConfirmButtonKey) {
-        OnvifDiscovery onvifDiscovery = new OnvifDiscovery(entityContext);
+    public DeviceScannerResult scan(Context context, ProgressBar progressBar, String headerConfirmButtonKey) {
+        OnvifDiscovery onvifDiscovery = new OnvifDiscovery(context);
         DeviceScannerResult result = new DeviceScannerResult();
         try {
-            Map<String, IpCameraEntity> existsCamera = entityContext.findAll(IpCameraEntity.class)
+            Map<String, IpCameraEntity> existsCamera = context.db().findAll(IpCameraEntity.class)
                                                                     .stream().collect(Collectors.toMap(IpCameraEntity::getIp, Function.identity()));
 
             onvifDiscovery.discoverCameras((brand, ipAddress, onvifPort, hardwareID) -> {
@@ -36,7 +36,7 @@ public class OnvifWsDiscoveryCameraScanner implements VideoStreamScanner {
                     result.getNewCount().incrementAndGet();
                     handleDevice(headerConfirmButtonKey,
                             "onvif-" + ipAddress,
-                            "Onvif", entityContext,
+                        "Onvif", context,
                             messages -> {
                                 messages.add(Lang.getServerMessage("VIDEO_STREAM.ADDRESS", ipAddress));
                                 messages.add(Lang.getServerMessage("VIDEO_STREAM.PORT", String.valueOf(onvifPort)));
@@ -47,7 +47,7 @@ public class OnvifWsDiscoveryCameraScanner implements VideoStreamScanner {
                             },
                             () -> {
                                 log.info("Confirm save onvif camera with ip address: <{}>", ipAddress);
-                                entityContext.save(new IpCameraEntity()
+                                context.db().save(new IpCameraEntity()
                                         .setIp(ipAddress)
                                         .setOnvifPort(onvifPort)
                                         .setCameraType(brand.getID()));

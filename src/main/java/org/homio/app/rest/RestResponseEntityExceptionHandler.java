@@ -6,7 +6,7 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ErrorHolderModel;
 import org.homio.api.util.CommonUtils;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.hquery.api.HardwareException;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpHeaders;
@@ -26,10 +26,10 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @RestControllerAdvice
 public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionHandler {
 
-    private final EntityContextImpl entityContext;
+    private final ContextImpl context;
 
-    public RestResponseEntityExceptionHandler(EntityContextImpl entityContext) {
-        this.entityContext = entityContext;
+    public RestResponseEntityExceptionHandler(ContextImpl context) {
+        this.context = context;
     }
 
     @ExceptionHandler({ServerException.class})
@@ -78,13 +78,13 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
         // addon linkage error
         if (ex.getCause() instanceof AbstractMethodError && msg.contains("org.homio.addon")) {
             int start = msg.indexOf("org.homio.addon") + "org.homio.addon".length() + 1;
-            entityContext.getAddon().disableAddon(msg.substring(start, msg.indexOf(".", start)));
+            context.getAddon().disableAddon(msg.substring(start, msg.indexOf(".", start)));
         }
         if (ex instanceof NullPointerException) {
             msg += ". src: " + ex.getStackTrace()[0].toString();
         }
         if (ex instanceof ServerException) {
-            entityContext.ui().toastr().error(ex);
+            context.ui().toastr().error(ex);
         }
         log.error("Error <{}>", msg, ex);
         Objects.requireNonNull(((ServletWebRequest) request).getResponse())

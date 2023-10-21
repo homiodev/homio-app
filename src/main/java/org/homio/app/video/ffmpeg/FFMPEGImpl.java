@@ -1,6 +1,6 @@
 package org.homio.app.video.ffmpeg;
 
-import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
+import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION;
 
 import com.pivovarit.function.ThrowingRunnable;
 import java.io.BufferedReader;
@@ -23,16 +23,16 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import org.apache.logging.log4j.Level;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContext.FileLogger;
-import org.homio.api.EntityContextHardware.ProcessStat;
-import org.homio.api.EntityContextMedia.FFMPEG;
-import org.homio.api.EntityContextMedia.FFMPEGFormat;
-import org.homio.api.EntityContextMedia.FFMPEGHandler;
+import org.homio.api.Context;
+import org.homio.api.Context.FileLogger;
+import org.homio.api.ContextHardware.ProcessStat;
+import org.homio.api.ContextMedia.FFMPEG;
+import org.homio.api.ContextMedia.FFMPEGFormat;
+import org.homio.api.ContextMedia.FFMPEGHandler;
 import org.homio.api.model.UpdatableValue;
 import org.homio.api.util.CommonUtils;
-import org.homio.app.manager.common.impl.EntityContextBGPImpl;
-import org.homio.app.manager.common.impl.EntityContextHardwareImpl.ProcessStatImpl;
+import org.homio.app.manager.common.impl.ContextBGPImpl;
+import org.homio.app.manager.common.impl.ContextHardwareImpl.ProcessStatImpl;
 import org.homio.app.model.entity.FFMPEGEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -60,7 +60,7 @@ public class FFMPEGImpl implements FFMPEG {
     protected final @NotNull Map<String, ThrowingRunnable<Exception>> destroyListeners = new HashMap<>();
     private final @Getter String cmd;
     protected final String entityID;
-    private final EntityContext entityContext;
+    private final Context context;
     private final @Getter int commandHashCode;
     private final @Getter FileLogger fileLogger;
     protected @Nullable Collection<ThrowingRunnable<Exception>> threadDestroyListeners;
@@ -83,9 +83,9 @@ public class FFMPEGImpl implements FFMPEG {
         @NotNull String output,
         @NotNull String username,
         @NotNull String password,
-        @NotNull EntityContext entityContext) {
+        @NotNull Context context) {
         this(entityID, description, handler, format, output, buildCommand(inputArguments,
-            input, outArguments, output, username, password), entityContext);
+            input, outArguments, output, username, password), context);
     }
 
     @SneakyThrows
@@ -95,11 +95,11 @@ public class FFMPEGImpl implements FFMPEG {
         @NotNull FFMPEGFormat format,
         @NotNull String output,
         @NotNull String command,
-        @NotNull EntityContext entityContext) {
-        this.entityContext = entityContext;
+        @NotNull Context context) {
+        this.context = context;
         FFMPEGImpl.ffmpegMap.put(entityID + "_" + description, this);
 
-        this.fileLogger = entityContext.getFileLogger(FFMPEGImpl.entity, description);
+        this.fileLogger = context.getFileLogger(FFMPEGImpl.entity, description);
         this.entityID = entityID;
         this.description = description;
         this.format = format;
@@ -111,7 +111,7 @@ public class FFMPEGImpl implements FFMPEG {
         cmd = "ffmpeg " + String.join(" ", commandArrayList);
         // ffmpegLocation may have a space in its folder
         commandArrayList.add(0, FFMPEG_LOCATION);
-        entityContext.ui().updateItem(entity);
+        context.ui().updateItem(entity);
     }
 
     public static String buildCommand(
@@ -153,7 +153,7 @@ public class FFMPEGImpl implements FFMPEG {
             running.set(true);
             FFMPEGImpl.ffmpegMap.put(entityID + "_" + description, this);
             ffmpegThread.start();
-            entityContext.ui().updateItem(entity);
+            context.ui().updateItem(entity);
             return true;
         }
         return false;
@@ -206,9 +206,9 @@ public class FFMPEGImpl implements FFMPEG {
         UpdatableValue<ProcessStat> cachedValue = PROCESS_STAT_LOADING_CACHE.computeIfAbsent(entityID,
             s -> UpdatableValue.wrap(new ProcessStatImpl(0, 0, 0), entityID));
         return cachedValue.getFreshValue(Duration.ofSeconds(10), () ->
-            entityContext.bgp().builder("fetch-ffmpeg-proc-stat")
+            context.bgp().builder("fetch-ffmpeg-proc-stat")
                          .execute(() -> {
-                             cachedValue.update(entityContext.hardware().getProcessStat(process.pid()));
+                             cachedValue.update(context.hardware().getProcessStat(process.pid()));
                              onRefreshUpdated.run();
                          }));
     }
@@ -219,7 +219,7 @@ public class FFMPEGImpl implements FFMPEG {
             if (ffmpegThread.isAlive()) {
                 fileLogger.logWarn("Stopping '%s' ffmpeg %s now when keepalive is: %s".formatted(description, format, keepAlive));
                 if (process != null) {
-                    EntityContextBGPImpl.stopProcess(process, description);
+                    ContextBGPImpl.stopProcess(process, description);
                     process.destroyForcibly();
                 }
                 if (duration != null) {
@@ -229,7 +229,7 @@ public class FFMPEGImpl implements FFMPEG {
             }
             return false;
         } finally {
-            entityContext.ui().updateItem(entity);
+            context.ui().updateItem(entity);
         }
     }
 
@@ -254,7 +254,7 @@ public class FFMPEGImpl implements FFMPEG {
         }
 
         FFMPEGImpl.ffmpegMap.remove(entityID + "_" + description, this);
-        entityContext.ui().updateItem(entity);
+        context.ui().updateItem(entity);
     }
 
     protected void logWarn(String message) {

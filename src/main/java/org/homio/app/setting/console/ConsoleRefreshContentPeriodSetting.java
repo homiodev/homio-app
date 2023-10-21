@@ -1,6 +1,9 @@
 package org.homio.app.setting.console;
 
-import org.homio.api.EntityContext;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import org.homio.api.Context;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
@@ -8,10 +11,6 @@ import org.homio.api.setting.SettingPluginOptions;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 
 public class ConsoleRefreshContentPeriodSetting
         implements ConsoleSettingPlugin<Integer>, SettingPluginOptions<Integer> {
@@ -32,7 +31,7 @@ public class ConsoleRefreshContentPeriodSetting
     }
 
     @Override
-    public @NotNull Collection<OptionModel> getOptions(EntityContext entityContext, JSONObject params) {
+    public @NotNull Collection<OptionModel> getOptions(Context context, JSONObject params) {
         return new ArrayList<>(
                 Arrays.asList(
                         OptionModel.of("0", "TIME.NEVER"),

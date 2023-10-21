@@ -2,8 +2,7 @@ package org.homio.addon.camera.handler;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
-import java.util.function.Supplier;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 
 public interface BaseBrandCameraHandler {
@@ -20,7 +19,7 @@ public interface BaseBrandCameraHandler {
 
     void pollCameraRunnable();
 
-    void postInitializeCamera(EntityContext entityContext);
+    void postInitializeCamera(Context context);
 
     String getUrlToKeepOpenForIdleStateEvent();
 

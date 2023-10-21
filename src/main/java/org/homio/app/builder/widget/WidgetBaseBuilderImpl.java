@@ -5,10 +5,10 @@ import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import java.util.Objects;
 import java.util.function.Consumer;
 import lombok.Getter;
-import org.homio.api.EntityContextWidget.PulseBuilder;
-import org.homio.api.EntityContextWidget.ThresholdBuilder;
-import org.homio.api.EntityContextWidget.WidgetBaseBuilder;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.api.ContextWidget.PulseBuilder;
+import org.homio.api.ContextWidget.ThresholdBuilder;
+import org.homio.api.ContextWidget.WidgetBaseBuilder;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.WidgetTabEntity;
 import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
@@ -19,11 +19,11 @@ import org.jetbrains.annotations.Nullable;
 public class WidgetBaseBuilderImpl<T, W extends WidgetBaseEntity> implements WidgetBaseBuilder<T> {
 
     protected final W widget;
-    private final EntityContextImpl entityContext;
+    private final ContextImpl context;
 
-    WidgetBaseBuilderImpl(W widget, EntityContextImpl entityContext) {
+    WidgetBaseBuilderImpl(W widget, ContextImpl context) {
         this.widget = widget;
-        this.entityContext = entityContext;
+        this.context = context;
     }
 
     @Override
@@ -71,7 +71,7 @@ public class WidgetBaseBuilderImpl<T, W extends WidgetBaseEntity> implements Wid
 
     @Override
     public @NotNull T attachToTab(@NotNull String name) {
-        for (WidgetTabEntity widgetTabEntity : entityContext.findAll(WidgetTabEntity.class)) {
+        for (WidgetTabEntity widgetTabEntity : context.db().findAll(WidgetTabEntity.class)) {
             if (Objects.equals(widgetTabEntity.getName(), name)) {
                 widget.setWidgetTabEntity(widgetTabEntity);
                 break;
@@ -82,7 +82,7 @@ public class WidgetBaseBuilderImpl<T, W extends WidgetBaseEntity> implements Wid
 
     @Override
     public @NotNull T attachToLayout(@NotNull String layoutEntityID, int rowNum, int columnNum) {
-        WidgetLayoutEntity entity = entityContext.getEntity(WidgetLayoutEntity.class, layoutEntityID);
+        WidgetLayoutEntity entity = context.db().getEntity(WidgetLayoutEntity.class, layoutEntityID);
         if (entity == null) {
             throw new IllegalArgumentException("Unable to find layout: " + layoutEntityID);
         }

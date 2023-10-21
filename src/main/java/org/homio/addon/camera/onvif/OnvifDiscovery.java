@@ -40,7 +40,7 @@ import org.apache.commons.io.IOUtils;
 import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.IpCameraService;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -52,18 +52,9 @@ import org.jetbrains.annotations.Nullable;
 public class OnvifDiscovery {
 
     private final ArrayList<DatagramPacket> listOfReplays = new ArrayList<>(2);
-    private final EntityContext entityContext;
+    private final Context context;
 
-    private static CameraBrandHandlerDescription checkForBrand(String response, EntityContext entityContext) {
-        for (CameraBrandHandlerDescription brandHandler : IpCameraService.getCameraBrands(entityContext).values()) {
-            if (response.contains(brandHandler.getName())) {
-                return brandHandler;
-            }
-        }
-        return DEFAULT_ONVIF_BRAND;
-    }
-
-    public static CameraBrandHandlerDescription getBrandFromLoginPage(String hostname, EntityContext entityContext) {
+    public static CameraBrandHandlerDescription getBrandFromLoginPage(String hostname, Context context) {
         try {
             URL url = new URL("http://" + hostname);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -74,12 +65,21 @@ public class OnvifDiscovery {
             try {
                 connection.connect();
                 String response = IOUtils.toString(connection.getInputStream(), Charset.defaultCharset());
-                return checkForBrand(response, entityContext);
+                return checkForBrand(response, context);
             } catch (MalformedURLException ignored) {
             } finally {
                 connection.disconnect();
             }
         } catch (Exception ignore) {
+        }
+        return DEFAULT_ONVIF_BRAND;
+    }
+
+    private static CameraBrandHandlerDescription checkForBrand(String response, Context context) {
+        for (CameraBrandHandlerDescription brandHandler : IpCameraService.getCameraBrands(context).values()) {
+            if (response.contains(brandHandler.getName())) {
+                return brandHandler;
+            }
         }
         return DEFAULT_ONVIF_BRAND;
     }
@@ -169,9 +169,9 @@ public class OnvifDiscovery {
         } else {// // http://192.168.0.1/onvif/device_service
             ipAddress = temp.substring(beginIndex, endIndex);
         }
-        CameraBrandHandlerDescription brand = checkForBrand(xml, entityContext);
+        CameraBrandHandlerDescription brand = checkForBrand(xml, context);
         if (brand.getID().equals(DEFAULT_ONVIF_BRAND.getID())) {
-            brand = getBrandFromLoginPage(ipAddress, entityContext);
+            brand = getBrandFromLoginPage(ipAddress, context);
         }
         cameraFoundHandler.handle(brand, ipAddress, onvifPort.intValue(), getHardwareID(xml));
     }

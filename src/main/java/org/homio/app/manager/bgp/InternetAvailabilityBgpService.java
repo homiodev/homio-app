@@ -6,37 +6,37 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextBGP.ScheduleBuilder;
-import org.homio.api.EntityContextBGP.ThreadContext;
+import org.homio.api.Context;
+import org.homio.api.ContextBGP.ScheduleBuilder;
+import org.homio.api.ContextBGP.ThreadContext;
 import org.homio.api.state.OnOffType;
 import org.homio.api.util.HardwareUtils;
-import org.homio.app.manager.common.impl.EntityContextBGPImpl;
+import org.homio.app.manager.common.impl.ContextBGPImpl;
 
 @Log4j2
 public class InternetAvailabilityBgpService {
 
     @Getter
     private final AtomicBoolean internetUp = new AtomicBoolean(false);
-    private final EntityContext entityContext;
+    private final Context context;
     private ThreadContext<Boolean> internetThreadContext;
 
-    public InternetAvailabilityBgpService(EntityContext entityContext, EntityContextBGPImpl entityContextBGP) {
-        this.entityContext = entityContext;
-        ScheduleBuilder<Boolean> builder = entityContextBGP.builder("internet-test");
-        Duration interval = entityContext.setting().getEnvRequire("interval-internet-test", Duration.class, Duration.ofSeconds(10), true);
+    public InternetAvailabilityBgpService(Context context, ContextBGPImpl ContextBGP) {
+        this.context = context;
+        ScheduleBuilder<Boolean> builder = ContextBGP.builder("internet-test");
+        Duration interval = context.setting().getEnvRequire("interval-internet-test", Duration.class, Duration.ofSeconds(10), true);
         ScheduleBuilder<Boolean> internetAccessBuilder = builder
                 .intervalWithDelay(interval)
                 .valueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
                     if (isInternetUp != isInternetWasUp) {
                         internetUp.set(isInternetUp);
-                        entityContext.event().fireEventIfNotSame("internet-status", OnOffType.of(isInternetUp));
+                        context.event().fireEventIfNotSame("internet-status", OnOffType.of(isInternetUp));
                     }
                     return null;
                 })
-                .tap(context -> internetThreadContext = context);
+                .tap(tc -> internetThreadContext = tc);
 
-        internetAccessBuilder.execute(context -> HardwareUtils.ping("google.com", 80) != null);
+        internetAccessBuilder.execute(tc -> HardwareUtils.ping("google.com", 80) != null);
     }
 
     @SneakyThrows
@@ -55,7 +55,7 @@ public class InternetAvailabilityBgpService {
     }
 
     private void executeInternetUpCommand(String name, ThrowingRunnable<Exception> command) {
-        entityContext.bgp().builder(name).execute(() -> {
+        context.bgp().builder(name).execute(() -> {
             log.info("Internet up. Run <" + name + "> listener.");
             try {
                 command.run();

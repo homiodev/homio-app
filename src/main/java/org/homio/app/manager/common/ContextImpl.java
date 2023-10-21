@@ -2,7 +2,6 @@ package org.homio.app.manager.common;
 
 import jakarta.persistence.EntityManagerFactory;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -25,19 +24,12 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.reflect.MethodUtils;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextHardware;
-import org.homio.api.EntityContextMedia;
-import org.homio.api.EntityContextStorage;
+import org.homio.api.Context;
+import org.homio.api.ContextHardware;
+import org.homio.api.ContextMedia;
 import org.homio.api.entity.BaseEntity;
-import org.homio.api.entity.BaseEntityIdentifier;
 import org.homio.api.entity.EntityFieldMetadata;
-import org.homio.api.entity.HasJsonData;
-import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
-import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
@@ -52,7 +44,7 @@ import org.homio.api.util.Lang;
 import org.homio.app.LogService;
 import org.homio.app.audio.AudioService;
 import org.homio.app.auth.JwtTokenProvider;
-import org.homio.app.builder.widget.EntityContextWidgetImpl;
+import org.homio.app.builder.widget.ContextWidgetImpl;
 import org.homio.app.config.TransactionManagerContext;
 import org.homio.app.manager.AddonService;
 import org.homio.app.manager.CacheService;
@@ -60,27 +52,22 @@ import org.homio.app.manager.LoggerService;
 import org.homio.app.manager.PortService;
 import org.homio.app.manager.ScriptService;
 import org.homio.app.manager.WidgetService;
-import org.homio.app.manager.common.impl.EntityContextAddonImpl;
-import org.homio.app.manager.common.impl.EntityContextBGPImpl;
-import org.homio.app.manager.common.impl.EntityContextEventImpl;
-import org.homio.app.manager.common.impl.EntityContextHardwareImpl;
-import org.homio.app.manager.common.impl.EntityContextInstallImpl;
-import org.homio.app.manager.common.impl.EntityContextMediaImpl;
-import org.homio.app.manager.common.impl.EntityContextServiceImpl;
-import org.homio.app.manager.common.impl.EntityContextSettingImpl;
-import org.homio.app.manager.common.impl.EntityContextStorageImpl;
-import org.homio.app.manager.common.impl.EntityContextUIImpl;
-import org.homio.app.manager.common.impl.EntityContextVarImpl;
-import org.homio.app.manager.common.impl.EntityContextWorkspaceImpl;
+import org.homio.app.manager.common.impl.ContextAddonImpl;
+import org.homio.app.manager.common.impl.ContextBGPImpl;
+import org.homio.app.manager.common.impl.ContextEventImpl;
+import org.homio.app.manager.common.impl.ContextHardwareImpl;
+import org.homio.app.manager.common.impl.ContextInstallImpl;
+import org.homio.app.manager.common.impl.ContextMediaImpl;
+import org.homio.app.manager.common.impl.ContextServiceImpl;
+import org.homio.app.manager.common.impl.ContextSettingImpl;
+import org.homio.app.manager.common.impl.ContextStorageImpl;
+import org.homio.app.manager.common.impl.ContextUIImpl;
+import org.homio.app.manager.common.impl.ContextVarImpl;
+import org.homio.app.manager.common.impl.ContextWorkspaceImpl;
 import org.homio.app.model.entity.FFMPEGEntity;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.app.model.entity.MediaMTXEntity;
 import org.homio.app.model.entity.user.UserAdminEntity;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
-import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
-import org.homio.app.model.entity.widget.WidgetSeriesEntity;
-import org.homio.app.model.entity.widget.attributes.HasPosition;
-import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
 import org.homio.app.repository.AbstractRepository;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.repository.VariableBackupRepository;
@@ -111,19 +98,16 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.boot.SpringApplication;
-import org.springframework.cglib.proxy.Enhancer;
-import org.springframework.cglib.proxy.MethodInterceptor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @SuppressWarnings("rawtypes")
 @Log4j2
 @Component
-public class EntityContextImpl implements EntityContext {
+public class ContextImpl implements Context {
 
     private static final Set<Class<? extends ContextCreated>> BEAN_CONTEXT_CREATED = new LinkedHashSet<>();
     private static final Set<Class<? extends ContextRefreshed>> BEAN_CONTEXT_REFRESH = new LinkedHashSet<>();
@@ -156,40 +140,34 @@ public class EntityContextImpl implements EntityContext {
         BEAN_CONTEXT_REFRESH.add(AudioService.class);
     }
 
+    public static ContextImpl INSTANCE;
+    private final ContextUIImpl contextUI;
+    private final ContextInstallImpl contextInstall;
+    private final ContextEventImpl contextEvent;
+    private final ContextBGPImpl contextBGP;
+    private final ContextSettingImpl contextSetting;
     private final GitHubProject appGitHub = GitHubProject.of("homiodev", "homio-app", CommonUtils.getInstallPath().resolve("homio"))
-            .setInstalledVersionResolver((entityContext, gitHubProject) -> setting().getApplicationVersion());
-    private final EntityContextUIImpl entityContextUI;
-    private final EntityContextInstallImpl entityContextInstall;
-    private final EntityContextEventImpl entityContextEvent;
-    private final EntityContextBGPImpl entityContextBGP;
-    private final EntityContextSettingImpl entityContextSetting;
-    private final EntityContextVarImpl entityContextVar;
-    private final EntityContextHardwareImpl entityContextHardware;
-    private final EntityContextWidgetImpl entityContextWidget;
-    private final EntityContextMediaImpl entityContextMedia;
-    private final EntityContextServiceImpl entityContextService;
-    private final EntityContextWorkspaceImpl entityContextWorkspace;
-    private final EntityContextStorageImpl entityContextStorage;
-    @Getter
-    private final EntityContextAddonImpl addon;
-    @Getter
-    private final EntityContextStorageImpl entityContextStorageImpl;
+                                                         .setInstalledVersionResolver((context, gitHubProject) -> setting().getApplicationVersion());
+    private final ContextVarImpl contextVar;
+    private final ContextHardwareImpl contextHardware;
+    private final ContextWidgetImpl contextWidget;
+    private final ContextMediaImpl contextMedia;
+    private final ContextServiceImpl contextService;
+    private final ContextWorkspaceImpl contextWorkspace;
+    private final ContextStorageImpl contextStorage;
     private final ClassFinder classFinder;
     @Getter
     private final CacheService cacheService;
     @Getter
     private final Set<ApplicationContext> allApplicationContexts = new HashSet<>();
-    private final EntityManager entityManager;
-    private final WidgetRepository widgetRepository;
-    private final WidgetSeriesRepository widgetSeriesRepository;
     private boolean showEntityState;
     private ApplicationContext applicationContext;
     private WorkspaceService workspaceService;
-    private final TransactionManagerContext transactionManagerContext;
-    public static EntityContextImpl INSTANCE;
+    @Getter
+    private final ContextAddonImpl addon;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    public EntityContextImpl(
+    public ContextImpl(
             TransactionManagerContext transactionManagerContext,
             List<AbstractRepository> repositories,
             AllDeviceRepository allDeviceRepository,
@@ -207,34 +185,35 @@ public class EntityContextImpl implements EntityContext {
             FfmpegHardwareRepository ffmpegHardwareRepository) {
         this.classFinder = classFinder;
         this.cacheService = cacheService;
-        this.entityManager = entityManager;
-        this.widgetRepository = widgetRepository;
-        this.widgetSeriesRepository = widgetSeriesRepository;
-        this.transactionManagerContext = transactionManagerContext;
 
-        EntityContextImpl.allDeviceRepository = allDeviceRepository;
-        EntityContextImpl.repositoriesByPrefix =
+        ContextImpl.allDeviceRepository = allDeviceRepository;
+        ContextImpl.repositoriesByPrefix =
                 repositories.stream()
                         .filter(r -> !r.getClass().equals(AllDeviceRepository.class))
                         .collect(Collectors.toMap(AbstractRepository::getPrefix, r -> r));
 
-        this.entityContextHardware = new EntityContextHardwareImpl(this, mhr);
-        this.entityContextSetting = new EntityContextSettingImpl(this, environment, classFinder);
-        this.entityContextUI = new EntityContextUIImpl(this, messagingTemplate);
-        this.entityContextBGP = new EntityContextBGPImpl(this, taskScheduler);
-        this.entityContextEvent = new EntityContextEventImpl(this, entityManagerFactory);
-        this.entityContextInstall = new EntityContextInstallImpl(this);
-        this.entityContextWidget = new EntityContextWidgetImpl(this);
-        this.entityContextStorageImpl = new EntityContextStorageImpl(this);
-        this.entityContextVar = new EntityContextVarImpl(this, variableBackupRepository);
-        this.entityContextMedia = new EntityContextMediaImpl(this, ffmpegHardwareRepository);
-        this.entityContextService = new EntityContextServiceImpl(this);
-        this.entityContextWorkspace = new EntityContextWorkspaceImpl(this);
-        this.entityContextStorage = new EntityContextStorageImpl(this);
-        this.addon = new EntityContextAddonImpl(this, cacheService);
+        this.contextHardware = new ContextHardwareImpl(this, mhr);
+        this.contextSetting = new ContextSettingImpl(this, environment, classFinder);
+        this.contextUI = new ContextUIImpl(this, messagingTemplate);
+        this.contextBGP = new ContextBGPImpl(this, taskScheduler);
+        this.contextEvent = new ContextEventImpl(this, entityManagerFactory);
+        this.contextInstall = new ContextInstallImpl(this);
+        this.contextWidget = new ContextWidgetImpl(this);
+        this.contextVar = new ContextVarImpl(this, variableBackupRepository);
+        this.contextMedia = new ContextMediaImpl(this, ffmpegHardwareRepository);
+        this.contextService = new ContextServiceImpl(this);
+        this.contextWorkspace = new ContextWorkspaceImpl(this);
+        this.contextStorage = new ContextStorageImpl(this,
+            transactionManagerContext,
+            allDeviceRepository,
+            entityManager,
+            cacheService,
+            widgetRepository,
+            widgetSeriesRepository);
+        this.addon = new ContextAddonImpl(this, cacheService);
 
-        this.entityContextBGP.builder("flush-delayed-updates").intervalWithDelay(Duration.ofSeconds(30))
-                .execute(cacheService::flushDelayedUpdates);
+        this.contextBGP.builder("flush-delayed-updates").intervalWithDelay(Duration.ofSeconds(30))
+                       .execute(cacheService::flushDelayedUpdates);
     }
 
     @SneakyThrows
@@ -248,7 +227,7 @@ public class EntityContextImpl implements EntityContext {
 
         rebuildRepositoryByPrefixMap();
 
-        entityContextEvent.onContextCreated();
+        contextEvent.onContextCreated();
 
         UserAdminEntity.ensureUserExists(this);
         LocalBoardEntity.ensureDeviceExists(this);
@@ -256,13 +235,13 @@ public class EntityContextImpl implements EntityContext {
         MediaMTXEntity.ensureEntityExists(this);
         FFMPEGEntity.ensureEntityExists(this);
 
-        entityContextSetting.onContextCreated();
-        entityContextVar.onContextCreated();
-        entityContextUI.onContextCreated();
-        entityContextBGP.onContextCreated();
+        contextSetting.onContextCreated();
+        contextVar.onContextCreated();
+        contextUI.onContextCreated();
+        contextBGP.onContextCreated();
         // initialize all addons
         addon.onContextCreated();
-        entityContextWorkspace.onContextCreated(workspaceService);
+        contextWorkspace.onContextCreated(workspaceService);
 
         for (Class<? extends ContextCreated> beanUpdateClass : BEAN_CONTEXT_CREATED) {
             applicationContext.getBean(beanUpdateClass).onContextCreated(this);
@@ -293,87 +272,71 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
-    public @NotNull EntityContextInstallImpl install() {
-        return this.entityContextInstall;
+    public @NotNull ContextInstallImpl install() {
+        return this.contextInstall;
     }
 
     @Override
-    public @NotNull EntityContextWorkspaceImpl workspace() {
-        return entityContextWorkspace;
+    public @NotNull ContextWorkspaceImpl workspace() {
+        return contextWorkspace;
     }
 
     @Override
-    public @NotNull EntityContextServiceImpl service() {
-        return entityContextService;
+    public @NotNull ContextServiceImpl service() {
+        return contextService;
     }
 
     @Override
-    public @NotNull EntityContextUIImpl ui() {
-        return entityContextUI;
+    public @NotNull ContextUIImpl ui() {
+        return contextUI;
     }
 
     @Override
-    public @NotNull EntityContextEventImpl event() {
-        return this.entityContextEvent;
+    public @NotNull ContextEventImpl event() {
+        return this.contextEvent;
     }
 
     @Override
-    public @NotNull EntityContextBGPImpl bgp() {
-        return entityContextBGP;
+    public @NotNull ContextBGPImpl bgp() {
+        return contextBGP;
     }
 
     @Override
-    public @NotNull EntityContextSettingImpl setting() {
-        return entityContextSetting;
+    public @NotNull ContextSettingImpl setting() {
+        return contextSetting;
     }
 
     @Override
-    public @NotNull EntityContextVarImpl var() {
-        return entityContextVar;
+    public @NotNull ContextVarImpl var() {
+        return contextVar;
     }
 
     @Override
-    public @NotNull EntityContextHardware hardware() {
-        return entityContextHardware;
+    public @NotNull ContextHardware hardware() {
+        return contextHardware;
     }
 
     @Override
-    public @NotNull EntityContextStorage storage() {
-        return entityContextStorage;
-    }
-
-    @Override
-    public @NotNull FileLogger getFileLogger(BaseEntity baseEntity, String suffix) {
+    public @NotNull FileLogger getFileLogger(@NotNull BaseEntity baseEntity, @NotNull String suffix) {
         return getBean(LogService.class).getFileLogger(baseEntity, suffix);
     }
 
     @Override
-    public @NotNull EntityContextMedia media() {
-        return entityContextMedia;
-    }
-
-    public @NotNull EntityContextWidgetImpl widget() {
-        return this.entityContextWidget;
+    public @NotNull ContextMedia media() {
+        return contextMedia;
     }
 
     @Override
-    public <T extends BaseEntity> T getEntity(@NotNull String entityID, boolean useCache) {
-        T baseEntity = useCache ? entityManager.getEntityWithFetchLazy(entityID) : entityManager.getEntityNoCache(entityID);
-        if (baseEntity == null) {
-            baseEntity = entityManager.getEntityNoCache(entityID);
-            if (baseEntity != null) {
-                cacheService.clearCache();
-            }
-        }
+    public @NotNull ContextStorageImpl db() {
+        return contextStorage;
+    }
 
-        if (baseEntity != null) {
-            cacheService.merge(baseEntity);
-        }
-        return baseEntity;
+    public @NotNull ContextWidgetImpl widget() {
+        return this.contextWidget;
     }
 
     public static AbstractRepository getRepository(@NotNull String entityIdOrPrefix) {
-        for (AbstractRepository repository : EntityContextImpl.repositoriesByPrefix.values()) {
+        for (AbstractRepository repository : ContextImpl.repositoriesByPrefix.values()) {
             if (repository.isMatch(entityIdOrPrefix)) {
                 return repository;
             }
@@ -382,123 +345,8 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
-    public <T extends BaseEntity> void createDelayed(@NotNull T entity) {
-        putToCache(entity, null);
-    }
-
-    @Override
-    public <T extends BaseEntity> void updateDelayed(T entity, Consumer<T> consumer) {
-        Map<String, Object[]> changeFields = new HashMap<>();
-        MethodInterceptor handler = (obj, method, args, proxy) -> {
-            String setName = method.getName();
-            if (setName.startsWith("set")) {
-                Object oldValue;
-                try {
-                    oldValue = cacheService.getFieldValue(entity.getIdentifier(), setName);
-                    if (oldValue == null) {
-                        oldValue = MethodUtils.invokeMethod(entity, method.getName().replaceFirst("set", "get"));
-                    }
-                } catch (NoSuchMethodException ex) {
-                    oldValue = MethodUtils.invokeMethod(entity, method.getName().replaceFirst("set", "is"));
-                }
-                Object newValue = setName.startsWith("setJsonData") ? args[1] : args[0];
-                if (!Objects.equals(oldValue, newValue)) {
-                    changeFields.put(setName, args);
-                    // invoke called entity to update with new value
-                    MethodUtils.invokeMethod(entity, method.getName(), args);
-                }
-            }
-            if (method.getReturnType().isAssignableFrom(entity.getClass())) {
-                proxy.invoke(entity, args);
-                return obj;
-            }
-            return proxy.invoke(entity, args);
-        };
-
-        T proxyInstance = (T) Enhancer.create(entity.getClass(), handler);
-        consumer.accept(proxyInstance);
-
-        // fire entityUpdateListeners only if method called not from transaction
-        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
-            BaseEntity oldEntity = entityManager.getEntityNoCache(entity.getEntityID());
-            runUpdateNotifyListeners(entity, oldEntity, event().getEntityUpdateListeners());
-        }
-
-        if (!changeFields.isEmpty()) {
-            putToCache(entity, changeFields);
-
-            // fire change event manually
-            sendEntityUpdateNotification(entity, ItemAction.Update);
-        }
-    }
-
-    @Override
-    public <T extends BaseEntity> @NotNull T save(@NotNull T entity, boolean fireNotifyListeners) {
-        AbstractRepository repository = getRepository(entity.getEntityPrefix());
-        EntityContextEventImpl.EntityListener entityUpdateListeners = this.event().getEntityUpdateListeners();
-
-        String entityID = entity.getEntityID();
-        entity.setEntityContext(this);
-        if (entityID == null) {
-            if (StringUtils.isEmpty(entity.getName())) {
-                entity.setName(entity.refreshName());
-            }
-            entity.beforePersist();
-        } else {
-            entity.beforeUpdate();
-        }
-        entity.validate();
-        T oldEntity = entityID == null ? null : getEntity(entityID, false);
-
-        T updatedEntity = transactionManagerContext.executeInTransaction(entityManager -> {
-            T t = (T) repository.save(entity);
-            return t;
-        });
-
-        if (fireNotifyListeners) {
-            if (oldEntity == null) {
-                runUpdateNotifyListeners(updatedEntity, null, entityUpdateListeners, this.event().getEntityCreateListeners());
-            } else {
-                runUpdateNotifyListeners(updatedEntity, oldEntity, entityUpdateListeners);
-            }
-        }
-
-        if (StringUtils.isEmpty(entity.getEntityID())) {
-            entity.setEntityID(updatedEntity.getEntityID());
-        }
-
-        // post save
-        cacheService.entityUpdated(entity);
-
-        return updatedEntity;
-    }
-
-    @Override
-    public <T extends BaseEntity> @NotNull List<T> findAll(@NotNull Class<T> clazz) {
-        return findAllByRepository((Class<BaseEntity>) clazz);
-    }
-
-    @Override
-    public <T extends BaseEntity> @NotNull List<T> findAllByPrefix(@NotNull String prefix) {
-        AbstractRepository<? extends BaseEntity> repository = getRepositoryByPrefix(prefix);
-        return findAllByRepository((Class<BaseEntity>) repository.getEntityClass());
-    }
-
-    @Override
     public @NotNull List<OptionModel> toOptionModels(@Nullable Collection<? extends BaseEntity> entities) {
         return OptionUtil.buildOptions(entities, this);
-    }
-
-    @Override
-    public BaseEntity delete(@NotNull String entityID) {
-        AbstractRepository repository = getRepository(entityID);
-        BaseEntity deletedEntity = repository.deleteByEntityID(entityID);
-        cacheService.clearCache();
-        if (deletedEntity != null) {
-            getBean(LogService.class).deleteEntityLogsFile(deletedEntity);
-            runUpdateNotifyListeners(null, deletedEntity, this.event().getEntityRemoveListeners());
-        }
-        return deletedEntity;
     }
 
     public AbstractRepository<? extends BaseEntity> getRepositoryByPrefix(@NotNull String repositoryPrefix) {
@@ -579,10 +427,6 @@ public class EntityContextImpl implements EntityContext {
         }
     }
 
-    public List<BaseEntity> findAllBaseEntities() {
-        return new ArrayList<>(findAll(DeviceBaseEntity.class));
-    }
-
     public <T> List<T> getEntityServices(Class<T> serviceClass) {
         return allDeviceRepository.listAll().stream()
                 .filter(e -> serviceClass.isAssignableFrom(e.getClass()))
@@ -590,78 +434,6 @@ public class EntityContextImpl implements EntityContext {
                 .collect(Collectors.toList());
     }
 
-    public BaseEntity copyEntity(BaseEntity entity) {
-        BaseEntity newEntity = copyEntityItem(entity);
-        BaseEntity saved = save(newEntity, false);
-
-        // copy children if current entity is layout(it may contain children)
-        if (entity instanceof WidgetLayoutEntity) {
-            for (BaseEntity baseEntity : findAll(WidgetBaseEntity.class)) {
-                if (baseEntity instanceof HasPosition<?> positionEntity) {
-                    if (entity.getEntityID().equals(positionEntity.getParent())) {
-                        BaseEntity newChildEntity = copyEntityItem(baseEntity);
-                        ((HasPosition) newChildEntity).setParent(saved.getEntityID());
-                        save(newChildEntity, false);
-                    }
-                }
-            }
-        }
-
-        saved = save(saved, true);
-        cacheService.clearCache();
-        return saved;
-    }
-
-    private BaseEntity copyEntityItem(BaseEntity entity) {
-        BaseEntity newEntity = buildInitialCopyEntity(entity);
-        if (newEntity instanceof WidgetBaseEntity<?> widget) {
-            widget.setParent(null);
-        }
-
-        // save to assign id
-        newEntity = save(newEntity, false);
-
-        if (entity instanceof WidgetBaseEntityAndSeries widgetSeriesEntity) {
-            WidgetBaseEntityAndSeries newWidgetSeriesData = (WidgetBaseEntityAndSeries) newEntity;
-            Set<WidgetSeriesEntity> entitySeries = widgetSeriesEntity.getSeries();
-            Set<WidgetSeriesEntity> series = new HashSet<>();
-            for (WidgetSeriesEntity entry : entitySeries) {
-                WidgetSeriesEntity seriesEntry = (WidgetSeriesEntity) buildInitialCopyEntity(entry);
-                seriesEntry.setPriority(entry.getPriority());
-                seriesEntry.setWidgetEntity((WidgetBaseEntityAndSeries) newEntity);
-                seriesEntry = save(seriesEntry, false);
-                series.add(seriesEntry);
-            }
-            newWidgetSeriesData.setSeries(series);
-        }
-        return newEntity;
-    }
-
-    @NotNull
-    private static BaseEntity buildInitialCopyEntity(BaseEntity entity) {
-        BaseEntity newEntity = CommonUtils.newInstance(entity.getClass());
-        newEntity.setName(entity.getName());
-
-        if (entity instanceof HasJsonData entityData) {
-            HasJsonData newEntityData = (HasJsonData) newEntity;
-            for (String key : entityData.getJsonData().keySet()) {
-                newEntityData.setJsonData(key, entityData.getJsonData().get(key));
-            }
-        }
-
-        if (entity instanceof WidgetBaseEntity widgetEntity) {
-            WidgetBaseEntity newWidgetData = (WidgetBaseEntity) newEntity;
-            newWidgetData.setWidgetTabEntity(widgetEntity.getWidgetTabEntity());
-        }
-
-        if (entity instanceof DeviceBaseEntity deviceEntity) {
-            DeviceBaseEntity newDeviceData = (DeviceBaseEntity) newEntity;
-            newDeviceData.setIeeeAddress(deviceEntity.getIeeeAddress());
-            newDeviceData.setImageIdentifier(deviceEntity.getImageIdentifier());
-            newDeviceData.setPlace(deviceEntity.getPlace());
-        }
-        return newEntity;
-    }
 
     public void fireAllLock(Consumer<LockManagerImpl> handler) {
         this.workspaceService.fireAllLock(handler);
@@ -682,7 +454,7 @@ public class EntityContextImpl implements EntityContext {
 
     private void restartEntityServices() {
         log.info("Loading entities and initialize all related services");
-        for (BaseEntity baseEntity : findAllBaseEntities()) {
+        for (BaseEntity baseEntity : db().findAllBaseEntities()) {
             if (baseEntity instanceof BaseFileSystemEntity) {
                 ((BaseFileSystemEntity<?, ?>) baseEntity).getFileSystem(this).restart(false);
             }
@@ -739,51 +511,12 @@ public class EntityContextImpl implements EntityContext {
         Runtime.getRuntime().halt(4);
     }
 
-    private void putToCache(BaseEntity entity, Map<String, Object[]> changeFields) {
-        cacheService.putToCache(getRepository(entity.getEntityPrefix()), entity, changeFields);
-    }
-
-    private <T extends HasEntityIdentifier> void runUpdateNotifyListeners(@Nullable T updatedEntity, T oldEntity,
-                                                                          EntityContextEventImpl.EntityListener... entityListeners) {
-        if (updatedEntity != null || oldEntity != null) {
-            bgp().builder("entity-" + (updatedEntity == null ? oldEntity : updatedEntity).getEntityID() + "-updated").hideOnUI(true)
-                    .execute(() -> {
-                        for (EntityContextEventImpl.EntityListener entityListener : entityListeners) {
-                            entityListener.notify(updatedEntity, oldEntity);
-                        }
-                    });
-        }
-    }
-
-    private <T extends BaseEntity> List<T> findAllByRepository(Class<BaseEntity> clazz) {
-        AbstractRepository repository;
-        if (Modifier.isAbstract(clazz.getModifiers())) {
-            if (DeviceBaseEntity.class.isAssignableFrom(clazz)) {
-                repository = allDeviceRepository;
-            } else if (WidgetBaseEntity.class.isAssignableFrom(clazz)) {
-                repository = widgetRepository;
-            } else if (WidgetSeriesEntity.class.isAssignableFrom(clazz)) {
-                repository = widgetSeriesRepository;
-            } else {
-                throw new IllegalStateException("Unable to find repository for class: " + clazz.getSimpleName());
-            }
-
-        } else {
-            repository = getRepository(CommonUtils.newInstance(clazz).getEntityPrefix());
-        }
-        if (!repository.isUseCache()) {
-            return repository.listAll();
-        }
-        return entityManager.getEntityIDsByEntityClassFullName(clazz, repository).stream().map(entityID ->
-            entityManager.<T>getEntityWithFetchLazy(entityID)).filter(Objects::nonNull).collect(Collectors.toList());
-    }
-
     @AllArgsConstructor
     public enum ItemAction {
         Insert(context -> context.ui().toastr().info("TOASTR.ENTITY_INSERTED")),
         Update(context -> context.ui().toastr().info("TOASTR.ENTITY_UPDATED")),
         Remove(context -> context.ui().toastr().warn("TOASTR.ENTITY_REMOVED"));
 
-        private final Consumer<EntityContextImpl> messageEvent;
+        private final Consumer<ContextImpl> messageEvent;
     }
 }

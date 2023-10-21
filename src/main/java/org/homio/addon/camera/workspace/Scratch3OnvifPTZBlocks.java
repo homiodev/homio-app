@@ -14,7 +14,7 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.addon.camera.service.IpCameraService;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
@@ -37,8 +37,8 @@ public class Scratch3OnvifPTZBlocks extends Scratch3ExtensionBlocks {
     private final ServerMenuBlock menuZoomCamera;
     private final ServerMenuBlock menuPresetCamera;
 
-    public Scratch3OnvifPTZBlocks(EntityContext entityContext, CameraEntrypoint cameraEntrypoint) {
-        super("#4F4BA6", entityContext, cameraEntrypoint, "onvifptz");
+    public Scratch3OnvifPTZBlocks(Context context, CameraEntrypoint cameraEntrypoint) {
+        super("#4F4BA6", context, cameraEntrypoint, "onvifptz");
         setParent("media");
 
         // Menu

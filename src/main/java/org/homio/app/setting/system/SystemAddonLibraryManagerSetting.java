@@ -23,7 +23,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.cache.CachedValue;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.UnzipFileIssueHandler;
@@ -31,7 +31,7 @@ import org.homio.api.repository.GitHubProject;
 import org.homio.api.setting.SettingPluginPackageInstall;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.extloader.AddonContext;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.setting.CoreSettingPlugin;
 import org.homio.hquery.Curl;
 import org.homio.hquery.ProgressBar;
@@ -42,7 +42,7 @@ import org.json.JSONObject;
 public class SystemAddonLibraryManagerSetting
         implements SettingPluginPackageInstall, CoreSettingPlugin<JSONObject> {
 
-    private static final CachedValue<Collection<PackageModel>, EntityContext> addons =
+    private static final CachedValue<Collection<PackageModel>, Context> addons =
             new CachedValue<>(Duration.ofHours(24),
                     SystemAddonLibraryManagerSetting::readAddons);
 
@@ -59,16 +59,16 @@ public class SystemAddonLibraryManagerSetting
     }
 
     @Override
-    public boolean isVisible(EntityContext entityContext) {
+    public boolean isVisible(Context context) {
         return false;
     }
 
     @Override
-    public PackageContext allPackages(EntityContext entityContext) {
+    public PackageContext allPackages(Context context) {
         PackageContext packageContext = new PackageContext();
         try {
-            Collection<PackageModel> allPackageModels = new ArrayList<>(addons.getValue(entityContext));
-            filterMatchPackages(entityContext, allPackageModels);
+            Collection<PackageModel> allPackageModels = new ArrayList<>(addons.getValue(context));
+            filterMatchPackages(context, allPackageModels);
             packageContext.setPackages(allPackageModels);
         } catch (Exception ex) {
             packageContext.setPackages(List.of());
@@ -85,11 +85,33 @@ public class SystemAddonLibraryManagerSetting
         return packageContext;
     }
 
+    @Override
+    public PackageContext installedPackages(Context context) {
+        return new PackageContext(
+                null,
+            ((ContextImpl) context).getAddon().getInstalledAddons()
+                                   .stream()
+                                   .map(this::build)
+                                   .collect(Collectors.toSet()));
+    }
+
+    @Override
+    public void installPackage(Context context, PackageRequest request, ProgressBar progressBar) {
+        ((ContextImpl) context).getAddon().installAddon(request.getName(), request.getUrl(),
+                request.getVersion(), progressBar);
+    }
+
+    @Override
+    public void unInstallPackage(
+        Context context, PackageRequest packageRequest, ProgressBar progressBar) {
+        ((ContextImpl) context).getAddon().uninstallAddon(packageRequest.getName(), true);
+    }
+
     /**
      * Remove packages if no versions available. Also remove versions that not match app major version
      */
-    private void filterMatchPackages(EntityContext entityContext, Collection<PackageModel> allPackageModels) {
-        int appVersion = entityContext.setting().getApplicationMajorVersion();
+    private void filterMatchPackages(Context context, Collection<PackageModel> allPackageModels) {
+        int appVersion = context.setting().getApplicationMajorVersion();
         if (appVersion == 0) {
             return;
         }
@@ -101,28 +123,6 @@ public class SystemAddonLibraryManagerSetting
                 return packageModel.getVersions().isEmpty();
             }
         });
-    }
-
-    @Override
-    public PackageContext installedPackages(EntityContext entityContext) {
-        return new PackageContext(
-                null,
-                ((EntityContextImpl) entityContext).getAddon().getInstalledAddons()
-                        .stream()
-                        .map(this::build)
-                        .collect(Collectors.toSet()));
-    }
-
-    @Override
-    public void installPackage(EntityContext entityContext, PackageRequest request, ProgressBar progressBar) {
-        ((EntityContextImpl) entityContext).getAddon().installAddon(request.getName(), request.getUrl(),
-                request.getVersion(), progressBar);
-    }
-
-    @Override
-    public void unInstallPackage(
-            EntityContext entityContext, PackageRequest packageRequest, ProgressBar progressBar) {
-        ((EntityContextImpl) entityContext).getAddon().uninstallAddon(packageRequest.getName(), true);
     }
 
     @Override
@@ -140,10 +140,10 @@ public class SystemAddonLibraryManagerSetting
     }
 
     @SneakyThrows
-    private static Collection<PackageModel> readAddons(EntityContext entityContext) {
+    private static Collection<PackageModel> readAddons(Context context) {
         Collection<PackageModel> addons = new ArrayList<>();
         Set<String> urls = new HashSet<>(SystemAddonRepositoriesSetting.BUILD_IN_ADDON_REPO);
-        urls.addAll(entityContext.setting().getValue(SystemAddonRepositoriesSetting.class));
+        urls.addAll(context.setting().getValue(SystemAddonRepositoriesSetting.class));
         urls.stream().filter(url -> !StringUtils.isEmpty(url)).forEach(url -> {
             try {
                 addons.addAll(getAddons(url));

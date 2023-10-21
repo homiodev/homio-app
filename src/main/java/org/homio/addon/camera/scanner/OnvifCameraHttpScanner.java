@@ -23,7 +23,7 @@ import org.homio.addon.camera.setting.onvif.ScanOnvifHttpDefaultPasswordAuthSett
 import org.homio.addon.camera.setting.onvif.ScanOnvifHttpDefaultUserAuthSetting;
 import org.homio.addon.camera.setting.onvif.ScanOnvifHttpMaxPingTimeoutSetting;
 import org.homio.addon.camera.setting.onvif.ScanOnvifPortsSetting;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.service.discovery.VideoStreamScanner;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.HardwareUtils;
@@ -38,7 +38,7 @@ import org.springframework.stereotype.Component;
 public class OnvifCameraHttpScanner implements VideoStreamScanner {
 
     private static final int THREAD_COUNT = 8;
-    private final EntityContext entityContext;
+    private final Context context;
     private DeviceScannerResult result;
     private String headerConfirmButtonKey;
 
@@ -49,27 +49,27 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
 
     @SneakyThrows
     @Override
-    public synchronized DeviceScannerResult scan(EntityContext entityContext,
+    public synchronized DeviceScannerResult scan(Context context,
                                                                     ProgressBar progressBar,
                                                                     String headerConfirmButtonKey) {
-        return executeScan(entityContext, progressBar, headerConfirmButtonKey);
+        return executeScan(context, progressBar, headerConfirmButtonKey);
     }
 
-    public DeviceScannerResult executeScan(EntityContext entityContext, ProgressBar progressBar,
+    public DeviceScannerResult executeScan(Context context, ProgressBar progressBar,
         String headerConfirmButtonKey) {
         this.headerConfirmButtonKey = headerConfirmButtonKey;
         this.result = new DeviceScannerResult();
-        List<IpCameraEntity> allSavedCameraEntities = entityContext.findAll(IpCameraEntity.class);
+        List<IpCameraEntity> allSavedCameraEntities = context.db().findAll(IpCameraEntity.class);
         Map<String, IpCameraEntity> existsCameraByIpPort = allSavedCameraEntities.stream().collect(
             Collectors.toMap(e -> e.getIp() + ":" + e.getOnvifPort(), Function.identity()));
 
-        String user = entityContext.setting().getValue(ScanOnvifHttpDefaultUserAuthSetting.class);
-        String password = entityContext.setting().getValue(ScanOnvifHttpDefaultPasswordAuthSetting.class);
-        NetworkHardwareRepository networkHardwareRepository = entityContext.getBean(NetworkHardwareRepository.class);
+        String user = context.setting().getValue(ScanOnvifHttpDefaultUserAuthSetting.class);
+        String password = context.setting().getValue(ScanOnvifHttpDefaultPasswordAuthSetting.class);
+        NetworkHardwareRepository networkHardwareRepository = context.getBean(NetworkHardwareRepository.class);
 
-        Set<Integer> ports = entityContext.setting().getValue(ScanOnvifPortsSetting.class);
-        int pingTimeout = entityContext.setting().getValue(ScanOnvifHttpMaxPingTimeoutSetting.class);
-        Set<String> ipRangeList = entityContext.setting().getValue(CameraScanPortRangeSetting.class);
+        Set<Integer> ports = context.setting().getValue(ScanOnvifPortsSetting.class);
+        int pingTimeout = context.setting().getValue(ScanOnvifHttpMaxPingTimeoutSetting.class);
+        Set<String> ipRangeList = context.setting().getValue(CameraScanPortRangeSetting.class);
 
         Map<String, Callable<Integer>> tasks = new HashMap<>();
         for (String ipRange : ipRangeList) {
@@ -77,8 +77,8 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
                 buildCameraTask(existsCameraByIpPort, user, password, ipAddress, port)));
         }
 
-        entityContext.event().runOnceOnInternetUp("scan-onvif-camera", () -> {
-            List<Integer> availableOnvifCameras = entityContext.bgp().runInBatchAndGet("scan-onvif-http-batch-result",
+        context.event().runOnceOnInternetUp("scan-onvif-camera", () -> {
+            List<Integer> availableOnvifCameras = context.bgp().runInBatchAndGet("scan-onvif-http-batch-result",
                     Duration.ofSeconds(2L * pingTimeout * tasks.size()), THREAD_COUNT, tasks,
                     completedTaskCount -> {
                         if (progressBar != null) {
@@ -147,12 +147,12 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
         log.info("Scan found onvif camera: <{}>", onvifDeviceState.getHOST_IP());
         result.getNewCount().incrementAndGet();
 
-        CameraBrandHandlerDescription brand = OnvifDiscovery.getBrandFromLoginPage(onvifDeviceState.getIp(), entityContext);
+        CameraBrandHandlerDescription brand = OnvifDiscovery.getBrandFromLoginPage(onvifDeviceState.getIp(), context);
         String name = Lang.getServerMessage("NEW_DEVICE.ONVIF_CAMERA") + onvifDeviceState.getHOST_IP();
         // get IEEEAddress call init() internally
         handleDevice(headerConfirmButtonKey,
                 "onvif-http-" + onvifDeviceState.getHOST_IP(),
-                name, entityContext,
+            name, context,
                 messages -> {
                     messages.add(Lang.getServerMessage("VIDEO_STREAM.ADDRESS", onvifDeviceState.getHOST_IP()));
                     if (requireAuth) {
@@ -167,13 +167,13 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
                     log.info("Saving onvif camera with host: <{}>", onvifDeviceState.getHOST_IP());
                     IpCameraEntity entity = new IpCameraEntity().setCameraType(brand.getID());
                     entity.setInfo(onvifDeviceState, requireAuth);
-                    entityContext.save(entity);
+                    context.db().save(entity);
                 });
     }
 
     private void updateCameraIpPortName(OnvifDeviceState onvifDeviceState, IpCameraEntity existedCamera) {
         try {
-            existedCamera.tryUpdateData(entityContext, onvifDeviceState.getIp(), onvifDeviceState.getOnvifPort());
+            existedCamera.tryUpdateData(context, onvifDeviceState.getIp(), onvifDeviceState.getOnvifPort());
         } catch (Exception ex) {
             log.error("Error while trying update camera: <{}>", CommonUtils.getErrorMessage(ex));
         }

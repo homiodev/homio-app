@@ -29,7 +29,7 @@ import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.device.DeviceBaseEntity;
@@ -46,7 +46,7 @@ import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFie
 import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields.RequestDynamicParameter;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.Lang;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.utils.UIFieldSelectionUtil.SelectHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -55,35 +55,35 @@ import org.jetbrains.annotations.Nullable;
 public final class OptionUtil {
 
     @SneakyThrows
-    public static Collection<OptionModel> getAllOptions(EntityContextImpl entityContext) {
-        LoadOptionsParameters param = new LoadOptionsParameters(null, entityContext, Object.class, new Object(), null, null);
+    public static Collection<OptionModel> getAllOptions(ContextImpl context) {
+        LoadOptionsParameters param = new LoadOptionsParameters(null, context, Object.class, new Object(), null, null);
         List<OptionModel> options = new ArrayList<>();
         assembleOptionsForEntityByClassSelection(param, options, HasGetStatusValue.class);
         return filterAndGroupingOptions(options);
     }
 
-    public static List<OptionModel> buildOptions(Collection<? extends BaseEntity> entities, EntityContext entityContext) {
+    public static List<OptionModel> buildOptions(Collection<? extends BaseEntity> entities, Context context) {
         List<OptionModel> options = new ArrayList<>();
-        assembleItemsToOptions(options, null, entities, entityContext, null);
+        assembleItemsToOptions(options, null, entities, context, null);
         return groupingOptions(filterOptions(options));
     }
 
     public static void assembleOptionsForEntityByClassSelection(LoadOptionsParameters params, List<OptionModel> list,
         Class<? extends HasEntityIdentifier> sourceClassType) {
 
-        for (Class<? extends HasEntityIdentifier> foundTargetType : params.entityContext.getClassesWithParent(sourceClassType)) {
+        for (Class<? extends HasEntityIdentifier> foundTargetType : params.context.getClassesWithParent(sourceClassType)) {
             if (BaseEntity.class.isAssignableFrom(foundTargetType)) {
-                List<BaseEntity> items = params.entityContext.findAll((Class<BaseEntity>) foundTargetType)
+                List<BaseEntity> items = params.context.db().findAll((Class<BaseEntity>) foundTargetType)
                                                              .stream().filter(baseEntity -> {
                         // hack: check if sourceClassType is HasSetStatusValue and we if we are unable to write to value
                         return !HasSetStatusValue.class.isAssignableFrom(sourceClassType) || ((HasSetStatusValue) baseEntity).isAbleToSetValue();
                     }).collect(Collectors.toList());
-                OptionUtil.assembleItemsToOptions(list, sourceClassType, items, params.entityContext, params.classEntityForDynamicOptionLoader);
+                OptionUtil.assembleItemsToOptions(list, sourceClassType, items, params.context, params.classEntityForDynamicOptionLoader);
             }
         }
     }
 
-    public static List<OptionModel> loadOptions(Object classEntity, EntityContext entityContext, String fieldName, Object classEntityForDynamicOptionLoader,
+    public static List<OptionModel> loadOptions(Object classEntity, Context context, String fieldName, Object classEntityForDynamicOptionLoader,
         String selectType, Map<String, String> deps) {
 
         Method method = findMethodByName(classEntity.getClass(), fieldName, SELECT_ANNOTATIONS);
@@ -93,12 +93,12 @@ public final class OptionUtil {
         }
         List<OptionModel> options = null;
         if (method != null) {
-            options = loadOptions(method, entityContext, method.getReturnType(), classEntity, classEntityForDynamicOptionLoader, selectType, deps);
+            options = loadOptions(method, context, method.getReturnType(), classEntity, classEntityForDynamicOptionLoader, selectType, deps);
         }
         if (options == null) {
             Field field = FieldUtils.getField(classEntity.getClass(), fieldName, true);
             if (field != null) {
-                options = loadOptions(field, entityContext, field.getType(), classEntity, classEntityForDynamicOptionLoader, selectType, deps);
+                options = loadOptions(field, context, field.getType(), classEntity, classEntityForDynamicOptionLoader, selectType, deps);
             }
         }
 
@@ -126,62 +126,15 @@ public final class OptionUtil {
         return null;
     }
 
-    private static List<OptionModel> loadOptions(AccessibleObject field, EntityContext entityContext, Class<?> targetClass, Object classEntity,
-        Object classEntityForDynamicOptionLoader, String selectType, Map<String, String> deps) {
-
-        LoadOptionsParameters param = new LoadOptionsParameters(field, entityContext, targetClass, classEntity, classEntityForDynamicOptionLoader, deps);
-        // fetch all options according to all selectType
-        List<OptionModel> options = new ArrayList<>();
-        boolean handled = selectType != null && assembleOptionsBySelectType(field, selectType, param, options);
-
-        // if not passed selectType - iterate through all
-        if (options.isEmpty()) {
-            for (SelectHandler selectHandler : SelectHandler.values()) {
-                if (field.getDeclaredAnnotationsByType(selectHandler.selectClass).length > 0) {
-                    handled = true;
-                    options = selectHandler.handler.apply(param);
-                    break;
-                }
-            }
-        }
-
-        if (!handled) {
-            return null;
-        }
-
-        return OptionUtil.filterAndGroupingOptions(options);
-    }
-
-    private static boolean assembleOptionsBySelectType(AccessibleObject field, String selectType, LoadOptionsParameters param, List<OptionModel> options) {
-        boolean handled = false;
-        SelectHandler selectHandler = SelectHandler.valueOf(selectType);
-        if (field.getDeclaredAnnotationsByType(selectHandler.selectClass).length > 0) {
-            Collection<OptionModel> result = selectHandler.handler.apply(param);
-            handled = true;
-            if (result != null) {
-                options.addAll(result);
-            }
-        }
-        return handled;
-    }
-
-    private static List<OptionModel> filterAndGroupingOptions(List<OptionModel> options) {
-        // filter options
-        options = filterOptions(options);
-
-        // group by @UIFieldSelectionParent
-        return groupingOptions(options);
-    }
-
     public static void assembleItemsToOptions(
         @NotNull List<OptionModel> list,
         @Nullable Class<? extends HasEntityIdentifier> sourceClassType,
         @NotNull Collection<? extends BaseEntity> items,
-        @NotNull EntityContext entityContext,
+        @NotNull Context context,
         @Nullable Object classEntityForDynamicOptionLoader) {
 
         for (BaseEntity baseEntity : items) {
-            String lastValue = tryFetchCurrentValueFromEntity(baseEntity, entityContext);
+            String lastValue = tryFetchCurrentValueFromEntity(baseEntity, context);
             String title = baseEntity.getTitle();
             OptionModel optionModel = OptionModel.of(baseEntity.getEntityID(), title);
             if (lastValue != null) {
@@ -210,6 +163,53 @@ public final class OptionUtil {
             list.add(optionModel);
         }
         Collections.sort(list);
+    }
+
+    private static boolean assembleOptionsBySelectType(AccessibleObject field, String selectType, LoadOptionsParameters param, List<OptionModel> options) {
+        boolean handled = false;
+        SelectHandler selectHandler = SelectHandler.valueOf(selectType);
+        if (field.getDeclaredAnnotationsByType(selectHandler.selectClass).length > 0) {
+            Collection<OptionModel> result = selectHandler.handler.apply(param);
+            handled = true;
+            if (result != null) {
+                options.addAll(result);
+            }
+        }
+        return handled;
+    }
+
+    private static List<OptionModel> filterAndGroupingOptions(List<OptionModel> options) {
+        // filter options
+        options = filterOptions(options);
+
+        // group by @UIFieldSelectionParent
+        return groupingOptions(options);
+    }
+
+    private static List<OptionModel> loadOptions(AccessibleObject field, Context context, Class<?> targetClass, Object classEntity,
+        Object classEntityForDynamicOptionLoader, String selectType, Map<String, String> deps) {
+
+        LoadOptionsParameters param = new LoadOptionsParameters(field, context, targetClass, classEntity, classEntityForDynamicOptionLoader, deps);
+        // fetch all options according to all selectType
+        List<OptionModel> options = new ArrayList<>();
+        boolean handled = selectType != null && assembleOptionsBySelectType(field, selectType, param, options);
+
+        // if not passed selectType - iterate through all
+        if (options.isEmpty()) {
+            for (SelectHandler selectHandler : SelectHandler.values()) {
+                if (field.getDeclaredAnnotationsByType(selectHandler.selectClass).length > 0) {
+                    handled = true;
+                    options = selectHandler.handler.apply(param);
+                    break;
+                }
+            }
+        }
+
+        if (!handled) {
+            return null;
+        }
+
+        return OptionUtil.filterAndGroupingOptions(options);
     }
 
     public static void updateSelectedOptionModel(Object target, Object requestedEntity, Class<?> sourceClassType, OptionModel optionModel) {
@@ -253,10 +253,10 @@ public final class OptionUtil {
         }
     }
 
-    private static String tryFetchCurrentValueFromEntity(BaseEntity baseEntity, EntityContext entityContext) {
+    private static String tryFetchCurrentValueFromEntity(BaseEntity baseEntity, Context context) {
         if (baseEntity instanceof HasGetStatusValue) {
             try {
-                return ((HasGetStatusValue) baseEntity).getStatusValueRepresentation(entityContext);
+                return ((HasGetStatusValue) baseEntity).getStatusValueRepresentation(context);
             } catch (Exception ex) {
                 log.warn("Unable to fetch state value from entity: {}. Msg: {}", baseEntity, CommonUtils.getErrorMessage(ex));
             }
@@ -393,7 +393,7 @@ public final class OptionUtil {
     public static class LoadOptionsParameters {
 
         public AccessibleObject field;
-        public EntityContext entityContext;
+        public Context context;
         public Class<?> targetClass;
         public Object classEntityForDynamicOptionLoader;
         public Object classEntity;

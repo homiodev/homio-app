@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.service.discovery.ItemDiscoverySupport.DeviceScannerResult;
@@ -24,8 +24,8 @@ import org.json.JSONObject;
 public abstract class BaseItemsDiscovery implements UIActionHandler {
 
     @Override
-    public ActionResponseModel handleAction(EntityContext entityContext, JSONObject ignore) {
-        List<DevicesScanner> scanners = getScanners(entityContext);
+    public ActionResponseModel handleAction(Context context, JSONObject ignore) {
+        List<DevicesScanner> scanners = getScanners(context);
         if (scanners.isEmpty()) {
             return ActionResponseModel.showWarn("SCAN.NO_PROCESSES");
         }
@@ -33,16 +33,16 @@ public abstract class BaseItemsDiscovery implements UIActionHandler {
         log.info("Start batch scanning for <{}>", getBatchName());
         String headerButtonKey = "SCAN." + getBatchName();
 
-        entityContext.bgp().runInBatch(getBatchName(), Duration.ofSeconds(getMaxTimeToWaitInSeconds()), scanners,
+        context.bgp().runInBatch(getBatchName(), Duration.ofSeconds(getMaxTimeToWaitInSeconds()), scanners,
             scanner -> {
                 log.info("Start scan in thread <{}>", scanner.name);
                 AtomicInteger status =
                     CommonUtils.getStatusMap().computeIfAbsent("scan-" + scanner.name, s -> new AtomicInteger(0));
                 if (status.compareAndSet(0, 1)) {
-                    return () -> entityContext.ui().progress().runAndGet(scanner.name, true,
+                    return () -> context.ui().progress().runAndGet(scanner.name, true,
                         progressBar -> {
                             try {
-                                return scanner.handler.handle(entityContext, progressBar, headerButtonKey);
+                                return scanner.handler.handle(context, progressBar, headerButtonKey);
                             } catch (Exception ex) {
                                 log.error("Error while execute task: " + scanner.name, ex);
                                 return new DeviceScannerResult();
@@ -52,7 +52,7 @@ public abstract class BaseItemsDiscovery implements UIActionHandler {
                             log.info("Done scan for <{}>", scanner.name);
                             status.set(0);
                             if (ex != null) {
-                                entityContext.ui().toastr().error("SCAN.ERROR", FlowMap.of("MSG", CommonUtils.getErrorMessage(ex)), ex);
+                                context.ui().toastr().error("SCAN.ERROR", FlowMap.of("MSG", CommonUtils.getErrorMessage(ex)), ex);
                             }
                         });
                 } else {
@@ -67,13 +67,13 @@ public abstract class BaseItemsDiscovery implements UIActionHandler {
                     foundNewCount += deviceScannerResult.getNewCount().get();
                     foundOldCount += deviceScannerResult.getExistedCount().get();
                 }
-                entityContext.ui().toastr().info("SCAN.RESULT", FlowMap.of("OLD", foundOldCount, "NEW", foundNewCount));
+                context.ui().toastr().info("SCAN.RESULT", FlowMap.of("OLD", foundOldCount, "NEW", foundNewCount));
                 log.info("Done batch scanning for <{}>", getBatchName());
             });
         return ActionResponseModel.showSuccess("SCAN.STARTED");
     }
 
-    protected abstract List<DevicesScanner> getScanners(EntityContext entityContext);
+    protected abstract List<DevicesScanner> getScanners(Context context);
 
     protected abstract String getBatchName();
 
@@ -90,11 +90,11 @@ public abstract class BaseItemsDiscovery implements UIActionHandler {
          * Fires to start search for new items
          *
          * @param headerConfirmationButtonKey - special header button where confirm request to attach
-         * @param entityContext               -
+         * @param context               -
          * @param progressBar                 -
          * @return found items count
          */
-        DeviceScannerResult handle(EntityContext entityContext, ProgressBar progressBar, String headerConfirmationButtonKey);
+        DeviceScannerResult handle(Context context, ProgressBar progressBar, String headerConfirmationButtonKey);
     }
 
 

@@ -1,29 +1,32 @@
 package org.homio.app.rest;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.app.manager.AddonService;
 import org.homio.app.manager.AddonService.AddonJson;
 import org.homio.app.manager.common.ClassFinder;
-import org.homio.app.manager.common.impl.EntityContextUIImpl;
+import org.homio.app.manager.common.impl.ContextUIImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.WebRequest;
 
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 @RestController
 @RequestMapping("/rest/route")
 public class RouteController {
 
-    private final EntityContext entityContext;
+    private final Context context;
     private final List<Class<?>> uiSidebarMenuClasses;
     private final AddonService addonService;
     private final SettingController settingController;
@@ -32,27 +35,27 @@ public class RouteController {
             ClassFinder classFinder,
             AddonService addonService,
             SettingController settingController,
-            EntityContext entityContext) {
+        Context context) {
         this.uiSidebarMenuClasses = classFinder.getClassesWithAnnotation(UISidebarMenu.class);
         this.addonService = addonService;
         this.settingController = settingController;
-        this.entityContext = entityContext;
+        this.context = context;
     }
 
     @GetMapping("/bootstrap")
     public BootstrapContext getBootstrap(WebRequest webRequest) {
-        BootstrapContext context = new BootstrapContext();
-        context.routes = getRoutes();
-        context.menu = getMenu();
-        context.addons = addonService.getAllAddonJson();
-        context.settings = settingController.getSettings();
-        context.notifications = ((EntityContextUIImpl) entityContext.ui()).getNotifications();
+        BootstrapContext bootstrapContext = new BootstrapContext();
+        bootstrapContext.routes = getRoutes();
+        bootstrapContext.menu = getMenu();
+        bootstrapContext.addons = addonService.getAllAddonJson();
+        bootstrapContext.settings = settingController.getSettings();
+        bootstrapContext.notifications = ((ContextUIImpl) context.ui()).getNotifications();
 
-        String eTag = String.valueOf(context.hashCode());
+        String eTag = String.valueOf(bootstrapContext.hashCode());
         if (webRequest.checkNotModified(eTag)) {
             return null;
         }
-        return context;
+        return bootstrapContext;
     }
 
     private Map<String, List<SidebarMenuItem>> getMenu() {
@@ -108,7 +111,7 @@ public class RouteController {
         public Map<String, List<SidebarMenuItem>> menu;
         public List<AddonJson> addons;
         public List<SettingEntity> settings;
-        public EntityContextUIImpl.NotificationResponse notifications;
+        public ContextUIImpl.NotificationResponse notifications;
     }
 
     public record SidebarMenuItem(String href, String icon, String bg, String label, int order) {

@@ -28,19 +28,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextBGP;
-import org.homio.api.EntityContextBGP.ProcessContext;
-import org.homio.api.EntityContextMedia.MediaMTXInfo;
-import org.homio.api.EntityContextMedia.MediaMTXSource;
+import org.homio.api.Context;
+import org.homio.api.ContextBGP;
+import org.homio.api.ContextBGP.ProcessContext;
+import org.homio.api.ContextMedia.MediaMTXInfo;
+import org.homio.api.ContextMedia.MediaMTXSource;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.HasEntityIdentifier;
-import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.model.UpdatableValue;
 import org.homio.api.service.EntityService.ServiceInstance;
-import org.homio.api.ui.UI.Color;
 import org.homio.api.util.Lang;
 import org.homio.app.model.entity.MediaMTXEntity;
 import org.homio.app.model.entity.MediaMTXEntity.LogLevel;
@@ -64,8 +62,8 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
 
     private @Getter boolean isRunningLocally;
 
-    public MediaMTXService(@NotNull EntityContext entityContext, @NotNull MediaMTXEntity entity) {
-        super(entityContext, entity, true);
+    public MediaMTXService(@NotNull Context context, @NotNull MediaMTXEntity entity) {
+        super(context, entity, true);
     }
 
     public JsonNode getApiList() {
@@ -95,10 +93,10 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
                 this.entity.setStatus(Status.OFFLINE, entity.getStatusMessage());
             }
         }
-        EntityContextBGP.cancel(processContext);
+        ContextBGP.cancel(processContext);
         log.warn("Dispose mediamtx", ex);
 
-        entityContext.ui().toastr().warn("Dispose mediamtx");
+        context.ui().toastr().warn("Dispose mediamtx");
     }
 
     @Override
@@ -129,7 +127,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         entity.setReadTimeout(intervalToInt("readTimeout"));
         entity.setWriteTimeout(intervalToInt("writeTimeout"));
         if (hashCode != entity.getEntityServiceHashCode()) {
-            entityContext.save(entity);
+            context.db().save(entity);
         }
         saveConfiguration();
         restartService();
@@ -185,12 +183,12 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
             try {
                 projectUpdate.getGitHubProject().deleteProject();
             } catch (Exception ex) {
-                getEntityContext().ui().toastr().error(
+                context().ui().toastr().error(
                     Lang.getServerMessage("ZIGBEE.ERROR.DELETE",
                         projectUpdate.getGitHubProject().getLocalProjectPath().toString()));
                 throw ex;
             }
-            mediamtxGitHub.downloadReleaseAndInstall(entityContext, version, (progress, message, error) ->
+            mediamtxGitHub.downloadReleaseAndInstall(context, version, (progress, message, error) ->
                 progressBar.progress(progress, message));
             if (projectUpdate.isHasBackup()) {
                 projectUpdate.copyFromBackup(Set.of(Path.of("mediamtx_initial.yml"), Path.of("mediamtx.yml")));
@@ -233,7 +231,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         log.info("Starting MediaMTX");
         // not need internet because we should fail create service if no internet
         if (!mediamtxGitHub.isLocalProjectInstalled()) {
-            mediamtxGitHub.installLatestRelease(entityContext);
+            mediamtxGitHub.installLatestRelease(context);
             mediamtxGitHub.backup(Paths.get("mediamtx.yml"), Paths.get("mediamtx_initial.yml"));
         }
 
@@ -243,7 +241,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
             + " " + mediamtxGitHub.getLocalProjectPath().resolve("mediamtx.yml");
 
         AtomicReference<String> errorRef = new AtomicReference<>();
-        this.processContext = entityContext
+        this.processContext = context
             .bgp().processBuilder(getEntityID())
             .attachLogger(log)
             .attachEntityStatus(entity)
@@ -280,7 +278,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     }
 
     /*private void updateNotificationBlock() {
-        entityContext.ui().notification().addBlock(entityID, "MediaMTX", new Icon("fas fa-square-rss", "#308BB3"), builder -> {
+        context.ui().notification().addBlock(entityID, "MediaMTX", new Icon("fas fa-square-rss", "#308BB3"), builder -> {
             builder.setStatus(entity.getStatus());
             builder.linkToEntity(entity);
             builder.setUpdatable(entity);

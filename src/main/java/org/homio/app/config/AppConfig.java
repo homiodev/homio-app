@@ -4,17 +4,13 @@ import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.BeanDescription;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationConfig;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.module.SimpleSerializers;
 import com.fasterxml.jackson.datatype.hibernate5.jakarta.Hibernate5JakartaModule;
 import com.fasterxml.jackson.datatype.jsonorg.JsonOrgModule;
 import jakarta.servlet.Filter;
@@ -33,8 +29,7 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.util.SecureString;
@@ -44,7 +39,7 @@ import org.homio.app.json.jsog.JSOGGenerator;
 import org.homio.app.json.jsog.JSOGResolver;
 import org.homio.app.manager.CacheService;
 import org.homio.app.manager.common.ClassFinder;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.workspace.block.Scratch3Space;
 import org.jetbrains.annotations.NotNull;
@@ -228,7 +223,7 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
         simpleModule.addDeserializer(DeviceBaseEntity.class, new JsonDeserializer<>() {
             @Override
             public DeviceBaseEntity deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-                return applicationContext.getBean(EntityContextImpl.class).getEntity(p.getText());
+                return applicationContext.getBean(ContextImpl.class).db().getEntity(p.getText());
             }
         });
 
@@ -249,7 +244,7 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
     @Override
     public void addFormatters(final FormatterRegistry registry) {
         registry.addConverter(String.class, DeviceBaseEntity.class, source ->
-                applicationContext.getBean(EntityContext.class).getEntity(source));
+            applicationContext.getBean(Context.class).db().getEntity(source));
     }
 
     @Bean
@@ -270,8 +265,8 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
             this.applicationReady = true;
             this.printEnvVariables(cre.getApplicationContext().getEnvironment());
             ApplicationContext applicationContext = ((ContextRefreshedEvent) event).getApplicationContext();
-            EntityContextImpl entityContextImpl = applicationContext.getBean(EntityContextImpl.class);
-            entityContextImpl.afterContextStart(applicationContext);
+            ContextImpl contextImpl = applicationContext.getBean(ContextImpl.class);
+            contextImpl.afterContextStart(applicationContext);
         }
     }
 

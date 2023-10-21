@@ -10,7 +10,7 @@ import org.homio.addon.imou.ImouDeviceEntity;
 import org.homio.addon.imou.ImouProjectEntity;
 import org.homio.addon.imou.internal.cloud.ImouAPI;
 import org.homio.addon.imou.internal.cloud.ImouAPI.ImouApiNotReadyException;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.service.EntityService.ServiceInstance;
@@ -22,9 +22,9 @@ public class ImouProjectService extends ServiceInstance<ImouProjectEntity> {
     private final ImouAPI api;
 
     @SneakyThrows
-    public ImouProjectService(@NotNull EntityContext entityContext, ImouProjectEntity entity) {
-        super(entityContext, entity, true);
-        this.api = entityContext.getBean(ImouAPI.class);
+    public ImouProjectService(@NotNull Context context, ImouProjectEntity entity) {
+        super(context, entity, true);
+        this.api = context.getBean(ImouAPI.class);
     }
 
     public void initialize() {
@@ -34,7 +34,7 @@ public class ImouProjectService extends ServiceInstance<ImouProjectEntity> {
             testService();
             entity.setStatusOnline();
             // fire device discovery
-            entityContext.getBean(ImouDiscoveryService.class).scan(entityContext, null, null);
+            context.getBean(ImouDiscoveryService.class).scan(context, null, null);
         } catch (ImouApiNotReadyException te) {
             scheduleInitialize();
         } catch (Exception ex) {
@@ -44,12 +44,10 @@ public class ImouProjectService extends ServiceInstance<ImouProjectEntity> {
         }
     }
 
-    private void scheduleInitialize() {
-        entityContext.event().runOnceOnInternetUp("imou-project-init", () -> {
-            if (!entity.getStatus().isOnline()) {
-                entityContext.bgp().builder("init-imou-project-service").delay(Duration.ofSeconds(5))
-                        .execute(this::initialize);
-            }
+    public void updateNotificationBlock() {
+        context.ui().notification().addBlock(entityID, "Imou", new Icon(IMOU_ICON, IMOU_COLOR), builder -> {
+            builder.setStatus(entity.getStatus()).linkToEntity(entity);
+            builder.setDevices(context.db().findAll(ImouDeviceEntity.class));
         });
     }
 
@@ -69,10 +67,12 @@ public class ImouProjectService extends ServiceInstance<ImouProjectEntity> {
         updateNotificationBlock();
     }
 
-    public void updateNotificationBlock() {
-        entityContext.ui().notification().addBlock(entityID, "Imou", new Icon(IMOU_ICON, IMOU_COLOR), builder -> {
-            builder.setStatus(entity.getStatus()).linkToEntity(entity);
-            builder.setDevices(entityContext.findAll(ImouDeviceEntity.class));
+    private void scheduleInitialize() {
+        context.event().runOnceOnInternetUp("imou-project-init", () -> {
+            if (!entity.getStatus().isOnline()) {
+                context.bgp().builder("init-imou-project-service").delay(Duration.ofSeconds(5))
+                        .execute(this::initialize);
+            }
         });
     }
 }

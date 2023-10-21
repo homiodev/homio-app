@@ -1,17 +1,30 @@
 package org.homio.app.ssh;
 
+import static java.lang.String.format;
+import static org.homio.api.ContextSetting.SERVER_PORT;
+import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
+import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
+
 import com.sshtools.client.SessionChannelNG;
 import com.sshtools.client.SshClient;
 import com.sshtools.client.tasks.ShellTask;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.map.PassiveExpiringMap;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContextBGP.ThreadContext;
-import org.homio.app.manager.common.EntityContextImpl;
-import org.homio.app.manager.common.impl.EntityContextServiceImpl.DynamicWebSocketHandler;
+import org.homio.api.ContextBGP.ThreadContext;
+import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.manager.common.impl.ContextServiceImpl.DynamicWebSocketHandler;
 import org.homio.app.rest.ConsoleController;
 import org.homio.app.ssh.SSHServerEndpoint.XtermMessage.XtermHandler;
 import org.homio.app.ssh.SSHServerEndpoint.XtermMessage.XtermMessageType;
@@ -30,20 +43,6 @@ import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.BinaryWebSocketHandler;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
-import static java.lang.String.format;
-import static org.homio.api.EntityContextSetting.SERVER_PORT;
-import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
-import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
-
 @Log4j2
 @Service
 public class SSHServerEndpoint extends BinaryWebSocketHandler implements DynamicWebSocketHandler {
@@ -55,10 +54,10 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
 
     private static final PassiveExpiringMap<String, SessionContext> sessionByToken = new PassiveExpiringMap<>(24, TimeUnit.HOURS);
     private static final PassiveExpiringMap<String, SessionContext> sessionBySessionId = new PassiveExpiringMap<>(24, TimeUnit.HOURS);
-    private final EntityContextImpl entityContext;
+    private final ContextImpl context;
 
-    public SSHServerEndpoint(EntityContextImpl entityContext) {
-        this.entityContext = entityContext;
+    public SSHServerEndpoint(ContextImpl context) {
+        this.context = context;
     }
 
     @Override
@@ -95,7 +94,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
     }
 
     public SshSession openSession(SshGenericEntity entity) {
-        entityContext.service().registerWebSocketEndpoint(WEBSSH_PATH, this);
+        context.service().registerWebSocketEndpoint(WEBSSH_PATH, this);
 
         String token = UUID.randomUUID().toString();
 
@@ -234,7 +233,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
             if (threadContext != null && !threadContext.isStopped()) {
                 return;
             }
-            threadContext = entityContext.bgp().builder("ssh-shell-" + sessionId).execute(() -> {
+            threadContext = context.bgp().builder("ssh-shell-" + sessionId).execute(() -> {
                 try {
                     connect(cols);
                 } catch (Exception e) {

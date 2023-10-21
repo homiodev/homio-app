@@ -1,22 +1,32 @@
 package org.homio.app.audio.javasound;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.FloatControl;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.Mixer;
+import javax.sound.sampled.Port;
 import javazoom.jl.decoder.JavaLayerException;
 import javazoom.jl.player.advanced.AdvancedPlayer;
 import javazoom.jl.player.advanced.PlaybackEvent;
 import javazoom.jl.player.advanced.PlaybackListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.audio.AudioFormat;
 import org.homio.api.audio.AudioSink;
 import org.homio.api.audio.AudioStream;
 import org.homio.app.audio.AudioPlayer;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
-
-import javax.sound.sampled.*;
-import java.util.*;
-import java.util.function.Function;
 
 @Log4j2
 @Component
@@ -28,7 +38,7 @@ public class JavaSoundAudioSink implements AudioSink {
     private static final Set<Class<? extends AudioStream>> SUPPORTED_AUDIO_STREAMS =
             new HashSet<>(Collections.singletonList(AudioStream.class));
     private static AdvancedPlayer streamPlayer;
-    private final EntityContext entityContext;
+    private final Context context;
     // for resume
     private Integer pausedOnFrame;
     private AudioStream audioStream;
@@ -144,7 +154,7 @@ public class JavaSoundAudioSink implements AudioSink {
                     pausedOnFrame = event.getFrame();
                 }
             });
-            entityContext.bgp().builder("java_sink-audio").execute(() -> {
+            context.bgp().builder("java_sink-audio").execute(() -> {
                 try {
                     Integer start = from;
                     Integer end = to;

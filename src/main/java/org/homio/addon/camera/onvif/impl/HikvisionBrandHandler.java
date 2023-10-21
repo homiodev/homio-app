@@ -27,7 +27,7 @@ import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.IpCameraService;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.StringType;
 import org.jetbrains.annotations.Nullable;
@@ -318,7 +318,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler {
     }
 
     @Override
-    public void postInitializeCamera(EntityContext entityContext) {
+    public void postInitializeCamera(Context context) {
         if (service.lowPriorityRequests.isEmpty()) {
             service.addLowRequestGet("/ISAPI/System/IO/inputs/" + getEntity().getNvrChannel() + "/status");
         }

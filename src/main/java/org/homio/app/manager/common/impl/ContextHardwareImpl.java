@@ -9,10 +9,11 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
-import org.homio.api.EntityContextHardware;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.api.ContextHardware;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.hquery.ProgressBar;
 import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
@@ -20,10 +21,9 @@ import org.jetbrains.annotations.Nullable;
 
 @Log4j2
 @RequiredArgsConstructor
-public class EntityContextHardwareImpl implements EntityContextHardware {
+public class ContextHardwareImpl implements ContextHardware {
 
-    @Getter
-    private final EntityContextImpl entityContext;
+    private final @Getter @Accessors(fluent = true) ContextImpl context;
     private final MachineHardwareRepository hardwareRepository;
 
     @Override
@@ -63,25 +63,25 @@ public class EntityContextHardwareImpl implements EntityContextHardware {
     }
 
     @Override
-    public @NotNull EntityContextHardware installSoftware(@NotNull String soft, int maxSecondsTimeout) {
+    public @NotNull ContextHardware installSoftware(@NotNull String soft, int maxSecondsTimeout) {
         hardwareRepository.installSoftware(soft, maxSecondsTimeout);
         return this;
     }
 
     @Override
-    public @NotNull EntityContextHardware installSoftware(@NotNull String soft, int maxSecondsTimeout, ProgressBar progressBar) {
+    public @NotNull ContextHardware installSoftware(@NotNull String soft, int maxSecondsTimeout, ProgressBar progressBar) {
         hardwareRepository.installSoftware(soft, maxSecondsTimeout, progressBar);
         return this;
     }
 
     @Override
-    public @NotNull EntityContextHardware enableSystemCtl(@NotNull String soft) {
+    public @NotNull ContextHardware enableSystemCtl(@NotNull String soft) {
         hardwareRepository.enableSystemCtl(soft);
         return this;
     }
 
     @Override
-    public @NotNull EntityContextHardware startSystemCtl(@NotNull String soft) {
+    public @NotNull ContextHardware startSystemCtl(@NotNull String soft) {
         hardwareRepository.startSystemCtl(soft);
         return this;
     }

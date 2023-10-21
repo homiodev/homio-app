@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import org.homio.api.AddonEntrypoint;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.ServerException;
@@ -24,7 +24,7 @@ import org.homio.api.setting.SettingPluginToggle;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
 import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
 import org.homio.api.ui.field.UIFieldType;
-import org.homio.app.manager.common.impl.EntityContextSettingImpl;
+import org.homio.app.manager.common.impl.ContextSettingImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.app.setting.CoreSettingPlugin;
 import org.homio.app.spring.ContextRefreshed;
@@ -41,8 +41,8 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
         super(SettingEntity.class);
     }
 
-    public static Collection<OptionModel> getOptions(SettingPluginOptions<?> plugin, EntityContext entityContext, JSONObject param) {
-        Collection<OptionModel> options = plugin.getOptions(entityContext, param);
+    public static Collection<OptionModel> getOptions(SettingPluginOptions<?> plugin, Context context, JSONObject param) {
+        Collection<OptionModel> options = plugin.getOptions(context, param);
         if (plugin instanceof SettingPluginOptionsRemovable) {
             for (OptionModel option : options) {
                 if (((SettingPluginOptionsRemovable<?>) plugin).removableOption(option)) {
@@ -53,9 +53,9 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
         return options;
     }
 
-    public static void fulfillEntityFromPlugin(SettingEntity entity, EntityContext entityContext, SettingPlugin<?> plugin) {
+    public static void fulfillEntityFromPlugin(SettingEntity entity, Context context, SettingPlugin<?> plugin) {
         if (plugin == null) {
-            plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entity.getEntityID());
+            plugin = ContextSettingImpl.settingPluginsByPluginKey.get(entity.getEntityID());
         }
         if (plugin != null) {
             Class<? extends BaseEntity> availableForEntity = plugin.availableForEntity();
@@ -71,13 +71,13 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
                 entity.setToggleIcon(((SettingPluginToggle) plugin).getToggleIcon());
             }
             if (plugin instanceof SettingPluginButton) {
-                entity.setValue(((SettingPluginButton) plugin).getText(entityContext));
+                entity.setValue(((SettingPluginButton) plugin).getText(context));
                 entity.setPrimary(((SettingPluginButton) plugin).isPrimary());
             }
             entity.setSettingType(plugin.getSettingType());
             entity.setReverted(plugin.isReverted() ? true : null);
-            entity.setParameters(plugin.getParameters(entityContext, entity.getValue()));
-            entity.setDisabled(plugin.isDisabled(entityContext) ? true : null);
+            entity.setParameters(plugin.getParameters(context, entity.getValue()));
+            entity.setDisabled(plugin.isDisabled(context) ? true : null);
             entity.setRequired(plugin.isRequired());
             if (plugin instanceof SettingPluginOptions) {
                 entity.setLazyLoad(((SettingPluginOptions<?>) plugin).lazyLoad());
@@ -88,7 +88,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
             if (entity.isStorable()) {
                 if (entity.getSettingType().equals(UIFieldType.SelectBoxButton.name())
                         || entity.getSettingType().equals(UIFieldType.SelectBox.name())) {
-                    entity.setAvailableValues(SettingRepository.getOptions((SettingPluginOptions<?>) plugin, entityContext, null));
+                    entity.setAvailableValues(SettingRepository.getOptions((SettingPluginOptions<?>) plugin, context, null));
                 }
             }
 
@@ -118,12 +118,12 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
     /**
      * Search addonID for setting.
      */
-    public static String getSettingAddonName(EntityContext entityContext, Class<? extends SettingPlugin> settingPluginClass) {
+    public static String getSettingAddonName(Context context, Class<? extends SettingPlugin> settingPluginClass) {
         String name = settingPluginClass.getName();
         return settingToAddonMap.computeIfAbsent(name, key -> {
             if (name.startsWith(ADDON_PREFIX)) {
                 String pathName = name.substring(0, ADDON_PREFIX.length() + name.substring(ADDON_PREFIX.length()).indexOf('.'));
-                AddonEntrypoint addonEntrypoint = entityContext.getBeansOfType(AddonEntrypoint.class).stream()
+                AddonEntrypoint addonEntrypoint = context.getBeansOfType(AddonEntrypoint.class).stream()
                         .filter(b -> b.getClass().getName().startsWith(pathName)).findAny().orElse(null);
                 if (addonEntrypoint == null) {
                     throw new ServerException("Unable find addon entry-point for setting: " + key);
@@ -135,13 +135,13 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
     }
 
     @Override
-    public void onContextRefresh(EntityContext entityContext) {
-        for (SettingPlugin settingPlugin : EntityContextSettingImpl.settingPluginsBy(p -> !p.transientState())) {
-            SettingEntity settingEntity = entityContext.getEntity(getKey(settingPlugin));
+    public void onContextRefresh(Context context) {
+        for (SettingPlugin settingPlugin : ContextSettingImpl.settingPluginsBy(p -> !p.transientState())) {
+            SettingEntity settingEntity = context.db().getEntity(getKey(settingPlugin));
             if (settingEntity == null) {
                 SettingEntity entity = new SettingEntity();
                 entity.setEntityID(getKey(settingPlugin));
-                entityContext.save(entity);
+                context.db().save(entity);
             }
         }
     }

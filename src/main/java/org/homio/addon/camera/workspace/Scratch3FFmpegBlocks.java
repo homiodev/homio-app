@@ -1,6 +1,6 @@
 package org.homio.addon.camera.workspace;
 
-import static org.homio.api.EntityContextMedia.FFMPEGFormat.RTSP_ALARMS;
+import static org.homio.api.ContextMedia.FFMPEGFormat.RTSP_ALARMS;
 import static org.homio.api.util.CommonUtils.addToListSafe;
 
 import com.pivovarit.function.ThrowingBiConsumer;
@@ -12,10 +12,9 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
 import org.homio.addon.camera.CameraEntrypoint;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextMedia.FFMPEG;
-import org.homio.api.EntityContextMedia.FFMPEGHandler;
-import org.homio.api.state.DecimalType;
+import org.homio.api.Context;
+import org.homio.api.ContextMedia.FFMPEG;
+import org.homio.api.ContextMedia.FFMPEGHandler;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.jetbrains.annotations.NotNull;
@@ -28,8 +27,8 @@ public class Scratch3FFmpegBlocks extends Scratch3ExtensionBlocks {
 
     private static final int FFMPEG_WAIT_TO_START_TIMEOUT = 1000;
 
-    public Scratch3FFmpegBlocks(EntityContext entityContext, CameraEntrypoint cameraEntrypoint) {
-        super("#87B023", entityContext, cameraEntrypoint, "ffmpeg");
+    public Scratch3FFmpegBlocks(Context context, CameraEntrypoint cameraEntrypoint) {
+        super("#87B023", context, cameraEntrypoint, "ffmpeg");
         setParent("media");
 
         blockCommand(10, FFmpegApplyHandler.argsInput.name(), "Input arg [VALUE]", this::skipHandler, block ->
@@ -53,7 +52,7 @@ public class Scratch3FFmpegBlocks extends Scratch3ExtensionBlocks {
         FfmpegBuilder ffmpegBuilder = new FfmpegBuilder();
         applyParentBlocks(ffmpegBuilder, workspaceBlock.getParent());
 
-        FFMPEG ffmpeg = entityContext.media().buildFFMPEG(workspaceBlock.getId(),
+        FFMPEG ffmpeg = context.media().buildFFMPEG(workspaceBlock.getId(),
             "FFMPEG workspace", new FFMPEGHandler() {
 
 
@@ -88,8 +87,8 @@ public class Scratch3FFmpegBlocks extends Scratch3ExtensionBlocks {
         ffmpeg.stopConverting();
         log.info("FFmpeg has been stopped");
 
-       /* Path ffmpegPath = entityContext.setting().getValue(CameraFFMPEGInstallPathOptions.class);
-        FfmpegInputDeviceHardwareRepository repository = entityContext.getBean(FfmpegInputDeviceHardwareRepository.class);
+       /* Path ffmpegPath = context.setting().getValue(CameraFFMPEGInstallPathOptions.class);
+        FfmpegInputDeviceHardwareRepository repository = context.getBean(FfmpegInputDeviceHardwareRepository.class);
         repository.fireFfmpeg(ffmpegPath.toString(), input, source, output, -1);*/
     }
 

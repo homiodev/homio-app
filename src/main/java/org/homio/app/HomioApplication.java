@@ -15,7 +15,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.config.AppConfig;
-import org.homio.app.manager.common.impl.EntityContextSettingImpl;
+import org.homio.app.manager.common.impl.ContextSettingImpl;
 import org.homio.hquery.EnableHQuery;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -79,7 +79,7 @@ public class HomioApplication implements WebMvcConfigurer {
     }
 
     private static void setDatabaseProperties(Logger log) {
-        Properties properties = EntityContextSettingImpl.getHomioProperties();
+        Properties properties = ContextSettingImpl.getHomioProperties();
 
         @NotNull String type = properties.getProperty("dbType", "sqlite");
         @NotNull String url = properties.getProperty("dbUrl", "");
@@ -117,10 +117,10 @@ public class HomioApplication implements WebMvcConfigurer {
 
     @SneakyThrows
     private static void setProperty(String key, String configKey, String value) {
-        Properties properties = EntityContextSettingImpl.getHomioProperties();
+        Properties properties = ContextSettingImpl.getHomioProperties();
         if (!value.equals(properties.get(configKey))) {
             properties.setProperty(configKey, value);
-            properties.store(Files.newOutputStream(EntityContextSettingImpl.getPropertiesLocation()), null);
+            properties.store(Files.newOutputStream(ContextSettingImpl.getPropertiesLocation()), null);
         }
         if (key != null) {
             System.setProperty(key, value);

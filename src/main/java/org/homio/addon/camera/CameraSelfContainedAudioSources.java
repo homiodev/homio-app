@@ -7,7 +7,7 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.addon.camera.service.IpCameraService;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.audio.SelfContainedAudioSourceContainer;
 import org.homio.api.model.OptionModel;
 import org.onvif.ver10.schema.AudioSource;
@@ -18,12 +18,12 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CameraSelfContainedAudioSources implements SelfContainedAudioSourceContainer {
 
-    private final EntityContext entityContext;
+    private final Context context;
 
     @Override
     public Collection<OptionModel> getAudioSource() {
         Collection<OptionModel> models = new ArrayList<>();
-        for (BaseCameraEntity cameraEntity : entityContext.findAll(BaseCameraEntity.class)) {
+        for (BaseCameraEntity cameraEntity : context.db().findAll(BaseCameraEntity.class)) {
             // get sources from onvif audio streams
             if (cameraEntity.isStart() && cameraEntity instanceof IpCameraEntity) {
                 IpCameraService service = (IpCameraService) cameraEntity.getService();

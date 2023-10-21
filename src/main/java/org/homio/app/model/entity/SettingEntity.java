@@ -20,7 +20,7 @@ import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPlugin;
 import org.homio.api.setting.SettingType;
 import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
-import org.homio.app.manager.common.impl.EntityContextSettingImpl;
+import org.homio.app.manager.common.impl.ContextSettingImpl;
 import org.homio.app.repository.SettingRepository;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
@@ -161,7 +161,7 @@ public class SettingEntity extends BaseEntity {
     @Override
     public String getAddonID() {
         // dynamic settings(firmata has no parameters)
-        SettingPlugin plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(getEntityID());
-        return plugin == null ? null : SettingRepository.getSettingAddonName(getEntityContext(), plugin.getClass());
+        SettingPlugin plugin = ContextSettingImpl.settingPluginsByPluginKey.get(getEntityID());
+        return plugin == null ? null : SettingRepository.getSettingAddonName(context(), plugin.getClass());
     }
 }

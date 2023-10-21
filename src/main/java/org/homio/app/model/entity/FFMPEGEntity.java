@@ -4,7 +4,7 @@ import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
 import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
 import static org.homio.api.util.CommonUtils.STATIC_FILES;
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
+import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
@@ -20,9 +20,9 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextHardware;
-import org.homio.api.EntityContextHardware.ProcessStat;
+import org.homio.api.Context;
+import org.homio.api.ContextHardware;
+import org.homio.api.ContextHardware.ProcessStat;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContractStub;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.log.HasEntitySourceLog;
@@ -57,35 +57,27 @@ public class FFMPEGEntity extends MediaEntity implements
 
     private static FfmpegInstaller FFMPEG_INSTALLER;
 
-    private static FfmpegInstaller getFfmpegInstaller(EntityContext entityContext) {
-        if (FFMPEG_INSTALLER == null) {
-            FFMPEG_INSTALLER = new FfmpegInstaller(entityContext);
-        }
-        return FFMPEG_INSTALLER;
-    }
-
-    public static void ensureEntityExists(EntityContext entityContext) {
-        entityContext.install().createInstallContext(FfmpegInstaller.class)
+    public static void ensureEntityExists(Context context) {
+        context.install().createInstallContext(FfmpegInstaller.class)
                      .requireAsync(null, (installed, exception) -> {
                          if (installed) {
                              log.info("FFPMEG service successfully installed");
                          }
                      });
-        FFMPEGEntity.getFfmpegInstaller(entityContext)
+        FFMPEGEntity.getFfmpegInstaller(context)
                     .installLatestAsync();
 
-        FFMPEGEntity entity = entityContext.getEntity(FFMPEGEntity.class, PRIMARY_DEVICE);
+        FFMPEGEntity entity = context.db().getEntity(FFMPEGEntity.class, PRIMARY_DEVICE);
         if (entity == null) {
             entity = new FFMPEGEntity();
             entity.setEntityID(PRIMARY_DEVICE);
             entity.setJsonData("dis_del", true);
             entity.setJsonData("dis_edit", true);
-            entity = entityContext.save(entity);
+            entity = context.db().save(entity);
         }
         FFMPEGImpl.entity = entity;
 
-
-        entityContext.bgp().registerThreadsPuller("ffmpeg", threadPuller -> {
+        context.bgp().registerThreadsPuller("ffmpeg", threadPuller -> {
             for (Map.Entry<String, FFMPEGImpl> threadEntry : FFMPEGImpl.ffmpegMap.entrySet()) {
                 FFMPEGImpl ffmpeg = threadEntry.getValue();
                 if (ffmpeg.getIsAlive()) {
@@ -96,6 +88,11 @@ public class FFMPEGEntity extends MediaEntity implements
                 }
             }
         });
+    }
+
+    @Override
+    public String getFirmwareVersion() {
+        return FFMPEGEntity.getFfmpegInstaller(context()).getVersion();
     }
 
     @Override
@@ -129,9 +126,11 @@ public class FFMPEGEntity extends MediaEntity implements
     public void logBuilder(@NotNull EntityLogBuilder builder) {
     }
 
-    @Override
-    public String getFirmwareVersion() {
-        return FFMPEGEntity.getFfmpegInstaller(getEntityContext()).getVersion();
+    private static FfmpegInstaller getFfmpegInstaller(Context context) {
+        if (FFMPEG_INSTALLER == null) {
+            FFMPEG_INSTALLER = new FfmpegInstaller(context);
+        }
+        return FFMPEG_INSTALLER;
     }
 
     @Override
@@ -200,7 +199,7 @@ public class FFMPEGEntity extends MediaEntity implements
         public FfmpegInstanceEndpoint(FFMPEGImpl ffmpeg, FFMPEGEntity entity) {
             super(new Icon(ffmpeg.getFormat().getIcon(), ffmpeg.getFormat().getColor()),
                 "FFMPEG",
-                entity.getEntityContext(),
+                entity.context(),
                 entity,
                 ffmpeg.getDescription(),
                 false,
@@ -224,8 +223,8 @@ public class FFMPEGEntity extends MediaEntity implements
     @Log4j2
     public static class FfmpegInstaller extends DependencyExecutableInstaller {
 
-        public FfmpegInstaller(EntityContext entityContext) {
-            super(entityContext);
+        public FfmpegInstaller(Context context) {
+            super(context);
             executable = FFMPEG_LOCATION;
         }
 
@@ -241,7 +240,7 @@ public class FFMPEGEntity extends MediaEntity implements
 
         @Override
         protected @Nullable String getInstalledVersion() {
-            EntityContextHardware hardware = entityContext.hardware();
+            ContextHardware hardware = context.hardware();
             String version = null;
             if (IS_OS_WINDOWS) {
                 Path targetPath = CommonUtils.getInstallPath().resolve("ffmpeg").resolve("ffmpeg.exe");
@@ -260,12 +259,12 @@ public class FFMPEGEntity extends MediaEntity implements
         @Override
         protected void installDependencyInternal(@NotNull ProgressBar progressBar, String version) {
             if (IS_OS_LINUX) {
-                EntityContextHardware hardware = entityContext.hardware();
+                ContextHardware hardware = context.hardware();
                 if (!hardware.isSoftwareInstalled("ffmpeg")) {
                     hardware.installSoftware("ffmpeg", 600);
                 }
             } else {
-                String url = entityContext.setting().getEnv("source-ffmpeg");
+                String url = context.setting().getEnv("source-ffmpeg");
                 if (url == null) {
                     url = STATIC_FILES.getContentFile("ffmpeg").map(VersionedFile::getDownloadUrl).orElse(null);
                 }

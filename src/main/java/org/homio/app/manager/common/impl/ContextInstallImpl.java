@@ -7,8 +7,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextInstall;
+import org.homio.api.Context;
+import org.homio.api.ContextInstall;
 import org.homio.api.service.DependencyExecutableInstaller;
 import org.homio.app.manager.install.NodeJsInstaller;
 import org.homio.hquery.ProgressBar;
@@ -16,14 +16,14 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Log4j2
-public class EntityContextInstallImpl implements EntityContextInstall {
+public class ContextInstallImpl implements ContextInstall {
 
-    private final EntityContext entityContext;
+    private final Context context;
     private final Map<Class<?>, InstallContext> cache = new ConcurrentHashMap<>();
 
     @SneakyThrows
-    public EntityContextInstallImpl(EntityContext entityContext) {
-        this.entityContext = entityContext;
+    public ContextInstallImpl(Context context) {
+        this.context = context;
     }
 
     @Override
@@ -45,7 +45,7 @@ public class EntityContextInstallImpl implements EntityContextInstall {
 
                 {
                     try {
-                        installer = installerClass.getConstructor(EntityContext.class).newInstance(entityContext);
+                        installer = installerClass.getConstructor(Context.class).newInstance(context);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -62,11 +62,11 @@ public class EntityContextInstallImpl implements EntityContextInstall {
                         return;
                     }
                     installing = true;
-                    entityContext.event().runOnceOnInternetUp("wait-inet-for-install-" + installer.getName(), () -> installSoftware(version));
+                    context.event().runOnceOnInternetUp("wait-inet-for-install-" + installer.getName(), () -> installSoftware(version));
                 }
 
                 private void installSoftware(@Nullable String version) {
-                    entityContext.bgp().runWithProgress("install-" + installer.getName())
+                    context.bgp().runWithProgress("install-" + installer.getName())
                                  .onFinally(exception -> {
                                      installing = false;
                                      for (BiConsumer<Boolean, Exception> waiter : waiters) {

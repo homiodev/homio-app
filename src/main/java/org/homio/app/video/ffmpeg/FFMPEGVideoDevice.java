@@ -6,7 +6,7 @@ import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.homio.api.EntityContextMedia.VideoInputDevice;
+import org.homio.api.ContextMedia.VideoInputDevice;
 import org.jetbrains.annotations.NotNull;
 
 @Getter

@@ -17,7 +17,7 @@ import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.model.JSON;
 import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.jetbrains.annotations.NotNull;
 
 @Setter
@@ -68,6 +68,6 @@ public abstract class WidgetSeriesEntity<T extends WidgetBaseEntityAndSeries>
     @Override
     public void afterUpdate() {
         super.afterUpdate();
-        ((EntityContextImpl) getEntityContext()).event().removeEvents(widgetEntity.getEntityID() + getEntityID());
+        ((ContextImpl) context()).event().removeEvents(widgetEntity.getEntityID() + getEntityID());
     }
 }

@@ -37,7 +37,7 @@ import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.validation.MaxItems;
 import org.homio.api.entity.validation.UIFieldValidationSize;
@@ -136,9 +136,9 @@ public class UIFieldUtils {
         return meta;
     }
 
-    public static Collection<UIInputEntity> fetchUIActionsFromClass(Class<?> clazz, EntityContext entityContext) {
+    public static Collection<UIInputEntity> fetchUIActionsFromClass(Class<?> clazz, Context context) {
         if (clazz != null) {
-            UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
+            UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
             for (Method method : MethodUtils.getMethodsWithAnnotation(clazz, UIContextMenuAction.class)) {
                 UIContextMenuAction action = method.getDeclaredAnnotation(UIContextMenuAction.class);
                 Icon icon = new Icon(action.icon(), action.iconColor());
@@ -168,23 +168,23 @@ public class UIFieldUtils {
     }
 
     @SneakyThrows
-    public static List<EntityUIMetaData> fillEntityUIMetadataList(Class entityClassByType, EntityContext entityContext) {
-        return fillEntityUIMetadataList(entityClassByType, new HashSet<>(), entityContext);
+    public static List<EntityUIMetaData> fillEntityUIMetadataList(Class entityClassByType, Context context) {
+        return fillEntityUIMetadataList(entityClassByType, new HashSet<>(), context);
     }
 
     @SneakyThrows
     public static List<EntityUIMetaData> fillEntityUIMetadataList(Class entityClassByType,
         Set<EntityUIMetaData> entityUIMetaDataSet,
-        EntityContext entityContext) {
+        Context context) {
         if (entityClassByType == null) {
             return Collections.emptyList();
         }
         Object instance = CommonUtils.newInstance(entityClassByType);
         if (instance instanceof BaseEntity be) {
             be.setEntityID("FETCH_UI_FIELD_SPECIFICATIONS");
-            be.setEntityContext(entityContext);
+            be.setContext(context);
         }
-        List<EntityUIMetaData> result = fillEntityUIMetadataList(instance, entityUIMetaDataSet, entityContext, false, null);
+        List<EntityUIMetaData> result = fillEntityUIMetadataList(instance, entityUIMetaDataSet, context, false, null);
         if (instance instanceof ConfigureFieldsService configurator) {
             configurator.configure(result);
         }
@@ -194,7 +194,7 @@ public class UIFieldUtils {
     public static List<EntityUIMetaData> fillEntityUIMetadataList(
         @NotNull Object instance,
         @NotNull Set<EntityUIMetaData> entityUIMetaDataSet,
-        @NotNull EntityContext entityContext,
+        @NotNull Context context,
         boolean fullDisableEdit,
         @Nullable EntityUIMetaData entityUIMetaData) {
 
@@ -228,7 +228,7 @@ public class UIFieldUtils {
         }
 
         for (UIFieldMethodContext fieldMethodContext : fieldNameToGetters.values()) {
-            generateUIField(instance, entityUIMetaDataSet, fieldMethodContext, entityContext, fullDisableEdit);
+            generateUIField(instance, entityUIMetaDataSet, fieldMethodContext, context, fullDisableEdit);
         }
 
         Set<String> processedMethods = fieldNameToGetters.values().stream().map(UIFieldMethodContext::getMethodName).collect(toSet());
@@ -239,7 +239,7 @@ public class UIFieldUtils {
                 List<Method> fieldGetterMethods =
                     fieldNameToGettersMap.getOrDefault("get" + capitalizeMethodName, new ArrayList<>());
                 fieldGetterMethods.addAll(fieldNameToGettersMap.getOrDefault("is" + capitalizeMethodName, Collections.emptyList()));
-                generateUIField(instance, entityUIMetaDataSet, new UIFieldFieldContext(field, fieldGetterMethods), entityContext, fullDisableEdit);
+                generateUIField(instance, entityUIMetaDataSet, new UIFieldFieldContext(field, fieldGetterMethods), context, fullDisableEdit);
             }
         });
 
@@ -257,7 +257,7 @@ public class UIFieldUtils {
 
     @SneakyThrows
     private static void generateUIField(Object instance, Set<EntityUIMetaData> entityUIMetaDataList,
-        UIFieldContext fieldContext, EntityContext entityContext, boolean fullDisableEdit) {
+        UIFieldContext fieldContext, Context context, boolean fullDisableEdit) {
         EntityUIMetaData entityUIMetaData = new EntityUIMetaData();
         entityUIMetaData.setEntityName(fieldContext.getName());
         Type genericType = fieldContext.getGenericType();
@@ -635,7 +635,7 @@ public class UIFieldUtils {
         var fieldInlineEdit = fieldContext.getDeclaredAnnotation(UIFieldInlineEditEntities.class);
         if (fieldInlineEdit != null) {
             if (genericType instanceof ParameterizedType && Collection.class.isAssignableFrom(type)) {
-                putUIInlineFieldIfRequire(instance, fieldContext, entityUIMetaData, (ParameterizedType) genericType, jsonTypeMetadata, entityContext);
+                putUIInlineFieldIfRequire(instance, fieldContext, entityUIMetaData, (ParameterizedType) genericType, jsonTypeMetadata, context);
                 entityUIMetaData.setStyle("padding: 0; background: " + fieldInlineEdit.bg() + ";");
 
                 jsonTypeMetadata.put("fw", true);
@@ -659,7 +659,7 @@ public class UIFieldUtils {
                     entityUIMetaData,
                     (ParameterizedType) genericType,
                     jsonTypeMetadata,
-                    entityContext);
+                    context);
 
                 entityUIMetaData.setStyle("padding: 0; background: " + fieldInline.bg() + ";");
                 jsonTypeMetadata.put("fw", true);
@@ -802,7 +802,7 @@ public class UIFieldUtils {
     }
 
     private static void putUIInlineFieldIfRequire(Object instance, UIFieldContext fieldContext, EntityUIMetaData entityUIMetaData,
-        ParameterizedType genericType, ObjectNode jsonTypeMetadata, EntityContext entityContext) {
+        ParameterizedType genericType, ObjectNode jsonTypeMetadata, Context context) {
         if (!jsonTypeMetadata.has("inlineTypeFields")) {
             Type inlineType = extractSetEntityType(instance, fieldContext, entityUIMetaData, genericType, jsonTypeMetadata);
             // for non BaseEntity types
@@ -812,7 +812,7 @@ public class UIFieldUtils {
             Object childClassInstance = CommonUtils.newInstance((Class) inlineType);
             boolean fullDisableEdit = fieldContext.getUIField().disableEdit();
             JsonNode inlineTypeFields = OBJECT_MAPPER.valueToTree(
-                UIFieldUtils.fillEntityUIMetadataList(childClassInstance, new HashSet<>(), entityContext, fullDisableEdit, entityUIMetaData));
+                UIFieldUtils.fillEntityUIMetadataList(childClassInstance, new HashSet<>(), context, fullDisableEdit, entityUIMetaData));
             if (!inlineTypeFields.isEmpty()) {
                 jsonTypeMetadata.set("inlineTypeFields", inlineTypeFields);
             }

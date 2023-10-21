@@ -19,7 +19,7 @@ import static org.homio.addon.camera.CameraConstants.ENDPOINT_TILT;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_TILT_COMMAND;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ZOOM;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ZOOM_COMMAND;
-import static org.homio.api.EntityContextSetting.SERVER_PORT;
+import static org.homio.api.ContextSetting.SERVER_PORT;
 import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 
@@ -76,9 +76,9 @@ import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.onvif.util.NettyAuthHandler;
 import org.homio.addon.camera.service.util.CameraUtils;
 import org.homio.addon.camera.service.util.CommonCameraHandler;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContext.FileLogger;
-import org.homio.api.EntityContextMedia.MediaMTXSource;
+import org.homio.api.Context;
+import org.homio.api.Context.FileLogger;
+import org.homio.api.ContextMedia.MediaMTXSource;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
@@ -114,13 +114,13 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
     public List<LowRequest> lowPriorityRequests = new ArrayList<>(0);
     private byte lowPriorityCounter = 0;
 
-    public IpCameraService(EntityContext entityContext, IpCameraEntity entity) {
-        super(entity, entityContext);
+    public IpCameraService(Context context, IpCameraEntity entity) {
+        super(entity, context);
 
-        onvifEventsLogger = getEntityContext().getFileLogger(getEntity(), "onvifEvents");
+        onvifEventsLogger = context().getFileLogger(getEntity(), "onvifEvents");
 
         onvifDeviceState = new OnvifDeviceState(entity.getEntityID());
-        onvifDeviceState.setUpdateListener(() -> entityContext.ui().updateItem(entity));
+        onvifDeviceState.setUpdateListener(() -> context.ui().updateItem(entity));
 
         onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(), entity.getUser(), entity.getPassword().asString());
 
@@ -172,8 +172,8 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
             "VideoSource/ImageTooBlurry/ImagingService",
             "VideoSource/ImageTooBlurry/RecordingService");
 
-        if (entity.getCameraType() != null && getCameraBrands(entityContext).containsKey(entity.getCameraType())) {
-            CameraBrandHandlerDescription cameraBrandHandlerDescription = getCameraBrands(entityContext).get(entity.getCameraType());
+        if (entity.getCameraType() != null && getCameraBrands(context).containsKey(entity.getCameraType())) {
+            CameraBrandHandlerDescription cameraBrandHandlerDescription = getCameraBrands(context).get(entity.getCameraType());
             this.brandHandler = cameraBrandHandlerDescription.newInstance(this);
         } else {
             this.brandHandler = new UnknownBrandHandler(this);
@@ -185,10 +185,10 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
         alarmDetected(dataValue.equals("true"), alarmEvent);
     }
 
-    public static Map<String, CameraBrandHandlerDescription> getCameraBrands(EntityContext entityContext) {
+    public static Map<String, CameraBrandHandlerDescription> getCameraBrands(Context context) {
         if (cameraBrands.isEmpty()) {
             for (Class<? extends BaseOnvifCameraBrandHandler> brandHandlerClass :
-                entityContext.getClassesWithParent(BaseOnvifCameraBrandHandler.class)) {
+                context.getClassesWithParent(BaseOnvifCameraBrandHandler.class)) {
                 cameraBrands.put(brandHandlerClass.getSimpleName(), new CameraBrandHandlerDescription(brandHandlerClass));
             }
         }
@@ -373,18 +373,22 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
         }
     }
 
-    @Override
-    protected void updateNotificationBlock() {
-        CameraEntrypoint.updateCamera(entityContext, getEntity(),
-            () -> {
-                val brand = getCameraBrands(entityContext).get(entity.getCameraType());
-                return entity.getIp() + ":" + entity.getOnvifPort() + " " + brand.getName();
-            }, new Icon("fas fa-wifi", "#0E578F"),
-            actionBuilder -> actionBuilder.addButton("RESTART", new Icon("fas fa-power-off"),
-                (entityContext, params) -> {
-                    String response = onvifDeviceState.getInitialDevices().reboot();
-                    return ActionResponseModel.showSuccess(response);
-                }));
+    public ActionResponseModel authenticate() {
+        context.ui().dialog().sendDialogRequest("cam_auth", "AUTHENTICATE",
+            (responseType, pressedButton, parameters) ->
+                fireAuth(parameters),
+            dialogModel -> {
+                dialogModel.disableKeepOnUi();
+                dialogModel.appearance(new Icon("fas fa-camera"), null);
+                List<ActionInputParameter> inputs = new ArrayList<>();
+                inputs.add(ActionInputParameter.text("user", entity.getUser(), "min:3"));
+                inputs.add(ActionInputParameter.text("password", entity.getPassword().asString()));
+
+                dialogModel.submitButton("AUTHENTICATE", button ->
+                    button.setIcon("fas fa-sign-in-alt")
+                ).group("General", inputs);
+            });
+        return null;
     }
 
     /**
@@ -443,12 +447,17 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
     }
 
     @Override
-    protected void postInitializeCamera() {
-        onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(),
-            entity.getUser(), entity.getPassword().asString());
-        urls.setSnapshotUri(brandHandler.getSnapshotUri());
-        urls.setMjpegUri(brandHandler.getMjpegUri());
-        brandHandler.postInitializeCamera(entityContext);
+    protected void updateNotificationBlock() {
+        CameraEntrypoint.updateCamera(context, getEntity(),
+            () -> {
+                val brand = getCameraBrands(context).get(entity.getCameraType());
+                return entity.getIp() + ":" + entity.getOnvifPort() + " " + brand.getName();
+            }, new Icon("fas fa-wifi", "#0E578F"),
+            actionBuilder -> actionBuilder.addButton("RESTART", new Icon("fas fa-power-off"),
+                (context, params) -> {
+                    String response = onvifDeviceState.getInitialDevices().reboot();
+                    return ActionResponseModel.showSuccess(response);
+                }));
     }
 
     @Override
@@ -570,22 +579,13 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
         }
     }
 
-    public ActionResponseModel authenticate() {
-        entityContext.ui().dialog().sendDialogRequest("cam_auth", "AUTHENTICATE",
-            (responseType, pressedButton, parameters) ->
-                fireAuth(parameters),
-            dialogModel -> {
-                dialogModel.disableKeepOnUi();
-                dialogModel.appearance(new Icon("fas fa-camera"), null);
-                List<ActionInputParameter> inputs = new ArrayList<>();
-                inputs.add(ActionInputParameter.text("user", entity.getUser(), "min:3"));
-                inputs.add(ActionInputParameter.text("password", entity.getPassword().asString()));
-
-                dialogModel.submitButton("AUTHENTICATE", button ->
-                    button.setIcon("fas fa-sign-in-alt")
-                ).group("General", inputs);
-            });
-        return null;
+    @Override
+    protected void postInitializeCamera() {
+        onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(),
+            entity.getUser(), entity.getPassword().asString());
+        urls.setSnapshotUri(brandHandler.getSnapshotUri());
+        urls.setMjpegUri(brandHandler.getMjpegUri());
+        brandHandler.postInitializeCamera(context);
     }
 
     @Override
@@ -662,7 +662,7 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
             })
             .toList();
         if (!resolutions.isEmpty()) {
-            entityContext.updateDelayed(entity, e -> {
+            context.db().updateDelayed(entity, e -> {
                 if (entity.getStreamResolutions().isEmpty()) {
                     e.setStreamResolutions(resolutions.stream()
                                                       .sorted(Comparator.comparingInt(o -> o.width + o.height))
@@ -687,27 +687,27 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
         if (rtspUri.startsWith("rtsp://") && !rtspUri.contains("@") && isNotEmpty(entity.getUser())) {
             rtspUri = "rtsp://" + entity.getUser() + ":" + entity.getPassword().asString() + "@" + rtspUri.substring("rtsp://".length());
         }
-        entityContext.media().registerMediaMTXSource(getEntityID(), new MediaMTXSource(rtspUri));
+        context.media().registerMediaMTXSource(getEntityID(), new MediaMTXSource(rtspUri));
 
         super.pollCameraConnection();
     }
 
     private void fireAuth(ObjectNode params) {
-        entityContext.bgp().runWithProgress("camera-auth").execute(progressBar -> {
+        context.bgp().runWithProgress("camera-auth").execute(progressBar -> {
             progressBar.progress(10, "Authenticate...");
             try {
                 String user = params.get("user").asText();
                 String password = params.get("password").asText();
-                IpCameraEntity entity = entityContext.getEntityRequire(getEntityID());
+                IpCameraEntity entity = context.db().getEntityRequire(getEntityID());
                 OnvifDeviceState onvifDeviceState = new OnvifDeviceState(getEntityID());
                 onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(), user, password);
                 HardwareUtils.ping(entity.getIp(), entity.getRestPort());
                 progressBar.progress(20, "Ping done");
                 entity.setInfo(onvifDeviceState, false);
-                entityContext.save(entity);
-                entityContext.ui().toastr().success("Onvif camera: " + getEntity() + " authenticated successfully");
+                context.db().save(entity);
+                context.ui().toastr().success("Onvif camera: " + getEntity() + " authenticated successfully");
             } catch (Exception ex) {
-                entityContext.ui().toastr().error("Camera fault: %s".formatted(ex.getMessage()));
+                context.ui().toastr().error("Camera fault: %s".formatted(ex.getMessage()));
             } finally {
                 progressBar.done();
             }

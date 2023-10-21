@@ -1,19 +1,18 @@
 package org.homio.app.workspace.block.core;
 
+import java.math.BigDecimal;
 import java.security.SecureRandom;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
+import java.util.function.Function;
 import lombok.Getter;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.springframework.stereotype.Component;
-
-import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
-import java.util.function.Function;
 
 @Getter
 @Component
@@ -38,8 +37,8 @@ public class Scratch3OperatorBlocks extends Scratch3ExtensionBlocks {
 
     private final Random random = new SecureRandom();
 
-    public Scratch3OperatorBlocks(EntityContext entityContext) {
-        super("operator", entityContext);
+    public Scratch3OperatorBlocks(Context context) {
+        super("operator", context);
 
         // Blocks
         blockReporter("add", this::addEvaluateEvaluate);

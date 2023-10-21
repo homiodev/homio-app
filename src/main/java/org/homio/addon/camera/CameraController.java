@@ -35,8 +35,8 @@ import org.homio.addon.camera.onvif.impl.InstarBrandHandler;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.service.BaseCameraService;
 import org.homio.addon.camera.service.IpCameraService;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextMedia.FFMPEG;
+import org.homio.api.Context;
+import org.homio.api.ContextMedia.FFMPEG;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
@@ -67,7 +67,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class CameraController {
 
-    private final EntityContext entityContext;
+    private final Context context;
     public static final Map<String, OpenStreamsContainer> camerasOpenStreams = new ConcurrentHashMap<>();
 
     @GetMapping("/devices/pan")
@@ -91,7 +91,7 @@ public class CameraController {
     @GetMapping("/presets")
     public @NotNull Collection<OptionModel> getCameraPresets(
         @RequestParam(value = "onvifCameraMenu") @NotNull String cameraEntityID) {
-        IpCameraEntity entity = entityContext.getEntityRequire(cameraEntityID);
+        IpCameraEntity entity = context.db().getEntityRequire(cameraEntityID);
         return entity.getService().getPtzPresets();
     }
 
@@ -113,7 +113,7 @@ public class CameraController {
     @SneakyThrows
     @PostMapping("/{entityID}/OnvifEvent")
     public void postOnvifEvent(@PathVariable("entityID") String entityID, HttpServletRequest req) {
-        IpCameraEntity entity = entityContext.getEntityRequire(entityID);
+        IpCameraEntity entity = context.db().getEntityRequire(entityID);
         entity.getService().getOnvifDeviceState().getEventDevices().fireEvent(req.getReader().toString());
     }
 
@@ -204,9 +204,9 @@ public class CameraController {
         // Use cached image if recent. Cameras can take > 1sec to send back a reply.
         // Example an Image item/widget may have a 1-second refresh.
         if (isUseCachedImage(handler)) {
-            sendSnapshotImage(resp, handler.getSnapshot());
+            sendSnapshotImage(resp, handler.getLastSnapshot());
         } else {
-            handler.getSnapshot();
+            handler.getLastSnapshot();
             AsyncContext asyncContext = req.startAsync(req, resp);
             asyncContext.start(() -> {
                 Instant startTime = Instant.now();
@@ -214,16 +214,49 @@ public class CameraController {
                     sleep(100);
                 } // 5 sec timeout OR a new snapshot comes back from camera
                 while (Duration.between(startTime, Instant.now()).toMillis() < 5000
-                    && Duration.between(handler.getCurrentSnapshotTime(), Instant.now()).toMillis() > 1200);
-                sendSnapshotImage(resp, handler.getSnapshot());
+                    && Duration.between(handler.getSnapshot().getCurrentSnapshotTime(), Instant.now()).toMillis() > 1200);
+                sendSnapshotImage(resp, handler.getLastSnapshot());
                 asyncContext.complete();
             });
         }
     }
 
-    private static boolean isUseCachedImage(BaseCameraService<?, ?> handler) {
-        return Objects.requireNonNull(handler.getFfmpegSnapshot()).isRunning()
-                || Duration.between(handler.getCurrentSnapshotTime(), Instant.now()).toMillis() < 1200;
+    @SneakyThrows
+    @GetMapping("/{entityID}/autofps.mjpeg")
+    public void requestCameraAutoFps(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
+        BaseCameraEntity<?, ?> entity = getEntity(entityID);
+        BaseCameraService<?, ?> service = entity.getService();
+        service.setStreamingAutoFps(true);
+        StreamOutput output = new StreamOutput(resp);
+        OpenStreams openAutoFpsStreams = getOpenStreamsContainer(entityID).openAutoFpsStreams;
+        openAutoFpsStreams.addStream(output);
+
+        try {
+            int counter = 0;
+            do {
+                try {
+                    if (service.isAlarmDetected()) {
+                        output.sendSnapshotBasedFrame(service.getLastSnapshot());
+                    } // every 8 seconds if no motion or the first three snapshots to fill any FIFO
+                    else if (counter % 8 == 0 || counter < 3) {
+                        output.sendSnapshotBasedFrame(service.getLastSnapshot());
+                    }
+                    counter++;
+                    sleep(1000);
+                } catch (Exception e) {
+                    // Never stop streaming until IOException. Occurs when browser stops the stream.
+                    openAutoFpsStreams.removeStream(output);
+                    log.debug("Now there are {} autofps.mjpeg streams open.",
+                        openAutoFpsStreams.getNumberOfStreams());
+                    return;
+                }
+            } while (true);
+        } finally {
+            if (openAutoFpsStreams.isEmpty()) {
+                service.setStreamingAutoFps(false);
+                log.debug("All autofps.mjpeg streams have stopped.");
+            }
+        }
     }
 
     @SneakyThrows
@@ -290,42 +323,23 @@ public class CameraController {
         });
     }
 
-    @SneakyThrows
-    @GetMapping("/{entityID}/autofps.mjpeg")
-    public void requestCameraAutoFps(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
-        BaseCameraEntity<?, ?> entity = getEntity(entityID);
-        BaseCameraService<?, ?> service = entity.getService();
-        service.setStreamingAutoFps(true);
-        StreamOutput output = new StreamOutput(resp);
-        OpenStreams openAutoFpsStreams = getOpenStreamsContainer(entityID).openAutoFpsStreams;
-        openAutoFpsStreams.addStream(output);
-
-        try {
-            int counter = 0;
-            do {
-                try {
-                    if (service.isAlarmDetected()) {
-                        output.sendSnapshotBasedFrame(service.getSnapshot());
-                    } // every 8 seconds if no motion or the first three snapshots to fill any FIFO
-                    else if (counter % 8 == 0 || counter < 3) {
-                        output.sendSnapshotBasedFrame(service.getSnapshot());
+    @GetMapping("/ffmpegWithProfiles")
+    public List<OptionModel> getAllFFmpegWithProfiles() {
+        List<OptionModel> list = new ArrayList<>();
+        for (BaseCameraEntity<?, ?> videoStreamEntity : context.db().findAll(BaseCameraEntity.class)) {
+            if (videoStreamEntity.getStatus() == Status.ONLINE && videoStreamEntity.isStart()) {
+                if (videoStreamEntity instanceof IpCameraEntity) {
+                    IpCameraService service = (IpCameraService) videoStreamEntity.getService();
+                    for (Profile profile : service.getOnvifDeviceState().getProfiles()) {
+                        list.add(OptionModel.of(videoStreamEntity.getEntityID() + "/" + profile.getToken(),
+                            videoStreamEntity.getTitle() + " (" + profile.getVideoEncoderConfiguration().getResolution().toString() + ")"));
                     }
-                    counter++;
-                    sleep(1000);
-                } catch (Exception e) {
-                    // Never stop streaming until IOException. Occurs when browser stops the stream.
-                    openAutoFpsStreams.removeStream(output);
-                    log.debug("Now there are {} autofps.mjpeg streams open.",
-                        openAutoFpsStreams.getNumberOfStreams());
-                    return;
+                } else {
+                    list.add(OptionModel.of(videoStreamEntity.getEntityID(), videoStreamEntity.getTitle()));
                 }
-            } while (true);
-        } finally {
-            if (openAutoFpsStreams.isEmpty()) {
-                service.setStreamingAutoFps(false);
-                log.debug("All autofps.mjpeg streams have stopped.");
             }
         }
+        return list;
     }
 
     @GetMapping("/{entityID}/instar")
@@ -357,23 +371,9 @@ public class CameraController {
         return getFile(entityID, s -> s.getFfmpegGifOutputPath().resolve(filename + ".mp4"), headers);
     }
 
-    @GetMapping("/ffmpegWithProfiles")
-    public List<OptionModel> getAllFFmpegWithProfiles() {
-        List<OptionModel> list = new ArrayList<>();
-        for (BaseCameraEntity<?, ?> videoStreamEntity : entityContext.findAll(BaseCameraEntity.class)) {
-            if (videoStreamEntity.getStatus() == Status.ONLINE && videoStreamEntity.isStart()) {
-                if (videoStreamEntity instanceof IpCameraEntity) {
-                    IpCameraService service = (IpCameraService) videoStreamEntity.getService();
-                    for (Profile profile : service.getOnvifDeviceState().getProfiles()) {
-                        list.add(OptionModel.of(videoStreamEntity.getEntityID() + "/" + profile.getToken(),
-                            videoStreamEntity.getTitle() + " (" + profile.getVideoEncoderConfiguration().getResolution().toString() + ")"));
-                    }
-                } else {
-                    list.add(OptionModel.of(videoStreamEntity.getEntityID(), videoStreamEntity.getTitle()));
-                }
-            }
-        }
-        return list;
+    private static boolean isUseCachedImage(BaseCameraService<?, ?> handler) {
+        return Objects.requireNonNull(handler.getFfmpegSnapshot()).isRunning()
+            || Duration.between(handler.getSnapshot().getCurrentSnapshotTime(), Instant.now()).toMillis() < 1200;
     }
 
     @SneakyThrows
@@ -392,7 +392,7 @@ public class CameraController {
 
     private OpenStreamsContainer getOpenStreamsContainer(String entityID) {
         return camerasOpenStreams.computeIfAbsent(entityID, s ->
-            new OpenStreamsContainer(entityContext.getEntity(entityID)));
+            new OpenStreamsContainer(context.db().getEntity(entityID)));
     }
 
     @Getter
@@ -480,7 +480,7 @@ public class CameraController {
 
     @SneakyThrows
     private @NotNull BaseCameraEntity<?, ?> getEntity(String entityID) {
-        BaseCameraEntity<?, ?> entity = entityContext.getEntityRequire(entityID);
+        BaseCameraEntity<?, ?> entity = context.db().getEntityRequire(entityID);
         if (!entity.getStatus().isOnline()) {
             throw new ServerException("Unable to run execute request. Video entity: %s has wrong status: %s".formatted(entity.getTitle(), entity.getStatus()))
                 .setStatus(HttpStatus.PRECONDITION_FAILED);
@@ -503,7 +503,7 @@ public class CameraController {
     }
 
     private @NotNull List<OptionModel> filterCameraDevices(Predicate<IpCameraService> filter) {
-        return entityContext.toOptionModels(entityContext
+        return context.toOptionModels(context.db()
             .findAll(IpCameraEntity.class)
             .stream()
             .filter(ipCameraEntity -> filter.test(ipCameraEntity.getService())).toList());

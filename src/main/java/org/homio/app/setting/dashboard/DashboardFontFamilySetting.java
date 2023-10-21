@@ -1,15 +1,14 @@
 package org.homio.app.setting.dashboard;
 
-import org.homio.api.EntityContext;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import org.homio.api.Context;
 import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPluginOptions;
 import org.homio.app.setting.CoreSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 
 public class DashboardFontFamilySetting
         implements CoreSettingPlugin<String>, SettingPluginOptions<String> {
@@ -35,7 +34,7 @@ public class DashboardFontFamilySetting
     }
 
     @Override
-    public @NotNull Collection<OptionModel> getOptions(EntityContext entityContext, JSONObject params) {
+    public @NotNull Collection<OptionModel> getOptions(Context context, JSONObject params) {
         return new ArrayList<>(
                 Arrays.asList(
                         OptionModel.of("inherit"),

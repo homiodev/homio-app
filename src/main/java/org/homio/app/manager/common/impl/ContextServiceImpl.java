@@ -9,13 +9,13 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.Getter;
 import lombok.SneakyThrows;
+import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.reflect.MethodUtils;
-import org.homio.addon.mqtt.entity.MQTTClientEntity;
-import org.homio.api.EntityContextService;
+import org.homio.api.ContextService;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.service.EntityService.ServiceInstance;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.user.UserBaseEntity;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.server.ServerHttpRequest;
@@ -27,24 +27,21 @@ import org.springframework.web.socket.server.support.WebSocketHandlerMapping;
 import org.springframework.web.socket.server.support.WebSocketHttpRequestHandler;
 
 @Log4j2
-public class EntityContextServiceImpl implements EntityContextService {
+public class ContextServiceImpl implements ContextService {
 
     public static final Map<String, Class<? extends HasEntityIdentifier>> entitySelectMap = new ConcurrentHashMap<>();
     private static final Map<String, ServiceInstance> entityToService = new ConcurrentHashMap<>();
+    private final @Getter @Accessors(fluent = true) ContextImpl context;
 
-    @Getter
-    private final EntityContextImpl entityContext;
-
-    public EntityContextServiceImpl(EntityContextImpl entityContext) {
-        this.entityContext = entityContext;
-        entityContext.bgp().executeOnExit(() -> {
+    public ContextServiceImpl(ContextImpl context) {
+        this.context = context;
+        context.bgp().executeOnExit(() ->
             entityToService.values().forEach(serviceInstance -> {
                 try {
                     serviceInstance.destroy();
                 } catch (Exception ignore) {
                 }
-            });
-        });
+            }));
     }
 
     @Override
@@ -68,12 +65,12 @@ public class EntityContextServiceImpl implements EntityContextService {
     @Override
     public void addEntityService(String entityID, ServiceInstance service) {
         entityToService.put(entityID, service);
-        entityContext.bgp().getWatchdogBgpService().addWatchDogService(entityID, service);
+        context.bgp().getWatchdogBgpService().addWatchDogService(entityID, service);
     }
 
     @Override
     public ServiceInstance removeEntityService(String entityID) {
-        entityContext.bgp().getWatchdogBgpService().removeWatchDogService(entityID);
+        context.bgp().getWatchdogBgpService().removeWatchDogService(entityID);
         return entityToService.remove(entityID);
     }
 
@@ -85,7 +82,7 @@ public class EntityContextServiceImpl implements EntityContextService {
             throw new IllegalArgumentException("Custom ws path must starts with '/cws'");
         }
         if (WS_HANDLERS.add(path)) {
-            WebSocketHandlerMapping webSocketHandlerMapping = entityContext.getBean("webSocketHandlerMapping", WebSocketHandlerMapping.class);
+            WebSocketHandlerMapping webSocketHandlerMapping = context.getBean("webSocketHandlerMapping", WebSocketHandlerMapping.class);
             WebSocketHttpRequestHandler httpHandler = new WebSocketHttpRequestHandler(webSocketHandler, new DefaultHandshakeHandler());
             httpHandler.setHandshakeInterceptors(List.of(webSocketHandler));
             MethodUtils.invokeMethod(webSocketHandlerMapping, true, "registerHandler", path, httpHandler);

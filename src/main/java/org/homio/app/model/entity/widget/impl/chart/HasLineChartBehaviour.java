@@ -1,12 +1,16 @@
 package org.homio.app.model.entity.widget.impl.chart;
 
-import org.homio.api.EntityContextWidget.ChartType;
-import org.homio.api.EntityContextWidget.Fill;
-import org.homio.api.EntityContextWidget.PointStyle;
-import org.homio.api.EntityContextWidget.Stepped;
+import org.homio.api.ContextWidget.ChartType;
+import org.homio.api.ContextWidget.Fill;
+import org.homio.api.ContextWidget.PointStyle;
+import org.homio.api.ContextWidget.Stepped;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
 

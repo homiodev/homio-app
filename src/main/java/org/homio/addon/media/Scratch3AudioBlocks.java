@@ -1,10 +1,17 @@
 package org.homio.addon.media;
 
 import com.pivovarit.function.ThrowingFunction;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.Objects;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.UnsupportedAudioFileException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.audio.AudioSink;
 import org.homio.api.audio.stream.FileAudioStream;
 import org.homio.api.service.TextToSpeechEntityService;
@@ -21,14 +28,6 @@ import org.jaudiotagger.audio.generic.GenericAudioHeader;
 import org.jaudiotagger.audio.mp3.MP3AudioHeader;
 import org.springframework.stereotype.Component;
 
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.UnsupportedAudioFileException;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Map;
-import java.util.Objects;
-
 @Log4j2
 @Getter
 @Component
@@ -42,8 +41,8 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
     // private final Scratch3Block playSourceCommand;
     private final MenuBlock.StaticMenuBlock<AudioInfo> infoMenu;
 
-    public Scratch3AudioBlocks(EntityContext entityContext, AudioService audioService) {
-        super("#87B023", entityContext, null, "audio");
+    public Scratch3AudioBlocks(Context context, AudioService audioService) {
+        super("#87B023", context, null, "audio");
         this.audioService = audioService;
         setParent("media");
 

@@ -28,13 +28,14 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextBGP;
+import org.homio.api.Context;
+import org.homio.api.ContextBGP;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.ServerException;
 import org.homio.api.state.RawType;
 import org.homio.api.state.State;
 import org.homio.api.util.CommonUtils;
+import org.homio.api.util.DataSourceUtil;
 import org.homio.api.workspace.LockManager;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.BlockType;
@@ -87,7 +88,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     private List<ThrowingRunnable> releaseListeners;
 
-    private EntityContextBGP.ThreadContext<?> threadContext;
+    private ContextBGP.ThreadContext<?> threadContext;
 
     WorkspaceBlockImpl(String id, WorkspaceTabHolder workspaceTabHolder) {
         this.id = id;
@@ -113,7 +114,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     public void logError(String message, Object... params) {
         log(Level.ERROR, message, params);
         String msg = log.getMessageFactory().newMessage(message, params).getFormattedMessage();
-        getEntityContext().ui().toastr().error(msg);
+        context().ui().toastr().error(msg);
     }
 
     @Override
@@ -127,7 +128,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     public void logWarn(String message, Object... params) {
         String msg = log.getMessageFactory().newMessage(message, params).getFormattedMessage();
         log(Level.WARN, msg);
-        getEntityContext().ui().toastr().warn(msg);
+        context().ui().toastr().warn(msg);
     }
 
     @Override
@@ -156,7 +157,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             return items.stream().map(item -> (P) Long.valueOf(item)).collect(Collectors.toList());
         } else if (BaseEntity.class.isAssignableFrom(type)) {
             return items.stream()
-                    .map(item -> (P) getEntityContext().getEntity(item))
+                        .map(item -> (P) context().db().getEntity(item))
                     .collect(Collectors.toList());
         }
         logErrorAndThrow("Unable to handle menu value with type: " + type.getSimpleName());
@@ -247,7 +248,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
                         scratch3Block.getHandler().handle(this);
                     } catch (Exception ex) {
                         String err = "Workspace " + scratch3Block.getOpcode() + " scratch error\n" + CommonUtils.getErrorMessage(ex);
-                        getEntityContext().ui().toastr().error(err, ex);
+                        context().ui().toastr().error(err, ex);
                         log.error(err);
                         return null;
                     }
@@ -273,7 +274,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
                     try {
                         return this.setValue(scratch3Block.getEvaluateHandler().handle(this));
                     } catch (Exception ex) {
-                        getEntityContext().ui().toastr().error("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
+                        context().ui().toastr().error("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
                         throw new ServerException(ex);
                     }
                 });
@@ -382,7 +383,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
                 if (array != null) {
                     PrimitiveRef primitiveRef = PrimitiveRef.values()[array.getInt(0)];
                     if (fetchValue) {
-                        return primitiveRef.fetchValue(array, getEntityContext());
+                        return primitiveRef.fetchValue(array, context());
                     } else {
                         return primitiveRef.getRef(array).toString();
                     }
@@ -506,14 +507,14 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
                 });
     }
 
-    public void setThreadContext(EntityContextBGP.ThreadContext<?> threadContext) {
+    public void setThreadContext(ContextBGP.ThreadContext<?> threadContext) {
         this.threadContext = threadContext;
         threadContext.setMetadata("workspace", id);
         threadContext.setMetadata("activeWorkspaceId", id);
     }
 
-    public EntityContext getEntityContext() {
-        return workspaceTabHolder.getEntityContext();
+    public Context context() {
+        return workspaceTabHolder.context();
     }
 
     void setOpcode(String opcode) {
@@ -553,7 +554,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         } else if (Long.class.isAssignableFrom(type)) {
             return (P) Long.valueOf(fieldValue);
         } else if (BaseEntity.class.isAssignableFrom(type)) {
-            return (P) getEntityContext().getEntity(fieldValue);
+            return (P) context().db().getEntity(fieldValue);
         }
         logErrorAndThrow("Unable to handle menu value with type: " + type.getSimpleName());
         return null; // unreachable block
@@ -564,7 +565,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         return function.apply(getScratch3Block());
     }
 
-    private EntityContextBGP.ThreadContext<?> getNearestLiveThread() {
+    private ContextBGP.ThreadContext<?> getNearestLiveThread() {
         if (this.threadContext != null) {
             return this.threadContext;
         } else if (this.parent != null) {
@@ -579,13 +580,13 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     private String sendScratch3ExtensionNotFound(String extensionId) {
         String msg = "No scratch extension <" + extensionId + "> found";
-        getEntityContext().ui().toastr().error(msg, extensionId);
+        context().ui().toastr().error(msg, extensionId);
         return msg;
     }
 
     private String sendScratch3BlockNotFound(String extensionId, String opcode) {
         String msg = "No scratch block <" + opcode + "> found in extension <" + extensionId + ">";
-        getEntityContext().ui().toastr().error("W.ERROR.SCRATCH_BLOCK_NOT_FOUND", opcode);
+        context().ui().toastr().error("W.ERROR.SCRATCH_BLOCK_NOT_FOUND", opcode);
         return msg;
     }
 
@@ -602,38 +603,34 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         INTEGER_NUM_PRIMITIVE,
         CHECKBOX_NUM_PRIMITIVE(
                 array -> array.getBoolean(1),
-                (array, entityContext) -> {
+            (array, context) -> {
                     return array.get(2);
                 }),
         COLOR_PICKER_PRIMITIVE,
         TEXT_PRIMITIVE,
         BROADCAST_PRIMITIVE(
                 array -> array.get(2),
-                (array, entityContext) -> {
+            (array, context) -> {
                     return array.get(2);
                 }),
-        VAR_PRIMITIVE /*(array -> array.get(2), (array, entityContext) -> {
-                          WorkspaceStandaloneVariableEntity entity =
-                                  entityContext.getEntity(WorkspaceStandaloneVariableEntity.PREFIX + array.get(2));
-                          if (entity == null) {
-                              throw new IllegalArgumentException("Unable to find variable with name: " + array.get(1));
-                          }
-                          return StringUtils.defaultIfEmpty(String.valueOf(entity.getValue()), "0");
-                      })*/,
+        VAR_PRIMITIVE(array -> array.get(2), (array, context) -> {
+            String varEntityID = DataSourceUtil.getSelection(array.get(2).toString()).getEntityValue();
+            return State.of(context.var().get(varEntityID));
+        }),
         LIST_PRIMITIVE,
         FONT_AWESOME_PRIMITIVE;
 
         private Function<JSONArray, Object> refFn = array -> array.getString(1);
 
-        private BiFunction<JSONArray, EntityContext, Object> valueFn =
-                (array, entityContext) -> array.getString(1);
+        private BiFunction<JSONArray, Context, Object> valueFn =
+            (array, context) -> array.getString(1);
 
         public Object getRef(JSONArray array) {
             return refFn.apply(array);
         }
 
-        public Object fetchValue(JSONArray array, EntityContext entityContext) {
-            return valueFn.apply(array, entityContext);
+        public Object fetchValue(JSONArray array, Context context) {
+            return valueFn.apply(array, context);
         }
     }
 }

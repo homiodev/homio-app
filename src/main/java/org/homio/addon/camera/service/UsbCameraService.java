@@ -2,7 +2,7 @@ package org.homio.addon.camera.service;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
-import static org.homio.api.EntityContextMedia.FFMPEGFormat.RE;
+import static org.homio.api.ContextMedia.FFMPEGFormat.RE;
 import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 
 import java.awt.Dimension;
@@ -15,16 +15,14 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import lombok.Getter;
-import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
-import org.apache.logging.log4j.Level;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.ConfigurationException;
 import org.homio.addon.camera.entity.UsbCameraEntity;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextMedia.FFMPEG;
-import org.homio.api.EntityContextMedia.MediaMTXSource;
-import org.homio.api.EntityContextMedia.VideoInputDevice;
+import org.homio.api.Context;
+import org.homio.api.ContextMedia.FFMPEG;
+import org.homio.api.ContextMedia.MediaMTXSource;
+import org.homio.api.ContextMedia.VideoInputDevice;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.util.CommonUtils;
@@ -38,13 +36,13 @@ public class UsbCameraService extends BaseCameraService<UsbCameraEntity, UsbCame
     private FFMPEG ffmpegReStream;
     private @Nullable VideoInputDevice input;
 
-    public UsbCameraService(UsbCameraEntity entity, EntityContext entityContext) {
-        super(entity, entityContext);
+    public UsbCameraService(UsbCameraEntity entity, Context context) {
+        super(entity, context);
     }
 
     @Override
     protected void pollCameraConnection() throws Exception {
-        Set<String> aliveVideoDevices = entityContext.media().getVideoDevices();
+        Set<String> aliveVideoDevices = context.media().getVideoDevices();
         if (!aliveVideoDevices.contains(entity.getIeeeAddress())) {
             throw new ConfigurationException("W.ERROR.USB_CAMERA_NOT_AVAILABLE");
         }
@@ -96,7 +94,7 @@ public class UsbCameraService extends BaseCameraService<UsbCameraEntity, UsbCame
 
     @Override
     protected void updateNotificationBlock() {
-        CameraEntrypoint.updateCamera(entityContext, getEntity(),
+        CameraEntrypoint.updateCamera(context, getEntity(),
                 null,
                 new Icon("fas fa-users-viewfinder", "#669618"),
                 null);
@@ -106,10 +104,10 @@ public class UsbCameraService extends BaseCameraService<UsbCameraEntity, UsbCame
     protected void postInitializeCamera() {
         urls.setRtspUri("rtsp://127.0.0.1:%s/%s".formatted(MediaMTXEntity.RTSP_PORT, getEntityID()));
         String ieeeAddress = Objects.requireNonNull(entity.getIeeeAddress());
-        input = entityContext.media().createVideoInputDevice(ieeeAddress);
+        input = context.media().createVideoInputDevice(ieeeAddress);
         if (input.getResolutions().length > 0) {
             try {
-                entityContext.updateDelayed(entity, e -> {
+                context.db().updateDelayed(entity, e -> {
                     if (entity.getStreamResolutions().isEmpty()) {
                         e.setStreamResolutions(String.join(LIST_DELIMITER, input.getResolutionSet()));
                     }
@@ -159,14 +157,14 @@ public class UsbCameraService extends BaseCameraService<UsbCameraEntity, UsbCame
         }*/
 
         if (ffmpegReStream == null || !ffmpegReStream.getIsAlive()) {
-            ffmpegReStream = entityContext.media().buildFFMPEG(getEntityID(), "TEE", this,
+            ffmpegReStream = context.media().buildFFMPEG(getEntityID(), "TEE", this,
                 RE, IS_OS_LINUX ? "-f v4l2" : "-f dshow", url,
                 String.join(" ", outputParams),
                 getUdpUrl() + "?pkt_size=1316",
                 "", "");
             ffmpegReStream.startConverting();
         }
-        entityContext.media().registerMediaMTXSource(getEntityID(), new MediaMTXSource(getUdpUrl()));
+        context.media().registerMediaMTXSource(getEntityID(), new MediaMTXSource(getUdpUrl()));
     }
 
     @Override

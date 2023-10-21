@@ -1,42 +1,43 @@
 package org.homio.app.console;
 
+import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
+
+import java.util.List;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.homio.api.EntityContext;
+import lombok.experimental.Accessors;
+import org.homio.api.Context;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.console.ConsolePluginLines;
 import org.homio.app.LogService;
-
-import java.util.List;
-
-import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
+import org.jetbrains.annotations.NotNull;
 
 @RequiredArgsConstructor
 public class LogsConsolePlugin implements ConsolePluginLines {
 
     @Getter
-    private final EntityContext entityContext;
+    private final @Accessors(fluent = true) Context context;
     private final LogService logService;
     private final String name;
 
     @Override
     public List<String> getValue() {
-        entityContext.assertAccess(LOG_RESOURCE);
+        context.assertAccess(LOG_RESOURCE);
         return this.logService.getLogs(name);
     }
 
     @Override
-    public ConsolePlugin.RenderType getRenderType() {
+    public ConsolePlugin.@NotNull RenderType getRenderType() {
         return RenderType.lines;
     }
 
     @Override
     public boolean isEnabled() {
-        return entityContext.accessEnabled(LOG_RESOURCE);
+        return context.accessEnabled(LOG_RESOURCE);
     }
 
     @Override
-    public String getName() {
+    public @NotNull String getName() {
         return "logs";
     }
 }

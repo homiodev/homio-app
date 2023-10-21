@@ -1,8 +1,8 @@
 package org.homio.app.builder.widget.hasBuilder;
 
-import org.homio.api.EntityContextWidget.HasAlign;
-import org.homio.api.EntityContextWidget.HorizontalAlign;
-import org.homio.api.EntityContextWidget.VerticalAlign;
+import org.homio.api.ContextWidget.HasAlign;
+import org.homio.api.ContextWidget.HorizontalAlign;
+import org.homio.api.ContextWidget.VerticalAlign;
 
 public interface HasAlignBuilder<T extends org.homio.app.model.entity.widget.attributes.HasAlign, R>
         extends HasAlign<R> {

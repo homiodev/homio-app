@@ -20,8 +20,8 @@ import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.apache.commons.lang3.tuple.Pair;
-import org.homio.api.EntityContextVar.TransformVariableSource;
-import org.homio.api.EntityContextVar.VariableType;
+import org.homio.api.ContextVar.TransformVariableSource;
+import org.homio.api.ContextVar.VariableType;
 import org.homio.api.entity.widget.AggregationType;
 import org.homio.api.entity.widget.PeriodRequest;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
@@ -33,14 +33,13 @@ import org.homio.api.storage.SourceHistory;
 import org.homio.api.storage.SourceHistoryItem;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.api.util.DataSourceUtil.SelectionSource;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.var.WorkspaceGroup;
 import org.homio.app.model.var.WorkspaceVariable;
 import org.homio.app.rest.widget.ChartDataset;
 import org.homio.app.rest.widget.EvaluateDatesAndValues;
 import org.homio.app.rest.widget.WidgetChartsController;
 import org.homio.app.rest.widget.WidgetChartsController.TimeSeriesChartData;
-import org.homio.app.utils.OptionUtil;
 import org.json.JSONObject;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -55,7 +54,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class VariableController {
 
-    private final EntityContextImpl entityContext;
+    private final ContextImpl context;
 
     @GetMapping("/translateFunctions")
     public TranslateLegend getTranslateFunctions() {
@@ -93,7 +92,7 @@ public class VariableController {
 
     @PostMapping("/{group}/transform")
     public void createTransformVariable(@PathVariable("group") String group, @RequestBody TransformVarRequest request) {
-        entityContext.var().createTransformVariable(group, null, request.name, VariableType.Float,
+        context.var().createTransformVariable(group, null, request.name, VariableType.Float,
             builder -> builder
                 .setTransformCode(request.getCode())
                 .setSourceVariables(request.getSources() == null ? List.of() : request.getSources())
@@ -106,32 +105,32 @@ public class VariableController {
 
     @PostMapping("/evaluate")
     public Object evaluate(@RequestBody EvaluateRequest request) {
-        return entityContext.var().evaluate(request.code, request.sources);
+        return context.var().evaluate(request.code, request.sources);
     }
 
     // show all read/write variables
     @GetMapping("/options")
     public List<OptionModel> getWorkspaceVariableValues() {
-        return entityContext.toOptionModels(getAllVariables());
+        return context.toOptionModels(getAllVariables());
     }
 
     @GetMapping("/{type}")
     public List<OptionModel> getWorkspaceVariables(@PathVariable("type") String type) {
-        return OptionModel.entityList(entityContext.findAllByPrefix(type));
+        return OptionModel.entityList(context.db().findAllByPrefix(type));
     }
 
     @PostMapping("/source/history/info")
     public SourceHistory getSourceHistory(@RequestBody SourceHistoryRequest request) {
         SelectionSource selection = DataSourceUtil.getSelection(request.dataSource);
-        HasGetStatusValue source = selection.getValue(entityContext);
-        val historyRequest = new GetStatusValueRequest(entityContext, request.dynamicParameters);
+        HasGetStatusValue source = selection.getValue(context);
+        val historyRequest = new GetStatusValueRequest(context, request.dynamicParameters);
         return source.getSourceHistory(historyRequest);
     }
 
     @PostMapping("/source/chart")
     public WidgetChartsController.TimeSeriesChartData<ChartDataset> getSourceChart(@RequestBody SourceHistoryChartRequest request) {
         SelectionSource selection = DataSourceUtil.getSelection(request.dataSource);
-        HasTimeValueSeries source = selection.getValue(entityContext);
+        HasTimeValueSeries source = selection.getValue(context);
         if(request.minutes == -1) {
             return getSourceChartSnapshot(source, request);
         }
@@ -152,7 +151,7 @@ public class VariableController {
                 sortAsc = false;
             }
         }
-        PeriodRequest periodRequest = new PeriodRequest(entityContext, from, to).setParameters(request.getDynamicParameters());
+        PeriodRequest periodRequest = new PeriodRequest(context, from, to).setParameters(request.getDynamicParameters());
         periodRequest.setMinItemsCount(request.minItems);
         periodRequest.setForward(request.forward);
         periodRequest.setSortAsc(sortAsc);
@@ -169,9 +168,18 @@ public class VariableController {
         return chartData;
     }
 
+    @PostMapping("/source/history/items")
+    public List<SourceHistoryItem> getSourceHistoryItems(@RequestBody SourceHistoryRequest request) {
+        SelectionSource selection = DataSourceUtil.getSelection(request.dataSource);
+        HasGetStatusValue source = selection.getValue(context);
+
+        val historyRequest = new GetStatusValueRequest(context, request.dynamicParameters);
+        return source.getSourceHistoryItems(historyRequest, request.getFrom(), request.getCount());
+    }
+
     private TimeSeriesChartData<ChartDataset> getSourceChartSnapshot(HasTimeValueSeries source, SourceHistoryChartRequest request) {
         WidgetChartsController.TimeSeriesChartData<ChartDataset> chartData = new TimeSeriesChartData<>();
-        PeriodRequest periodRequest = new PeriodRequest(entityContext, null, null).setParameters(request.getDynamicParameters());
+        PeriodRequest periodRequest = new PeriodRequest(context, null, null).setParameters(request.getDynamicParameters());
 
         val timeSeries = source.getMultipleTimeValueSeries(periodRequest);
         List<Object[]> rawValues = timeSeries.values().iterator().next();
@@ -195,17 +203,8 @@ public class VariableController {
         return chartData;
     }
 
-    @PostMapping("/source/history/items")
-    public List<SourceHistoryItem> getSourceHistoryItems(@RequestBody SourceHistoryRequest request) {
-        SelectionSource selection = DataSourceUtil.getSelection(request.dataSource);
-        HasGetStatusValue source = selection.getValue(entityContext);
-
-        val historyRequest = new GetStatusValueRequest(entityContext, request.dynamicParameters);
-        return source.getSourceHistoryItems(historyRequest, request.getFrom(), request.getCount());
-    }
-
     private List<WorkspaceVariable> getAllVariables() {
-        return entityContext.findAll(WorkspaceVariable.class)
+        return context.db().findAll(WorkspaceVariable.class)
                             .stream()
                             .filter(s -> !s.getWorkspaceGroup().getEntityID().equals(WorkspaceGroup.PREFIX + "broadcasts"))
                             .collect(Collectors.toList());

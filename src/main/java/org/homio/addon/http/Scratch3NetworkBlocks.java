@@ -1,20 +1,52 @@
 package org.homio.addon.http;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.springframework.http.HttpHeaders.ACCEPT;
+import static org.springframework.http.HttpHeaders.ACCEPT_ENCODING;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
+import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
+import static org.springframework.http.HttpHeaders.HOST;
+import static org.springframework.http.HttpHeaders.LOCATION;
+import static org.springframework.http.HttpHeaders.USER_AGENT;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
+import static org.springframework.http.MediaType.TEXT_HTML_VALUE;
+import static org.springframework.http.MediaType.TEXT_PLAIN_VALUE;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.pivovarit.function.ThrowingBiConsumer;
-import lombok.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
+import java.net.SocketException;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.Map.Entry;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.SneakyThrows;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.*;
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpHead;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.state.JsonType;
 import org.homio.api.state.RawType;
@@ -35,25 +67,15 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 
-import java.net.*;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
-import java.util.Map.Entry;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.springframework.http.HttpHeaders.*;
-import static org.springframework.http.MediaType.*;
-
 @Getter
 @Component
 public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
 
     private final DatagramSocket udpSocket = new DatagramSocket();
 
-    public Scratch3NetworkBlocks(EntityContext entityContext)
+    public Scratch3NetworkBlocks(Context context)
             throws SocketException {
-        super("#595F4B", entityContext, null, "net");
+        super("#595F4B", context, null, "net");
         this.udpSocket.setBroadcast(true);
 
         blockCommand(10, "request", "HTTP [URL] | [SETTING]", this::httpRequestHandler, block -> {

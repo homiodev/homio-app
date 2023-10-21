@@ -8,9 +8,11 @@ import static org.homio.api.ui.field.UIFieldType.HTML;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import jakarta.persistence.Entity;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -20,28 +22,40 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
+import org.homio.addon.imou.internal.cloud.ImouAPI.CameraProfile;
 import org.homio.addon.imou.internal.cloud.dto.ImouDeviceDTO;
 import org.homio.addon.imou.internal.cloud.dto.ImouDeviceDTO.ImouChannel;
 import org.homio.addon.imou.service.ImouDeviceService;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.version.HasFirmwareVersion;
+import org.homio.api.exception.ServerException;
+import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.FileContentType;
+import org.homio.api.model.FileModel;
+import org.homio.api.model.Icon;
 import org.homio.api.model.device.ConfigDeviceDefinition;
 import org.homio.api.model.device.ConfigDeviceDefinitionService;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.service.EntityService;
+import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.UISidebarMenu.TopSidebarMenu;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.action.UIActionButton;
+import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.color.UIFieldColorBgRef;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
+import org.homio.api.ui.field.image.UIFieldImage;
 import org.homio.api.widget.template.WidgetDefinition;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONObject;
 
 @Getter
 @Setter
@@ -65,6 +79,8 @@ public final class ImouDeviceEntity extends DeviceBaseEntity
     DeviceEndpointsBehaviourContract,
     HasFirmwareVersion,
     EntityService<ImouDeviceService, ImouDeviceEntity>, HasEntityLog {
+
+    public static final String PREFIX = "imou";
 
     @Override
     public @NotNull String getDeviceFullName() {
@@ -96,6 +112,18 @@ public final class ImouDeviceEntity extends DeviceBaseEntity
     @UIFieldGroup("GENERAL")
     public @Nullable String getIeeeAddress() {
         return super.getIeeeAddress();
+    }
+
+    @UIField(order = 25)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    @UIFieldGroup("GENERAL")
+    @UIFieldSlider(min = 30, max = 120)
+    public int getFetchDataInterval() {
+        return getJsonData("fdi", 60);
+    }
+
+    public void setFetchDataInterval(int value) {
+        setJsonData("fdi", value);
     }
 
     @UIField(order = 1, hideOnEmpty = true)
@@ -141,6 +169,17 @@ public final class ImouDeviceEntity extends DeviceBaseEntity
         return getJsonData("ch", -1);
     }
 
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @UIField(order = 500, hideInEdit = true)
+    @UIFieldImage
+    @UIActionButton(name = "refresh", icon = "fas fa-sync",
+                    actionHandler = ImouDeviceEntity.UpdateSnapshotActionHandler.class)
+    @UIActionButton(name = "get", icon = "fas fa-camera",
+                    actionHandler = ImouDeviceEntity.GetSnapshotActionHandler.class)
+    public byte[] getSnapshot() {
+        return optService().map(ImouDeviceService::getSnapshot).orElse(null);
+    }
+
     public void setIcon(String value) {
         setJsonData("icon", value);
     }
@@ -160,6 +199,17 @@ public final class ImouDeviceEntity extends DeviceBaseEntity
         return "Generic Tuya Device";
     }
 
+    @UIContextMenuAction(value = "ALARM_MESSAGES", icon = "fas fa-person-circle-exclamation")
+    public ActionResponseModel retrieveAlarmMessages() {
+        return ActionResponseModel.showJson("Alarms", getService().getApi().getAlarmMessages(getIeeeAddress()));
+    }
+
+    @UIContextMenuAction(value = "BIND_DEVICE_LIVE", icon = "fas fa-life-ring")
+    public ActionResponseModel retrieveBindDeviceLive() {
+        return ActionResponseModel.showJson("Live streams",
+            getService().getApi().getBindDeviceLive(getIeeeAddress(), CameraProfile.HD));
+    }
+
     @SneakyThrows
     public boolean tryUpdateDeviceEntity(ImouDeviceDTO device) {
         long hashCode = getEntityHashCode();
@@ -174,9 +224,6 @@ public final class ImouDeviceEntity extends DeviceBaseEntity
         if (capabilities.contains("WLM")) {
             capabilities.add("Linkagewhitelight");
         }
-        if (capabilities.contains("WLAN")) {
-            capabilities.add("pushNotifications");
-        }
 
         setJsonDataList("cap", capabilities);
         setJsonData("ch", device.channelNum);
@@ -189,7 +236,7 @@ public final class ImouDeviceEntity extends DeviceBaseEntity
     @Override
     public long getEntityServiceHashCode() {
         return Objects.hashCode(getIeeeAddress()) +
-            getJsonDataHashCode("cat", "brand", "tls", "model", "cap", "cat", "ch", "fv", "channels");
+            getJsonDataHashCode("cat", "brand", "fdi", "tls", "model", "cap", "cat", "ch", "fv", "channels");
     }
 
     @Override
@@ -197,13 +244,33 @@ public final class ImouDeviceEntity extends DeviceBaseEntity
         return getJsonData("fv");
     }
 
-    @Override
-    protected @NotNull String getDevicePrefix() {
-        return "imou-device";
+    public boolean isCompactMode() {
+        return context().setting().getValue(ImouEntityCompactModeSetting.class);
     }
 
-    public boolean isCompactMode() {
-        return getEntityContext().setting().getValue(ImouEntityCompactModeSetting.class);
+    @Override
+    public void assembleActions(UIInputBuilder uiInputBuilder) {
+        @NotNull List<ConfigDeviceDefinition> configDeviceDefinitions = getService().findDevices();
+        List<WidgetDefinition> widgetDefinitions = CONFIG_DEVICE_SERVICE.getDeviceWidgets(configDeviceDefinitions);
+        uiInputBuilder.context().widget().createTemplateWidgetActions(uiInputBuilder, this, widgetDefinitions);
+
+        optService().ifPresent(service -> {
+            if (getCapabilities().contains("WLAN")) {
+                uiInputBuilder.addOpenDialogSelectableButton("NOTIFICATION_CALLBACK_URL", new Icon("fas fa-link", "#6259B8"), null,
+                    (context, params) -> {
+                        String callbackUrl = params.getString("notificationCallbackUrl");
+
+                        if (!Objects.equals(callbackUrl, service.getCallbackUrl())) {
+                            service.updateCallbackUrl(callbackUrl);
+                        }
+                        return null;
+                    }).editDialog(dialogBuilder -> {
+                    dialogBuilder.setTitle("NOTIFICATION_CALLBACK_URL", new Icon("fas fa-link", "#6259B8"));
+                    dialogBuilder.addFlex("main", flex ->
+                        flex.addTextInput("notificationCallbackUrl", service.getCallbackUrl(), false));
+                });
+            }
+        });
     }
 
     @JsonIgnore
@@ -225,10 +292,8 @@ public final class ImouDeviceEntity extends DeviceBaseEntity
     }
 
     @Override
-    public void assembleActions(UIInputBuilder uiInputBuilder) {
-        @NotNull List<ConfigDeviceDefinition> configDeviceDefinitions = getService().findDevices();
-        List<WidgetDefinition> widgetDefinitions = CONFIG_DEVICE_SERVICE.getDeviceWidgets(configDeviceDefinitions);
-        uiInputBuilder.getEntityContext().widget().createTemplateWidgetActions(uiInputBuilder, this, widgetDefinitions);
+    public @NotNull ImouDeviceService createService(@NotNull Context context) {
+        return new ImouDeviceService(context, this);
     }
 
     @Override
@@ -237,8 +302,8 @@ public final class ImouDeviceEntity extends DeviceBaseEntity
     }
 
     @Override
-    public @NotNull ImouDeviceService createService(@NotNull EntityContext entityContext) {
-        return new ImouDeviceService(entityContext, this);
+    protected @NotNull String getDevicePrefix() {
+        return PREFIX;
     }
 
     @Override
@@ -247,5 +312,35 @@ public final class ImouDeviceEntity extends DeviceBaseEntity
             return "https://images.imoucn.com/%s".formatted(getJsonData("icon"));
         }
         return null;
+    }
+
+    public static class UpdateSnapshotActionHandler implements UIActionHandler {
+
+        @Override
+        public ActionResponseModel handleAction(Context context, JSONObject params) {
+            ImouDeviceEntity entity = context.db().getEntityRequire(params.getString("entityID"));
+            if (!entity.getStatus().isOnline()) {
+                throw new ServerException("W.ERROR.OFFLINE");
+            }
+            ImouDeviceService service = entity.getService();
+            service.takeSnapshot();
+            return ActionResponseModel.fired();
+        }
+    }
+
+    public static class GetSnapshotActionHandler implements UIActionHandler {
+
+        @Override
+        public ActionResponseModel handleAction(Context context, JSONObject params) {
+            ImouDeviceEntity entity = context.db().getEntityRequire(params.getString("entityID"));
+            if (!entity.getStatus().isOnline()) {
+                throw new ServerException("W.ERROR.OFFLINE");
+            }
+            ImouDeviceService service = entity.getService();
+            byte[] image = entity.getService().getSnapshot();
+            String encodedValue = "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(image);
+            FileModel snapshot = new FileModel("Snapshot", encodedValue, FileContentType.image);
+            return ActionResponseModel.showFile(snapshot);
+        }
     }
 }

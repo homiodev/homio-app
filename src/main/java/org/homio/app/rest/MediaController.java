@@ -3,7 +3,7 @@ package org.homio.app.rest;
 import static java.lang.String.format;
 import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
-import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
+import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION;
 import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
 import static org.springframework.http.HttpHeaders.ETAG;
 import static org.springframework.http.HttpHeaders.LAST_MODIFIED;
@@ -41,7 +41,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.entity.CameraPlaybackStorage;
 import org.homio.addon.camera.entity.CameraPlaybackStorage.DownloadFile;
 import org.homio.api.AddonEntrypoint;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.audio.AudioSink;
 import org.homio.api.audio.SelfContainedAudioSourceContainer;
 import org.homio.api.exception.NotFoundException;
@@ -81,13 +81,11 @@ import org.springframework.web.context.request.WebRequest;
 @RequiredArgsConstructor
 public class MediaController {
 
-   // private final Pattern STATIC_CONTENT = Pattern.compile("jpg|m3u8|png");
-
     private static final Cache<String, MediaPlayContext> fileIdToMedia = CacheBuilder
         .newBuilder().expireAfterAccess(Duration.ofHours(24)).build();
 
     private final ImageService imageService;
-    private final EntityContext entityContext;
+    private final Context context;
     private final AudioService audioService;
     private final FfmpegHardwareRepository ffmpegHardwareRepository;
     private final AddonService addonService;
@@ -139,8 +137,8 @@ public class MediaController {
         @PathVariable(value = "from") @DateTimeFormat(pattern = "yyyyMMdd") Date from,
         @PathVariable(value = "to") @DateTimeFormat(pattern = "yyyyMMdd") Date to)
         throws Exception {
-        CameraPlaybackStorage entity = entityContext.getEntityRequire(entityID);
-        return entity.getAvailableDaysPlaybacks(entityContext, "main", from, to);
+        CameraPlaybackStorage entity = context.db().getEntityRequire(entityID);
+        return entity.getAvailableDaysPlaybacks(context, "main", from, to);
     }
 
     @GetMapping("/video/playback/files/{entityID}/{date}")
@@ -148,8 +146,8 @@ public class MediaController {
         @PathVariable("entityID") String entityID,
         @PathVariable(value = "date") @DateTimeFormat(pattern = "yyyyMMdd") Date date)
         throws Exception {
-        CameraPlaybackStorage entity = entityContext.getEntityRequire(entityID);
-        return entity.getPlaybackFiles(entityContext, "main", date, new Date(date.getTime() + TimeUnit.DAYS.toMillis(1) - 1));
+        CameraPlaybackStorage entity = context.db().getEntityRequire(entityID);
+        return entity.getPlaybackFiles(context, "main", date, new Date(date.getTime() + TimeUnit.DAYS.toMillis(1) - 1));
     }
 
     @PostMapping("/video/playback/{entityID}/thumbnails/base64")
@@ -192,7 +190,7 @@ public class MediaController {
         @PathVariable("fileId") String fileId,
         @RequestHeader HttpHeaders headers)
         throws IOException {
-        CameraPlaybackStorage entity = entityContext.getEntityRequire(entityID);
+        CameraPlaybackStorage entity = context.db().getEntityRequire(entityID);
         String ext = StringUtils.defaultIfEmpty(FilenameUtils.getExtension(fileId), "mp4");
         Path path = CommonUtils.getMediaPath().resolve("camera").resolve(entityID).resolve("playback").resolve(fileId + "." + ext);
 
@@ -205,9 +203,10 @@ public class MediaController {
                                    .onFailure(event ->
                                        log.error("Unable to download playback file: <{}>. <{}>. Msg: <{}>", entity.getTitle(), fileId,
                                            getErrorMessage(event.getException())))
-                                   .get(context -> {
-                                       log.info("Reply <{}>. Download playback video file <{}>. <{}>", context.getAttemptCount(), entity.getTitle(), fileId);
-                                       return entity.downloadPlaybackFile(entityContext, "main", fileId, path);
+                                   .get(executionContext -> {
+                                       log.info("Reply <{}>. Download playback video file <{}>. <{}>",
+                                           executionContext.getAttemptCount(), entity.getTitle(), fileId);
+                                       return entity.downloadPlaybackFile(context, "main", fileId, path);
                                    });
         }
 
@@ -314,7 +313,7 @@ public class MediaController {
 
     @SneakyThrows
     private Path getPlaybackThumbnailPath(String entityID, String fileId, String size) {
-        CameraPlaybackStorage entity = entityContext.getEntityRequire(entityID);
+        CameraPlaybackStorage entity = context.db().getEntityRequire(entityID);
         Path path = CommonUtils.getMediaPath().resolve("camera").resolve(entityID).resolve("playback")
                                .resolve(fileId + "_" + size.replaceAll(":", "x") + ".jpg");
         if (Files.exists(path) && Files.size(path) > 0) {
@@ -323,7 +322,7 @@ public class MediaController {
         CommonUtils.createDirectoriesIfNotExists(path.getParent());
         Files.deleteIfExists(path);
 
-        URI uri = entity.getPlaybackVideoURL(entityContext, fileId);
+        URI uri = entity.getPlaybackVideoURL(context, fileId);
         String uriStr = uri.getScheme().equals("file") ? Paths.get(uri).toString() : uri.toString();
 
         Fallback<Path> fallback = Fallback.of((Path) null);

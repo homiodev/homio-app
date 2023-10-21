@@ -4,8 +4,13 @@ import static java.util.Objects.requireNonNull;
 import static org.homio.addon.imou.ImouEntrypoint.IMOU_COLOR;
 import static org.homio.api.model.Status.ERROR;
 import static org.homio.api.model.Status.OFFLINE;
+import static org.homio.api.model.Status.ONLINE;
+import static org.homio.api.model.Status.SLEEPING;
+import static org.homio.api.model.Status.UNKNOWN;
+import static org.homio.api.model.Status.UPDATING;
 import static org.homio.api.model.endpoint.DeviceEndpoint.ENDPOINT_DEVICE_STATUS;
 
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -23,13 +28,14 @@ import org.homio.addon.imou.ImouDeviceEndpoint;
 import org.homio.addon.imou.ImouDeviceEntity;
 import org.homio.addon.imou.ImouProjectEntity;
 import org.homio.addon.imou.internal.cloud.ImouAPI;
+import org.homio.addon.imou.internal.cloud.dto.ImouDeviceAlarmMessageDTO.Alarm;
 import org.homio.addon.imou.internal.cloud.dto.ImouDeviceCallbackUrlDTO;
 import org.homio.addon.imou.internal.cloud.dto.ImouDeviceNightVisionModeDTO;
-import org.homio.addon.imou.internal.cloud.dto.ImouDeviceOnlineStatusDTO;
 import org.homio.addon.imou.internal.cloud.dto.ImouDevicePowerInfoDTO;
+import org.homio.addon.imou.internal.cloud.dto.ImouDeviceStatusDTO;
 import org.homio.addon.imou.internal.cloud.dto.ImouSDCardDTO.ImouSDCardStatusDTO;
-import org.homio.api.EntityContext;
-import org.homio.api.model.ActionResponseModel;
+import org.homio.api.Context;
+import org.homio.api.ContextBGP.ThreadContext;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
@@ -43,7 +49,7 @@ import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.UI.Color;
+import org.homio.api.ui.UI.Image.Snapshot;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
@@ -61,63 +67,33 @@ public class ImouDeviceService extends ServiceInstance<ImouDeviceEntity> {
     @Getter
     private final @NotNull Map<String, ImouDeviceEndpoint> endpoints = new ConcurrentHashMap<>();
     private final String deviceId;
-    private final ImouAPI api;
-    //private @Nullable ThreadContext<Void> pollingJob;
-    //private @Nullable ThreadContext<Void> reconnectFuture;
+    private final @NotNull @Getter ImouAPI api;
     private List<ConfigDeviceDefinition> models;
+    private final Snapshot snapshot;
+    private boolean initialized;
+    private ThreadContext<Void> deviceStatusCheck;
+    private int order = 100;
+    private ImouDeviceEndpoint statusEndpoint;
 
-    public ImouDeviceService(EntityContext entityContext, ImouDeviceEntity entity) {
-        super(entityContext, entity, true);
+    public ImouDeviceService(Context context, ImouDeviceEntity entity) {
+        super(context, entity, true);
         this.deviceId = entity.getIeeeAddress();
-        this.api = entityContext.getBean(ImouAPI.class);
+        this.api = context.getBean(ImouAPI.class);
+        this.snapshot = new Snapshot(entity.getFetchDataInterval());
     }
-
-    /*@Override
-    public void processDeviceStatus(String cid, @NotNull Map<Integer, Object> deviceStatus) {
-        log.debug("[{}]: received status message '{}'", entity.getEntityID(), deviceStatus);
-
-        if (deviceStatus.isEmpty()) {
-            // if status is empty -> need to use control method to request device status
-            Map<Integer, @Nullable Object> commandRequest = new HashMap<>();
-            endpoints.values().forEach(p -> {
-                if (p.getDp() != 0) {
-                    commandRequest.put(p.getDp(), null);
-                }
-            });
-            endpoints.values().stream().filter(p -> p.getDp2() != null).forEach(p -> commandRequest.put(p.getDp2(), null));
-
-            imouDeviceCommunicator.ifPresent(c -> c.sendCommand(commandRequest));
-        } else {
-            deviceStatus.forEach(this::externalUpdate);
-        }
-    }*/
 
     @Override
     public void destroy() {
-        //closeAll();
+        if (deviceStatusCheck != null) {
+            deviceStatusCheck.cancel();
+        }
     }
-
-    /*private void closeAll() {
-        imouDeviceCommunicator.ifPresent(ImouDeviceCommunicator::dispose);
-        imouDeviceCommunicator = Optional.empty();
-        if (EntityContextBGP.cancel(reconnectFuture)) {
-            reconnectFuture = null;
-        }
-        if (EntityContextBGP.cancel(pollingJob)) {
-            pollingJob = null;
-        }
-    }*/
 
     @Override
     @SneakyThrows
     public void initialize() {
-        // this.closeAll(); // stop all before initialize
         createOrUpdateDeviceGroup();
         try {
-            if (StringUtils.isEmpty(entity.getIeeeAddress())) {
-                setEntityStatus(ERROR, "Empty device id");
-                return;
-            }
             // check if we have endpoints and add them if available
             if (endpoints.isEmpty()) {
                 List<String> capabilities = entity.getCapabilities();
@@ -129,83 +105,119 @@ public class ImouDeviceService extends ServiceInstance<ImouDeviceEntity> {
                     setEntityStatus(OFFLINE, "No endpoints found");
                 }
             }
+
+            this.deviceStatusCheck =
+                context.bgp().builder("imou-fetch-data-" + entityID)
+                       .cancelOnError(false)
+                       .intervalWithDelay(Duration.ofSeconds(entity.getFetchDataInterval()))
+                       .execute(() -> {
+                           if (!entity.getStatus().isOnline()) {
+                               statusEndpoint.readValue();
+                           } else {
+                               for (ImouDeviceEndpoint endpoint : endpoints.values()) {
+                                   if (endpoint.getReader() != null) {
+                                       endpoint.readValue();
+                                   }
+                               }
+                           }
+                       });
         } catch (Exception ex) {
             setEntityStatus(ERROR, CommonUtils.getErrorMessage(ex));
             log.error("[{}]: Error during initialize imou device: {}", entity.getEntityID(), CommonUtils.getErrorMessage(ex));
         }
     }
 
+    public String getCallbackUrl() {
+        return api.getMessageCallback(deviceId).getCallbackUrl();
+    }
+
+    public void updateCallbackUrl(String callbackUrl) {
+        api.setMessageCallback(callbackUrl);
+    }
+
+    public byte[] getSnapshot() {
+        return snapshot.getSnapshot(() -> {
+            new Thread(this::takeSnapshotSync).start();
+            return null;
+        });
+    }
+
+    public void takeSnapshot() {
+        snapshot.setSnapshot(api.getSnapshot(deviceId));
+    }
+
+    private void takeSnapshotSync() {
+        if (snapshot.setSnapshot(api.getSnapshot(deviceId))) {
+            context.ui().updateItem(getEntity(), "snapshot", snapshot.getLatestSnapshot());
+        }
+    }
+
     private void buildEndpoints(List<String> capabilities) {
-        Set<String> fixedCapabilities = capabilities.stream().map(c -> c.toLowerCase().replaceAll("v\\d$", "")).collect(Collectors.toSet());
-        Map<String, ConfigDeviceEndpoint> switches = CONFIG_DEVICE_SERVICE.getDeviceEndpoints().values().stream()
-                                                                          .filter(de -> de.getMetadata().optString("type").equals("switch"))
-                                                                          .filter(de -> fixedCapabilities.contains(de.getName().toLowerCase()))
-                                                                          .collect(Collectors.toMap(ConfigDeviceEndpoint::getName, e -> e));
+        Map<String, ConfigDeviceEndpoint> switches = getSwitches(capabilities);
         for (Entry<String, ConfigDeviceEndpoint> switchEntry : switches.entrySet()) {
-            ImouDeviceEndpoint deviceEndpoint = addEndpoint(new ImouDeviceEndpoint(switchEntry.getKey(), true,
-                true, EndpointType.bool, new Icon(switchEntry.getValue().getIcon(), switchEntry.getValue().getIconColor()), entity));
-            deviceEndpoint.setInitialValue(OnOffType.OFF);
+            ImouDeviceEndpoint endpoint = addEndpoint(switchEntry.getKey(), EndpointType.bool);
+            endpoint.setInitialValue(OnOffType.OFF);
+            endpoint.setReader(() -> {
+                ImouDeviceStatusDTO dto = api.request("getDeviceCameraStatus", deviceId, "enableType", endpoint.getEndpointEntityID(),
+                    ImouDeviceStatusDTO.class);
+                return OnOffType.of("on".equals(dto.getStatus()));
+            });
+            endpoint.setUpdateHandler(state ->
+                api.setDeviceCameraStatus(deviceId, endpoint.getEndpointEntityID(), state.boolValue()));
         }
 
+        Status status = api.getDeviceStatus(deviceId).getStatus();
+        entity.setStatus(status);
+
+        addStatusEndpoint(status);
         addBatteryEndpoint(capabilities);
+        addRestartButton();
+        addRefreshButton();
+        addNightVisionModeEndpoint(capabilities);
+        addMotionAlarm(capabilities);
         addStorageUsedEndpoint(capabilities);
         addCallbackUrlEndpoint();
 
-        // add motionAlarm binary sensor
-        if (capabilities.remove("AlarmMD")) {
-            addEndpoint(new ImouDeviceEndpoint("motionAlarm", true,
-                false, EndpointType.bool, null, entity));
-        }
+        tryInitializeEndpoints(status);
 
-        ImouDeviceOnlineStatusDTO.Status status = api.getDeviceStatus(deviceId).getOnLine();
-
-        // add status sensor
-        addStatusEndpoint(status);
-        // add nightVisionMode select
-        addNightVisionModeEndpoint(capabilities);
-        // add restart button
-        addRestartButton();
-        // add refresh button
-        addRefreshButton();
-
-        // update the status of all the sensors (if the device is online)
-        if (status == ImouDeviceOnlineStatusDTO.Status.Online) {
-            log.info("Fetch device {} endpoint statuses", entity);
-            for (ImouDeviceEndpoint endpoint : endpoints.values()) {
-                Runnable initializer = endpoint.getInitializer();
-                if (initializer != null) {
-                    initializer.run();
-                } else if (endpoint.getReader() != null) {
-                    endpoint.setInitialValue(endpoint.getReader().get());
-                }
-                // fire create variable after first init
-                endpoint.getOrCreateVariable();
-            }
-        }
-
-        /**
-         * # add callbackUrl sensor
+        /*
          * # add online binary sensor
-         * # add restartDevice button
-         * # add refreshData button
          * # add siren siren
          * # add cameras HD/SD
          */
 
         capabilities.removeAll(switches.keySet());
-        int order = 1000;
         for (String capability : capabilities) {
-            ImouDeviceEndpoint deviceEndpoint = addEndpoint(new ImouDeviceEndpoint(capability, false,
-                false, EndpointType.bool, new Icon("fa fa-fw fa-flask-vial"), entity));
-            deviceEndpoint.setOrder(order++);
+            ImouDeviceEndpoint deviceEndpoint = addEndpoint(capability, EndpointType.bool);
+            deviceEndpoint.setIcon(new Icon("fa fa-fw fa-flask-vial"));
             deviceEndpoint.setInitialValue(OnOffType.ON);
+        }
+    }
+
+    @NotNull
+    private static Map<String, ConfigDeviceEndpoint> getSwitches(List<String> capabilities) {
+        Set<String> fixedCapabilities = capabilities.stream()
+                                                    .map(c -> c.toLowerCase().replaceAll("v\\d$", ""))
+                                                    .collect(Collectors.toSet());
+        return CONFIG_DEVICE_SERVICE.getDeviceEndpoints().values().stream()
+                                    .filter(de -> de.getMetadata().optString("type").equals("switch"))
+                                    .filter(de -> fixedCapabilities.contains(de.getName().toLowerCase()))
+                                    .collect(Collectors.toMap(ConfigDeviceEndpoint::getName, e -> e));
+    }
+
+    private void addMotionAlarm(List<String> capabilities) {
+        if (capabilities.remove("AlarmMD")) {
+            ImouDeviceEndpoint endpoint = addEndpoint("motionAlarm", EndpointType.bool);
+            endpoint.setReader(() -> {
+                List<Alarm> alarms = api.getAlarmMessages(deviceId).getAlarms();
+                return new StringType(alarms.isEmpty() ? "-" : alarms.get(0).getLocalDate());
+            });
         }
     }
 
     private void addBatteryEndpoint(List<String> capabilities) {
         if (capabilities.remove("Dormant")) {
-            ImouDeviceEndpoint endpoint = addEndpoint(new ImouDeviceEndpoint("battery", true,
-                false, EndpointType.number, null, entity));
+            ImouDeviceEndpoint endpoint = addEndpoint("battery", EndpointType.number);
             endpoint.setReader(() -> {
                 ImouDevicePowerInfoDTO dto = api.request("getDevicePowerInfo", deviceId, ImouDevicePowerInfoDTO.class);
                 return new DecimalType(dto.getElectricitys().getElectric());
@@ -214,38 +226,61 @@ public class ImouDeviceService extends ServiceInstance<ImouDeviceEntity> {
     }
 
     private void addCallbackUrlEndpoint() {
-        ImouDeviceEndpoint endpoint = addEndpoint(new ImouDeviceEndpoint("callbackUrl", true,
-            false, EndpointType.string, null, entity));
+        ImouDeviceEndpoint endpoint = addEndpoint("callbackUrl", EndpointType.string);
         endpoint.setReader(() -> {
-            ImouDeviceCallbackUrlDTO dto = api.request("getMessageCallback", deviceId, ImouDeviceCallbackUrlDTO.class);
+            ImouDeviceCallbackUrlDTO dto = api.getMessageCallback(deviceId);
+            if (dto.getStatus().equals("off")) {
+                return new StringType("OFF");
+            }
             return new StringType(dto.getCallbackUrl());
         });
     }
 
     private void addStorageUsedEndpoint(List<String> capabilities) {
         if (capabilities.remove("LocalStorage")) {
-            ImouDeviceEndpoint endpoint = addEndpoint(new ImouDeviceEndpoint("storageUsed", true,
-                false, EndpointType.string, null, entity));
+            ImouDeviceEndpoint endpoint = addEndpoint("storageUsed", EndpointType.string);
             endpoint.setReader(() -> {
-                ImouSDCardStatusDTO status = api.getDeviceSDCardStatus(this.deviceId);
-                if (status != null) {
+                try {
+                    ImouSDCardStatusDTO status = api.getDeviceSDCardStatus(this.deviceId);
                     return new StringType(status.toString());
+                } catch (Exception ex) {
+                    return new StringType(ex.getMessage());
                 }
-                return new StringType("-");
             });
         }
     }
 
-    private void addStatusEndpoint(ImouDeviceOnlineStatusDTO.Status status) {
-        ImouDeviceEndpoint statusEndpoint = addEndpoint(new ImouDeviceEndpoint("status", true,
-            false, EndpointType.string, null, entity));
-        statusEndpoint.setReader(() -> new StringType(api.getDeviceStatus(deviceId).getOnLine().name()));
+    private void addStatusEndpoint(Status status) {
+        statusEndpoint = addEndpoint(new ImouDeviceEndpoint(ENDPOINT_DEVICE_STATUS, EndpointType.select, entity));
+        statusEndpoint.setRange(OptionModel.list(Status.set(ONLINE, OFFLINE, UNKNOWN, UPDATING, SLEEPING)));
         statusEndpoint.setInitialValue(new StringType(status.name()));
-        statusEndpoint.setInitializer(() -> {});
+        statusEndpoint.setReader(() -> {
+            Status newStatus = api.getDeviceStatus(deviceId).getStatus();
+            tryInitializeEndpoints(newStatus);
+            entity.setStatus(newStatus);
+            return new StringType(newStatus.name());
+        });
+        statusEndpoint.setInitializer(() -> {}); // to avoid call reader first time
+    }
+
+    private void tryInitializeEndpoints(@NotNull Status newStatus) {
+        if (!initialized && newStatus.isOnline()) {
+            initialized = true;
+            log.info("[{}]: Fetch device {} endpoint statuses", entityID, entity);
+            for (ImouDeviceEndpoint endpoint : endpoints.values()) {
+                Runnable initializer = endpoint.getInitializer();
+                if (initializer != null) {
+                    initializer.run();
+                } else if (endpoint.getReader() != null) {
+                    endpoint.setInitialValue(endpoint.getReader().get());
+                }
+                endpoint.getOrCreateVariable();
+            }
+        }
     }
 
     private void addRefreshButton() {
-        addTriggerEndpoint("refreshData", "RESTART", new Icon("fas fa-power-off", Color.BLUE), state -> {
+        addTriggerEndpoint("refreshData", "FETCH_DATA_FROM_SERVER", state -> {
             for (ImouDeviceEndpoint endpoint : endpoints.values()) {
                 endpoint.readValue();
             }
@@ -253,38 +288,43 @@ public class ImouDeviceService extends ServiceInstance<ImouDeviceEntity> {
     }
 
     private void addRestartButton() {
-        addTriggerEndpoint("restartDevice", "RESTART", new Icon("fas fa-power-off", Color.RED), state -> {
-            api.restart(deviceId);
-        });
+        addTriggerEndpoint("restartDevice", "RESTART_DEVICE", state ->
+            api.restart(deviceId));
     }
 
-    private void addTriggerEndpoint(String endpointId, String confirmBtn, Icon buttonIcon, Consumer<State> updateHandler) {
-        addEndpoint(new ImouDeviceEndpoint(endpointId, true,
-            true, EndpointType.trigger, buttonIcon, entity) {
+    private void addTriggerEndpoint(String endpointId, String confirmBtn, Consumer<State> updateHandler) {
+        addEndpoint(new ImouDeviceEndpoint(endpointId, EndpointType.trigger, entity) {
             @Override
             public UIInputBuilder createTriggerActionBuilder(@NotNull UIInputBuilder uiInputBuilder) {
-                uiInputBuilder.addButton(getEntityID(), buttonIcon, (entityContext, params) -> {
+                uiInputBuilder.addButton(getEntityID(), getIcon(), (context, params) -> {
+                                  setValue(OnOffType.ON, false);
                                   updateHandler.accept(null);
                                   return null;
                               })
+                              .setText("")
                               .setConfirmMessage("W.CONFIRM." + confirmBtn)
-                              .setConfirmMessageDialogColor(buttonIcon.getColor())
-                              .setDisabled(!getEndpoints().get("status").getValue().stringValue()
-                                                          .equals(ImouDeviceOnlineStatusDTO.Status.Online.name()));
+                              .setConfirmMessageDialogColor(UI.Color.darker(getIcon().getColor(), 0.6f))
+                              .setDisabled(!statusEndpoint.getValue().stringValue().equals(Status.ONLINE.name()));
                 return uiInputBuilder;
             }
         });
     }
 
+    private ImouDeviceEndpoint addEndpoint(String endpointId, EndpointType endpointType) {
+        return addEndpoint(new ImouDeviceEndpoint(endpointId, endpointType, entity));
+    }
+
     private ImouDeviceEndpoint addEndpoint(ImouDeviceEndpoint endpoint) {
+        if (endpoint.getOrder() > 1000) {
+            endpoint.setOrder(order++);
+        }
         endpoints.put(endpoint.getEndpointEntityID(), endpoint);
         return endpoint;
     }
 
     private void addNightVisionModeEndpoint(List<String> capabilities) {
         if (capabilities.remove("NVM")) {
-            ImouDeviceEndpoint deviceEndpoint = addEndpoint(new ImouDeviceEndpoint("nightVisionMode", true,
-                false, EndpointType.select, null, entity));
+            ImouDeviceEndpoint deviceEndpoint = addEndpoint("nightVisionMode", EndpointType.select);
             deviceEndpoint.setReader(() -> new StringType(api.getNightVisionMode(deviceId).getMode()));
             deviceEndpoint.setInitializer(() -> {
                 ImouDeviceNightVisionModeDTO dto = api.getNightVisionMode(deviceId);
@@ -304,7 +344,6 @@ public class ImouDeviceService extends ServiceInstance<ImouDeviceEntity> {
     private void setEntityStatus(@NotNull Status status, @Nullable String message) {
         if (entity.getStatus() != status || !Objects.equals(entity.getStatusMessage(), message)) {
             entity.setStatus(status, message);
-            getEndpoints().get(ENDPOINT_DEVICE_STATUS).setValue(new StringType(toString()), true);
             ImouProjectEntity projectEntity = ImouAPI.getProjectEntity();
             if (projectEntity != null) {
                 projectEntity.getService().updateNotificationBlock();
@@ -319,115 +358,15 @@ public class ImouDeviceService extends ServiceInstance<ImouDeviceEntity> {
         return "${%s} [%s]".formatted(entity.getName(), entity.getIeeeAddress());
     }
 
-    /*@Override
-    public void onDisconnected(@NotNull String message) {
-        setEntityStatus(ERROR, message);
-        if (EntityContextBGP.cancel(pollingJob)) {
-            pollingJob = null;
-        }
-        scheduleReconnect();
-    }*/
-
-   /* @Override
-    public void onConnected() {
-        if (!entity.getStatus().isOnline()) {
-            setEntityStatus(ONLINE, null);
-            scheduleRefreshDeviceStatus();
-        }
-    }*/
-
-   /* @Override
-    public void deviceInfoChanged(DeviceInfo deviceInfo) {
-        log.info("[{}]: Configuring IP address '{}' for thing '{}'.", entity.getEntityID(), deviceInfo, entity.getTitle());
-
-        imouDeviceCommunicator.ifPresent(ImouDeviceCommunicator::dispose);
-        if (!deviceInfo.ip().equals(entity.getIp())) {
-            entityContext.save(entity.setIp(deviceInfo.ip()));
-        }
-        setEntityStatus(WAITING, null);
-
-        imouDeviceCommunicator = Optional.of(new ImouDeviceCommunicator(this, eventLoopGroup,
-            deviceInfo.ip(), deviceInfo.protocolVersion(), entity));
-    }*/
-
-    /*private void externalUpdate(Integer dp, Object rawValue) {
-        endpoints.get(ENDPOINT_LAST_SEEN).setValue(new DecimalType(System.currentTimeMillis()), true);
-        ImouDeviceEndpoint endpoint = endpoints.values().stream().filter(p -> p.getDp() == dp).findAny().orElse(null);
-        if (endpoint != null) {
-            State state = endpoint.rawValueToState(rawValue);
-            if (state == null) {
-                log.warn("[{}]: Could not update endpoint '{}' with value '{}'. Datatype incompatible.",
-                    entity.getEntityID(), endpoint.getDeviceID(), rawValue);
-            } else {
-                endpoint.setValue(state, true);
-            }
-        } else {
-            List<ImouDeviceEndpoint> dp2Endpoints = endpoints.values().stream().filter(p -> Objects.equals(p.getDp2(), dp)).toList();
-            if (dp2Endpoints.isEmpty()) {
-                log.debug("[{}]: Could not find endpoint for dp '{}' in thing '{}'", entity.getEntityID(), dp, entity.getTitle());
-            } else {
-                if (Boolean.class.isAssignableFrom(rawValue.getClass())) {
-                    for (ImouDeviceEndpoint dp2Endpoint : dp2Endpoints) {
-                        dp2Endpoint.setValue(State.of(rawValue), true);
-                    }
-                    return;
-                }
-                log.warn("[{}]: Could not update endpoint '{}' with value {}. Datatype incompatible.",
-                    entity.getEntityID(), dp2Endpoints, rawValue);
-            }
-        }
-    }*/
-
-    public ActionResponseModel send(@NotNull Map<Integer, @Nullable Object> commands) {
-        return null;
-        // return imouDeviceCommunicator.map(communicator -> communicator.sendCommand(commands)).orElse(null);
-    }
-
     private void createOrUpdateDeviceGroup() {
         List<ConfigDeviceDefinition> devices = findDevices();
         Icon icon = new Icon(
             CONFIG_DEVICE_SERVICE.getDeviceIcon(devices, "fas fa-server"),
             CONFIG_DEVICE_SERVICE.getDeviceIconColor(devices, UI.Color.random())
         );
-        entityContext.var().createGroup("imou", "Imou", builder ->
+        context.var().createGroup("imou", "Imou", builder ->
             builder.setIcon(new Icon("fas fa-u", IMOU_COLOR)).setLocked(true));
-        entityContext.var().createSubGroup("imou", requireNonNull(entity.getIeeeAddress()), entity.getDeviceFullName(), builder -> {
-            builder.setIcon(icon).setDescription(getGroupDescription()).setLocked(true);
-        });
+        context.var().createSubGroup("imou", requireNonNull(entity.getIeeeAddress()), entity.getDeviceFullName(), builder ->
+            builder.setIcon(icon).setDescription(getGroupDescription()).setLocked(true));
     }
-
-    /*private void scheduleRefreshDeviceStatus() {
-        if (entity.getStatus().isOnline()) {
-            // request all statuses
-            //   imouDeviceCommunicator.ifPresent(ImouDeviceCommunicator::requestStatus);
-
-            imouDeviceCommunicator.ifPresent(communicator -> {
-                entityContext.bgp().builder("imou-pull-all-%s".formatted(entity.getIeeeAddress()))
-                             .delay(Duration.ofSeconds(5))
-                             .execute(communicator::requestStatus);
-                pollingJob = entityContext.bgp().builder("imou-pull-%s".formatted(entity.getIeeeAddress()))
-                                          .intervalWithDelay(Duration.ofSeconds(entity.getPollingInterval()))
-                                          .execute(communicator::refreshStatus);
-            });
-        }
-    }*/
-
-    /*private void scheduleReconnect() {
-        imouDeviceCommunicator.ifPresent(communicator -> {
-            ThreadContext<Void> reconnectFuture = this.reconnectFuture;
-            // only re-connect if a device is present, we are not disposing the thing and either the reconnectFuture is
-            // empty or already done
-            if (reconnectFuture == null || reconnectFuture.isStopped()) {
-                this.reconnectFuture =
-                    entityContext.bgp().builder("imou-connect-%s".formatted(entity.getIeeeAddress()))
-                                 .delay(Duration.ofSeconds(entity.getReconnectInterval()))
-                                 .execute(() -> {
-                                     if (!entity.getStatus().isOnline()) {
-                                         setEntityStatus(INITIALIZE, null);
-                                         communicator.connect();
-                                     }
-                                 });
-            }
-        });
-    }*/
 }

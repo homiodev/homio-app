@@ -1,12 +1,11 @@
 package org.homio.app.builder.widget.hasBuilder;
 
-import org.homio.api.EntityContextWidget.HasIcon;
-import org.homio.api.EntityContextWidget.ThresholdBuilder;
+import java.util.function.Consumer;
+import org.homio.api.ContextWidget.HasIcon;
+import org.homio.api.ContextWidget.ThresholdBuilder;
 import org.homio.api.entity.BaseEntity;
 import org.homio.app.builder.widget.ThresholdBuilderImpl;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.function.Consumer;
 
 public interface HasIconColorThresholdBuilder<T extends BaseEntity & org.homio.app.model.entity.widget.attributes.HasIcon, R>
         extends HasIcon<R> {

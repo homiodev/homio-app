@@ -1,22 +1,21 @@
 package org.homio.app.builder.widget;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.homio.api.EntityContextWidget.SliderWidgetBuilder;
-import org.homio.api.EntityContextWidget.SliderWidgetSeriesBuilder;
+import org.homio.api.ContextWidget.SliderWidgetBuilder;
+import org.homio.api.ContextWidget.SliderWidgetSeriesBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasIconColorThresholdBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasNameBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasPaddingBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasValueTemplateBuilder;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
 
 public class SliderBuilderImpl extends WidgetBaseBuilderImpl<SliderWidgetBuilder, WidgetSliderEntity>
         implements SliderWidgetBuilder,
@@ -26,8 +25,8 @@ public class SliderBuilderImpl extends WidgetBaseBuilderImpl<SliderWidgetBuilder
     @Getter
     private final List<WidgetSliderSeriesEntity> series = new ArrayList<>();
 
-    SliderBuilderImpl(WidgetSliderEntity widget, EntityContextImpl entityContext) {
-        super(widget, entityContext);
+    SliderBuilderImpl(WidgetSliderEntity widget, ContextImpl context) {
+        super(widget, context);
     }
 
     @Override

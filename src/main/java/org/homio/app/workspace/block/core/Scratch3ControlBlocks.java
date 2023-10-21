@@ -14,8 +14,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.SneakyThrows;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextBGP.ThreadContext;
+import org.homio.api.Context;
+import org.homio.api.ContextBGP.ThreadContext;
 import org.homio.api.exception.ServerException;
 import org.homio.api.state.DecimalType;
 import org.homio.api.workspace.Lock;
@@ -28,8 +28,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
 
-    public Scratch3ControlBlocks(EntityContext entityContext) {
-        super("control", entityContext);
+    public Scratch3ControlBlocks(Context context) {
+        super("control", context);
 
         blockCommand("forever", this::foreverHandler);
         blockCommand("schedule", this::repeatEveryTimeScheduleHandler);
@@ -64,7 +64,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
                             + " "
                             + workspaceBlock.getInputString("DOW");
             AtomicInteger index = new AtomicInteger();
-            entityContext
+            context
                     .bgp()
                     .builder("workspace-schedule-cron-" + workspaceBlock.getId())
                     .tap(context -> ((WorkspaceBlockImpl) workspaceBlock).setThreadContext(context))
@@ -120,7 +120,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
         }
 
         Duration duration = Duration.between(nowDateTime, nextFromRun);
-        entityContext
+        context
                 .bgp()
                 .builder("when-time-in-range" + workspaceBlock.getId())
                 .tap(context -> ((WorkspaceBlockImpl) workspaceBlock).setThreadContext(context))
@@ -136,7 +136,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
         workspaceBlock.logInfo("Fire when-time-execution. Duration: {}", timeToExecute);
         AtomicInteger index = new AtomicInteger(0);
         ThreadContext<Void> executeContext =
-                entityContext
+            context
                         .bgp()
                         .builder("when-time-execution" + workspaceBlock.getId())
                         .interval(Duration.ofMillis(100))
@@ -148,7 +148,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
                                 });
 
         ThreadContext<Void> threadKiller =
-                entityContext
+            context
                         .bgp()
                         .builder("when-time-execution-killer-" + workspaceBlock.getId())
                         .delay(timeToExecute)
@@ -247,7 +247,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
         Thread thread = Thread.currentThread();
         // set minimum as 100ms
         Duration stopInDuration = Duration.ofMillis(Math.max(100, timeUnit.toMillis(timeout)));
-        entityContext
+        context
                 .bgp()
                 .builder("stop-in-timeout" + workspaceBlock.getId())
                 .tap(context -> ((WorkspaceBlockImpl) workspaceBlock).setThreadContext(context))
@@ -303,7 +303,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
      */
     private void buildSchedule(String name, WorkspaceBlock workspaceBlock, long timeout, ThrowingRunnable<Exception> handler) {
         AtomicInteger index = new AtomicInteger(0);
-        entityContext
+        context
                 .bgp()
                 .builder("workspace-schedule-" + name + "-" + workspaceBlock.getId())
                 .interval(Duration.ofMillis(Math.max(100, (int) timeout)))

@@ -8,8 +8,8 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.addon.camera.scanner.OnvifCameraHttpScanner;
 import org.homio.api.AddonEntrypoint;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextUI.NotificationInfoLineBuilder;
+import org.homio.api.Context;
+import org.homio.api.ContextUI.NotificationInfoLineBuilder;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.ui.UI.Color;
@@ -23,23 +23,23 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CameraEntrypoint implements AddonEntrypoint {
 
-    private final EntityContext entityContext;
+    private final Context context;
 
     @SneakyThrows
     public void init() {
-        entityContext.event().runOnceOnInternetUp("scan-cameras", () -> {
+        context.event().runOnceOnInternetUp("scan-cameras", () -> {
             // fire rescan whole possible items to see if ip address has been changed
-            entityContext.getBean(OnvifCameraHttpScanner.class).executeScan(entityContext, null, null);
+            context.getBean(OnvifCameraHttpScanner.class).executeScan(context, null, null);
         });
     }
 
     public static void updateCamera(
-            @NotNull EntityContext entityContext,
+        @NotNull Context context,
             @NotNull BaseCameraEntity<?, ?> entity,
             @Nullable Supplier<String> titleSupplier,
             @NotNull Icon icon,
             @Nullable Consumer<UILayoutBuilder> settingsBuilder) {
-        entityContext.ui().notification().addOrUpdateBlock("CAMERA", "CAMERA", new Icon("fas fa-video", "#367387"),
+        context.ui().notification().addOrUpdateBlock("CAMERA", "CAMERA", new Icon("fas fa-video", "#367387"),
                 builder -> {
                     String text = titleSupplier == null ? entity.getTitle() : titleSupplier.get();
                     NotificationInfoLineBuilder info = builder.addInfo(text, icon);
@@ -52,7 +52,7 @@ public class CameraEntrypoint implements AddonEntrypoint {
                     if (!entity.isStart() || settingsBuilder == null) {
                         if (!entity.isStart()) {
                             info.setRightButton(new Icon("fas fa-play"), "START", null, (ec, params) -> {
-                                ec.save(entity.setStart(true));
+                                ec.db().save(entity.setStart(true));
                                 return ActionResponseModel.fired();
                             });
                         }

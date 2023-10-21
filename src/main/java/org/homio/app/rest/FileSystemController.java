@@ -27,7 +27,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.fs.FileSystemProvider;
 import org.homio.api.fs.TreeConfiguration;
@@ -57,7 +57,7 @@ public class FileSystemController {
 
     // constructor parameters
     private final FileSystemService fileSystemService;
-    private final EntityContext entityContext;
+    private final Context context;
 
     @PostMapping("")
     @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
@@ -70,11 +70,11 @@ public class FileSystemController {
         }
         Collection<BaseFileSystemEntity> fsItems = getRequestedFileSystems(request);
         for (BaseFileSystemEntity fileSystem : fsItems) {
-            TreeConfiguration configuration = fileSystem.buildFileSystemConfiguration(entityContext);
+            TreeConfiguration configuration = fileSystem.buildFileSystemConfiguration(context);
 
             for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
                 if (selectedNode.fs.equals(fileSystem.getEntityID())) {
-                    FileSystemProvider fileSystemProvider = fileSystem.getFileSystem(entityContext);
+                    FileSystemProvider fileSystemProvider = fileSystem.getFileSystem(context);
                     try {
                         Set<TreeNode> treeNodes = fileSystemProvider.loadTreeUpToChild(request.getRootPath(), selectedNode.id);
                         if (treeNodes != null) {

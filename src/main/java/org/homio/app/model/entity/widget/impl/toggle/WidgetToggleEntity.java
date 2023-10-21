@@ -1,7 +1,7 @@
 package org.homio.app.model.entity.widget.impl.toggle;
 
 import jakarta.persistence.Entity;
-import org.homio.api.EntityContextWidget.ToggleType;
+import org.homio.api.ContextWidget.ToggleType;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldLayout;

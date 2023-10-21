@@ -13,7 +13,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import org.homio.api.EntityContext;
+import lombok.experimental.Accessors;
+import org.homio.api.Context;
 import org.homio.api.console.ConsolePluginTable;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.ui.field.UIField;
@@ -25,7 +26,7 @@ import org.springframework.stereotype.Component;
 public class NetworkInterfaceConsolePlugin implements ConsolePluginTable<NetworkInterfaceConsolePlugin.NetworkInterfaceEntity> {
 
     @Getter
-    private final EntityContext entityContext;
+    private final @Accessors(fluent = true) Context context;
 
     @Override
     public String getParentTab() {
@@ -55,7 +56,7 @@ public class NetworkInterfaceConsolePlugin implements ConsolePluginTable<Network
     }
 
     @Override
-    public String getName() {
+    public @NotNull String getName() {
         return "networkInterface";
     }
 

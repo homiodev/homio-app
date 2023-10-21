@@ -1,12 +1,18 @@
 package org.homio.app.model.entity.user;
 
+import static org.homio.api.util.Constants.ADMIN_ROLE;
+import static org.homio.api.util.Constants.GUEST_ROLE;
+import static org.homio.api.util.Constants.PRIVILEGED_USER_ROLE;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
+import java.util.HashSet;
+import java.util.Set;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.validator.internal.constraintvalidators.hv.EmailValidator;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.IdentityEntity;
@@ -23,11 +29,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
-import java.util.HashSet;
-import java.util.Set;
-
-import static org.homio.api.util.Constants.*;
 
 @Entity
 public abstract class UserBaseEntity extends IdentityEntity
@@ -142,7 +143,7 @@ public abstract class UserBaseEntity extends IdentityEntity
 
     @Override
     public void assembleActions(UIInputBuilder uiInputBuilder) {
-        UserEntity user = uiInputBuilder.getEntityContext().getUser();
+        UserEntity user = uiInputBuilder.context().getUser();
         if (user != null && user.isAdmin()) {
             uiInputBuilder.addOpenDialogSelectableButton("CHANGE_PASSWORD", new Icon("fas fa-unlock-keyhole",
                             Color.RED), null, this::changePassword)
@@ -180,15 +181,15 @@ public abstract class UserBaseEntity extends IdentityEntity
         log.info(entityID + ": " + message);
     }
 
-    private ActionResponseModel changeEmail(EntityContext entityContext, JSONObject json) {
-        assertCorrectPassword(entityContext, json);
+    private ActionResponseModel changeEmail(Context context, JSONObject json) {
+        assertCorrectPassword(context, json);
         setEmail(json.getString("email"));
-        entityContext.save(setEmail(json.getString("email")));
+        context.db().save(setEmail(json.getString("email")));
         return ActionResponseModel.showSuccess("USER.ALTERED");
     }
 
-    private ActionResponseModel changePassword(EntityContext entityContext, JSONObject json) {
-        assertCorrectPassword(entityContext, json);
+    private ActionResponseModel changePassword(Context context, JSONObject json) {
+        assertCorrectPassword(context, json);
         String newPassword = json.getString("newPassword");
         if (!newPassword.equals(json.getString("repeatNewPassword"))) {
             throw new IllegalArgumentException("USER.PASSWORD_NOT_MATCH");
@@ -196,16 +197,16 @@ public abstract class UserBaseEntity extends IdentityEntity
         if (newPassword.length() < 6) {
             throw new IllegalArgumentException("USER.PASSWORD_TOO_SHORT");
         }
-        PasswordEncoder passwordEncoder = entityContext.getBean(PasswordEncoder.class);
+        PasswordEncoder passwordEncoder = context.getBean(PasswordEncoder.class);
         setPassword(newPassword, passwordEncoder);
-        entityContext.save(this);
+        context.db().save(this);
 
-        entityContext.ui().dialog().reloadWindow("USER.ALTERED_RELOAD");
+        context.ui().dialog().reloadWindow("USER.ALTERED_RELOAD");
         return ActionResponseModel.showSuccess("USER.ALTERED");
     }
 
-    private void assertCorrectPassword(EntityContext entityContext, JSONObject json) {
-        if (this.getUserType() == UserType.ADMIN && !matchPassword(json.getString("currentPassword"), entityContext.getBean(PasswordEncoder.class))) {
+    private void assertCorrectPassword(Context context, JSONObject json) {
+        if (this.getUserType() == UserType.ADMIN && !matchPassword(json.getString("currentPassword"), context.getBean(PasswordEncoder.class))) {
             throw new IllegalArgumentException("W.ERROR.PASSWORD_NOT_MATCH");
         }
     }

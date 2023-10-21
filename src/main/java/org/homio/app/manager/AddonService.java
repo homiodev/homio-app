@@ -1,15 +1,27 @@
 package org.homio.app.manager;
 
+import java.awt.image.BufferedImage;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import javax.imageio.ImageIO;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.AddonEntrypoint;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.setting.SettingPluginPackageInstall;
 import org.homio.api.setting.SettingPluginPackageInstall.PackageRequest;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.utils.color.ColorThief;
@@ -19,21 +31,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.InputStream;
-import java.net.URL;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-
 @Log4j2
 @Component
 @RequiredArgsConstructor
 public class AddonService implements ContextCreated, ContextRefreshed {
 
     // constructor parameters
-    private final EntityContext entityContext;
+    private final Context context;
     private Map<String, String> addonColorMap;
     private Map<String, AddonEntrypoint> addonMap;
     private Collection<AddonEntrypoint> allAddonEntrypoint;
@@ -43,13 +47,13 @@ public class AddonService implements ContextCreated, ContextRefreshed {
     private final Map<String, Boolean> packagesInProgress = new ConcurrentHashMap<>();
 
     @Override
-    public void onContextCreated(EntityContextImpl entityContext) throws Exception {
-        onContextRefresh(entityContext);
+    public void onContextCreated(ContextImpl context) throws Exception {
+        onContextRefresh(context);
     }
 
     @Override
-    public void onContextRefresh(EntityContext entityContext) throws Exception {
-        this.allAddonEntrypoint = this.entityContext.getBeansOfType(AddonEntrypoint.class);
+    public void onContextRefresh(Context context) throws Exception {
+        this.allAddonEntrypoint = this.context.getBeansOfType(AddonEntrypoint.class);
         this.addonMap = allAddonEntrypoint.stream().collect(Collectors.toMap(AddonEntrypoint::getAddonID, s -> s));
         this.addonColorMap = new HashMap<>();
 
@@ -95,19 +99,19 @@ public class AddonService implements ContextCreated, ContextRefreshed {
         if (!packagesInProgress.containsKey(packageRequest.getName())) {
             packagesInProgress.put(packageRequest.getName(), true);
             String key = "Install " + packageRequest.getName() + "/" + packageRequest.getVersion();
-            entityContext.ui().progress().run(key, false, progressBar ->
-                            settingPlugin.installPackage(entityContext, packageRequest, progressBar),
+            context.ui().progress().run(key, false, progressBar ->
+                    settingPlugin.installPackage(context, packageRequest, progressBar),
                     ex -> packagesInProgress.remove(packageRequest.getName()));
         } else {
-            entityContext.ui().toastr().error("W.ERROR.UPDATE_IN_PROGRESS");
+            context.ui().toastr().error("W.ERROR.UPDATE_IN_PROGRESS");
         }
     }
 
     public void unInstallPackage(SettingPluginPackageInstall settingPlugin, PackageRequest packageRequest) {
         if (!packagesInProgress.containsKey(packageRequest.getName())) {
             packagesInProgress.put(packageRequest.getName(), false);
-            entityContext.ui().progress().run("Uninstall " + packageRequest.getName() + "/" + packageRequest.getVersion(), false,
-                    progressBar -> settingPlugin.unInstallPackage(entityContext, packageRequest, progressBar),
+            context.ui().progress().run("Uninstall " + packageRequest.getName() + "/" + packageRequest.getVersion(), false,
+                progressBar -> settingPlugin.unInstallPackage(context, packageRequest, progressBar),
                     ex -> packagesInProgress.remove(packageRequest.getName()));
         }
     }

@@ -14,7 +14,11 @@ public class AllDeviceRepository extends AbstractRepository<DeviceBaseEntity> {
 
     @Override
     public DeviceBaseEntity getByEntityID(String entityID) {
-        return super.getByEntityID(entityID);
+        String sql = "FROM DeviceBaseEntity where ieeeAddress = :value OR entityID = :value";
+        return tmc.executeInTransactionReadOnly(em ->
+            em.createQuery(sql, DeviceBaseEntity.class)
+              .setParameter("value", entityID)
+              .getResultList().stream().findAny().orElse(null));
     }
 
     public <T extends DeviceBaseEntity> @Nullable T getByIeeeAddressOrName(String name) {

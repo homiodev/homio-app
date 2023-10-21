@@ -1,8 +1,14 @@
 package org.homio.app.builder.ui;
 
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.homio.api.EntityContext;
+import lombok.experimental.Accessors;
+import org.homio.api.Context;
 import org.homio.api.model.Icon;
 import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.UIEntityBuilder;
@@ -16,18 +22,12 @@ import org.homio.app.builder.ui.layout.UIDialogLayoutBuilderImpl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
 @SuppressWarnings("rawtypes")
 @Getter
 @RequiredArgsConstructor
 public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInputBuilder {
 
-    private final EntityContext entityContext;
+    private final @Accessors(fluent = true) Context context;
     private final String entityID = null;
 
     public UIButtonItemBuilder addReferenceAction(String name, String reference, int order) {

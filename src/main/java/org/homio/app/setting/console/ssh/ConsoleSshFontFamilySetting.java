@@ -1,17 +1,16 @@
 package org.homio.app.setting.console.ssh;
 
-import org.homio.api.EntityContext;
+import static java.lang.String.format;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import org.homio.api.Context;
 import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPluginOptions;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
-import static java.lang.String.format;
 
 public class ConsoleSshFontFamilySetting
         implements ConsoleSettingPlugin<String>, SettingPluginOptions<String> {
@@ -27,7 +26,7 @@ public class ConsoleSshFontFamilySetting
     }
 
     @Override
-    public @NotNull Collection<OptionModel> getOptions(EntityContext entityContext, JSONObject params) {
+    public @NotNull Collection<OptionModel> getOptions(Context context, JSONObject params) {
         List<OptionModel> result = new ArrayList<>();
         for (String fontFamily : new String[]{"DejaVu Sans Mono", "Liberation Mono", "Cascadia Code", "Courier New", "Ubuntu Mono"}) {
             result.add(OptionModel.of(fontFamily,

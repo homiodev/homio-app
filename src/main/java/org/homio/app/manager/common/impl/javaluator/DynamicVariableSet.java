@@ -6,7 +6,7 @@ import java.util.List;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.exception.ServerException;
-import org.homio.app.manager.common.impl.EntityContextVarImpl.TransformVariableSourceImpl;
+import org.homio.app.manager.common.impl.ContextVarImpl.TransformVariableSourceImpl;
 import org.jetbrains.annotations.NotNull;
 
 @RequiredArgsConstructor

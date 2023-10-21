@@ -2,7 +2,12 @@ package org.homio.app.model.entity.widget.impl.fm;
 
 import jakarta.persistence.Entity;
 import org.homio.api.model.ActionResponseModel;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.UIFieldTableLayout;
 import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
@@ -127,9 +132,9 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
     @Override
     public void assembleActions(UIInputBuilder uiInputBuilder) {
         uiInputBuilder.addTableLayoutButton("LAYOUT", 8, 8, getLayout(), null,
-                (entityContext, params) -> {
+            (context, params) -> {
                     this.setLayout(params.getString("value"));
-                    entityContext.save(this);
+                context.db().save(this);
                     return ActionResponseModel.showSuccess("SUCCESS");
                 },
                 0);

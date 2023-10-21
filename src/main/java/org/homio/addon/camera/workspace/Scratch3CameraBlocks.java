@@ -25,7 +25,7 @@ import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.addon.camera.entity.storage.VideoBaseStorageService;
 import org.homio.addon.camera.service.BaseCameraService;
 import org.homio.addon.camera.service.CameraDeviceEndpoint;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.model.OptionModel.KeyValueEnum;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
@@ -74,8 +74,8 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
     private final MenuBlock.ServerMenuBlock menuCameraRecord;
     private final MenuBlock.ServerMenuBlock menuOnvifCamera;
 
-    public Scratch3CameraBlocks(EntityContext entityContext, CameraEntrypoint cameraEntrypoint) {
-        super("#8F4D77", entityContext, cameraEntrypoint, null);
+    public Scratch3CameraBlocks(Context context, CameraEntrypoint cameraEntrypoint) {
+        super("#8F4D77", context, cameraEntrypoint, null);
         setParent("media");
 
         // Menu
@@ -172,7 +172,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
         CameraWithProfile camera = getCameraProfile(workspaceBlock);
 
         workspaceBlock.handleAndRelease(
-                () -> storage.startRecord(output, output, camera.profile, camera.entity, entityContext),
+            () -> storage.startRecord(output, output, camera.profile, camera.entity, context),
                 () -> storage.stopRecord(output, output, camera.entity));
     }
 
@@ -248,7 +248,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
 
     private CameraWithProfile getCameraProfile(WorkspaceBlock workspaceBlock) {
         String[] cameraWithProfile = workspaceBlock.getMenuValue(VIDEO_STREAM, menuFfmpegCameraWithProfiles).split("/");
-        BaseCameraEntity<?, ?> cameraEntity = workspaceBlock.getEntityContext().getEntity(cameraWithProfile[0]);
+        BaseCameraEntity<?, ?> cameraEntity = workspaceBlock.context().db().getEntity(cameraWithProfile[0]);
         String profile = cameraWithProfile.length > 1 ? cameraWithProfile[1] : null;
         return new CameraWithProfile(cameraEntity, profile);
     }
@@ -330,13 +330,13 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
     private enum CameraProfileReportCommands implements KeyValueEnum {
         Snapshot("Snapshot", (workspaceBlock, scratch, cameraProfile) -> {
             BaseCameraService<?, ?> service = cameraProfile.entity.getService();
-            return new RawType(service.getSnapshot(), MimeTypeUtils.IMAGE_JPEG_VALUE, "snapshot.jpg");
+            return new RawType(service.getLastSnapshot(), MimeTypeUtils.IMAGE_JPEG_VALUE, "snapshot.jpg");
         }),
         LastPlayback("Last playback", (workspaceBlock, scratch, cameraProfile) -> {
             BaseCameraEntity<?, ?> entity = cameraProfile.entity;
             if (entity instanceof CameraPlaybackStorage cameraPlaybackStorage) {
                 String profile = cameraProfile.profile;
-                CameraPlaybackStorage.PlaybackFile playbackFile = cameraPlaybackStorage.getLastPlaybackFile(workspaceBlock.getEntityContext(), profile);
+                CameraPlaybackStorage.PlaybackFile playbackFile = cameraPlaybackStorage.getLastPlaybackFile(workspaceBlock.context(), profile);
                 if (playbackFile == null) {
                     return null;
                 }
@@ -356,7 +356,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
                             .get(context -> {
                                 log.info("Reply <{}>. Download playback video file <{}>. <{}>", context.getAttemptCount(), entity.getTitle(),
                                         playbackFile.id);
-                                return cameraPlaybackStorage.downloadPlaybackFile(workspaceBlock.getEntityContext(), "main", playbackFile.id, path);
+                                return cameraPlaybackStorage.downloadPlaybackFile(workspaceBlock.context(), "main", playbackFile.id, path);
                             });
                 }
                 return new RawType(IOUtils.toByteArray(downloadFile.stream().getInputStream()), "video/mp4", playbackFile.name);

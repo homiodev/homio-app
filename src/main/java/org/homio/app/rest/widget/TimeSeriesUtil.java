@@ -24,7 +24,7 @@ import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.api.util.DataSourceUtil.SelectionSource;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod.TimeRange;
@@ -39,7 +39,7 @@ import org.json.JSONObject;
 @RequiredArgsConstructor
 public class TimeSeriesUtil {
 
-    private final EntityContextImpl entityContext;
+    private final ContextImpl context;
 
     public <T extends HasDynamicParameterFields & HasChartDataSource> WidgetChartsController.TimeSeriesChartData<ChartDataset>
     buildTimeSeriesFullData(String entityID, HasChartTimePeriod.TimePeriod timePeriod,
@@ -52,7 +52,7 @@ public class TimeSeriesUtil {
 
         for (T item : series) {
             SelectionSource selection = DataSourceUtil.getSelection(item.getChartDataSource());
-            BaseEntity source = selection.getValue(entityContext);
+            BaseEntity source = selection.getValue(context);
             if (source instanceof HasTimeValueSeries) {
                 Set<TimeSeriesContext<T>> timeSeries = buildTimeSeriesFromDataSource(timeRange, item, (HasTimeValueSeries) source);
                 timeSeriesValuesList.add(new TimeSeriesValues<>(timeSeries, source));
@@ -87,7 +87,7 @@ public class TimeSeriesUtil {
             HasChartTimePeriod.TimePeriod timePeriod, String entityID, Set<T> series, Object source) {
 
         T item = timeSeriesContext.getSeriesEntity();
-        ((HasTimeValueSeries) source).addUpdateValueListener(entityContext, entityID + "_timeSeries",
+        ((HasTimeValueSeries) source).addUpdateValueListener(context, entityID + "_timeSeries",
                 item.getChartDynamicParameterFields(),
                 o -> {
                     Set<TimeSeriesContext<T>> cts = buildTimeSeriesFromDataSource(timePeriod.snapshot(), item, timeSeriesContext.getSeries());
@@ -98,7 +98,7 @@ public class TimeSeriesUtil {
                         WidgetChartsController.TimeSeriesChartData<ChartDataset> fullUpdatedData =
                                 this.buildTimeSeriesFullData(entityID, timePeriod, false, series);
 
-                        entityContext.ui().sendDynamicUpdateImpl(item.getChartDataSource(), entityID, fullUpdatedData);
+                        context.ui().sendDynamicUpdateImpl(item.getChartDataSource(), entityID, fullUpdatedData);
                     }
                 });
     }
@@ -116,7 +116,7 @@ public class TimeSeriesUtil {
         }
         String seriesEntityId = entity.getEntityID();
         SelectionSource selection = DataSourceUtil.getSelection(valueDataSource);
-        Object source = selection.getValue(entityContext);
+        Object source = selection.getValue(context);
         if (source == null) {
             return null;
         }
@@ -130,7 +130,7 @@ public class TimeSeriesUtil {
         String seriesEntityId = ((HasEntityIdentifier) dataSource).getEntityID();
         JSONObject dynamicParameters = dataSource.getValueDynamicParameterFields();
         SelectionSource selection = DataSourceUtil.getSelection(dataSource.getValueDataSource());
-        BaseEntity source = selection.getValue(entityContext);
+        BaseEntity source = selection.getValue(context);
         if (source == null) {
             return (R) "W.ERROR.BAD_SOURCE";
         }
@@ -147,12 +147,12 @@ public class TimeSeriesUtil {
         if (listenSourceUpdates) {
             AtomicReference<R> valueRef = new AtomicReference<>(null);
             String key = entityID + defaultString(seriesEntityId, "");
-            ((HasUpdateValueListener) source).addUpdateValueListener(entityContext, key, dynamicParameters,
+            ((HasUpdateValueListener) source).addUpdateValueListener(context, key, dynamicParameters,
                     o -> {
                         R updatedValue = valueSupplier.apply(o);
                         if (valueRef.get() != updatedValue) {
                             valueRef.set(updatedValue);
-                            entityContext.ui().sendDynamicUpdateImpl(dataSourceEntityID, entityID,
+                            context.ui().sendDynamicUpdateImpl(dataSourceEntityID, entityID,
                                     new WidgetChartsController.SingleValueData(updatedValue, seriesEntityId));
                         }
                     });
@@ -162,7 +162,7 @@ public class TimeSeriesUtil {
     public <T extends HasDynamicParameterFields & HasChartDataSource> Set<TimeSeriesContext<T>>
     buildTimeSeriesFromDataSource(HasChartTimePeriod.TimeRange timeRange, T item, HasTimeValueSeries source) {
         Set<TimeSeriesContext<T>> result = new HashSet<>();
-        PeriodRequest periodRequest = new PeriodRequest(entityContext, timeRange.getFrom(), timeRange.getTo())
+        PeriodRequest periodRequest = new PeriodRequest(context, timeRange.getFrom(), timeRange.getTo())
                 .setParameters(item.getChartDynamicParameterFields());
 
         Map<HasTimeValueSeries.TimeValueDatasetDescription, List<Object[]>> timeSeries =
@@ -177,7 +177,7 @@ public class TimeSeriesUtil {
                     }
                 }
             } else if (item.getFillEmptyValues()) { // we need find at least one value to fill chart if no data at all
-                Object value = source.getStatusValue(new GetStatusValueRequest(entityContext, item.getChartDynamicParameterFields()));
+                Object value = source.getStatusValue(new GetStatusValueRequest(context, item.getChartDynamicParameterFields()));
                 Long timestamp = periodRequest.getFromTime() == null ? periodRequest.getToTime() : periodRequest.getFromTime();
                 entry.setValue(Collections.singletonList(new Object[]{timestamp, InMemoryDB.toNumber(value)}));
             }
@@ -196,7 +196,7 @@ public class TimeSeriesUtil {
         String dataSourceEntityID) {
 
         Object value;
-        HasGetStatusValue.GetStatusValueRequest valueRequest = new HasGetStatusValue.GetStatusValueRequest(entityContext, dynamicParameters);
+        HasGetStatusValue.GetStatusValueRequest valueRequest = new HasGetStatusValue.GetStatusValueRequest(context, dynamicParameters);
         value = ((HasGetStatusValue) source).getStatusValue(valueRequest);
 
         if (entity instanceof HasSourceServerUpdates) {

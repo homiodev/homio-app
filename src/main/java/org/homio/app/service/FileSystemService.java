@@ -7,10 +7,10 @@ import java.util.List;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.fs.FileSystemProvider;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.app.setting.console.ConsoleFMClearCacheButtonSetting;
 import org.homio.app.spring.ContextCreated;
@@ -23,36 +23,36 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class FileSystemService implements ContextCreated, ContextRefreshed {
 
-    private final EntityContextImpl entityContext;
+    private final ContextImpl context;
     private List<BaseFileSystemEntity> fileSystems;
     private LocalFileSystemProvider localFileSystem;
 
     @Override
-    public void onContextCreated(EntityContextImpl entityContext) {
-        this.entityContext.event().addEntityRemovedListener(BaseFileSystemEntity.class, "fs-remove",
-            e -> findAllFileSystems(this.entityContext));
-        this.entityContext.event().addEntityCreateListener(BaseFileSystemEntity.class, "fs-create",
-            e -> findAllFileSystems(this.entityContext));
-        this.entityContext.event().addEntityUpdateListener(BaseFileSystemEntity.class, "fs-update",
-            e -> findAllFileSystems(this.entityContext));
-        entityContext.setting().listenValue(ConsoleFMClearCacheButtonSetting.class, "fs-cache",
+    public void onContextCreated(ContextImpl context) {
+        this.context.event().addEntityRemovedListener(BaseFileSystemEntity.class, "fs-remove",
+            e -> findAllFileSystems(this.context));
+        this.context.event().addEntityCreateListener(BaseFileSystemEntity.class, "fs-create",
+            e -> findAllFileSystems(this.context));
+        this.context.event().addEntityUpdateListener(BaseFileSystemEntity.class, "fs-update",
+            e -> findAllFileSystems(this.context));
+        context.setting().listenValue(ConsoleFMClearCacheButtonSetting.class, "fs-cache",
             jsonObject -> {
                 for (BaseFileSystemEntity<?, ?> fileSystem : fileSystems) {
-                    fileSystem.getFileSystem(entityContext).clearCache();
+                    fileSystem.getFileSystem(context).clearCache();
                 }
             });
 
-        LocalBoardEntity LocalBoardEntity = this.entityContext.getEntityRequire(LocalBoardEntity.class, PRIMARY_DEVICE);
-        localFileSystem = LocalBoardEntity.getFileSystem(this.entityContext);
+        LocalBoardEntity LocalBoardEntity = this.context.db().getEntityRequire(LocalBoardEntity.class, PRIMARY_DEVICE);
+        localFileSystem = LocalBoardEntity.getFileSystem(this.context);
     }
 
     @Override
-    public void onContextRefresh(EntityContext entityContext) {
-        findAllFileSystems(this.entityContext);
+    public void onContextRefresh(Context context) {
+        findAllFileSystems(this.context);
     }
 
     public FileSystemProvider getFileSystem(String fs) {
-        return getFileSystemEntity(fs).getFileSystem(entityContext);
+        return getFileSystemEntity(fs).getFileSystem(context);
     }
 
     public BaseFileSystemEntity<?, ?> getFileSystemEntity(@Nullable String fs) {
@@ -67,7 +67,7 @@ public class FileSystemService implements ContextCreated, ContextRefreshed {
         throw new RuntimeException("Unable to find file system with id: " + fs);
     }
 
-    private void findAllFileSystems(EntityContextImpl entityContext) {
-        fileSystems = entityContext.getEntityServices(BaseFileSystemEntity.class);
+    private void findAllFileSystems(ContextImpl context) {
+        fileSystems = context.getEntityServices(BaseFileSystemEntity.class);
     }
 }

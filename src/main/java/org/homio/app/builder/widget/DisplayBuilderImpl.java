@@ -8,9 +8,9 @@ import java.util.List;
 import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.homio.api.EntityContextWidget;
-import org.homio.api.EntityContextWidget.DisplayWidgetBuilder;
-import org.homio.api.EntityContextWidget.DisplayWidgetSeriesBuilder;
+import org.homio.api.ContextWidget;
+import org.homio.api.ContextWidget.DisplayWidgetBuilder;
+import org.homio.api.ContextWidget.DisplayWidgetSeriesBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasActionOnClickBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasChartDataSourceBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasChartTimePeriodBuilder;
@@ -22,7 +22,7 @@ import org.homio.app.builder.widget.hasBuilder.HasNameBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasPaddingBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasValueConverterBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasValueTemplateBuilder;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplaySeriesEntity;
 import org.jetbrains.annotations.NotNull;
@@ -42,8 +42,8 @@ public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuild
     @Getter
     private final List<WidgetDisplaySeriesEntity> series = new ArrayList<>();
 
-    DisplayBuilderImpl(WidgetDisplayEntity widget, EntityContextImpl entityContext) {
-        super(widget, entityContext);
+    DisplayBuilderImpl(WidgetDisplayEntity widget, ContextImpl context) {
+        super(widget, context);
     }
 
     @Override
@@ -83,7 +83,7 @@ public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuild
     }
 
     @Override
-    public @NotNull DisplayWidgetBuilder setChartType(@NotNull EntityContextWidget.ChartType value) {
+    public @NotNull DisplayWidgetBuilder setChartType(@NotNull ContextWidget.ChartType value) {
         widget.setChartType(value);
         return this;
     }

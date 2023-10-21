@@ -15,8 +15,8 @@ import java.util.concurrent.locks.Condition;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextBGP.ThreadContext;
+import org.homio.api.Context;
+import org.homio.api.ContextBGP.ThreadContext;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.fs.BaseCachedFileSystemProvider;
 import org.homio.app.ssh.SshGenericFileSystem.SshFile;
@@ -26,8 +26,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class SshGenericFileSystem extends BaseCachedFileSystemProvider<SshGenericEntity, SshFile, SshFileService> {
 
-    public SshGenericFileSystem(SshGenericEntity entity, EntityContext entityContext) {
-        super(entity, entityContext);
+    public SshGenericFileSystem(SshGenericEntity entity, Context context) {
+        super(entity, context);
         this.entity = entity;
     }
 
@@ -180,7 +180,7 @@ public class SshGenericFileSystem extends BaseCachedFileSystemProvider<SshGeneri
                 if (serviceThread != null) {
                     serviceThread.cancel();
                 }
-                serviceThread = entityContext.bgp().builder("sftp-client").execute(() -> {
+                serviceThread = context.bgp().builder("sftp-client").execute(() -> {
                     try (SshClient sshClient = entity.createSshClient()) {
                         sshClient.runTask(new SftpClientTask(sshClient) {
 

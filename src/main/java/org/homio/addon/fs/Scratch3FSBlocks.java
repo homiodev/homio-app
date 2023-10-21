@@ -19,7 +19,7 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.commons.io.IOUtils;
 import org.homio.addon.fs.Scratch3FSBlocks.ModifyFileSettings.ModifyOption;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.fs.FileSystemProvider;
@@ -50,8 +50,8 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
     private final MenuBlock.StaticMenuBlock<CountNodeEnum> countMenu;
     private final ServerMenuBlock fsEntityMenu;
 
-    public Scratch3FSBlocks(EntityContext entityContext) {
-        super("#93922C", entityContext, null, "fs");
+    public Scratch3FSBlocks(Context context) {
+        super("#93922C", context, null, "fs");
         setParent("storage");
 
         // menu
@@ -146,7 +146,7 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
     }
 
     /*public void init() {
-        this.fsEntityMenu.setDefault(entityContext.findAny(entityClass));
+        this.fsEntityMenu.setDefault(context.findAny(entityClass));
         super.init();
     }*/
 
@@ -173,7 +173,7 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
 
     private FileSystemProvider getFileSystem(WorkspaceBlock workspaceBlock) {
         BaseFileSystemEntity entity = workspaceBlock.getMenuValueEntityRequired(ENTITY, this.fsEntityMenu);
-        return entity.getFileSystem(entityContext);
+        return entity.getFileSystem(context);
     }
 
     private RawType getFieldContent(WorkspaceBlock workspaceBlock) throws Exception {
@@ -238,13 +238,13 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
 
     private FileSystemItem getItemId(String key, WorkspaceBlock workspaceBlock) {
         String[] ids = workspaceBlock.getMenuValue(key, this.fileMenu).split(LIST_DELIMITER);
-        BaseFileSystemEntity entity = getEntityContext().getEntityRequire(ids[0]);
+        BaseFileSystemEntity entity = context.db().getEntityRequire(ids[0]);
         String node = ids[1];
         int splitNameAndId = node.indexOf("://");
         if (splitNameAndId >= 0) {
             node = node.substring(splitNameAndId + "://".length());
         }
-        return new FileSystemItem(entity.getFileSystem(entityContext), entity, node);
+        return new FileSystemItem(entity.getFileSystem(context), entity, node);
     }
 
     @RequiredArgsConstructor
@@ -261,8 +261,9 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
         File, Folder
     }
 
+    @Getter
     @RequiredArgsConstructor
-    private static class FileSystemItem {
+    public static class FileSystemItem {
 
         private final FileSystemProvider fileSystem;
         private final BaseFileSystemEntity entity;

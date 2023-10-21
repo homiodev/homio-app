@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.service.UsbCameraService;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextMedia.VideoInputDevice;
+import org.homio.api.Context;
+import org.homio.api.ContextMedia.VideoInputDevice;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.OptionModel;
 import org.homio.api.ui.UISidebarChildren;
@@ -131,15 +131,24 @@ public class UsbCameraEntity extends BaseCameraEntity<UsbCameraEntity, UsbCamera
     }
 
     @Override
-    public UsbCameraService createService(@NotNull EntityContext entityContext) {
-        return new UsbCameraService(this, entityContext);
+    public UsbCameraService createService(@NotNull Context context) {
+        return new UsbCameraService(this, context);
+    }
+
+    @Override
+    public void beforePersist() {
+        super.beforePersist();
+        String alarmProvider = context()
+            .getBeansOfTypeWithBeanName(VideoMotionAlarmProvider.class)
+            .keySet().iterator().next();
+        setVideoMotionAlarmProvider(alarmProvider);
     }
 
     public static class SelectAudioSource implements DynamicOptionLoader {
 
         @Override
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
-            return OptionModel.list(parameters.getEntityContext().media().getAudioDevices());
+            return OptionModel.list(parameters.context().media().getAudioDevices());
         }
     }
 
@@ -147,25 +156,7 @@ public class UsbCameraEntity extends BaseCameraEntity<UsbCameraEntity, UsbCamera
 
         @Override
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
-            return OptionModel.list(parameters.getEntityContext().media().getVideoDevices());
-        }
-    }
-
-    public static class SelectVideoResolutionSource implements DynamicOptionLoader {
-
-        @Override
-        public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
-            UsbCameraEntity entity = (UsbCameraEntity) parameters.getBaseEntity();
-            List<OptionModel> list = new ArrayList<>();
-            list.add(OptionModel.of("", "PLACEHOLDER.NOT_SELECTED"));
-            if (StringUtils.isNotEmpty(entity.getIeeeAddress())) {
-                VideoInputDevice input = parameters.getEntityContext().media()
-                                                   .createVideoInputDevice(entity.getIeeeAddress());
-                for (String resolution : entity.getStreamResolutions()) {
-                    list.add(OptionModel.of(resolution));
-                }
-            }
-            return list;
+            return OptionModel.list(parameters.context().media().getVideoDevices());
         }
     }
 
@@ -181,12 +172,21 @@ public class UsbCameraEntity extends BaseCameraEntity<UsbCameraEntity, UsbCamera
         return ActionResponseModel.showJson("GET_INFO", getService().getInput());
     }
 
-    @Override
-    public void beforePersist() {
-        super.beforePersist();
-        String alarmProvider = getEntityContext()
-            .getBeansOfTypeWithBeanName(VideoMotionAlarmProvider.class)
-            .keySet().iterator().next();
-        setVideoMotionAlarmProvider(alarmProvider);
+    public static class SelectVideoResolutionSource implements DynamicOptionLoader {
+
+        @Override
+        public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
+            UsbCameraEntity entity = (UsbCameraEntity) parameters.getBaseEntity();
+            List<OptionModel> list = new ArrayList<>();
+            list.add(OptionModel.of("", "PLACEHOLDER.NOT_SELECTED"));
+            if (StringUtils.isNotEmpty(entity.getIeeeAddress())) {
+                VideoInputDevice input = parameters.context().media()
+                                                   .createVideoInputDevice(entity.getIeeeAddress());
+                for (String resolution : entity.getStreamResolutions()) {
+                    list.add(OptionModel.of(resolution));
+                }
+            }
+            return list;
+        }
     }
 }

@@ -15,7 +15,7 @@ import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.service.IpCameraService;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
 import org.jetbrains.annotations.Nullable;
@@ -148,7 +148,7 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler {
     }
 
     @Override
-    public void postInitializeCamera(EntityContext entityContext) {
+    public void postInitializeCamera(Context context) {
         IpCameraEntity entity = getEntity();
         // Foscam needs any special char like spaces (%20) to be encoded for URLs.
         entity.setUser(Helper.encodeSpecialChars(entity.getUser()));

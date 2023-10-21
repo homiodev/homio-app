@@ -1,12 +1,17 @@
 package org.homio.addon.media;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.function.BiFunction;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.model.StylePosition;
 import org.homio.api.state.RawType;
 import org.homio.api.workspace.WorkspaceBlock;
@@ -16,12 +21,6 @@ import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.setting.workspace.ImageDefaultProcessingSetting;
 import org.springframework.stereotype.Component;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.function.BiFunction;
-
 @Log4j2
 @Getter
 @Component
@@ -30,8 +29,8 @@ public class Scratch3ImageEditBlocks extends Scratch3ExtensionBlocks {
     private static final String IMAGE = "IMAGE";
     private final MenuBlock.StaticMenuBlock<StylePosition> textPositionMenu;
 
-    public Scratch3ImageEditBlocks(EntityContext entityContext) {
-        super("#3C6360", entityContext, null, "imageeditor");
+    public Scratch3ImageEditBlocks(Context context) {
+        super("#3C6360", context, null, "imageeditor");
         setParent("media");
         // Menu
         this.textPositionMenu = menuStatic("textPositionMenu", StylePosition.class, StylePosition.TopLeft);
@@ -114,14 +113,14 @@ public class Scratch3ImageEditBlocks extends Scratch3ExtensionBlocks {
     }
 
     private RawType brightnessImageCommand(WorkspaceBlock workspaceBlock) {
-        return handle(workspaceBlock, (formatType, image) -> entityContext
+        return handle(workspaceBlock, (formatType, image) -> context
                 .setting()
                 .getValue(ImageDefaultProcessingSetting.class)
                 .setBrightness(image, workspaceBlock.getInputFloat(VALUE), formatType));
     }
 
     private RawType overlayImageCommand(WorkspaceBlock workspaceBlock) {
-        return handle(workspaceBlock, (formatType, image) -> entityContext
+        return handle(workspaceBlock, (formatType, image) -> context
                 .setting().getValue(ImageDefaultProcessingSetting.class)
                 .overlayImage(image,
                         fixImage(workspaceBlock.getInputRawType("IMAGE2")).getValue(),
@@ -133,7 +132,7 @@ public class Scratch3ImageEditBlocks extends Scratch3ExtensionBlocks {
     }
 
     private RawType cropImageCommand(WorkspaceBlock workspaceBlock) {
-        return handle(workspaceBlock, (formatType, image) -> entityContext
+        return handle(workspaceBlock, (formatType, image) -> context
                 .setting()
                 .getValue(ImageDefaultProcessingSetting.class)
                 .cropImage(
@@ -146,35 +145,35 @@ public class Scratch3ImageEditBlocks extends Scratch3ExtensionBlocks {
     }
 
     private RawType flipImageCommand(WorkspaceBlock workspaceBlock) {
-        return handle(workspaceBlock, (formatType, image) -> entityContext
+        return handle(workspaceBlock, (formatType, image) -> context
                 .setting()
                 .getValue(ImageDefaultProcessingSetting.class)
                 .flipImage(image, workspaceBlock.getInputBoolean(VALUE), formatType));
     }
 
     private RawType scaleImageCommand(WorkspaceBlock workspaceBlock) {
-        return handle(workspaceBlock, (formatType, image) -> entityContext
+        return handle(workspaceBlock, (formatType, image) -> context
                 .setting()
                 .getValue(ImageDefaultProcessingSetting.class)
                 .scaleImage(image, workspaceBlock.getInputInteger("SX"), workspaceBlock.getInputInteger("SY"), formatType));
     }
 
     private RawType resizeImageCommand(WorkspaceBlock workspaceBlock) {
-        return handle(workspaceBlock, (formatType, image) -> entityContext
+        return handle(workspaceBlock, (formatType, image) -> context
                 .setting()
                 .getValue(ImageDefaultProcessingSetting.class)
                 .resizeImage(image, workspaceBlock.getInputInteger("W"), workspaceBlock.getInputInteger("H"), formatType));
     }
 
     private RawType translateImageCommand(WorkspaceBlock workspaceBlock) {
-        return handle(workspaceBlock, (formatType, image) -> entityContext
+        return handle(workspaceBlock, (formatType, image) -> context
                 .setting()
                 .getValue(ImageDefaultProcessingSetting.class)
                 .translateImage(image, workspaceBlock.getInputFloat("X"), workspaceBlock.getInputFloat("Y"), formatType));
     }
 
     private RawType setTextImageCommand(WorkspaceBlock workspaceBlock) {
-        return handle(workspaceBlock, (formatType, image) -> entityContext
+        return handle(workspaceBlock, (formatType, image) -> context
                 .setting()
                 .getValue(ImageDefaultProcessingSetting.class)
                 .addText(image, workspaceBlock.getMenuValue("POSITION", this.textPositionMenu), workspaceBlock.getInputString("COLOR"),
@@ -182,7 +181,7 @@ public class Scratch3ImageEditBlocks extends Scratch3ExtensionBlocks {
     }
 
     private RawType rotateImageCommand(WorkspaceBlock workspaceBlock) {
-        return handle(workspaceBlock, (formatType, image) -> entityContext
+        return handle(workspaceBlock, (formatType, image) -> context
                 .setting()
                 .getValue(ImageDefaultProcessingSetting.class)
                 .rotateImage(image, workspaceBlock.getInputInteger("DEGREE"), formatType));

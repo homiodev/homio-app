@@ -1,7 +1,7 @@
 package org.homio.app.manager.common.impl;
 
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.homio.app.manager.common.impl.EntityContextUIImpl.GlobalSendType.setting;
+import static org.homio.app.manager.common.impl.ContextUIImpl.GlobalSendType.setting;
 import static org.homio.app.model.entity.SettingEntity.getKey;
 import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;
 
@@ -25,7 +25,7 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContextSetting;
+import org.homio.api.ContextSetting;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.model.OptionModel;
@@ -37,7 +37,7 @@ import org.homio.api.state.StringType;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.extloader.AddonContext;
 import org.homio.app.manager.common.ClassFinder;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.setting.system.SystemPlaceSetting;
@@ -48,7 +48,7 @@ import org.springframework.core.env.ConfigurableEnvironment;
 @SuppressWarnings("unused")
 @Log4j2
 @RequiredArgsConstructor
-public class EntityContextSettingImpl implements EntityContextSetting {
+public class ContextSettingImpl implements ContextSetting {
 
     @Getter
     private static Path propertiesLocation;
@@ -61,7 +61,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     private static final Map<String, SettingPlugin> settingPluginsByPluginClass = new HashMap<>();
     private final Map<String, Map<String, ThrowingConsumer<?, Exception>>> settingListeners = new HashMap<>();
     private final Map<String, Map<String, ThrowingConsumer<?, Exception>>> httpRequestSettingListeners = new HashMap<>();
-    private final EntityContextImpl entityContext;
+    private final ContextImpl context;
     private final ConfigurableEnvironment environment;
     private final ClassFinder classFinder;
 
@@ -77,10 +77,10 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     @Override
     public void reloadSettings(@NotNull Class<? extends SettingPluginOptions> settingPlugin) {
         String entityID = SettingEntity.getKey(settingPlugin);
-        SettingPluginOptions<?> pluginOptions = (SettingPluginOptions<?>) EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+        SettingPluginOptions<?> pluginOptions = (SettingPluginOptions<?>) ContextSettingImpl.settingPluginsByPluginKey.get(entityID);
 
-        Collection<OptionModel> options = SettingRepository.getOptions(pluginOptions, entityContext, null);
-        entityContext.ui().sendGlobal(setting, entityID, options, null, OBJECT_MAPPER.createObjectNode().put("subType", "list"));
+        Collection<OptionModel> options = SettingRepository.getOptions(pluginOptions, context, null);
+        context.ui().sendGlobal(setting, entityID, options, null, OBJECT_MAPPER.createObjectNode().put("subType", "list"));
     }
 
     /**
@@ -95,7 +95,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
                 .collect(Collectors.toList());
         dynamicHeaderSettings.put(dynamicSettingPluginClass, dynamicEntities);
 
-        entityContext.ui().sendGlobal(setting, SettingEntity.PREFIX + dynamicSettingPluginClass.getSimpleName(),
+        context.ui().sendGlobal(setting, SettingEntity.PREFIX + dynamicSettingPluginClass.getSimpleName(),
                 dynamicEntities, null, OBJECT_MAPPER.createObjectNode().put("subType", "dynamic"));
     }
 
@@ -105,7 +105,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         if (pluginFor.transientState()) {
             value = settingTransientState.get(pluginFor);
         } else {
-            SettingEntity settingEntity = entityContext.getEntity(SettingEntity.getKey(pluginFor));
+            SettingEntity settingEntity = context.db().getEntity(SettingEntity.getKey(pluginFor));
             value = settingEntity == null ? null : settingEntity.getValue();
         }
         return parseSettingValue(pluginFor, value);
@@ -133,7 +133,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         if (pluginFor.transientState()) {
             value = settingTransientState.get(pluginFor);
         } else {
-            SettingEntity settingEntity = entityContext.getEntity(SettingEntity.getKey(pluginFor));
+            SettingEntity settingEntity = context.db().getEntity(SettingEntity.getKey(pluginFor));
             value = settingEntity == null ? null : settingEntity.getValue();
         }
         if (settingValuePostProcessors.containsKey(key)) {
@@ -250,8 +250,8 @@ public class EntityContextSettingImpl implements EntityContextSetting {
      */
     public <T> void notifyValueStateChanged(Class<? extends SettingPlugin<T>> settingPluginClazz) {
         SettingPlugin<T> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
-        SettingEntity settingEntity = entityContext.getEntityRequire(SettingEntity.getKey(pluginFor));
-        T value = pluginFor.parseValue(entityContext, settingEntity.getValue());
+        SettingEntity settingEntity = context.db().getEntityRequire(SettingEntity.getKey(pluginFor));
+        T value = pluginFor.parseValue(context, settingEntity.getValue());
         fireNotifyHandlers(settingPluginClazz, value, pluginFor, settingEntity.getValue(), true);
     }
 
@@ -269,7 +269,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
 
     public <T> void setValueRaw(Class<? extends SettingPlugin<T>> settingPluginClazz, @Nullable String value, boolean fireNotificationOnUI) {
         SettingPlugin<?> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
-        T parsedValue = (T) pluginFor.parseValue(entityContext, value);
+        T parsedValue = (T) pluginFor.parseValue(context, value);
         String strValue = setValueSilence(pluginFor, parsedValue);
         fireNotifyHandlers(settingPluginClazz, parsedValue, pluginFor, strValue, fireNotificationOnUI);
     }
@@ -309,14 +309,14 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     private SettingEntity createSettingEntityFromPlugin(SettingPlugin<?> settingPlugin) {
         SettingEntity entity = new SettingEntity();
         entity.setEntityID(getKey(settingPlugin));
-        fulfillEntityFromPlugin(entity, entityContext, settingPlugin);
+        fulfillEntityFromPlugin(entity, context, settingPlugin);
         return entity;
     }
 
     @Nullable
     private <T> T parseSettingValue(SettingPlugin<T> pluginFor, String value) {
         try {
-            return pluginFor.parseValue(entityContext, StringUtils.defaultIfEmpty(value, pluginFor.getDefaultValue()));
+            return pluginFor.parseValue(context, StringUtils.defaultIfEmpty(value, pluginFor.getDefaultValue()));
         } catch (Exception ex) {
             log.error("Unable to parse value: '{}' to type: '{}'", value, pluginFor.getType());
             return null;
@@ -326,12 +326,12 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     private <T> void fireNotifyHandlers(Class<? extends SettingPlugin<T>> settingPluginClazz, T value,
                                         SettingPlugin pluginFor, String strValue, boolean fireUpdatesToUI) {
         if (settingListeners.containsKey(settingPluginClazz.getName())) {
-            entityContext.bgp().builder("update-setting-" + settingPluginClazz.getSimpleName()).auth().execute(() -> {
+            context.bgp().builder("update-setting-" + settingPluginClazz.getSimpleName()).auth().execute(() -> {
                 for (ThrowingConsumer consumer : settingListeners.get(settingPluginClazz.getName()).values()) {
                     try {
                         consumer.accept(value);
                     } catch (Exception ex) {
-                        entityContext.ui().toastr().error(ex);
+                        context.ui().toastr().error(ex);
                         log.error("Error while fire listener for setting <{}>. Value: <{}>", settingPluginClazz.getSimpleName(), value, ex);
                     }
                 }
@@ -343,17 +343,17 @@ public class EntityContextSettingImpl implements EntityContextSetting {
                 try {
                     consumer.accept(value);
                 } catch (Exception ex) {
-                    entityContext.ui().toastr().error(ex);
+                    context.ui().toastr().error(ex);
                     log.error("Error while fire listener for setting <{}>. Value: <{}>", settingPluginClazz.getSimpleName(), value, ex);
                 }
             }
         }
 
-        entityContext.event().fireEvent(SettingEntity.getKey(settingPluginClazz),
+        context.event().fireEvent(SettingEntity.getKey(settingPluginClazz),
             new StringType(StringUtils.defaultIfEmpty(strValue, pluginFor.getDefaultValue())));
 
         if (fireUpdatesToUI) {
-            entityContext.ui().sendGlobal(setting, SettingEntity.getKey(settingPluginClazz), value, null,
+            context.ui().sendGlobal(setting, SettingEntity.getKey(settingPluginClazz), value, null,
                     OBJECT_MAPPER.createObjectNode().put("subType", "single"));
         }
     }
@@ -374,12 +374,12 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         if (pluginFor.transientState()) {
             settingTransientState.put(pluginFor, value);
         } else {
-            SettingEntity settingEntity = entityContext.getEntityRequire(SettingEntity.getKey(pluginFor));
+            SettingEntity settingEntity = context.db().getEntityRequire(SettingEntity.getKey(pluginFor));
             if (!Objects.equals(value, settingEntity.getValue())) {
                 if (Objects.equals(settingEntity.getDefaultValue(), value)) {
                     value = "";
                 }
-                entityContext.save(settingEntity.setValue(value));
+                context.db().save(settingEntity.setValue(value));
             }
         }
     }

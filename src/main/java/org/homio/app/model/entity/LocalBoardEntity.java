@@ -1,11 +1,16 @@
 package org.homio.app.model.entity;
 
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.types.MicroControllerBaseEntity;
 import org.homio.api.fs.archive.ArchiveUtil;
@@ -21,15 +26,8 @@ import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.service.LocalBoardService;
 import org.homio.app.service.LocalFileSystemProvider;
-import org.homio.app.service.video.MediaMTXService;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.jetbrains.annotations.Nullable;
-
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 @Entity
 @Log4j2
@@ -79,7 +77,7 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
     }
 
     @Override
-    public @NotNull LocalFileSystemProvider buildFileSystem(@NotNull EntityContext entityContext) {
+    public @NotNull LocalFileSystemProvider buildFileSystem(@NotNull Context context) {
         return new LocalFileSystemProvider(this);
     }
 
@@ -121,8 +119,8 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
     }
 
     @Override
-    public @Nullable LocalBoardService createService(@NotNull EntityContext entityContext) {
-        return new LocalBoardService(entityContext, this);
+    public @Nullable LocalBoardService createService(@NotNull Context context) {
+        return new LocalBoardService(context, this);
     }
 
     @Override
@@ -139,13 +137,13 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
         setJsonData("cpu_interval", value);
     }
 
-    public static LocalBoardEntity ensureDeviceExists(EntityContext entityContext) {
-        LocalBoardEntity entity = entityContext.getEntity(LocalBoardEntity.class, PRIMARY_DEVICE);
+    public static LocalBoardEntity ensureDeviceExists(Context context) {
+        LocalBoardEntity entity = context.db().getEntity(LocalBoardEntity.class, PRIMARY_DEVICE);
         if (entity == null) {
             log.info("Save default compute board device");
             entity = new LocalBoardEntity();
             entity.setEntityID(PRIMARY_DEVICE);
-            entity = entityContext.save(entity);
+            entity = context.db().save(entity);
         }
         return entity;
     }

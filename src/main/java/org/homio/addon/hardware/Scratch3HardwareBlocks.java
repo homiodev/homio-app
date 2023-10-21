@@ -7,7 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.JsonType;
 import org.homio.api.state.State;
@@ -38,8 +38,8 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block countryInfoReporter;
 
     public Scratch3HardwareBlocks(
-            EntityContext entityContext, NetworkHardwareRepository networkHardwareRepository) {
-        super("#51633C", entityContext, null, "hardware");
+        Context context, NetworkHardwareRepository networkHardwareRepository) {
+        super("#51633C", context, null, "hardware");
         this.networkHardwareRepository = networkHardwareRepository;
 
         // Menu
@@ -73,7 +73,7 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
         blockHat(400, "event", "Hardware event [EVENT]", this::fireHardwareHatEvent,
                 block -> block.addArgument(EVENT, this.hardwareEventsMenu));
 
-        entityContext.event().runOnceOnInternetUp("scratch3-hardware", () -> {
+        context.event().runOnceOnInternetUp("scratch3-hardware", () -> {
             String ipAddress = networkHardwareRepository.getOuterIpAddress();
             this.ipGeoLocationReporter.addArgument(VALUE, ipAddress);
             JsonNode ipGeo = networkHardwareRepository.getIpGeoLocation(ipAddress);

@@ -8,8 +8,8 @@ import java.util.regex.Pattern;
 import lombok.SneakyThrows;
 import org.aspectj.util.FileUtil;
 import org.homio.addon.camera.service.BaseCameraService;
-import org.homio.api.EntityContextMedia.FFMPEG;
-import org.homio.api.EntityContextMedia.FFMPEGFormat;
+import org.homio.api.ContextMedia.FFMPEG;
+import org.homio.api.ContextMedia.FFMPEGFormat;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
@@ -96,7 +96,7 @@ public interface StreamDASH extends HasJsonData {
             throw new IllegalArgumentException("Unable to find video service dash url");
         }
         String streamPrefix = "%s_dash".formatted(service.getEntityID());
-        return service.getEntityContext().media().buildFFMPEG(
+        return service.context().media().buildFFMPEG(
                           service.getEntityID(),
                           "DASH",
                           service,

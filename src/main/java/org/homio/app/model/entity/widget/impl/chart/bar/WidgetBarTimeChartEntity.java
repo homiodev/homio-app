@@ -1,7 +1,7 @@
 package org.homio.app.model.entity.widget.impl.chart.bar;
 
 import jakarta.persistence.Entity;
-import org.homio.api.EntityContextWidget.BarChartType;
+import org.homio.api.ContextWidget.BarChartType;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.app.model.entity.widget.UIFieldJSONLine;

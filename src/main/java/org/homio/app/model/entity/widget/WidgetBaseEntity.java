@@ -28,7 +28,7 @@ import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.api.ui.field.UIFieldSlider;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.entity.widget.attributes.HasStyle;
 import org.jetbrains.annotations.NotNull;
@@ -135,36 +135,10 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
         return "widget";
     }
 
-    /**
-     * Find free space in matrix for new item
-     */
-    private void findSuitablePosition() {
-        List<WidgetBaseEntity> widgets = getEntityContext().findAll(WidgetBaseEntity.class);
-        if (isNotEmpty(getParent())) {
-            WidgetBaseEntity layout = widgets.stream().filter(w -> w.getEntityID().equals(getParent())).findAny().orElse(null);
-            if (layout == null) {
-                throw new IllegalArgumentException("Widget: " + getTitle() + " has xbl/tbl and have to be belong to layout widget but it's not found");
-            }
-            // do not change position for widget which belong to layout
-            return;
-        }
-
-
-        var hBlockCount = this.widgetTabEntity.getHorizontalBlocks();
-        var vBlockCount = this.widgetTabEntity.getVerticalBlocks();
-        boolean[][] matrix = new boolean[vBlockCount][hBlockCount];
-        for (int j = 0; j < vBlockCount; j++) {
-            matrix[j] = new boolean[hBlockCount];
-        }
-        initMatrix(widgets, matrix);
-        if (!isSatisfyPosition(matrix, getXb(), getYb(), getBw(), getBh(), hBlockCount, vBlockCount)) {
-            Pair<Integer, Integer> freePosition = findMatrixFreePosition(matrix, getBw(), getBh(), hBlockCount, vBlockCount);
-            if (freePosition == null) {
-                throw new IllegalStateException("W.ERROR.NO_WIDGET_FREE_POSITION");
-            }
-            setXb(freePosition.getKey());
-            setYb(freePosition.getValue());
-        }
+    @Override
+    public void afterUpdate() {
+        super.afterUpdate();
+        ((ContextImpl) context()).event().removeEvents(getEntityID());
     }
 
     /**
@@ -209,9 +183,35 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
         return 0;
     }
 
-    @Override
-    public void afterUpdate() {
-        super.afterUpdate();
-        ((EntityContextImpl)getEntityContext()).event().removeEvents(getEntityID());
+    /**
+     * Find free space in matrix for new item
+     */
+    private void findSuitablePosition() {
+        List<WidgetBaseEntity> widgets = context().db().findAll(WidgetBaseEntity.class);
+        if (isNotEmpty(getParent())) {
+            WidgetBaseEntity layout = widgets.stream().filter(w -> w.getEntityID().equals(getParent())).findAny().orElse(null);
+            if (layout == null) {
+                throw new IllegalArgumentException("Widget: " + getTitle() + " has xbl/tbl and have to be belong to layout widget but it's not found");
+            }
+            // do not change position for widget which belong to layout
+            return;
+        }
+
+
+        var hBlockCount = this.widgetTabEntity.getHorizontalBlocks();
+        var vBlockCount = this.widgetTabEntity.getVerticalBlocks();
+        boolean[][] matrix = new boolean[vBlockCount][hBlockCount];
+        for (int j = 0; j < vBlockCount; j++) {
+            matrix[j] = new boolean[hBlockCount];
+        }
+        initMatrix(widgets, matrix);
+        if (!isSatisfyPosition(matrix, getXb(), getYb(), getBw(), getBh(), hBlockCount, vBlockCount)) {
+            Pair<Integer, Integer> freePosition = findMatrixFreePosition(matrix, getBw(), getBh(), hBlockCount, vBlockCount);
+            if (freePosition == null) {
+                throw new IllegalStateException("W.ERROR.NO_WIDGET_FREE_POSITION");
+            }
+            setXb(freePosition.getKey());
+            setYb(freePosition.getValue());
+        }
     }
 }

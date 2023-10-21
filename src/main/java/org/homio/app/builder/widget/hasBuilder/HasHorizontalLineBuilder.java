@@ -1,6 +1,6 @@
 package org.homio.app.builder.widget.hasBuilder;
 
-import org.homio.api.EntityContextWidget.HasHorizontalLine;
+import org.homio.api.ContextWidget.HasHorizontalLine;
 import org.jetbrains.annotations.Nullable;
 
 public interface HasHorizontalLineBuilder<T extends org.homio.app.model.entity.widget.impl.chart.HasHorizontalLine, R>

@@ -12,7 +12,7 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.OptionModel;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.WorkspaceEntity;
 import org.homio.app.model.var.WorkspaceGroup;
 import org.homio.app.model.var.WorkspaceVariable;
@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/rest/workspace")
 public class WorkspaceController {
 
-    private final EntityContextImpl entityContext;
+    private final ContextImpl context;
     private final WorkspaceService workspaceService;
 
     @GetMapping("/extension")
@@ -44,7 +44,7 @@ public class WorkspaceController {
 
     @GetMapping("/{entityID}")
     public String getWorkspace(@PathVariable("entityID") String entityID) {
-        WorkspaceEntity workspaceEntity = entityContext.getEntity(WorkspaceEntity.class, entityID);
+        WorkspaceEntity workspaceEntity = context.db().getEntity(WorkspaceEntity.class, entityID);
         if (workspaceEntity == null) {
             throw new NotFoundException("Unable to find workspace tab with id: " + entityID);
         }
@@ -55,7 +55,7 @@ public class WorkspaceController {
     public String getWorkspaceVariables() {
         JSONObject result = new JSONObject();
 
-        Map<String, WorkspaceGroup> groups = entityContext
+        Map<String, WorkspaceGroup> groups = context.db()
             .findAll(WorkspaceGroup.class)
             .stream()
             .collect(Collectors.toMap(WorkspaceGroup::getEntityID, g -> g));
@@ -79,11 +79,11 @@ public class WorkspaceController {
     @PostMapping("/{entityID}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void saveWorkspace(@PathVariable("entityID") String entityID, @RequestBody String json) {
-        WorkspaceEntity workspaceEntity = entityContext.getEntity(WorkspaceEntity.class, entityID);
+        WorkspaceEntity workspaceEntity = context.db().getEntity(WorkspaceEntity.class, entityID);
         if (workspaceEntity == null) {
             throw new NotFoundException("Unable to find workspace: " + entityID);
         }
-        entityContext.save(workspaceEntity.setContent(json));
+        context.db().save(workspaceEntity.setContent(json));
     }
 
     @PostMapping("/variable")
@@ -93,17 +93,17 @@ public class WorkspaceController {
 
     @GetMapping("/tab")
     public List<OptionModel> getWorkspaceTabs() {
-        return entityContext.toOptionModels(entityContext.findAll(WorkspaceEntity.class));
+        return context.toOptionModels(context.db().findAll(WorkspaceEntity.class));
     }
 
     @SneakyThrows
     @PostMapping("/tab/{name}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public OptionModel createWorkspaceTab(@PathVariable("name") String name) {
-        WorkspaceEntity entity = entityContext.getEntity(WorkspaceEntity.class, name);
+        WorkspaceEntity entity = context.db().getEntity(WorkspaceEntity.class, name);
         if (entity == null) {
             entity = new WorkspaceEntity(name, name);
-            entity = entityContext.save(entity);
+            entity = context.db().save(entity);
             return OptionModel.of(entity.getEntityID(), entity.getTitle());
         }
         throw new IllegalArgumentException("Workspace tab with name <" + name + "> already exists");
@@ -112,7 +112,7 @@ public class WorkspaceController {
     @SneakyThrows
     @GetMapping("/tab/{name}")
     public boolean tabExists(@PathVariable("name") String name) {
-        return entityContext.getEntity(WorkspaceEntity.class, name) != null;
+        return context.db().getEntity(WorkspaceEntity.class, name) != null;
     }
 
     @Setter

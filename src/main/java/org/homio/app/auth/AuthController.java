@@ -1,16 +1,19 @@
 package org.homio.app.auth;
 
+import static java.lang.String.format;
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+
 import jakarta.ws.rs.BadRequestException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.val;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.UserEntity.UserType;
 import org.homio.api.model.Icon;
-import org.homio.app.manager.common.impl.EntityContextAddonImpl;
+import org.homio.app.manager.common.impl.ContextAddonImpl;
 import org.homio.app.model.entity.user.UserAdminEntity;
 import org.homio.app.model.entity.user.UserBaseEntity;
 import org.homio.app.setting.system.SystemLogoutButtonSetting;
@@ -19,10 +22,11 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
-
-import static java.lang.String.format;
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/rest/auth")
@@ -31,12 +35,12 @@ public class AuthController {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
-    private final EntityContext entityContext;
+    private final Context context;
 
     @GetMapping("/status")
     public StatusResponse getStatus(UsernamePasswordAuthenticationToken user) {
         if (user == null) {
-            UserAdminEntity userAdminEntity = entityContext.getEntityRequire(UserAdminEntity.class, PRIMARY_DEVICE);
+            UserAdminEntity userAdminEntity = context.db().getEntityRequire(UserAdminEntity.class, PRIMARY_DEVICE);
             if (StringUtils.isBlank(userAdminEntity.getEmail())) {
                 return new StatusResponse(402, null);
             }
@@ -46,8 +50,8 @@ public class AuthController {
         String userEntityID = UserEntityDetailsService.getEntityID(user);
 
         addUserNotificationBlock(userEntityID, email, false);
-        String version = format("%s-%s-%s", entityContext.setting().getApplicationVersion(),
-                EntityContextAddonImpl.ADDON_UPDATE_COUNT, JwtTokenProvider.RUN_COUNT);
+        String version = format("%s-%s-%s", context.setting().getApplicationVersion(),
+            ContextAddonImpl.ADDON_UPDATE_COUNT, JwtTokenProvider.RUN_COUNT);
         return new StatusResponse(200, version);
     }
 
@@ -56,14 +60,14 @@ public class AuthController {
         credentials.validate();
         UserBaseEntity.log.info("Registering <{}>", credentials.getEmail());
         try {
-            UserAdminEntity userAdminEntity = entityContext.getEntityRequire(UserAdminEntity.class, PRIMARY_DEVICE);
+            UserAdminEntity userAdminEntity = context.db().getEntityRequire(UserAdminEntity.class, PRIMARY_DEVICE);
             if (StringUtils.isNotBlank(userAdminEntity.getEmail())) {
                 throw new IllegalStateException("Unable to register second primary user");
             }
             userAdminEntity.setEmail(credentials.email);
-            userAdminEntity.setPassword(credentials.password, entityContext.getBean(PasswordEncoder.class));
+            userAdminEntity.setPassword(credentials.password, context.getBean(PasswordEncoder.class));
 
-            entityContext.save(userAdminEntity);
+            context.db().save(userAdminEntity);
         } catch (Exception ex) {
             UserBaseEntity.log.info("Register failed for <{}>", credentials.getEmail(), ex);
             throw ex;
@@ -72,7 +76,7 @@ public class AuthController {
 
     @GetMapping("/user")
     public UserEntity getUser() {
-        return entityContext.getUser();
+        return context.getUser();
     }
 
     @PostMapping("/login")
@@ -96,14 +100,14 @@ public class AuthController {
 
     private void addUserNotificationBlock(String entityID, String email, boolean replace) {
         String key = "user-" + entityID;
-        if (replace || !entityContext.ui().notification().isHasBlock(key)) {
-            entityContext.ui().notification().addBlock(key, email, new Icon("fas fa-user", "#AAAC2C"), builder ->
+        if (replace || !context.ui().notification().isHasBlock(key)) {
+            context.ui().notification().addBlock(key, email, new Icon("fas fa-user", "#AAAC2C"), builder ->
                     builder.visibleForUser(email)
-                            .linkToEntity(entityContext.getEntityRequire(entityID))
+                           .linkToEntity(context.db().getEntityRequire(entityID))
                             .setBorderColor("#AAAC2C")
                             .addInfo(key, null, "")
                             .setRightButton(new Icon("fas fa-right-from-bracket"), "W.INFO.LOGOUT", "W.CONFIRM.LOGOUT", (ignore, params) -> {
-                                entityContext.setting().setValue(SystemLogoutButtonSetting.class, new JSONObject());
+                                context.setting().setValue(SystemLogoutButtonSetting.class, new JSONObject());
                                 return null;
                             }));
         }

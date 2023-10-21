@@ -17,8 +17,8 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.AddonEntrypoint;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextUI.NotificationBlockBuilder;
+import org.homio.api.Context;
+import org.homio.api.ContextUI.NotificationBlockBuilder;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
@@ -39,7 +39,7 @@ import org.homio.app.extloader.AddonClassLoader;
 import org.homio.app.extloader.AddonContext;
 import org.homio.app.manager.AddonService;
 import org.homio.app.manager.CacheService;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.setting.system.SystemAddonLibraryManagerSetting;
 import org.homio.app.utils.HardwareUtils;
 import org.homio.hquery.Curl;
@@ -54,18 +54,18 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.core.env.Environment;
 
 @Log4j2
-public class EntityContextAddonImpl {
+public class ContextAddonImpl {
 
     // count how much add/remove addon invokes
     public static int ADDON_UPDATE_COUNT = 0;
     private final Map<String, AddonContext> addonContextMap = new ConcurrentHashMap<>();
-    private final EntityContextImpl entityContext;
+    private final ContextImpl context;
     private final CacheService cacheService;
     @Setter
     private ApplicationContext applicationContext;
 
-    public EntityContextAddonImpl(EntityContextImpl entityContext, CacheService cacheService) {
-        this.entityContext = entityContext;
+    public ContextAddonImpl(ContextImpl context, CacheService cacheService) {
+        this.context = context;
         this.cacheService = cacheService;
 
         for (String systemAddon : Constants.SYSTEM_ADDONS) {
@@ -118,19 +118,19 @@ public class EntityContextAddonImpl {
 
         for (AddonContext addonContext : loadedAddons) {
             addonContext.setInitialized(true);
-            entityContext.setting().addSettingsFromClassLoader(addonContext);
+            context.setting().addSettingsFromClassLoader(addonContext);
             applicationContext.getBean(ExtRequestMappingHandlerMapping.class).registerAddonRestControllers(addonContext);
         }
-        entityContext.rebuildRepositoryByPrefixMap();
+        context.rebuildRepositoryByPrefixMap();
         applicationContext.getBean(TransactionManagerContext.class).invalidate();
-        entityContext.fireRefreshBeans();
+        context.fireRefreshBeans();
         // we need rebuild Hibernate entityManagerFactory to fetch new models
         cacheService.clearCache();
         Lang.clear();
 
         for (AddonContext addonContext : loadedAddons) {
-            ApplicationContext context = addonContext.getApplicationContext();
-            for (AddonEntrypoint addonEntrypoint : context.getBeansOfType(AddonEntrypoint.class).values()) {
+            ApplicationContext appContext = addonContext.getApplicationContext();
+            for (AddonEntrypoint addonEntrypoint : appContext.getBeansOfType(AddonEntrypoint.class).values()) {
                 fireAddonEntrypoint(addonEntrypoint);
             }
         }
@@ -138,31 +138,33 @@ public class EntityContextAddonImpl {
         ADDON_UPDATE_COUNT++;
     }
 
-    private void destroyAddonContext(@NotNull AddonContext addonContext, boolean deleteFile) {
-        AnnotationConfigApplicationContext context = addonContext.getApplicationContext();
-        context.getBean(AddonEntrypoint.class).destroy();
-        addonContext.fireCloseListeners();
-        entityContext.getAllApplicationContexts().remove(context);
-        context.close(); // destroy spring context
-        HomioClassLoader.removeClassLoader(addonContext.getAddonID());
-        applicationContext.getBean(TransactionManagerContext.class).invalidate();
-        Lang.clear();
-
-
-        entityContext.fireRefreshBeans();
-        entityContext.rebuildRepositoryByPrefixMap();
-
-        if (deleteFile) {
-            entityContext.ui().notification().updateBlock("addons", builder -> builder.removeInfo(addonContext.getAddonID()));
-        } else {
-            entityContext.ui().notification().updateBlock("addons", builder -> {
-                builder.removeInfo(addonContext.getAddonID());
-                addAddonNotificationRow(addonContext, builder, true);
-            });
+    /**
+     * Load context from specific file 'contextFile' and wraps logging info
+     */
+    public void onContextCreated() throws Exception {
+        context.ui().notification().addBlock("addons", "Addons", new Icon("fas fa-file-zipper", "#FF4400"),
+                block -> block.setBorderColor("#FF4400"));
+        Path addonPath = CommonUtils.getAddonPath();
+        int appVersion = context.setting().getApplicationMajorVersion();
+        for (Path contextFile : findAddonContextFilesFromPath(addonPath)) {
+            try {
+                AddonContext addonContext = new AddonContext(contextFile);
+                // 0 mean develop mode
+                if (appVersion != 0 && !AddonContext.validVersion(addonContext.getVersion(), appVersion)) {
+                    log.error("Unable to launch addon {}. Incompatible version", addonContext.getVersion());
+                } else {
+                    addonContextMap.put(addonContext.getPomFile().getArtifactId(), addonContext);
+                }
+            } catch (Exception ex) {
+                log.error("\n#{}\nUnable to parse addon: {}\n#{}",
+                        repeat("-", 50), contextFile.getFileName(), repeat("-", 50));
+            }
         }
-        addonContextMap.remove(addonContext.getAddonID());
-
-        ADDON_UPDATE_COUNT++;
+        // set up addons, create spring contexts,...
+        for (AddonContext context : addonContextMap.values()) {
+            setupAddonContext(context);
+        }
+        this.context.getAddon().initializeAddons(addonContextMap);
     }
 
     @SneakyThrows
@@ -202,69 +204,66 @@ public class EntityContextAddonImpl {
         removeAddon(context, deleteFile);
     }
 
-    /**
-     * Load context from specific file 'contextFile' and wraps logging info
-     */
-    public void onContextCreated() throws Exception {
-        entityContext.ui().notification().addBlock("addons", "Addons", new Icon("fas fa-file-zipper", "#FF4400"),
-                block -> block.setBorderColor("#FF4400"));
-        Path addonPath = CommonUtils.getAddonPath();
-        int appVersion = entityContext.setting().getApplicationMajorVersion();
-        for (Path contextFile : findAddonContextFilesFromPath(addonPath)) {
-            try {
-                AddonContext addonContext = new AddonContext(contextFile);
-                // 0 mean develop mode
-                if (appVersion != 0 && !AddonContext.validVersion(addonContext.getVersion(), appVersion)) {
-                    log.error("Unable to launch addon {}. Incompatible version", addonContext.getVersion());
-                } else {
-                    addonContextMap.put(addonContext.getPomFile().getArtifactId(), addonContext);
-                }
-            } catch (Exception ex) {
-                log.error("\n#{}\nUnable to parse addon: {}\n#{}",
-                        repeat("-", 50), contextFile.getFileName(), repeat("-", 50));
-            }
+    private void destroyAddonContext(@NotNull AddonContext addonContext, boolean deleteFile) {
+        AnnotationConfigApplicationContext appContext = addonContext.getApplicationContext();
+        appContext.getBean(AddonEntrypoint.class).destroy();
+        addonContext.fireCloseListeners();
+        context.getAllApplicationContexts().remove(appContext);
+        appContext.close(); // destroy spring context
+        HomioClassLoader.removeClassLoader(addonContext.getAddonID());
+        applicationContext.getBean(TransactionManagerContext.class).invalidate();
+        Lang.clear();
+
+        context.fireRefreshBeans();
+        context.rebuildRepositoryByPrefixMap();
+
+        if (deleteFile) {
+            context.ui().notification().updateBlock("addons", builder -> builder.removeInfo(addonContext.getAddonID()));
+        } else {
+            context.ui().notification().updateBlock("addons", builder -> {
+                builder.removeInfo(addonContext.getAddonID());
+                addAddonNotificationRow(addonContext, builder, true);
+            });
         }
-        // set up addons, create spring contexts,...
-        for (AddonContext context : addonContextMap.values()) {
-            setupAddonContext(context);
-        }
-        this.entityContext.getAddon().initializeAddons(addonContextMap);
+        addonContextMap.remove(addonContext.getAddonID());
+
+        ADDON_UPDATE_COUNT++;
     }
 
     private void addAddonFromPath(AddonContext addonContext) {
         addonContextMap.put(addonContext.getPomFile().getArtifactId(), addonContext);
         setupAddonContext(addonContext);
-        entityContext.getAddon().initializeAddons(addonContextMap);
+        context.getAddon().initializeAddons(addonContextMap);
     }
 
     /**
      * Fulfill addon context from pom file, create spring context, add jar class loader
      */
-    private void setupAddonContext(AddonContext context) {
-        if (!context.isLoaded() && !context.isInternal()) {
-            log.info("Try load addon context <{}>.", context.getPomFile().getArtifactId());
+    private void setupAddonContext(AddonContext addonContext) {
+        if (!addonContext.isLoaded() && !addonContext.isInternal()) {
+            log.info("Try load addon context <{}>.", addonContext.getPomFile().getArtifactId());
             try {
-                if (loadContext(context)) {
-                    entityContext.getAllApplicationContexts().add(context.getApplicationContext());
+                if (loadContext(addonContext)) {
+                    context.getAllApplicationContexts().add(addonContext.getApplicationContext());
 
                     // currently all copied resources will be kept on file system
-                    URL externalFiles = context.getClassLoader().getResource("external_files.7z");
+                    URL externalFiles = addonContext.getClassLoader().getResource("external_files.7z");
                     // copy resource only if size not match or if not exists
                     HardwareUtils.copyResources(externalFiles);
 
-                    entityContext.ui().notification().updateBlock("addons",
-                            builder -> addAddonNotificationRow(context, builder, false));
+                    context.ui().notification().updateBlock("addons",
+                        builder -> addAddonNotificationRow(addonContext, builder, false));
 
-                    log.info("Addon context <{}> registered successfully.", context.getPomFile().getArtifactId());
-                    addonContextMap.put(context.getAddonID(), context);
+                    log.info("Addon context <{}> registered successfully.", addonContext.getPomFile().getArtifactId());
+                    addonContextMap.put(addonContext.getAddonID(), addonContext);
                 } else {
-                    log.info("Addon context <{}> already registered before.", context.getPomFile().getArtifactId());
+                    log.info("Addon context <{}> already registered before.", addonContext.getPomFile().getArtifactId());
                 }
             } catch (Exception ex) {
-                entityContext.ui().notification().updateBlock("addons",
-                        builder -> addAddonNotificationRow(context, builder, true));
-                addonContextMap.remove(context.getAddonID());
-                log.error("Unable to load addon context <{}>.", context.getPomFile().getArtifactId(), ex);
+                context.ui().notification().updateBlock("addons",
+                    builder -> addAddonNotificationRow(addonContext, builder, true));
+                addonContextMap.remove(addonContext.getAddonID());
+                log.error("Unable to load addon context <{}>.", addonContext.getPomFile().getArtifactId(), ex);
             }
         }
     }
@@ -296,16 +295,16 @@ public class EntityContextAddonImpl {
     }
 
     @SneakyThrows
-    private void removeAddon(@NotNull AddonContext context, boolean deleteFile) {
-        String addonID = context.getAddonID();
+    private void removeAddon(@NotNull AddonContext addonContext, boolean deleteFile) {
+        String addonID = addonContext.getAddonID();
         log.warn("Remove addon: {}", addonID);
-        destroyAddonContext(context, deleteFile);
+        destroyAddonContext(addonContext, deleteFile);
 
         if (deleteFile) {
-            deleteFileWithRetry(context.getContextFile());
-            if (Files.exists(context.getContextFile())) {
+            deleteFileWithRetry(addonContext.getContextFile());
+            if (Files.exists(addonContext.getContextFile())) {
                 log.error("Addon <{}> has been stopped but unable to delete file. File will be removed on restart", addonID);
-                entityContext.bgp().executeOnExit(() -> Files.deleteIfExists(context.getContextFile()));
+                context.bgp().executeOnExit(() -> Files.deleteIfExists(addonContext.getContextFile()));
             }
             log.info("Addon <{}> has been removed successfully", addonID);
         } else {
@@ -355,8 +354,8 @@ public class EntityContextAddonImpl {
         } else {
             builder.addFlexAction(key, flex -> {
                 flex.addInfo(info).setIcon(icon);
-                flex.addSelectBox("versions", (entityContext, params) ->
-                                handleUpdateAddon(addonContext, key, entityContext, params, versions, packageModel))
+                flex.addSelectBox("versions", (context, params) ->
+                        handleUpdateAddon(addonContext, key, context, params, versions, packageModel))
                         .setHighlightSelected(false)
                     .setOptions(versions)
                         .setAsButton(new Icon("fas fa-cloud-download-alt", Color.PRIMARY_COLOR), addonContext.getVersion())
@@ -368,7 +367,7 @@ public class EntityContextAddonImpl {
     @Nullable
     private ActionResponseModel handleUpdateAddon(@NotNull AddonContext addonContext,
         @NotNull String key,
-        @NotNull EntityContext entityContext,
+        @NotNull Context context,
         @NotNull JSONObject params,
         @NotNull List<OptionModel> versions,
         @NotNull PackageModel packageModel) {
@@ -376,8 +375,8 @@ public class EntityContextAddonImpl {
         if (OptionModel.getByKey(versions, newVersion) != null) {
             String question = Lang.getServerMessage("PACKAGE_UPDATE_QUESTION",
                     FlowMap.of("NAME", addonContext.getPomFile().getName(), "VERSION", newVersion));
-            entityContext.ui().dialog().sendConfirmation("update-" + key, "DIALOG.TITLE.UPDATE_PACKAGE", () ->
-                    entityContext.getBean(AddonService.class).installPackage(
+            context.ui().dialog().sendConfirmation("update-" + key, "DIALOG.TITLE.UPDATE_PACKAGE", () ->
+                context.getBean(AddonService.class).installPackage(
                             new SystemAddonLibraryManagerSetting(),
                             new PackageRequest().setName(packageModel.getName())
                                     .setVersion(newVersion)
@@ -387,9 +386,10 @@ public class EntityContextAddonImpl {
         return ActionResponseModel.showError("Unable to find package or version");
     }
 
+    @SneakyThrows
     private @Nullable PackageModel getPackageModel(String addonID) {
         var addonManager = new SystemAddonLibraryManagerSetting();
-        PackageContext allPackages = addonManager.allPackages(entityContext);
+        PackageContext allPackages = addonManager.allPackages(context);
         PackageModel packageModel = allPackages.getPackages().stream().filter(p -> p.getName().equals(addonID)).findAny().orElse(null);
         if (packageModel == null) {
             log.error("Unable to find addon '{}' in repositories", addonID);

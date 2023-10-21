@@ -1,10 +1,11 @@
 package org.homio.addon.ui;
 
+import java.util.function.BiConsumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextUI.HeaderButtonBuilder;
+import org.homio.api.Context;
+import org.homio.api.ContextUI.HeaderButtonBuilder;
 import org.homio.api.model.Icon;
 import org.homio.api.util.NotificationLevel;
 import org.homio.api.workspace.WorkspaceBlock;
@@ -15,8 +16,6 @@ import org.homio.app.setting.SendBroadcastSetting;
 import org.homio.app.workspace.WorkspaceService;
 import org.homio.app.workspace.block.core.Scratch3EventsBlocks;
 import org.springframework.stereotype.Component;
-
-import java.util.function.BiConsumer;
 
 @Log4j2
 @Getter
@@ -29,10 +28,10 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3EventsBlocks scratch3EventsBlocks;
 
     public Scratch3UIBlocks(
-            EntityContext entityContext,
+        Context context,
             Scratch3EventsBlocks scratch3EventsBlocks,
             WorkspaceService workspaceService) {
-        super("#7C4B96", entityContext, null, "ui");
+        super("#7C4B96", context, null, "ui");
         this.scratch3EventsBlocks = scratch3EventsBlocks;
 
         this.popupType = menuStatic("popupType", PopupType.class, PopupType.INFO);
@@ -59,7 +58,7 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
                     block.addArgument("BROADCAST", ArgumentType.broadcast);
                 });
 
-        entityContext.setting().listenValue(SendBroadcastSetting.class, "listen-ui-header-click",
+        context.setting().listenValue(SendBroadcastSetting.class, "listen-ui-header-click",
                 json -> {
                     String workspaceEntityID = json.getString("entityID");
                     WorkspaceBlock workspaceBlock = workspaceService.getWorkspaceBlockById(workspaceEntityID);
@@ -85,7 +84,7 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
                     String color = workspaceBlock.getInputString("COLOR");
                     // TODO: ????? String broadcast = workspaceBlock.getInputString("BROADCAST");
                     HeaderButtonBuilder headerButtonBuilder =
-                            entityContext
+                        context
                                     .ui()
                                     .headerButtonBuilder(workspaceBlock.getId())
                                     .title(title)
@@ -98,14 +97,14 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
                         headerButtonBuilder.icon(new Icon("fas fa-" + workspaceBlock.getInputString("ICON"))).build();
                     }
                 },
-                () -> entityContext.ui().removeHeaderButton(workspaceBlock.getId()));
+            () -> context.ui().removeHeaderButton(workspaceBlock.getId()));
     }
 
     private void showPopupHandler(WorkspaceBlock workspaceBlock) {
         workspaceBlock
                 .getMenuValue("TYPE", this.popupType)
                 .popupHandler
-                .accept(entityContext, workspaceBlock.getInputString("MSG"));
+            .accept(context, workspaceBlock.getInputString("MSG"));
     }
 
     @RequiredArgsConstructor
@@ -115,7 +114,7 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
         ERROR((context, msg) -> context.ui().toastr().error(msg), NotificationLevel.error),
         SUCCESS((context, msg) -> context.ui().toastr().success(msg), NotificationLevel.success);
 
-        private final BiConsumer<EntityContext, String> popupHandler;
+        private final BiConsumer<Context, String> popupHandler;
         private final NotificationLevel level;
     }
 }

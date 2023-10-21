@@ -20,7 +20,6 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.val;
-import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.console.ConsolePluginEditor;
 import org.homio.api.console.ConsolePluginTable;
@@ -36,13 +35,12 @@ import org.homio.api.util.CommonUtils;
 import org.homio.app.LogService;
 import org.homio.app.builder.ui.UIInputBuilderImpl;
 import org.homio.app.console.LogsConsolePlugin;
-import org.homio.app.manager.common.EntityContextImpl;
-import org.homio.app.manager.common.impl.EntityContextUIImpl;
+import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.manager.common.impl.ContextUIImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.rest.ItemController.ActionModelRequest;
 import org.homio.app.spring.ContextCreated;
-import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.ssh.SshBaseEntity;
 import org.homio.app.ssh.SshProviderService;
 import org.homio.app.ssh.SshProviderService.SshSession;
@@ -64,7 +62,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ConsoleController implements ContextCreated {
 
     private final LogService logService;
-    private final EntityContextImpl entityContext;
+    private final ContextImpl context;
     private final ItemController itemController;
     private final Map<String, ConsolePlugin<?>> logsConsolePluginsMap = new HashMap<>();
     private final List<ConsoleTab> logs = new ArrayList<>();
@@ -73,22 +71,22 @@ public class ConsoleController implements ContextCreated {
     private static final Map<String, SshSession<?>> sessions = new HashMap<>();
 
     @Override
-    public void onContextCreated(EntityContextImpl entityContext) throws Exception {
+    public void onContextCreated(ContextImpl context) throws Exception {
         for (String tab : logService.getTabs()) {
             logs.add(new ConsoleTab(tab, ConsolePlugin.RenderType.lines, null));
-            logsConsolePluginsMap.put(tab, new LogsConsolePlugin(this.entityContext, logService, tab));
+            logsConsolePluginsMap.put(tab, new LogsConsolePlugin(this.context, logService, tab));
         }
 
-        List<ConsolePlugin> consolePlugins = new ArrayList<>(this.entityContext.getBeansOfType(ConsolePlugin.class));
+        List<ConsolePlugin> consolePlugins = new ArrayList<>(this.context.getBeansOfType(ConsolePlugin.class));
         Collections.sort(consolePlugins);
         for (ConsolePlugin<?> consolePlugin : consolePlugins) {
-            EntityContextUIImpl.consolePluginsMap.put(consolePlugin.getName(), consolePlugin);
+            ContextUIImpl.consolePluginsMap.put(consolePlugin.getName(), consolePlugin);
         }
     }
 
     @GetMapping("/tab/{tab}/content")
     public Object getTabContent(@PathVariable("tab") String tab) {
-        ConsolePlugin<?> consolePlugin = EntityContextUIImpl.consolePluginsMap.get(tab);
+        ConsolePlugin<?> consolePlugin = ContextUIImpl.consolePluginsMap.get(tab);
         if (consolePlugin == null) {
             consolePlugin = logsConsolePluginsMap.get(tab);
             if (consolePlugin == null) {
@@ -101,16 +99,16 @@ public class ConsoleController implements ContextCreated {
 
             return new EntityContent()
                     .setList(baseEntities)
-                    .setActions(UIFieldUtils.fetchUIActionsFromClass(clazz, entityContext))
-                    .setUiFields(UIFieldUtils.fillEntityUIMetadataList(clazz, entityContext));
+                    .setActions(UIFieldUtils.fetchUIActionsFromClass(clazz, context))
+                    .setUiFields(UIFieldUtils.fillEntityUIMetadataList(clazz, context));
         }
         return consolePlugin.getValue();
     }
 
     @GetMapping("/tab/{tab}/actions")
     public Collection<UIInputEntity> getConsoleTabActions(@PathVariable("tab") String tab) {
-        UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
-        ConsolePlugin<?> consolePlugin = EntityContextUIImpl.consolePluginsMap.get(tab);
+        UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
+        ConsolePlugin<?> consolePlugin = ContextUIImpl.consolePluginsMap.get(tab);
         if (consolePlugin != null) {
             fetchUIHeaderActions(consolePlugin, uiInputBuilder);
         }
@@ -122,10 +120,10 @@ public class ConsoleController implements ContextCreated {
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public ActionResponseModel executeAction(@PathVariable("tab") String tab, @RequestBody ActionModelRequest request) {
         String entityID = request.getEntityID();
-        ConsolePlugin<?> consolePlugin = EntityContextUIImpl.consolePluginsMap.get(tab);
+        ConsolePlugin<?> consolePlugin = ContextUIImpl.consolePluginsMap.get(tab);
         if (consolePlugin instanceof ConsolePluginTable table) {
             HasEntityIdentifier identifier = table.findEntity(entityID);
-            return itemController.executeAction(request, identifier, entityContext.getEntity(identifier.getEntityID()));
+            return itemController.executeAction(request, identifier, context.db().getEntity(identifier.getEntityID()));
         }
         return consolePlugin.executeAction(entityID, request.getParams());
     }
@@ -135,13 +133,13 @@ public class ConsoleController implements ContextCreated {
             @PathVariable("tab") String tab,
             @PathVariable("entityID") String entityID,
             @PathVariable("fieldName") String fieldName) {
-        ConsolePlugin<?> consolePlugin = EntityContextUIImpl.consolePluginsMap.get(tab);
+        ConsolePlugin<?> consolePlugin = ContextUIImpl.consolePluginsMap.get(tab);
         if (consolePlugin instanceof ConsolePluginTable) {
             Collection<? extends HasEntityIdentifier> baseEntities = ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
             HasEntityIdentifier identifier =
                     baseEntities.stream().filter(e -> e.getEntityID().equals(entityID)).findAny().orElseThrow(
                         () -> NotFoundException.entityNotFound(entityID));
-            return OptionUtil.loadOptions(identifier, entityContext, fieldName, null, null, null);
+            return OptionUtil.loadOptions(identifier, context, fieldName, null, null, null);
         }
         return null;
     }
@@ -149,7 +147,7 @@ public class ConsoleController implements ContextCreated {
     @GetMapping("/tab")
     public Set<ConsoleTab> getTabs() {
         Set<ConsoleTab> tabs = new HashSet<>();
-        if (entityContext.accessEnabled(LOG_RESOURCE)) {
+        if (context.accessEnabled(LOG_RESOURCE)) {
             ConsoleTab logsTab = new ConsoleTab("logs", null, null);
             logs.forEach(logsTab::addChild);
             tabs.add(logsTab);
@@ -157,7 +155,7 @@ public class ConsoleController implements ContextCreated {
 
         Map<String, ConsoleTab> parens = new HashMap<>();
         for (Map.Entry<String, ConsolePlugin<?>> entry :
-                EntityContextUIImpl.consolePluginsMap.entrySet()) {
+            ContextUIImpl.consolePluginsMap.entrySet()) {
             if (entry.getKey().equals("icl")) {
                 continue;
             }
@@ -179,8 +177,8 @@ public class ConsoleController implements ContextCreated {
         tabs.addAll(parens.values());
 
         // register still unavailable console plugins if any
-        for (Entry<String, String> entry : EntityContextUIImpl.customConsolePluginNames.entrySet()) {
-            if (entry.getValue().isEmpty() || entityContext.accessEnabled(entry.getValue())) {
+        for (Entry<String, String> entry : ContextUIImpl.customConsolePluginNames.entrySet()) {
+            if (entry.getValue().isEmpty() || context.accessEnabled(entry.getValue())) {
                 String pluginName = entry.getKey();
                 if (tabs.stream().noneMatch(t -> t.name.equals(pluginName))) {
                     tabs.add(new ConsoleTab(pluginName, null, null));
@@ -195,7 +193,7 @@ public class ConsoleController implements ContextCreated {
     @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
     public SshProviderService.SshSession openSshSession(@PathVariable("entityID") String entityID) {
         log.info("Request to open ssh: {}", entityID);
-        BaseEntity entity = entityContext.getEntity(entityID);
+        BaseEntity entity = context.db().getEntity(entityID);
         if (entity instanceof SshBaseEntity) {
             SshProviderService service = ((SshBaseEntity<?, ?>) entity).getService();
             SshSession sshSession = service.openSshSession((SshBaseEntity) entity);

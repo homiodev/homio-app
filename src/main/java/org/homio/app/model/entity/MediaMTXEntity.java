@@ -13,7 +13,7 @@ import java.util.Map;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContractStub;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.MediaEntity;
@@ -51,18 +51,18 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     public static final int RTSP_PORT = 8554;
     public static final GitHubProject mediamtxGitHub =
         GitHubProject.of("bluenviron", "mediamtx")
-                     .setInstalledVersionResolver((entityContext, gitHubProject) -> {
+                     .setInstalledVersionResolver((context, gitHubProject) -> {
                          Path executable = CommonUtils.getInstallPath().resolve("mediamtx").resolve("mediamtx");
-                         return entityContext.hardware().execute(executable + " --version");
+                         return context.hardware().execute(executable + " --version");
                      });
 
-    public static MediaMTXEntity ensureEntityExists(EntityContext entityContext) {
-        MediaMTXEntity entity = entityContext.getEntity(MediaMTXEntity.class, PRIMARY_DEVICE);
+    public static MediaMTXEntity ensureEntityExists(Context context) {
+        MediaMTXEntity entity = context.db().getEntity(MediaMTXEntity.class, PRIMARY_DEVICE);
         if (entity == null) {
             entity = new MediaMTXEntity();
             entity.setEntityID(PRIMARY_DEVICE);
             entity.setJsonData("dis_del", true);
-            entityContext.save(entity);
+            context.db().save(entity);
         }
         return entity;
     }
@@ -129,8 +129,8 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     }
 
     @Override
-    public MediaMTXService createService(@NotNull EntityContext entityContext) {
-        return new MediaMTXService(entityContext, this);
+    public MediaMTXService createService(@NotNull Context context) {
+        return new MediaMTXService(context, this);
     }
 
     @Override
@@ -291,7 +291,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
 
         public StreamEndpoint(JsonNode node, MediaMTXEntity entity) {
             super(createIcon(node.get("source").get("type").asText()), "MTX",
-                entity.getEntityContext(), entity, node.get("name").asText(), false, EndpointType.trigger);
+                entity.context(), entity, node.get("name").asText(), false, EndpointType.trigger);
             this.node = node;
 
             boolean ready = node.get("ready").asBoolean();
@@ -304,7 +304,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
 
         @Override
         public UIInputBuilder createTriggerActionBuilder(@NotNull UIInputBuilder uiInputBuilder) {
-            uiInputBuilder.addButton(getEntityID(), null, (entityContext, params) ->
+            uiInputBuilder.addButton(getEntityID(), null, (context, params) ->
                               ActionResponseModel.showJson("TITLE.MEDIA_MTX_NODE_INFO", node))
                           .setText(getValue().toString());
             return uiInputBuilder;

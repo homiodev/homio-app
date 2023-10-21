@@ -3,7 +3,7 @@ package org.homio.app.model.entity.widget.impl.toggle;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import org.apache.commons.lang3.NotImplementedException;
-import org.homio.api.EntityContextWidget.ToggleType;
+import org.homio.api.ContextWidget.ToggleType;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;

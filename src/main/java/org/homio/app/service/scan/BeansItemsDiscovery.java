@@ -3,7 +3,7 @@ package org.homio.app.service.scan;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.service.discovery.ItemDiscoverySupport;
 
 /**
@@ -15,9 +15,9 @@ public class BeansItemsDiscovery extends BaseItemsDiscovery {
     private final Class<? extends ItemDiscoverySupport> declaredBeanClass;
 
     @Override
-    protected List<DevicesScanner> getScanners(EntityContext entityContext) {
+    protected List<DevicesScanner> getScanners(Context context) {
         List<DevicesScanner> list = new ArrayList<>();
-        for (ItemDiscoverySupport bean : entityContext.getBeansOfType(declaredBeanClass)) {
+        for (ItemDiscoverySupport bean : context.getBeansOfType(declaredBeanClass)) {
             DevicesScanner devicesScanner = new DevicesScanner(bean.getName(), bean::scan);
             list.add(devicesScanner);
         }

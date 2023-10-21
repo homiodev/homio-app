@@ -1,19 +1,21 @@
 package org.homio.app.console;
 
+import static org.homio.app.model.entity.user.UserBaseEntity.SSH_RESOURCE;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.homio.api.EntityContext;
+import lombok.experimental.Accessors;
+import org.homio.api.Context;
 import org.homio.api.console.ConsolePlugin;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
-
-import static org.homio.app.model.entity.user.UserBaseEntity.SSH_RESOURCE;
 
 @Component
 @RequiredArgsConstructor
 public class SshConsolePlugin implements ConsolePlugin<Object> {
 
     @Getter
-    private final EntityContext entityContext;
+    private final @Accessors(fluent = true) Context context;
 
     @Override
     public Object getValue() {
@@ -21,17 +23,17 @@ public class SshConsolePlugin implements ConsolePlugin<Object> {
     }
 
     @Override
-    public RenderType getRenderType() {
-        return null;
+    public @NotNull RenderType getRenderType() {
+        return RenderType.string;
     }
 
     @Override
-    public String getName() {
+    public @NotNull String getName() {
         return "ssh";
     }
 
     @Override
     public boolean isEnabled() {
-        return entityContext.accessEnabled(SSH_RESOURCE);
+        return context.accessEnabled(SSH_RESOURCE);
     }
 }

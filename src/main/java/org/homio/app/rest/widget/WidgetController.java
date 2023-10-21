@@ -31,8 +31,6 @@ import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
 import org.homio.api.fs.FileSystemProvider;
 import org.homio.api.fs.TreeNode;
-import org.homio.api.model.Icon;
-import org.homio.api.model.OptionModel;
 import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
@@ -46,7 +44,7 @@ import org.homio.app.config.cacheControl.CacheControl;
 import org.homio.app.config.cacheControl.CachePolicy;
 import org.homio.app.manager.ScriptService;
 import org.homio.app.manager.WidgetService;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
@@ -73,11 +71,9 @@ import org.homio.app.rest.widget.WidgetChartsController.SingleValueData;
 import org.homio.app.utils.JavaScriptBuilderImpl;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -89,7 +85,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class WidgetController {
 
     private final ObjectMapper objectMapper;
-    private final EntityContextImpl entityContext;
+    private final ContextImpl context;
     private final ScriptService scriptService;
     private final WidgetService widgetService;
     private final List<WidgetVideoSourceResolver> videoSourceResolvers;
@@ -98,18 +94,18 @@ public class WidgetController {
 
     public WidgetController(
             ObjectMapper objectMapper,
-            EntityContextImpl entityContext,
+        ContextImpl context,
             ScriptService scriptService,
             WidgetService widgetService,
             List<WidgetVideoSourceResolver> videoSourceResolvers,
             WidgetTabRepository widgetTabRepository) {
         this.objectMapper = objectMapper;
-        this.entityContext = entityContext;
+        this.context = context;
         this.scriptService = scriptService;
         this.widgetService = widgetService;
         this.widgetTabRepository = widgetTabRepository;
         this.videoSourceResolvers = videoSourceResolvers;
-        this.timeSeriesUtil = new TimeSeriesUtil(entityContext);
+        this.timeSeriesUtil = new TimeSeriesUtil(context);
     }
 
     @PostMapping("/sources")
@@ -117,11 +113,11 @@ public class WidgetController {
         Map<String, Object> result = new HashMap<>();
         for (String source : request.sources) {
             SelectionSource selection = DataSourceUtil.getSelection(source);
-            BaseEntity entity = selection.getValue(entityContext);
+            BaseEntity entity = selection.getValue(context);
             if (!(entity instanceof HasGetStatusValue)) {
                 throw new IllegalArgumentException("Unable to get value from non source entity");
             }
-            val valueRequest = new HasGetStatusValue.GetStatusValueRequest(entityContext, null);
+            val valueRequest = new HasGetStatusValue.GetStatusValueRequest(context, null);
             result.put(source, ((HasGetStatusValue) entity).getStatusValue(valueRequest));
             timeSeriesUtil.addListenValueIfRequire(true, "dashboard",
                 entity, null, null, source,
@@ -144,11 +140,11 @@ public class WidgetController {
             @RequestParam("h") int height,
             @RequestBody List<WidgetFMPrevSnapshot> prevValues) {
         Map<String, Long> seriesToSnapValue = prevValues.stream().collect(Collectors.toMap(n -> n.sid, n -> n.sn));
-        WidgetFMEntity entity = entityContext.getEntity(entityID);
+        WidgetFMEntity entity = context.db().getEntity(entityID);
         if (entity == null) { // in case if deleted but still requested
             return null;
         }
-        List<BaseFileSystemEntity> fileSystems = entityContext.getEntityServices(BaseFileSystemEntity.class);
+        List<BaseFileSystemEntity> fileSystems = context.getEntityServices(BaseFileSystemEntity.class);
         List<WidgetFMNodes> nodes = new ArrayList<>();
         for (WidgetFMSeriesEntity seriesEntity : entity.getSeries()) {
             String[] path = seriesEntity.getValueDataSource().split("###");
@@ -157,7 +153,7 @@ public class WidgetController {
             BaseFileSystemEntity fileSystemEntity = fileSystems.stream().filter(fileSystem -> fileSystem.getEntityID().equals(fs)).findAny().orElse(null);
             if (fileSystemEntity != null) {
                 Long snapshot = seriesToSnapValue.get(seriesEntity.getEntityID());
-                FileSystemProvider fileSystem = fileSystemEntity.getFileSystem(entityContext);
+                FileSystemProvider fileSystem = fileSystemEntity.getFileSystem(context);
                 Long lastUpdated = fileSystem.toTreeNode(parentId).getAttributes().getLastUpdated();
                 Set<WidgetFMNodeValue> items = null;
                 if (!Objects.equals(snapshot, lastUpdated)) {
@@ -208,7 +204,7 @@ public class WidgetController {
     public void fireVideoAction(@RequestBody VideoActionRequest request) {
         WidgetVideoSeriesEntity series = getSeriesEntity(request);
         try {
-            BaseCameraEntity entity = entityContext.getEntity(series.getValueDataSource());
+            BaseCameraEntity entity = context.db().getEntity(series.getValueDataSource());
             if (entity == null) {
                 throw new NotFoundException("ERROR.VIDEO_SERIES_NOT_FOUND");
             }
@@ -218,7 +214,7 @@ public class WidgetController {
             if (actionHandler == null) {
                 throw new NotFoundException("ERROR.VIDEO_ACTION_NOT_FOUND");
             }
-            actionHandler.handleAction(entityContext, new JSONObject().put("value", request.value));
+            actionHandler.handleAction(context, new JSONObject().put("value", request.value));
         } catch (Exception ex) {
             throw new IllegalStateException(Lang.getServerMessage(ex.getMessage()));
         }
@@ -226,7 +222,7 @@ public class WidgetController {
 
     @PostMapping("/value")
     public SingleValueData getValue(@Valid @RequestBody WidgetDataRequest request) {
-        WidgetBaseEntity entity = request.getEntity(entityContext, objectMapper);
+        WidgetBaseEntity entity = request.getEntity(context, objectMapper);
         if (entity instanceof HasSingleValueDataSource) {
             return new SingleValueData(timeSeriesUtil.getSingleValue(entity, (HasSingleValueDataSource) entity, o -> o), null);
         }
@@ -242,7 +238,7 @@ public class WidgetController {
 
     @PostMapping("/slider/values")
     public List<Integer> getSliderValues(@RequestBody WidgetDataRequest request) {
-        WidgetSliderEntity entity = request.getEntity(entityContext, objectMapper, WidgetSliderEntity.class);
+        WidgetSliderEntity entity = request.getEntity(context, objectMapper, WidgetSliderEntity.class);
         List<Integer> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetSliderSeriesEntity item : entity.getSeries()) {
             values.add(timeSeriesUtil.getSingleValue(entity, item, o -> HasSetStatusValue.SetStatusValueRequest.rawValueToNumber(o, 0).intValue()));
@@ -259,7 +255,7 @@ public class WidgetController {
 
     @PostMapping("/toggle/values")
     public List<String> getToggleValues(@RequestBody WidgetDataRequest request) {
-        WidgetToggleEntity entity = request.getEntity(entityContext, objectMapper, WidgetToggleEntity.class);
+        WidgetToggleEntity entity = request.getEntity(context, objectMapper, WidgetToggleEntity.class);
         List<String> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetToggleSeriesEntity item : entity.getSeries()) {
             values.add(timeSeriesUtil.getSingleValue(entity, item, String::valueOf));
@@ -276,7 +272,7 @@ public class WidgetController {
 
     @PostMapping("/colors/value")
     public WidgetColorValue getColorValues(@RequestBody WidgetDataRequest request) {
-        WidgetColorEntity entity = request.getEntity(entityContext, objectMapper, WidgetColorEntity.class);
+        WidgetColorEntity entity = request.getEntity(context, objectMapper, WidgetColorEntity.class);
         return new WidgetColorValue(
                 timeSeriesUtil.getSingleValue(entity,
                         entity.getBrightnessValueDataSource(),
@@ -299,7 +295,7 @@ public class WidgetController {
     @PostMapping("/colors/update")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void updateColorsValue(@RequestBody ColorValueRequest request) {
-        WidgetColorEntity entity = entityContext.getEntityRequire(request.entityID);
+        WidgetColorEntity entity = context.db().getEntityRequire(request.entityID);
         switch (request.type) {
             case colorTemp -> setValue(request.value,
                     entity.getColorTemperatureSetValueDataSource(),
@@ -328,21 +324,21 @@ public class WidgetController {
 
     @GetMapping("/{entityID}")
     public WidgetBaseEntity getWidget(@PathVariable("entityID") String entityID) {
-        WidgetBaseEntity widget = entityContext.getEntity(entityID);
+        WidgetBaseEntity widget = context.db().getEntity(entityID);
         updateWidgetBeforeReturnToUI(widget);
         return widget;
     }
 
     @GetMapping("/tab/{tabId}")
     public List<WidgetEntity> getWidgetsInTab(@PathVariable("tabId") String tabId) {
-        List<WidgetBaseEntity> widgets = entityContext.findAll(WidgetBaseEntity.class).stream()
+        List<WidgetBaseEntity> widgets = context.db().findAll(WidgetBaseEntity.class).stream()
                 .filter(w -> w.getWidgetTabEntity().getEntityID().equals(tabId)).toList();
 
         List<WidgetEntity> result = new ArrayList<>();
         for (WidgetBaseEntity<?> widget : widgets) {
             updateWidgetBeforeReturnToUI(widget);
 
-            UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
+            UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
             if (widget instanceof HasDynamicContextMenuActions) {
                 ((HasDynamicContextMenuActions) widget).assembleActions(uiInputBuilder);
             }
@@ -356,16 +352,16 @@ public class WidgetController {
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public BaseEntity createWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type) throws Exception {
         log.debug("Request creating widget entity by type: <{}> in tabId <{}>", type, tabId);
-        WidgetTabEntity widgetTabEntity = entityContext.getEntity(tabId);
+        WidgetTabEntity widgetTabEntity = context.db().getEntity(tabId);
         if (widgetTabEntity == null) {
             throw new NotFoundException("ERROR.TAB_NOT_FOUND", tabId);
         }
 
-        Class<? extends EntityFieldMetadata> typeClass = EntityContextImpl.uiFieldClasses.get(type);
+        Class<? extends EntityFieldMetadata> typeClass = ContextImpl.uiFieldClasses.get(type);
         WidgetBaseEntity<?> baseEntity = (WidgetBaseEntity<?>) typeClass.getConstructor().newInstance();
 
         baseEntity.setWidgetTabEntity(widgetTabEntity);
-        return entityContext.save(baseEntity);
+        return context.db().save(baseEntity);
     }
 
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
@@ -375,12 +371,12 @@ public class WidgetController {
             @PathVariable("type") String type,
             @PathVariable("addon") String addon) {
         log.debug("Request creating extra widget entity by type: <{}> in tabId <{}>, addon: <{}>", type, tabId, addon);
-        WidgetTabEntity widgetTabEntity = entityContext.getEntity(tabId);
+        WidgetTabEntity widgetTabEntity = context.db().getEntity(tabId);
         if (widgetTabEntity == null) {
             throw new NotFoundException("ERROR.TAB_NOT_FOUND", tabId);
         }
 
-        Collection<WidgetBaseTemplate> widgets = entityContext.getBeansOfTypeByAddons(WidgetBaseTemplate.class).get(addon);
+        Collection<WidgetBaseTemplate> widgets = context.getBeansOfTypeByAddons(WidgetBaseTemplate.class).get(addon);
         if (widgets == null) {
             throw new NotFoundException("Unable to find addon: " + tabId + " or widgets in addon");
         }
@@ -409,39 +405,33 @@ public class WidgetController {
 
         //TODO: fix:::  widgetJsEntity.setWidgetTabEntity(widgetTabEntity).setFieldFetchType(addon + ":" + template.getClass().getSimpleName());
 
-        return null; // TODO: fix::::entityContext.save(widgetJsEntity);
+        return null; // TODO: fix::::context.db().save(widgetJsEntity);
     }
 
     @GetMapping("/tab")
     public List<WidgetTabEntity> getWidgetTabs() {
-        return entityContext.findAll(WidgetTabEntity.class);
+        return context.db().findAll(WidgetTabEntity.class);
     }
 
     @SneakyThrows
     @PostMapping("/tab/{name}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public WidgetTabEntity createWidgetTab(@PathVariable("name") String name) {
-        BaseEntity widgetTab = entityContext.getEntity(WidgetTabEntity.PREFIX + name);
+        BaseEntity widgetTab = context.db().getEntity(WidgetTabEntity.PREFIX + name);
         if (widgetTab == null) {
             WidgetTabEntity widgetTabEntity = new WidgetTabEntity();
             widgetTabEntity.setEntityID(name);
             widgetTabEntity.setName(name);
             widgetTabEntity.setOrder(this.findHighestOrder() + 1);
-            return entityContext.save(widgetTabEntity);
+            return context.db().save(widgetTabEntity);
         }
         throw new ServerException("Widget tab with same name already exists");
-    }
-
-    private Integer findHighestOrder() {
-        return entityContext.findAll(WidgetTabEntity.class)
-                .stream().map(HasOrder::getOrder)
-                .max(Integer::compare).orElse(0);
     }
 
     @PostMapping("/tab/{tabId}/move")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void moveWidgetTab(@PathVariable("tabId") String tabId, @RequestParam("left") boolean left) {
-        List<WidgetTabEntity> tabs = entityContext.findAll(WidgetTabEntity.class).stream().sorted().collect(Collectors.toList());
+        List<WidgetTabEntity> tabs = context.db().findAll(WidgetTabEntity.class).stream().sorted().collect(Collectors.toList());
         WidgetTabEntity tabToMove = tabs.stream().filter(t -> t.getEntityID().equals(tabId)).findAny().orElseThrow(
                 () -> new IllegalArgumentException("No tab: " + tabs + " found"));
         int order = tabToMove.getOrder();
@@ -454,13 +444,19 @@ public class WidgetController {
         }
     }
 
+    private Integer findHighestOrder() {
+        return context.db().findAll(WidgetTabEntity.class)
+                .stream().map(HasOrder::getOrder)
+                .max(Integer::compare).orElse(0);
+    }
+
     private void shiftTab(List<WidgetTabEntity> tabs, WidgetTabEntity tabToMove, int order, int shift) {
         WidgetTabEntity replaceTab = tabs.stream().filter(t -> t.getOrder() == order + shift).findAny().orElseThrow(
                 () -> new IllegalStateException("Unable to find tab with order: " + (order + shift)));
         tabToMove.setOrder(order + shift);
         replaceTab.setOrder(order);
-        entityContext.save(tabToMove, false);
-        entityContext.save(replaceTab, false);
+        context.db().save(tabToMove, false);
+        context.db().save(replaceTab, false);
     }
 
     private void updateWidgetBeforeReturnToUI(WidgetBaseEntity<?> widget) {
@@ -482,7 +478,7 @@ public class WidgetController {
     }
 
     private WidgetTabEntity getWidgetTabEntity(String tabId) {
-        BaseEntity baseEntity = entityContext.getEntity(tabId);
+        BaseEntity baseEntity = context.db().getEntity(tabId);
         if (baseEntity instanceof WidgetTabEntity) {
             return (WidgetTabEntity) baseEntity;
         }
@@ -490,7 +486,7 @@ public class WidgetController {
     }
 
     private <T extends WidgetSeriesEntity> T getSeriesEntity(SingleValueRequest<?> request) {
-        WidgetBaseEntityAndSeries entity = entityContext.getEntityRequire(request.entityID);
+        WidgetBaseEntityAndSeries entity = context.db().getEntityRequire(request.entityID);
         T series = ((Set<T>) entity.getSeries()).stream().filter(s -> s.getEntityID().equals(request.seriesEntityID)).findAny().orElse(null);
         if (series == null) {
             throw new NotFoundException("Unable to find series: " + request.seriesEntityID + " for entity: " + entity.getTitle());
@@ -499,7 +495,7 @@ public class WidgetController {
     }
 
     private <T> T getEntity(String entityID) {
-        BaseEntity entity = entityContext.getEntity(entityID);
+        BaseEntity entity = context.db().getEntity(entityID);
         if (entity == null) {
             throw new IllegalArgumentException("Unable to find widget with entityID: " + entityID);
         }
@@ -508,9 +504,9 @@ public class WidgetController {
 
     private void setValue(Object value, String dataSource, JSONObject dynamicParameters) {
         SelectionSource selection = DataSourceUtil.getSelection(dataSource);
-        BaseEntity entity = selection.getValue(entityContext);
+        BaseEntity entity = selection.getValue(context);
         ((HasSetStatusValue) entity).setStatusValue(new HasSetStatusValue.SetStatusValueRequest(
-            entityContext,
+            context,
             dynamicParameters,
             value));
     }

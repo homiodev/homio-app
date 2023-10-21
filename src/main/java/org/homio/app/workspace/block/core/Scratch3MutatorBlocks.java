@@ -1,10 +1,12 @@
 package org.homio.app.workspace.block.core;
 
 import com.jayway.jsonpath.JsonPath;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.state.JsonType;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
@@ -17,9 +19,6 @@ import org.homio.app.model.entity.ScriptEntity;
 import org.homio.app.workspace.WorkspaceBlockImpl;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @Getter
 @Component
 public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks
@@ -28,8 +27,8 @@ public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks
     private final Map<Integer, CompileScriptContext> compileScriptContextMap = new HashMap<>();
     private final ScriptService scriptService;
 
-    public Scratch3MutatorBlocks(EntityContext entityContext, ScriptService scriptService) {
-        super("mutator", entityContext);
+    public Scratch3MutatorBlocks(Context context, ScriptService scriptService) {
+        super("mutator", context);
         this.scriptService = scriptService;
 
         blockReporter("join", this::joinStringEvaluate);

@@ -12,7 +12,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.api.util.DataSourceUtil.SelectionSource;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.impl.chart.ChartBaseEntity;
@@ -34,19 +34,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/rest/widget/chart")
 public class WidgetChartsController {
 
-    private final EntityContextImpl entityContext;
+    private final ContextImpl context;
     private final ObjectMapper objectMapper;
     private final TimeSeriesUtil timeSeriesUtil;
 
-    public WidgetChartsController(EntityContextImpl entityContext, ObjectMapper objectMapper) {
-        this.entityContext = entityContext;
+    public WidgetChartsController(ContextImpl context, ObjectMapper objectMapper) {
+        this.context = context;
         this.objectMapper = objectMapper;
-        this.timeSeriesUtil = new TimeSeriesUtil(entityContext);
+        this.timeSeriesUtil = new TimeSeriesUtil(context);
     }
 
     @PostMapping("/display/series")
     public DisplayDataResponse getDisplayValues(@RequestBody WidgetDataRequest request) {
-        WidgetDisplayEntity entity = request.getEntity(entityContext, objectMapper, WidgetDisplayEntity.class);
+        WidgetDisplayEntity entity = request.getEntity(context, objectMapper, WidgetDisplayEntity.class);
         List<Object> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetDisplaySeriesEntity item : entity.getSeries()) {
             values.add(timeSeriesUtil.getSingleValue(entity, item, o -> o));
@@ -66,7 +66,7 @@ public class WidgetChartsController {
 
     @PostMapping("/line/series")
     public TimeSeriesChartData<ChartDataset> getChartSeries(@Valid @RequestBody WidgetDataRequest request) {
-        WidgetLineChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetLineChartEntity.class);
+        WidgetLineChartEntity entity = request.getEntity(context, objectMapper, WidgetLineChartEntity.class);
 
         return timeSeriesUtil.buildTimeSeriesFullData(
                 entity.getEntityID(),
@@ -78,7 +78,7 @@ public class WidgetChartsController {
     @PostMapping("/bartime/series")
     public TimeSeriesChartData<ChartDataset> getBartimeSeries(
             @Valid @RequestBody WidgetDataRequest request) {
-        WidgetBarTimeChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetBarTimeChartEntity.class);
+        WidgetBarTimeChartEntity entity = request.getEntity(context, objectMapper, WidgetBarTimeChartEntity.class);
 
         return timeSeriesUtil.buildTimeSeriesFullData(
                 entity.getEntityID(),
@@ -103,7 +103,7 @@ public class WidgetChartsController {
     public TimeSeriesChartData<ChartDataset> getDoughnutSeries(
             @Valid @RequestBody WidgetDataRequest request) {
         WidgetDoughnutChartEntity entity =
-                request.getEntity(entityContext, objectMapper, WidgetDoughnutChartEntity.class);
+            request.getEntity(context, objectMapper, WidgetDoughnutChartEntity.class);
         TimeSeriesChartData<ChartDataset> result =
                 getValueDataset(request, WidgetDoughnutChartEntity.class);
 
@@ -117,7 +117,7 @@ public class WidgetChartsController {
 
     private <S extends WidgetSeriesEntity<T> & HasSingleValueDataSource, T extends ChartBaseEntity<T, S>> TimeSeriesChartData<ChartDataset>
     getValueDataset(WidgetDataRequest request, Class<T> chartClass) {
-        T entity = request.getEntity(entityContext, objectMapper, chartClass);
+        T entity = request.getEntity(context, objectMapper, chartClass);
         TimeSeriesChartData<ChartDataset> timeSeriesChartData = new TimeSeriesChartData<>();
 
         for (S item : entity.getSeries()) {

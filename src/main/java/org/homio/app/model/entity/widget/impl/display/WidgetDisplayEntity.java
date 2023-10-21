@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.persistence.Entity;
 import java.util.List;
 import lombok.SneakyThrows;
-import org.homio.api.EntityContextWidget.ChartType;
+import org.homio.api.ContextWidget.ChartType;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;

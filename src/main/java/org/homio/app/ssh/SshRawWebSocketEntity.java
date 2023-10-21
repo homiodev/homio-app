@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.model.OptionModel;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
@@ -61,14 +61,14 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
     }
 
     @Override
-    public @Nullable RawWebSocketService createService(@NotNull EntityContext entityContext) {
-        return new RawWebSocketService(entityContext, this);
+    public @Nullable RawWebSocketService createService(@NotNull Context context) {
+        return new RawWebSocketService(context, this);
     }
 
     public static class RawWebSocketService extends ServiceInstance<SshRawWebSocketEntity> implements SshProviderService<SshRawWebSocketEntity> {
 
-        public RawWebSocketService(EntityContext entityContext, SshRawWebSocketEntity entity) {
-            super(entityContext, entity, true);
+        public RawWebSocketService(Context context, SshRawWebSocketEntity entity) {
+            super(context, entity, true);
         }
 
         @Override

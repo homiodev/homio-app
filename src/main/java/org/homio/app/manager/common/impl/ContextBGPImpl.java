@@ -47,7 +47,7 @@ import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.logging.log4j.Logger;
-import org.homio.api.EntityContextBGP;
+import org.homio.api.ContextBGP;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.HasEntityIdentifier;
@@ -56,7 +56,7 @@ import org.homio.api.util.CommonUtils;
 import org.homio.app.json.BgpProcessResponse;
 import org.homio.app.manager.bgp.InternetAvailabilityBgpService;
 import org.homio.app.manager.bgp.WatchdogBgpService;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.hquery.ProgressBar;
 import org.homio.hquery.StreamGobbler;
 import org.jetbrains.annotations.NotNull;
@@ -69,10 +69,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 @Log4j2
-public class EntityContextBGPImpl implements EntityContextBGP {
+public class ContextBGPImpl implements ContextBGP {
 
     @Getter
-    private final EntityContextImpl entityContext;
+    private final @Accessors(fluent = true) ContextImpl context;
     private final ThreadPoolTaskScheduler taskScheduler;
 
     @Getter
@@ -91,10 +91,10 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     @Getter
     private final WatchdogBgpService watchdogBgpService;
 
-    public EntityContextBGPImpl(EntityContextImpl entityContext, ThreadPoolTaskScheduler taskScheduler) {
-        this.entityContext = entityContext;
+    public ContextBGPImpl(ContextImpl context, ThreadPoolTaskScheduler taskScheduler) {
+        this.context = context;
         this.taskScheduler = taskScheduler;
-        this.internetAvailabilityService = new InternetAvailabilityBgpService(entityContext, this);
+        this.internetAvailabilityService = new InternetAvailabilityBgpService(context, this);
         this.watchdogBgpService = new WatchdogBgpService(this);
     }
 
@@ -103,12 +103,12 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         this.builder("send-bgp-to-ui")
                 .interval(Duration.ofSeconds(1))
                 .cancelOnError(false)
-                .execute(() -> this.entityContext.ui().sendDynamicUpdate("bgp", getProcesses()));
+            .execute(() -> this.context.ui().sendDynamicUpdate("bgp", getProcesses()));
     }
 
     public BgpProcessResponse getProcesses() {
         BgpProcessResponse response = new BgpProcessResponse();
-        for (EntityContextBGPImpl.ThreadContextImpl<?> context : schedulers.values()) {
+        for (ContextBGPImpl.ThreadContextImpl<?> context : schedulers.values()) {
             response.add(context);
         }
         return response;
@@ -503,7 +503,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         return new ProgressBuilderImpl(key);
     }
 
-    private <T> EntityContextBGPImpl.BatchRunContext<T> prepareBatchProcessContext(@NotNull String batchName, int threadsCount) {
+    private <T> ContextBGPImpl.BatchRunContext<T> prepareBatchProcessContext(@NotNull String batchName, int threadsCount) {
         if (batchRunContextMap.containsKey(batchName)) {
             throw new IllegalStateException("Batch processes with name " + batchName + " already in progress");
         }
@@ -603,7 +603,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                         }
 
                         log.error("Exception in thread: <{}>. Message: <{}>", threadContext.name, CommonUtils.getErrorMessage(ex), ex);
-                        entityContext.ui().toastr().error(ex);
+                        context.ui().toastr().error(ex);
                         if (threadContext.errorListener != null) {
                             try {
                                 threadContext.errorListener.accept(ex);
@@ -672,7 +672,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                     if (logToConsole) {
                         log.info("Progress: {}", message);
                     }
-                    getEntityContext().ui().progress().update(key, progress, message, cancellable);
+                    context().ui().progress().update(key, progress, message, cancellable);
                 };
                 progressBar.progress(0, key);
                 Exception exception = null;
@@ -820,7 +820,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         private void processFinished() {
             stopped = true;
             if (!showOnUI || hideOnUIAfterCancel) {
-                EntityContextBGPImpl.this.schedulers.remove(name);
+                ContextBGPImpl.this.schedulers.remove(name);
             }
             if (finallyListener != null) {
                 try {

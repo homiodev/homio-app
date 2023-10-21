@@ -21,7 +21,7 @@ import com.sshtools.common.ssh.components.SshKeyPair;
 import jakarta.persistence.Entity;
 import java.util.Objects;
 import lombok.SneakyThrows;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.types.IdentityEntity;
@@ -196,7 +196,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
             @UIActionInput(name = "comment", type = text),
             @UIActionInput(name = "bits", type = select, value = "3072", values = {"1024", "2048", "3072", "4096"})
     })
-    public ActionResponseModel generatePrivateKey(EntityContext entityContext, JSONObject params) {
+    public ActionResponseModel generatePrivateKey(Context context, JSONObject params) {
         if (isHasPrivateKey()) {
             return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_ALREADY_EXISTS");
         }
@@ -204,12 +204,12 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         String algorithm = params.optString("algorithm", "SSH2_RSA");
         int bits = params.optInt("bits", 3072);
         String alg = "SSH2_RSA".equals(algorithm) ? SSH2_RSA : "ECDSA".equals(algorithm) ? ECDSA : ED25519;
-        entityContext.bgp().runWithProgress("generate-ssh")
+        context.bgp().runWithProgress("generate-ssh")
                 .onFinally(exception -> {
                     if (exception != null) {
-                        entityContext.ui().toastr().error("ERROR.SSH_GENERATE");
+                        context.ui().toastr().error("ERROR.SSH_GENERATE");
                     } else {
-                        entityContext.ui().toastr().success("ACTION.RESPONSE.SUCCESS_SSH_GENERATE");
+                        context.ui().toastr().success("ACTION.RESPONSE.SUCCESS_SSH_GENERATE");
                     }
                 })
                 .execute(progressBar -> {
@@ -218,7 +218,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
                     SshPrivateKeyFile kf = SshPrivateKeyFileFactory.create(keyPair, passphrase, params.optString("comment"));
                     updateSSHData(this, passphrase, kf);
 
-                    entityContext.save(this);
+                    context.db().save(this);
                 });
         return null;
     }
@@ -227,8 +227,8 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
             @UIActionInput(name = "privateKey", type = textarea),
             @UIActionInput(name = "passphrase", type = text)
     })
-    public ActionResponseModel uploadPrivateKey(EntityContext entityContext, JSONObject params) {
-        return execUploadPrivateKey(this, entityContext, params);
+    public ActionResponseModel uploadPrivateKey(Context context, JSONObject params) {
+        return execUploadPrivateKey(this, context, params);
     }
 
     @SneakyThrows
@@ -245,7 +245,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @SneakyThrows
-    public static ActionResponseModel execUploadPrivateKey(IdentityEntity entity, EntityContext entityContext, JSONObject params) {
+    public static ActionResponseModel execUploadPrivateKey(IdentityEntity entity, Context context, JSONObject params) {
         if (entity.getJsonData().has("prv_key")) {
             return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_ALREADY_EXISTS");
         }
@@ -254,7 +254,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         SshPrivateKeyFile kf = SshPrivateKeyFileFactory.parse(privateKey.getBytes());
         updateSSHData(entity, passphrase, kf);
 
-        entityContext.save((BaseEntity) entity);
+        context.db().save((BaseEntity) entity);
         return ActionResponseModel.showSuccess("ACTION.SUCCESS");
     }
 
@@ -280,7 +280,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
 
     @SneakyThrows
     @UIContextMenuAction(value = "DOWNLOAD_PUBLIC_KEY", icon = "fas fa-download")
-    public ActionResponseModel downloadPublicKey(EntityContext entityContext, JSONObject params) {
+    public ActionResponseModel downloadPublicKey(Context context, JSONObject params) {
         if (!isHasPrivateKey()) {
             return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_NOT_FOUND");
         }
@@ -293,11 +293,11 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     @UIContextMenuAction(value = "DELETE_PRIVATE_KEY", icon = "fas fa-trash-can", inputs = {
             @UIActionInput(name = "passphrase", type = text)
     })
-    public ActionResponseModel deletePrivateKey(EntityContext entityContext, JSONObject params) {
-        return execDeletePrivateKey(this, entityContext, params);
+    public ActionResponseModel deletePrivateKey(Context context, JSONObject params) {
+        return execDeletePrivateKey(this, context, params);
     }
 
-    public static ActionResponseModel execDeletePrivateKey(IdentityEntity entity, EntityContext entityContext, JSONObject params) {
+    public static ActionResponseModel execDeletePrivateKey(IdentityEntity entity, Context context, JSONObject params) {
         if (!entity.getJsonData().has("prv_key")) {
             return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_NOT_FOUND");
         }
@@ -312,7 +312,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         entity.setJsonData("alg", null);
         entity.setJsonData("kt", null);
         entity.setJsonData("pub_cmn", null);
-        entityContext.save(entity);
+        context.db().save(entity);
         return ActionResponseModel.showSuccess("ACTION.SUCCESS");
     }
 
@@ -360,8 +360,8 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @Override
-    public @NotNull SshGenericFileSystem buildFileSystem(@NotNull EntityContext entityContext) {
-        return new SshGenericFileSystem(this, entityContext);
+    public @NotNull SshGenericFileSystem buildFileSystem(@NotNull Context context) {
+        return new SshGenericFileSystem(this, context);
     }
 
     @Override
@@ -380,8 +380,8 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @Override
-    public @Nullable GenericWebSocketService createService(@NotNull EntityContext entityContext) {
-        return new GenericWebSocketService(entityContext, this);
+    public @Nullable GenericWebSocketService createService(@NotNull Context context) {
+        return new GenericWebSocketService(context, this);
     }
 
     @Override
@@ -397,9 +397,9 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
 
         private final SSHServerEndpoint sshServerEndpoint;
 
-        public GenericWebSocketService(EntityContext entityContext, SshGenericEntity entity) {
-            super(entityContext, entity, true);
-            this.sshServerEndpoint = entityContext.getBean(SSHServerEndpoint.class);
+        public GenericWebSocketService(Context context, SshGenericEntity entity) {
+            super(context, entity, true);
+            this.sshServerEndpoint = context.getBean(SSHServerEndpoint.class);
         }
 
         @Override

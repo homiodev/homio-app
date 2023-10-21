@@ -18,7 +18,7 @@ import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Icon;
@@ -34,7 +34,7 @@ import org.homio.api.ui.field.selection.UIFieldTreeNodeSelection;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.api.util.CommonUtils;
-import org.homio.app.manager.common.impl.EntityContextServiceImpl;
+import org.homio.app.manager.common.impl.ContextServiceImpl;
 import org.homio.app.utils.OptionUtil.LoadOptionsParameters;
 
 @Log4j2
@@ -138,7 +138,7 @@ public final class UIFieldSelectionUtil {
 
     private static List<OptionModel> fetchOptionsFromDynamicOptionLoader(
         Class<?> targetClass, Object classEntityForDynamicOptionLoader,
-        EntityContext entityContext,
+        Context context,
         UIFieldDynamicSelection uiFieldTargetSelection, Map<String, String> deps) {
         DynamicOptionLoader dynamicOptionLoader = null;
         if (DynamicOptionLoader.class.isAssignableFrom(targetClass)) {
@@ -147,14 +147,14 @@ public final class UIFieldSelectionUtil {
         if (dynamicOptionLoader != null) {
             BaseEntity baseEntity = classEntityForDynamicOptionLoader instanceof BaseEntity ? (BaseEntity) classEntityForDynamicOptionLoader : null;
             return dynamicOptionLoader.loadOptions(
-                new DynamicOptionLoader.DynamicOptionLoaderParameters(baseEntity, entityContext, uiFieldTargetSelection.staticParameters(), deps));
+                new DynamicOptionLoader.DynamicOptionLoaderParameters(baseEntity, context, uiFieldTargetSelection.staticParameters(), deps));
         }
         return null;
     }
 
-    private static void buildSelectionsFromBean(List<UIFieldBeanSelection> selections, EntityContext entityContext, List<OptionModel> selectOptions) {
+    private static void buildSelectionsFromBean(List<UIFieldBeanSelection> selections, Context context, List<OptionModel> selectOptions) {
         for (UIFieldBeanSelection selection : selections) {
-            for (Map.Entry<String, ?> entry : entityContext.getBeansOfTypeWithBeanName(selection.value()).entrySet()) {
+            for (Map.Entry<String, ?> entry : context.getBeansOfTypeWithBeanName(selection.value()).entrySet()) {
                 Object bean = entry.getValue();
                 // filter if bean is BeanSelectionCondition and visible is false
                 if (bean instanceof BeanSelectionCondition cond) {
@@ -202,7 +202,7 @@ public final class UIFieldSelectionUtil {
             if (uiFieldTargetSelection != null) {
                 params.targetClass = uiFieldTargetSelection.value();
             }
-            List<OptionModel> options = fetchOptionsFromDynamicOptionLoader(params.targetClass, params.classEntityForDynamicOptionLoader, params.entityContext,
+            List<OptionModel> options = fetchOptionsFromDynamicOptionLoader(params.targetClass, params.classEntityForDynamicOptionLoader, params.context,
                 uiFieldTargetSelection, params.deps);
             if (options == null) {
                 options = OptionModel.enumList((Class<? extends Enum>) params.targetClass);
@@ -213,7 +213,7 @@ public final class UIFieldSelectionUtil {
         bean(UIFieldBeanSelection.class, params -> {
             List<OptionModel> list = new ArrayList<>();
             var selections = Arrays.asList(params.field.getDeclaredAnnotationsByType(UIFieldBeanSelection.class));
-            buildSelectionsFromBean(selections, params.entityContext, list);
+            buildSelectionsFromBean(selections, params.context, list);
             return list;
         }),
         port(UIFieldDevicePortSelection.class, params ->
@@ -228,7 +228,7 @@ public final class UIFieldSelectionUtil {
         entityByType(UIFieldEntityTypeSelection.class, params -> {
             List<OptionModel> list = new ArrayList<>();
             UIFieldEntityTypeSelection item = params.field.getDeclaredAnnotation(UIFieldEntityTypeSelection.class);
-            Class<? extends HasEntityIdentifier> typeClass = EntityContextServiceImpl.entitySelectMap.get(item.type());
+            Class<? extends HasEntityIdentifier> typeClass = ContextServiceImpl.entitySelectMap.get(item.type());
             if (typeClass == null) {
                 throw new IllegalArgumentException("Unable to find entity class with type: " + item.type());
             }

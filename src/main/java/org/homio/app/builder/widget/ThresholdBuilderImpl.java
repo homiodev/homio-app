@@ -1,20 +1,19 @@
 package org.homio.app.builder.widget;
 
-import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContextWidget.PulseBuilder;
-import org.homio.api.EntityContextWidget.PulseColor;
-import org.homio.api.EntityContextWidget.ThresholdBuilder;
-import org.homio.api.EntityContextWidget.ValueCompare;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
+import org.homio.api.ContextWidget.PulseBuilder;
+import org.homio.api.ContextWidget.PulseColor;
+import org.homio.api.ContextWidget.ThresholdBuilder;
+import org.homio.api.ContextWidget.ValueCompare;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 @RequiredArgsConstructor
 public class ThresholdBuilderImpl implements ThresholdBuilder, PulseBuilder {

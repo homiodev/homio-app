@@ -15,10 +15,9 @@ import java.util.Objects;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
 import org.homio.addon.camera.onvif.impl.UnknownBrandHandler;
 import org.homio.addon.camera.service.IpCameraService;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
@@ -247,7 +246,7 @@ public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraSer
         return null;
     }
 
-    public void tryUpdateData(EntityContext entityContext, String ip, Integer port) {
+    public void tryUpdateData(Context context, String ip, Integer port) {
         if (!getIp().equals(ip) || getOnvifPort() != port) {
             if (!getIp().equals(ip)) {
                 log.info("[{}]: Onvif camera <{}> changed ip address from <{}> to <{}>", getEntityID(), this, getIp(), ip);
@@ -255,7 +254,7 @@ public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraSer
             if (getOnvifPort() != port) {
                 log.info("[{}]: Onvif camera <{}> changed port from <{}> to <{}>", getEntityID(), this, getOnvifPort(), port);
             }
-            entityContext.save(setIp(ip).setOnvifPort(port));
+            context.db().save(setIp(ip).setOnvifPort(port));
         }
     }
 
@@ -278,7 +277,7 @@ public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraSer
                     }
                 }
                 uiInputBuilder.addSelectableButton("AUTHENTICATE", new Icon("fas fa-sign-in-alt", Color.GREEN),
-                        (entityContext, params) -> getService().authenticate());
+                    (context, params) -> getService().authenticate());
             }
         }
 
@@ -306,30 +305,30 @@ public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraSer
     }
 
     @Override
-    public LinkedHashMap<Long, Boolean> getAvailableDaysPlaybacks(EntityContext entityContext, String profile, Date from, Date to)
+    public LinkedHashMap<Long, Boolean> getAvailableDaysPlaybacks(Context context, String profile, Date from, Date to)
             throws Exception {
-        return getService().getVideoPlaybackStorage().getAvailableDaysPlaybacks(entityContext, profile, from, to);
+        return getService().getVideoPlaybackStorage().getAvailableDaysPlaybacks(context, profile, from, to);
     }
 
     @Override
-    public List<PlaybackFile> getPlaybackFiles(EntityContext entityContext, String profile, Date from, Date to) throws Exception {
-        return getService().getVideoPlaybackStorage().getPlaybackFiles(entityContext, profile, from, to);
+    public List<PlaybackFile> getPlaybackFiles(Context context, String profile, Date from, Date to) throws Exception {
+        return getService().getVideoPlaybackStorage().getPlaybackFiles(context, profile, from, to);
     }
 
     @Override
-    public DownloadFile downloadPlaybackFile(EntityContext entityContext, String profile, String fileId, Path path)
+    public DownloadFile downloadPlaybackFile(Context context, String profile, String fileId, Path path)
             throws Exception {
-        return getService().getVideoPlaybackStorage().downloadPlaybackFile(entityContext, profile, fileId, path);
+        return getService().getVideoPlaybackStorage().downloadPlaybackFile(context, profile, fileId, path);
     }
 
     @Override
-    public URI getPlaybackVideoURL(EntityContext entityContext, String fileId) throws Exception {
-        return getService().getVideoPlaybackStorage().getPlaybackVideoURL(entityContext, fileId);
+    public URI getPlaybackVideoURL(Context context, String fileId) throws Exception {
+        return getService().getVideoPlaybackStorage().getPlaybackVideoURL(context, fileId);
     }
 
     @Override
-    public PlaybackFile getLastPlaybackFile(EntityContext entityContext, String profile) {
-        return getService().getVideoPlaybackStorage().getLastPlaybackFile(entityContext, profile);
+    public PlaybackFile getLastPlaybackFile(Context context, String profile) {
+        return getService().getVideoPlaybackStorage().getLastPlaybackFile(context, profile);
     }
 
     @Override
@@ -338,8 +337,8 @@ public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraSer
     }
 
     @Override
-    public IpCameraService createService(@NotNull EntityContext entityContext) {
-        return new IpCameraService(entityContext, this);
+    public IpCameraService createService(@NotNull Context context) {
+        return new IpCameraService(context, this);
     }
 
     public void setActiveLink(String value) {
@@ -366,7 +365,7 @@ public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraSer
 
         @Override
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
-            return OptionModel.list(IpCameraService.getCameraBrands(parameters.getEntityContext()).keySet());
+            return OptionModel.list(IpCameraService.getCameraBrands(parameters.context()).keySet());
         }
     }
 

@@ -1,22 +1,22 @@
 package org.homio.app.manager.common.impl;
 
 import lombok.Getter;
+import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.EntityContextWorkspace;
+import org.homio.api.ContextWorkspace;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.workspace.WorkspaceService;
 import org.jetbrains.annotations.NotNull;
 
 @Log4j2
-public class EntityContextWorkspaceImpl implements EntityContextWorkspace {
+public class ContextWorkspaceImpl implements ContextWorkspace {
 
-    @Getter
-    private final EntityContextImpl entityContext;
+    private final @Getter @Accessors(fluent = true) ContextImpl context;
     private WorkspaceService workspaceService;
 
-    public EntityContextWorkspaceImpl(EntityContextImpl entityContext) {
-        this.entityContext = entityContext;
+    public ContextWorkspaceImpl(ContextImpl context) {
+        this.context = context;
     }
 
     public void onContextCreated(WorkspaceService workspaceService) {

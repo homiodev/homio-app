@@ -39,7 +39,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.homio.addon.z2m.model.Z2MLocalCoordinatorEntity;
 import org.homio.addon.z2m.service.Z2MDeviceService;
-import org.homio.api.EntityContextUI;
+import org.homio.api.ContextUI;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.device.DeviceBaseEntity;
@@ -58,7 +58,7 @@ import org.homio.app.js.assistant.impl.ParserContext;
 import org.homio.app.js.assistant.model.Completion;
 import org.homio.app.js.assistant.model.CompletionRequest;
 import org.homio.app.manager.ScriptService;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.ScriptEntity;
 import org.homio.app.model.entity.widget.impl.js.WidgetFrameEntity;
 import org.homio.app.model.rest.DynamicUpdateRequest;
@@ -89,7 +89,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 @Validated
 public class UtilsController {
 
-    private final EntityContextImpl entityContext;
+    private final ContextImpl context;
     private final ScriptService scriptService;
     private final CodeParser codeParser;
 
@@ -103,8 +103,8 @@ public class UtilsController {
     // get all device that able to get status
     @GetMapping("/deviceWithStatus")
     public List<OptionModel> getItemOptionsByType() {
-        List<BaseEntity> entities = new ArrayList<>(entityContext.findAll(DeviceBaseEntity.class));
-        for (Z2MLocalCoordinatorEntity coordinator : entityContext.findAll(Z2MLocalCoordinatorEntity.class)) {
+        List<BaseEntity> entities = new ArrayList<>(context.db().findAll(DeviceBaseEntity.class));
+        for (Z2MLocalCoordinatorEntity coordinator : context.db().findAll(Z2MLocalCoordinatorEntity.class)) {
             entities.addAll(coordinator.getService().getDeviceHandlers().values().stream()
                     .map(Z2MDeviceService::getDeviceEntity).toList());
         }
@@ -141,18 +141,18 @@ public class UtilsController {
     @PutMapping("/multiDynamicUpdates")
     public void multiDynamicUpdates(@Valid @RequestBody List<DynamicRequestItem> request) {
         for (DynamicRequestItem requestItem : request) {
-            entityContext.ui().registerForUpdates(new DynamicUpdateRequest(requestItem.did, requestItem.eid));
+            context.ui().registerForUpdates(new DynamicUpdateRequest(requestItem.did, requestItem.eid));
         }
     }
 
     @DeleteMapping("/dynamicUpdates")
     public void unregisterForUpdates(@Valid @RequestBody DynamicUpdateRequest request) {
-        entityContext.ui().unRegisterForUpdates(request);
+        context.ui().unRegisterForUpdates(request);
     }
 
     @GetMapping("/frame/{entityID}")
     public String getFrame(@PathVariable("entityID") String entityID) {
-        WidgetFrameEntity widgetFrameEntity = entityContext.getEntityRequire(entityID);
+        WidgetFrameEntity widgetFrameEntity = context.db().getEntityRequire(entityID);
         return widgetFrameEntity.getFrame();
     }
 
@@ -247,14 +247,14 @@ public class UtilsController {
     @PostMapping("/header/dialog/{entityID}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void acceptDialog(@PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
-        entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Accepted, dialogRequest.pressedButton,
+        context.ui().handleDialog(entityID, ContextUI.DialogResponseType.Accepted, dialogRequest.pressedButton,
                 OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
     }
 
     @DeleteMapping("/header/dialog/{entityID}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void discardDialog(@PathVariable("entityID") String entityID) {
-        entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Cancelled, null, null);
+        context.ui().handleDialog(entityID, ContextUI.DialogResponseType.Cancelled, null, null);
     }
 
     @Getter

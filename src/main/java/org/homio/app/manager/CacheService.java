@@ -1,11 +1,18 @@
 package org.homio.app.manager;
 
+import static org.homio.app.manager.common.ClassFinder.CLASSES_WITH_PARENT_CLASS;
+import static org.homio.app.manager.common.ClassFinder.REPOSITORY_BY_CLAZZ;
+
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.reflect.MethodUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.HasEntityIdentifier;
@@ -15,14 +22,6 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
-
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
-import static org.homio.app.manager.common.ClassFinder.CLASSES_WITH_PARENT_CLASS;
-import static org.homio.app.manager.common.ClassFinder.REPOSITORY_BY_CLAZZ;
 
 @Log4j2
 @Component
@@ -103,11 +102,11 @@ public class CacheService {
     public void flushDelayedUpdates() {
         if (!entityCache.isEmpty()) {
             synchronized (entityCache) {
-                EntityContext entityContext = applicationContext.getBean(EntityContext.class);
+                Context context = applicationContext.getBean(Context.class);
                 for (UpdateStatement updateStatement : entityCache.values()) {
                     try {
                         if (updateStatement.changeFields != null) {
-                            BaseEntity baseEntity = entityContext.getEntity(updateStatement.entityID, false);
+                            BaseEntity baseEntity = context.db().getEntity(updateStatement.entityID, false);
                             for (Map.Entry<String, Object[]> entry : updateStatement.changeFields.entrySet()) {
                                 MethodUtils.invokeMethod(baseEntity, entry.getKey(), entry.getValue());
                             }

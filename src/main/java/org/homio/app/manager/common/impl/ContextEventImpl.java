@@ -40,8 +40,8 @@ import org.hibernate.event.spi.PostDeleteEvent;
 import org.hibernate.event.spi.PostInsertEvent;
 import org.hibernate.event.spi.PostUpdateEvent;
 import org.hibernate.internal.SessionFactoryImpl;
-import org.homio.api.EntityContextBGP;
-import org.homio.api.EntityContextEvent;
+import org.homio.api.ContextBGP;
+import org.homio.api.ContextEvent;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.BaseEntityIdentifier;
 import org.homio.api.entity.device.DeviceBaseEntity;
@@ -54,15 +54,15 @@ import org.homio.api.state.State;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
-import org.homio.app.manager.common.EntityContextImpl;
-import org.homio.app.manager.common.EntityContextImpl.ItemAction;
+import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.manager.common.ContextImpl.ItemAction;
 import org.homio.app.model.var.WorkspaceVariable;
 import org.homio.app.service.mem.InMemoryDB;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Log4j2
-public class EntityContextEventImpl implements EntityContextEvent {
+public class ContextEventImpl implements ContextEvent {
 
     @Getter
     private final EntityListener entityUpdateListeners = new EntityListener();
@@ -84,13 +84,13 @@ public class EntityContextEventImpl implements EntityContextEvent {
     private final Map<String, UdpContext> listenUdpMap = new HashMap<>();
 
     // constructor parameters
-    private final EntityContextImpl entityContext;
+    private final ContextImpl context;
 
     private final BlockingQueue<EntityUpdate> entityUpdatesQueue = new LinkedBlockingQueue<>();
     private final BlockingQueue<Event> eventQueue = new LinkedBlockingQueue<>();
 
-    public EntityContextEventImpl(EntityContextImpl entityContext, EntityManagerFactory entityManagerFactory) {
-        this.entityContext = entityContext;
+    public ContextEventImpl(ContextImpl context, EntityManagerFactory entityManagerFactory) {
+        this.context = context;
         registerEntityListeners(entityManagerFactory);
     }
 
@@ -116,7 +116,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
     }
 
     @Override
-    public EntityContextEvent addEventBehaviourListener(String key, String discriminator, Consumer<State> listener) {
+    public ContextEvent addEventBehaviourListener(String key, String discriminator, Consumer<State> listener) {
         if (lastValues.containsKey(key)) {
             listener.accept(lastValues.get(key));
         }
@@ -125,18 +125,18 @@ public class EntityContextEventImpl implements EntityContextEvent {
     }
 
     @Override
-    public EntityContextEvent addEventListener(String key, String discriminator, Consumer<State> listener) {
+    public ContextEvent addEventListener(String key, String discriminator, Consumer<State> listener) {
         eventListeners.computeIfAbsent(discriminator, d -> new ConcurrentHashMap<>()).put(key, listener);
         return this;
     }
 
     @Override
-    public EntityContextEvent fireEventIfNotSame(@NotNull String key, @Nullable State value) {
+    public ContextEvent fireEventIfNotSame(@NotNull String key, @Nullable State value) {
         return fireEvent(key, value, true);
     }
 
     @Override
-    public EntityContextEvent fireEvent(@NotNull String key, @Nullable State value) {
+    public ContextEvent fireEvent(@NotNull String key, @Nullable State value) {
         return fireEvent(key, value, false);
     }
 
@@ -146,7 +146,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
     }
 
     @Override
-    public EntityContextEvent removeEntityUpdateListener(String entityID, String key) {
+    public ContextEvent removeEntityUpdateListener(String entityID, String key) {
         if (this.entityUpdateListeners.idListeners.containsKey(entityID)) {
             this.entityUpdateListeners.idListeners.get(entityID).remove(key);
         }
@@ -157,7 +157,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
     }
 
     @Override
-    public EntityContextEvent removeEntityRemoveListener(String entityID, String key) {
+    public ContextEvent removeEntityRemoveListener(String entityID, String key) {
         if (this.entityRemoveListeners.idListeners.containsKey(entityID)) {
             this.entityRemoveListeners.idListeners.get(entityID).remove(key);
         }
@@ -166,58 +166,58 @@ public class EntityContextEventImpl implements EntityContextEvent {
 
     @Override
     public void runOnceOnInternetUp(@NotNull String name, @NotNull ThrowingRunnable<Exception> command) {
-        entityContext.bgp().getInternetAvailabilityService().addRunOnceOnInternetUpListener(name, command);
+        context.bgp().getInternetAvailabilityService().addRunOnceOnInternetUpListener(name, command);
     }
 
     @Override
     public boolean isInternetUp() {
-        return entityContext.bgp().getInternetAvailabilityService().getInternetUp().get();
+        return context.bgp().getInternetAvailabilityService().getInternetUp().get();
     }
 
     @Override
-    public <T extends BaseEntityIdentifier> EntityContextEvent addEntityUpdateListener(String entityID, String key, Consumer<T> listener) {
+    public <T extends BaseEntityIdentifier> ContextEvent addEntityUpdateListener(String entityID, String key, Consumer<T> listener) {
         this.entityUpdateListeners.idListeners.putIfAbsent(entityID, new HashMap<>());
         this.entityUpdateListeners.idListeners.get(entityID).put(key, listener);
         return this;
     }
 
     @Override
-    public <T extends BaseEntityIdentifier> EntityContextEvent addEntityUpdateListener(String entityID, String key, EntityUpdateListener<T> listener) {
+    public <T extends BaseEntityIdentifier> ContextEvent addEntityUpdateListener(String entityID, String key, EntityUpdateListener<T> listener) {
         this.entityUpdateListeners.idBiListeners.putIfAbsent(entityID, new HashMap<>());
         this.entityUpdateListeners.idBiListeners.get(entityID).put(key, listener);
         return this;
     }
 
     @Override
-    public <T extends BaseEntityIdentifier> EntityContextEvent addEntityUpdateListener(Class<T> entityClass, String key, Consumer<T> listener) {
+    public <T extends BaseEntityIdentifier> ContextEvent addEntityUpdateListener(Class<T> entityClass, String key, Consumer<T> listener) {
         this.entityUpdateListeners.typeListeners.putIfAbsent(entityClass.getName(), new HashMap<>());
         this.entityUpdateListeners.typeListeners.get(entityClass.getName()).put(key, listener);
         return this;
     }
 
     @Override
-    public <T extends BaseEntityIdentifier> EntityContextEvent addEntityUpdateListener(Class<T> entityClass, String key, EntityUpdateListener<T> listener) {
+    public <T extends BaseEntityIdentifier> ContextEvent addEntityUpdateListener(Class<T> entityClass, String key, EntityUpdateListener<T> listener) {
         this.entityUpdateListeners.typeBiListeners.putIfAbsent(entityClass.getName(), new HashMap<>());
         this.entityUpdateListeners.typeBiListeners.get(entityClass.getName()).put(key, listener);
         return this;
     }
 
     @Override
-    public <T extends BaseEntityIdentifier> EntityContextEvent addEntityCreateListener(Class<T> entityClass, String key, Consumer<T> listener) {
+    public <T extends BaseEntityIdentifier> ContextEvent addEntityCreateListener(Class<T> entityClass, String key, Consumer<T> listener) {
         this.entityCreateListeners.typeListeners.putIfAbsent(entityClass.getName(), new HashMap<>());
         this.entityCreateListeners.typeListeners.get(entityClass.getName()).put(key, listener);
         return this;
     }
 
     @Override
-    public <T extends BaseEntityIdentifier> EntityContextEvent addEntityRemovedListener(String entityID, String key, Consumer<T> listener) {
+    public <T extends BaseEntityIdentifier> ContextEvent addEntityRemovedListener(String entityID, String key, Consumer<T> listener) {
         this.entityRemoveListeners.idListeners.putIfAbsent(entityID, new HashMap<>());
         this.entityRemoveListeners.idListeners.get(entityID).put(key, listener);
         return this;
     }
 
     @Override
-    public <T extends BaseEntityIdentifier> EntityContextEvent addEntityRemovedListener(Class<T> entityClass, String key, Consumer<T> listener) {
+    public <T extends BaseEntityIdentifier> ContextEvent addEntityRemovedListener(Class<T> entityClass, String key, Consumer<T> listener) {
         this.entityRemoveListeners.typeListeners.putIfAbsent(entityClass.getName(), new HashMap<>());
         this.entityRemoveListeners.typeListeners.get(entityClass.getName()).put(key, listener);
         return this;
@@ -240,12 +240,12 @@ public class EntityContextEventImpl implements EntityContextEvent {
         String key, String host, int port, BiConsumer<DatagramPacket, String> listener) {
         String hostPortKey = (host == null ? "0.0.0.0" : host) + ":" + port;
         if (!this.listenUdpMap.containsKey(hostPortKey)) {
-            EntityContextBGP.ThreadContext<Void> scheduleFuture;
+            ContextBGP.ThreadContext<Void> scheduleFuture;
             try {
                 DatagramSocket socket = new DatagramSocket(host == null ? new InetSocketAddress(port) : new InetSocketAddress(host, port));
                 DatagramPacket datagramPacket = new DatagramPacket(new byte[255], 255);
 
-                scheduleFuture = entityContext.bgp().builder("listen-udp-" + hostPortKey).execute(() -> {
+                scheduleFuture = context.bgp().builder("listen-udp-" + hostPortKey).execute(() -> {
                     while (!Thread.currentThread().isInterrupted()) {
                         socket.receive(datagramPacket);
                         byte[] data = datagramPacket.getData();
@@ -255,7 +255,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
                 });
                 scheduleFuture.setDescription("Listen udp: " + hostPortKey);
             } catch (Exception ex) {
-                entityContext.ui().notification().addOrUpdateBlock("UPD", "UDP", new Icon("fas fa-kip-sign", "#482594"), blockBuilder -> {
+                context.ui().notification().addOrUpdateBlock("UPD", "UDP", new Icon("fas fa-kip-sign", "#482594"), blockBuilder -> {
                     String info = Lang.getServerMessage("UDP_ERROR", FlowMap.of("key", hostPortKey, "msg", ex.getMessage()));
                     blockBuilder.addInfo(info, new Icon("fas fa-triangle-exclamation"));
                 });
@@ -279,7 +279,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
             while (true) {
                 try {
                     EntityUpdate entityUpdate = entityUpdatesQueue.take();
-                    entityUpdate.itemAction.handler.accept(entityContext, entityUpdate.entity);
+                    entityUpdate.itemAction.handler.accept(context, entityUpdate.entity);
                 } catch (Exception ex) {
                     log.error("Error while execute postUpdate action", ex);
                 }
@@ -296,7 +296,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
                         }
                     }
                     globalEvenListeners.forEach(l -> l.accept(event.key, event.value));
-                    entityContext.fireAllLock(lockManager -> lockManager.signalAll(event.key, event.value));
+                    context.fireAllLock(lockManager -> lockManager.signalAll(event.key, event.value));
                 } catch (Exception ex) {
                     log.error("Error while execute event handler", ex);
                 }
@@ -304,7 +304,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
         }).start();
     }
 
-    private  @NotNull EntityContextEventImpl fireEvent(@NotNull String key, @Nullable State value, boolean compareValues) {
+    private @NotNull ContextEventImpl fireEvent(@NotNull String key, @Nullable State value, boolean compareValues) {
         // fire by key and key + value type
         fireEventInternal(key, value, compareValues);
         /*if (value != null && !(value instanceof String)) {
@@ -333,15 +333,15 @@ public class EntityContextEventImpl implements EntityContextEvent {
         registry.getEventListenerGroup(EventType.POST_LOAD).appendListener(event -> {
             Object entity = event.getEntity();
             if (entity instanceof BaseEntity baseEntity) {
-                baseEntity.setEntityContext(entityContext);
+                baseEntity.setContext(context);
                 baseEntity.afterFetch();
-                loadEntityService(entityContext, entity);
+                loadEntityService(context, entity);
             }
         });
         registry.getEventListenerGroup(EventType.PRE_DELETE).appendListener(event -> {
             Object entity = event.getEntity();
             if (entity instanceof BaseEntity baseEntity) {
-                baseEntity.setEntityContext(entityContext);
+                baseEntity.setContext(context);
                 if (baseEntity.isDisableDelete()) {
                     throw new IllegalStateException("Unable to remove entity");
                 }
@@ -353,7 +353,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
             @Override
             public void onPostInsert(PostInsertEvent event) {
                 super.onPostInsert(event);
-                updateCacheEntity(entityContext, event.getEntity(), ItemAction.Insert);
+                updateCacheEntity(context, event.getEntity(), ItemAction.Insert);
                 entityUpdatesQueue.add(new EntityUpdate(event.getEntity(), EntityUpdateAction.Insert));
             }
         });
@@ -367,7 +367,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
                 if (org.hibernate.engine.spi.Status.DELETED == entry.getStatus()) {
                     entityUpdatesQueue.add(new EntityUpdate(event.getEntity(), EntityUpdateAction.Delete));
                 } else {
-                    updateCacheEntity(entityContext, event.getEntity(), ItemAction.Update);
+                    updateCacheEntity(context, event.getEntity(), ItemAction.Update);
                     entityUpdatesQueue.add(new EntityUpdate(event.getEntity(), EntityUpdateAction.Update));
                 }
             }
@@ -378,18 +378,18 @@ public class EntityContextEventImpl implements EntityContextEvent {
             public void onPostDelete(PostDeleteEvent event) {
                 super.onPostDelete(event);
                 if (event.getEntity() instanceof BaseEntity baseEntity) {
-                    baseEntity.setEntityContext(entityContext);
-                    updateCacheEntity(entityContext, event.getEntity(), ItemAction.Remove);
+                    baseEntity.setContext(context);
+                    updateCacheEntity(context, event.getEntity(), ItemAction.Remove);
                 }
                 entityUpdatesQueue.add(new EntityUpdate(event.getEntity(), EntityUpdateAction.Delete));
             }
         });
     }
 
-    private static void postInsertUpdate(EntityContextImpl entityContext, Object entity, boolean persist) {
+    private static void postInsertUpdate(ContextImpl context, Object entity, boolean persist) {
         if (entity instanceof BaseEntity baseEntity) {
-            baseEntity.setEntityContext(entityContext);
-            loadEntityService(entityContext, entity);
+            baseEntity.setContext(context);
+            loadEntityService(context, entity);
             if (persist) {
                 baseEntity.afterPersist();
             } else {
@@ -399,15 +399,15 @@ public class EntityContextEventImpl implements EntityContextEvent {
             if (entity instanceof WorkspaceVariable wv) {
                 entity = wv.getTopGroup();
             }
-            entityContext.sendEntityUpdateNotification(entity, persist ? ItemAction.Insert : ItemAction.Update);
+            context.sendEntityUpdateNotification(entity, persist ? ItemAction.Insert : ItemAction.Update);
         }
     }
 
     // Try to instantiate service associated with entity
-    private static void loadEntityService(EntityContextImpl entityContext, Object entity) {
+    private static void loadEntityService(ContextImpl context, Object entity) {
         if (entity instanceof EntityService es) {
             try {
-                Optional<?> serviceOptional = ((EntityService<?, ?>) entity).getOrCreateService(entityContext);
+                Optional<?> serviceOptional = ((EntityService<?, ?>) entity).getOrCreateService(context);
                 // Update entity into service
                 if (serviceOptional.isPresent()) {
                     try {
@@ -426,10 +426,10 @@ public class EntityContextEventImpl implements EntityContextEvent {
     /**
      * Require to run inside transaction! to load lazy loaded groups/parents/etc...
      */
-    private static void updateCacheEntity(EntityContextImpl entityContext, Object entity, ItemAction type) {
+    private static void updateCacheEntity(ContextImpl context, Object entity, ItemAction type) {
         try {
             if (entity instanceof BaseEntity) {
-                entityContext.getCacheService().entityUpdated((BaseEntity) entity);
+                context.getCacheService().entityUpdated((BaseEntity) entity);
             }
         } catch (Exception ex) {
             log.error("Unable to update cache entity <{}> for entity: <{}>. Msg: <{}>", type, entity, CommonUtils.getErrorMessage(ex));
@@ -467,7 +467,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
 
                            String entityID = be.getEntityID();
                            // remove all status for entity
-                           EntityContextStorageImpl.ENTITY_MEMORY_MAP.remove(entityID);
+                           ContextStorageImpl.ENTITY_MEMORY_MAP.remove(entityID);
                            // remove in-memory data if any exists
                            InMemoryDB.removeService(entityID);
                            // clear all registered console plugins if any exists
@@ -475,7 +475,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
                            // remove any registered notifications/notification block
                            context.ui().notification().removeBlock(entityID);
                            // remove in-memory data
-                           context.getEntityContextStorageImpl().remove(entityID);
+                           context.db().deleteInMemoryData(entityID);
                        });
             }
             if (entity instanceof WorkspaceVariable wv) {
@@ -486,14 +486,14 @@ public class EntityContextEventImpl implements EntityContextEvent {
             }
         });
 
-        private final ThrowingBiConsumer<EntityContextImpl, Object, Exception> handler;
+        private final ThrowingBiConsumer<ContextImpl, Object, Exception> handler;
     }
 
     @RequiredArgsConstructor
     private static class UdpContext {
 
         private final Map<String, BiConsumer<DatagramPacket, String>> keyToListener = new HashMap<>();
-        private final EntityContextBGP.ThreadContext<Void> scheduleFuture;
+        private final ContextBGP.ThreadContext<Void> scheduleFuture;
 
         public void handle(DatagramPacket datagramPacket, String text) {
             for (BiConsumer<DatagramPacket, String> listener : keyToListener.values()) {

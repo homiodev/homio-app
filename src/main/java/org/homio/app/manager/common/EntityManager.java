@@ -1,6 +1,14 @@
 package org.homio.app.manager.common;
 
+import static org.homio.app.manager.CacheService.CACHE_CLASS_BY_TYPE;
+import static org.homio.app.manager.CacheService.ENTITY_IDS_BY_CLASS_NAME;
+import static org.homio.app.manager.CacheService.ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI;
+
 import jakarta.persistence.Entity;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.entity.BaseEntity;
@@ -11,26 +19,19 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.Set;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-
-import static org.homio.app.manager.CacheService.*;
-
 @Log4j2
 @Component
 public class EntityManager {
 
     @Cacheable(ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI)
     public <T extends BaseEntity> T getEntityWithFetchLazy(String entityID) {
-        AbstractRepository repository = EntityContextImpl.getRepository(entityID);
+        AbstractRepository repository = ContextImpl.getRepository(entityID);
         return (T) repository.getByEntityIDWithFetchLazy(entityID, false);
     }
 
     @Cacheable(CACHE_CLASS_BY_TYPE)
     public Class<? extends EntityFieldMetadata> getUIFieldClassByType(String type) {
-        for (Class<? extends EntityFieldMetadata> aClass : EntityContextImpl.uiFieldClasses.values()) {
+        for (Class<? extends EntityFieldMetadata> aClass : ContextImpl.uiFieldClasses.values()) {
             Entity entity = aClass.getDeclaredAnnotation(Entity.class);
             if (entity != null && entity.name().equals(type)
                     || aClass.getName().equals(type)
@@ -58,7 +59,7 @@ public class EntityManager {
                 .collect(Collectors.toSet());
     }
 
-    <T extends BaseEntity> @Nullable T getEntityNoCache(String entityID) {
-        return (T) EntityContextImpl.getRepository(entityID).getByEntityID(entityID);
+    public <T extends BaseEntity> @Nullable T getEntityNoCache(String entityID) {
+        return (T) ContextImpl.getRepository(entityID).getByEntityID(entityID);
     }
 }
