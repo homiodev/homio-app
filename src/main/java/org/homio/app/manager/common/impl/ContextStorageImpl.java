@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
@@ -311,6 +312,18 @@ public class ContextStorageImpl implements ContextStorage {
     public <T extends DataStorageEntity> DataStorageService<T> getOrCreateInMemoryService(@NotNull Class<T> pojoClass, @NotNull String uniqueId,
                                                                                           @Nullable Long quota) {
         return InMemoryDB.getOrCreateService(pojoClass, uniqueId, quota);
+    }
+
+    @Override
+    public List<DeviceBaseEntity> getDeviceEntity(@NotNull String ieeeAddress, @Nullable String typePrefix) {
+        List<DeviceBaseEntity> entities = findAll(DeviceBaseEntity.class);
+        Stream<DeviceBaseEntity> stream = entities
+            .stream()
+            .filter(e -> ieeeAddress.equals(e.getIeeeAddress()) || e.getEntityID().equals(ieeeAddress));
+        if (typePrefix != null) {
+            stream = stream.filter(e -> e.getEntityID().startsWith(DeviceBaseEntity.PREFIX + typePrefix));
+        }
+        return stream.toList();
     }
 
     private void setMemValue(@NotNull HasEntityIdentifier entity, @NotNull String key, @NotNull String title, @Nullable Object value) {

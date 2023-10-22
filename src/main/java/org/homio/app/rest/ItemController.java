@@ -89,6 +89,7 @@ import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.EntityManager;
 import org.homio.app.model.UIHideEntityIfFieldNotNull;
+import org.homio.app.model.entity.DeviceFallbackEntity;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.repository.AbstractRepository;
@@ -767,7 +768,12 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @SneakyThrows
     private boolean isRemoveItemFromResult(BaseEntity baseEntity) {
         UIHideEntityIfFieldNotNull hideCondition = baseEntity.getClass().getDeclaredAnnotation(UIHideEntityIfFieldNotNull.class);
-        return hideCondition != null && FieldUtils.readDeclaredField(baseEntity, hideCondition.value(), true) != null;
+        if (hideCondition != null && FieldUtils.readDeclaredField(baseEntity, hideCondition.value(), true) != null) {
+            return true;
+        } else if (baseEntity instanceof DeviceFallbackEntity) {
+            return true;
+        }
+        return false;
     }
 
     private List<OptionModel> getEntityOptions(String fieldName, Object classEntity, Class<?> entityClass) {

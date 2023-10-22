@@ -221,11 +221,6 @@ public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraSer
     }
 
     @Override
-    public @NotNull Icon getEntityIcon() {
-        return new Icon("fas fa-video", "#4E783D");
-    }
-
-    @Override
     public long getEntityServiceHashCode() {
         return Objects.hash(getIeeeAddress(), getName()) + getJsonDataHashCode("start", "ip", "cameraType", "onvifPort", "restPort",
                 "onvifMediaProfile", "user", "pwd");

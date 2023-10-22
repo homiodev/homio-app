@@ -5,6 +5,7 @@ import static org.homio.app.model.entity.widget.impl.video.sourceResolver.Widget
 import lombok.RequiredArgsConstructor;
 import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.api.Context;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
@@ -21,16 +22,22 @@ public class CameraServiceVideoSourceResolver implements WidgetVideoSourceResolv
         String ds = DataSourceUtil.getSelection(item.getValueDataSource()).getValue();
         String[] keys = ds.split("-->");
         String entityID = keys[0];
-        BaseCameraEntity<?, ?> baseVideoStreamEntity = context.db().getEntity(entityID);
-        if (baseVideoStreamEntity != null && keys.length >= 2) {
+        DeviceBaseEntity entity = context.db().getEntity(entityID);
+        if (entity != null && keys.length >= 2) {
             String videoIdentifier = keys[keys.length - 1];
+            if (videoIdentifier.startsWith("http") || videoIdentifier.startsWith("$DEVICE_URL")) {
+                return new VideoEntityResponse(item.getValueDataSource(), videoIdentifier, videoIdentifier, getVideoType(videoIdentifier));
+            }
             String url = getUrl(videoIdentifier, entityID);
             VideoEntityResponse response = new VideoEntityResponse(item.getValueDataSource(), ds, url, getVideoType(url));
-            UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
-            baseVideoStreamEntity.assembleActions(uiInputBuilder);
-            response.setActions(uiInputBuilder.buildAll());
-            if(!baseVideoStreamEntity.isStart()) {
-                response.setError("W.ERROR.VIDEO_NOT_STARTED");
+
+            if (entity instanceof BaseCameraEntity<?, ?> camera) {
+                UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
+                camera.assembleActions(uiInputBuilder);
+                response.setActions(uiInputBuilder.buildAll());
+                if (!camera.isStart()) {
+                    response.setError("W.ERROR.VIDEO_NOT_STARTED");
+                }
             }
             return response;
         }

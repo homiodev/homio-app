@@ -210,11 +210,6 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     }
 
     @Override
-    public @NotNull Icon getEntityIcon() {
-        return new Icon("fas fa-square-rss", "#308BB3");
-    }
-
-    @Override
     @UIFieldIgnore
     @JsonIgnore
     public @Nullable String getPlace() {

@@ -165,11 +165,6 @@ public class FFMPEGEntity extends MediaEntity implements
     }
 
     @Override
-    public @NotNull Icon getEntityIcon() {
-        return new Icon("fas fa-podcast", "#2DA844");
-    }
-
-    @Override
     @UIFieldIgnore
     @JsonIgnore
     public @Nullable String getPlace() {

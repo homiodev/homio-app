@@ -678,14 +678,10 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
 
     private void createOrUpdateDeviceGroup() {
         List<ConfigDeviceDefinition> devices = findDevices();
-        Icon icon = new Icon(
-            CONFIG_DEVICE_SERVICE.getDeviceIcon(devices, "fas fa-video"),
-            CONFIG_DEVICE_SERVICE.getDeviceIconColor(devices, UI.Color.random())
-        );
         context.var().createGroup("video", "Video", builder ->
             builder.setLocked(true).setIcon(new Icon("fas fa-video", "#0E578F")));
         context.var().createSubGroup("video", entity.getGroupID(), entity.getDeviceFullName(), builder ->
-            builder.setLocked(true).setDescription(getGroupDescription()).setIcon(icon));
+            builder.setLocked(true).setDescription(getGroupDescription()).setIcon(entity.getEntityIcon()));
     }
 
     protected void setAudioAlarmThreshold(int threshold) {

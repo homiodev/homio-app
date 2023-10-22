@@ -50,6 +50,7 @@ import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
+import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
 import org.homio.api.util.NotificationLevel;
@@ -108,7 +109,11 @@ public class ContextUIImpl implements ContextUI {
             for (Iterator<SendUpdateContext> iterator = sendToUIMap.values().iterator(); iterator.hasNext(); ) {
                 SendUpdateContext context = iterator.next();
 
-                sendDynamicUpdateSupplied(new DynamicUpdateRequest(context.dynamicUpdateID(), null), context.handler::get);
+                try {
+                    sendDynamicUpdateSupplied(new DynamicUpdateRequest(context.dynamicUpdateID(), null), context.handler::get);
+                } catch (Exception ex) {
+                    log.warn("Unable to send dynamic update for: {}. {}", context.dynamicUpdateID, CommonUtils.getErrorMessage(ex));
+                }
                 iterator.remove();
             }
             for (Iterator<Entry<String, Object>> iterator = refreshConsolePlugin.entrySet().iterator(); iterator.hasNext(); ) {

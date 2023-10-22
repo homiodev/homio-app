@@ -36,6 +36,7 @@ import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.log.HasEntitySourceLog;
 import org.homio.api.entity.types.MediaEntity;
 import org.homio.api.entity.version.HasFirmwareVersion;
+import org.homio.api.entity.video.HasVideoSources;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.FileContentType;
@@ -43,7 +44,6 @@ import org.homio.api.model.FileModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.device.ConfigDeviceDefinition;
-import org.homio.api.model.device.ConfigDeviceDefinitionService;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.service.EntityService;
 import org.homio.api.ui.UI.Color;
@@ -78,6 +78,7 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
     StreamDASH,
     StreamSnapshot,
     HasFirmwareVersion,
+    HasVideoSources,
     DeviceEndpointsBehaviourContract,
     EntityService<S, T> {
 
@@ -314,12 +315,12 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
         setJsonData("sr", value);
     }
 
-    @JsonIgnore
+    @Override
     public List<OptionModel> getVideoSources() {
         List<OptionModel> videoSources = new ArrayList<>();
         boolean mediaMTXReady = context().media().getMediaMTXInfo(getEntityID()).isReady();
         assembleStream("hls", "Hls streams(.m3u8)", m3u8 -> {
-            m3u8.setIcon(new Icon(FFMPEGFormat.HLS.getIcon()));
+            m3u8.setIcon(FFMPEGFormat.HLS.getIconModel());
             m3u8.addChild(of("video.m3u8", "HLS [default]")
                 .setIcon(FFMPEGFormat.HLS.getIconModel()));
             if (!getHlsLowResolution().isEmpty()) {
@@ -496,11 +497,6 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
     @Override
     public @Nullable String getDescriptionImpl() {
         return getError();
-    }
-
-    @Override
-    public @NotNull ConfigDeviceDefinitionService getConfigDeviceDefinitionService() {
-        return BaseCameraService.CONFIG_DEVICE_SERVICE;
     }
 
     @Override
