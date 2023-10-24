@@ -158,7 +158,8 @@ public class ContextUIImpl implements ContextUI {
             duc.timeout = System.currentTimeMillis(); // refresh timer
             duc.registerCounter.incrementAndGet();
         }
-        context.event().addEventListener(request.getDynamicUpdateId(), o -> this.sendDynamicUpdateSupplied(request, () -> o));
+        context.event().addEventListener(request.getDynamicUpdateId(), value ->
+            sendDynamicUpdateSupplied(request, () -> value));
     }
 
     public void unRegisterForUpdates(DynamicUpdateRequest request) {

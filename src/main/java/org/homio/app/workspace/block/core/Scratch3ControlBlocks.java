@@ -1,7 +1,6 @@
 package org.homio.app.workspace.block.core;
 
 import static java.util.concurrent.TimeUnit.HOURS;
-import static org.homio.api.workspace.scratch.Scratch3Block.CONDITION;
 
 import com.pivovarit.function.ThrowingRunnable;
 import java.time.Duration;
@@ -67,7 +66,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
             context
                     .bgp()
                     .builder("workspace-schedule-cron-" + workspaceBlock.getId())
-                    .tap(context -> ((WorkspaceBlockImpl) workspaceBlock).setThreadContext(context))
+                    .tap(workspaceBlock::setThreadContext)
                     .interval(cron)
                     .execute(
                             () -> {

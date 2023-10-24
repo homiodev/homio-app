@@ -1,5 +1,6 @@
 package org.homio.app.manager.common.impl;
 
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
 
 import java.util.HashSet;
@@ -13,6 +14,7 @@ import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.api.ContextService;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.service.EntityService.ServiceInstance;
 import org.homio.app.manager.common.ContextImpl;
@@ -42,6 +44,11 @@ public class ContextServiceImpl implements ContextService {
                 } catch (Exception ignore) {
                 }
             }));
+    }
+
+    @Override
+    public String getPrimaryMqttEntity() {
+        return DeviceBaseEntity.PREFIX + "mqtt_" + PRIMARY_DEVICE;
     }
 
     @Override

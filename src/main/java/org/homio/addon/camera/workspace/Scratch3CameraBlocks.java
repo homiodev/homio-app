@@ -76,7 +76,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
 
     public Scratch3CameraBlocks(Context context, CameraEntrypoint cameraEntrypoint) {
         super("#8F4D77", context, cameraEntrypoint, null);
-        setParent("media");
+        setParent(ScratchParent.media);
 
         // Menu
         this.menuCameraRecord = menuServerItems(RECORD_STORAGE_MENU, VideoBaseStorageService.class, "Record storage");

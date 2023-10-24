@@ -124,7 +124,7 @@ import org.springframework.core.annotation.AnnotationUtils;
 @Log4j2
 public class UIFieldUtils {
 
-    public static @NotNull JSONObject buildDynamicParameterMetadata(@NotNull Object requestedEntity, @Nullable Class<?> sourceClassType) {
+    public static @NotNull JSONObject buildDynamicParameterMetadata(@Nullable Object requestedEntity, @Nullable Class<?> sourceClassType) {
         JSONObject meta = new JSONObject();
         if (requestedEntity instanceof HasDynamicParameterFields && sourceClassType != null) {
             if (sourceClassType.equals(HasGetStatusValue.class)) {

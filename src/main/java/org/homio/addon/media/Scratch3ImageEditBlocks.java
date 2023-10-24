@@ -31,7 +31,7 @@ public class Scratch3ImageEditBlocks extends Scratch3ExtensionBlocks {
 
     public Scratch3ImageEditBlocks(Context context) {
         super("#3C6360", context, null, "imageeditor");
-        setParent("media");
+        setParent(ScratchParent.media);
         // Menu
         this.textPositionMenu = menuStatic("textPositionMenu", StylePosition.class, StylePosition.TopLeft);
 

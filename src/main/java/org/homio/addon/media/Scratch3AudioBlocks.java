@@ -44,7 +44,7 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
     public Scratch3AudioBlocks(Context context, AudioService audioService) {
         super("#87B023", context, null, "audio");
         this.audioService = audioService;
-        setParent("media");
+        setParent(ScratchParent.media);
 
         // menu
         this.ttsMenu = menuServerServiceItems("tts", TextToSpeechEntityService.class, "Select TTS");

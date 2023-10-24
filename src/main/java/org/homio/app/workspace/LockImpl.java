@@ -31,8 +31,8 @@ public class LockImpl implements Lock {
     @Getter
     private Object value;
 
-    public LockImpl(String id, Object expectedValue) {
-        this.key = id;
+    public LockImpl(String key, Object expectedValue) {
+        this.key = key;
         this.expectedValue = expectedValue;
         if (this.expectedValue == null) {
             this.valueCheck = o -> true;

@@ -340,10 +340,7 @@ public class WorkspaceService implements ContextRefreshed {
         private final LockManagerImpl lockManager;
         private final Map<String, WorkspaceBlockImpl> blocks = new HashMap<>();
 
-        public WorkspaceTabHolder(
-                String tabId,
-            Context context,
-                Map<String, Scratch3ExtensionBlocks> scratch3Blocks) {
+        public WorkspaceTabHolder(String tabId, Context context, Map<String, Scratch3ExtensionBlocks> scratch3Blocks) {
             this.tabId = tabId;
             this.scratch3Blocks = scratch3Blocks;
             this.context = context;

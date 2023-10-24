@@ -78,6 +78,9 @@ public class ContextAddonImpl {
         log.info("Initialize addons...");
         ArrayList<AddonEntrypoint> addonEntrypoints = new ArrayList<>(applicationContext.getBeansOfType(AddonEntrypoint.class).values());
         Collections.sort(addonEntrypoints);
+        log.info("Found addons: \r\n{}",
+            addonEntrypoints.stream().map(AddonEntrypoint::getAddonID)
+                            .collect(Collectors.joining("\r\n")));
         for (AddonEntrypoint entrypoint : addonEntrypoints) {
             //this.addons.put("addon-" + entrypoint.getAddonID(), new InternalAddonContext(entrypoint, null));
             fireAddonEntrypoint(entrypoint);
@@ -206,6 +209,7 @@ public class ContextAddonImpl {
 
     private void destroyAddonContext(@NotNull AddonContext addonContext, boolean deleteFile) {
         AnnotationConfigApplicationContext appContext = addonContext.getApplicationContext();
+        log.warn("Destroy {} entrypoint", addonContext.getAddonID());
         appContext.getBean(AddonEntrypoint.class).destroy();
         addonContext.fireCloseListeners();
         context.getAllApplicationContexts().remove(appContext);

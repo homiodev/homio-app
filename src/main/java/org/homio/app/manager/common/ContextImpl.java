@@ -24,6 +24,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.homio.addon.mqtt.entity.MQTTClientEntity;
+import org.homio.addon.telegram.TelegramEntity;
 import org.homio.api.Context;
 import org.homio.api.ContextHardware;
 import org.homio.api.ContextMedia;
@@ -230,10 +232,12 @@ public class ContextImpl implements Context {
         contextEvent.onContextCreated();
 
         UserAdminEntity.ensureUserExists(this);
+        MQTTClientEntity.ensureEntityExists(this);
         LocalBoardEntity.ensureDeviceExists(this);
         SshTmateEntity.ensureEntityExists(this);
         MediaMTXEntity.ensureEntityExists(this);
         FFMPEGEntity.ensureEntityExists(this);
+        TelegramEntity.ensureEntityExists(this);
 
         contextSetting.onContextCreated();
         contextVar.onContextCreated();

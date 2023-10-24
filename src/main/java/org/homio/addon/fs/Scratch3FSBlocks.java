@@ -34,6 +34,7 @@ import org.homio.api.workspace.scratch.ArgumentType;
 import org.homio.api.workspace.scratch.MenuBlock;
 import org.homio.api.workspace.scratch.MenuBlock.ServerMenuBlock;
 import org.homio.api.workspace.scratch.MenuBlock.StaticMenuBlock;
+import org.homio.api.workspace.scratch.Scratch3Block.ScratchSettingBaseEntity;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.jetbrains.annotations.NotNull;
@@ -52,7 +53,7 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
 
     public Scratch3FSBlocks(Context context) {
         super("#93922C", context, null, "fs");
-        setParent("storage");
+        setParent(ScratchParent.storage);
 
         // menu
         this.fsEntityMenu = menuServerItems(ENTITY, LocalBoardEntity.class, "FileSystem");
@@ -272,7 +273,7 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
 
     @Getter
     @Setter
-    public static class ModifyFileSettings implements EntityFieldMetadata {
+    public static class ModifyFileSettings implements ScratchSettingBaseEntity {
 
         @UIField(order = 1, icon = "fa fa-pen", type = UIFieldType.EnumButtons)
         private ModifyOption modifyOption = ModifyOption.Overwrite;

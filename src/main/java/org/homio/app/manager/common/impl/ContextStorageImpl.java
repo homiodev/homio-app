@@ -10,7 +10,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
+import org.homio.addon.z2m.model.Z2MLocalCoordinatorEntity;
 import org.homio.api.ContextSetting;
 import org.homio.api.ContextSetting.MemSetterHandler;
 import org.homio.api.ContextStorage;
@@ -380,11 +380,24 @@ public class ContextStorageImpl implements ContextStorage {
         } else {
             repository = ContextImpl.getRepository(CommonUtils.newInstance(clazz).getEntityPrefix());
         }
+        List<T> result = new ArrayList<>();
         if (!repository.isUseCache()) {
-            return repository.listAll();
+            result.addAll(repository.listAll());
+        } else {
+            result.addAll(entityManager.getEntityIDsByEntityClassFullName(clazz, repository).stream().map(entityID ->
+                entityManager.<T>getEntityWithFetchLazy(entityID)).filter(Objects::nonNull).toList());
         }
-        return entityManager.getEntityIDsByEntityClassFullName(clazz, repository).stream().map(entityID ->
-            entityManager.<T>getEntityWithFetchLazy(entityID)).filter(Objects::nonNull).collect(Collectors.toList());
+        if (clazz.equals(DeviceBaseEntity.class)) {
+            List<T> memoryDevices = new ArrayList<>();
+            for (T t : result) {
+                if (t instanceof Z2MLocalCoordinatorEntity coordinator) {
+                    memoryDevices.addAll(coordinator.getService().getDeviceHandlers().values().stream()
+                                             .map(z2MDeviceService -> (T) z2MDeviceService.getDeviceEntity()).toList());
+                }
+            }
+            result.addAll(memoryDevices);
+        }
+        return result;
     }
 
     private static class EntityMemoryData {

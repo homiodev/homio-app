@@ -57,8 +57,6 @@ import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
-import org.homio.addon.z2m.model.Z2MLocalCoordinatorEntity;
-import org.homio.addon.z2m.service.Z2MDeviceService;
 import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
@@ -680,10 +678,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @GetMapping("/deviceWithStatus")
     public List<OptionModel> getItemOptionsByType() {
         List<BaseEntity> entities = new ArrayList<>(context.db().findAll(DeviceBaseEntity.class));
-        for (Z2MLocalCoordinatorEntity coordinator : context.db().findAll(Z2MLocalCoordinatorEntity.class)) {
-            entities.addAll(coordinator.getService().getDeviceHandlers().values().stream()
-                                       .map(Z2MDeviceService::getDeviceEntity).toList());
-        }
         entities.removeIf(e -> !(e instanceof HasStatusAndMsg) || isRemoveItemFromResult(e));
         Map<String, List<BaseEntity>> groups =
             entities.stream().collect(Collectors.groupingBy(obj -> {

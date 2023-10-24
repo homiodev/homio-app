@@ -7,6 +7,7 @@
   "PACKAGE_UPDATE_QUESTION": "Are you sure update {{NAME}}-{{VERSION}} package?",
   "SERVER_STARTED": "Started: {{VALUE}}. Uptime: {{TIME}}",
   "ERROR": {
+    "NO_TG_BOT_NAME": "Bot name not specified",
     "NO_PORT_SELECTED": "No port selected",
     "NO_USER": "No user",
     "NO_PASSWORD": "No password",

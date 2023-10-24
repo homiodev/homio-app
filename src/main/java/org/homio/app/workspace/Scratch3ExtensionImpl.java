@@ -3,6 +3,7 @@ package org.homio.app.workspace;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks.ScratchParent;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
@@ -10,7 +11,7 @@ import java.util.Objects;
 @Getter
 public final class Scratch3ExtensionImpl implements Comparable<Scratch3ExtensionImpl> {
 
-    private final String parent;
+    private final ScratchParent parent;
     private final String extensionId;
     private final boolean featured = true;
     private final Scratch3ExtensionBlocks getInfo;

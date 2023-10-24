@@ -59,7 +59,7 @@ public class WatchdogBgpService {
         try {
             if (entry.getValue() instanceof EntityService.ServiceInstance<?> si) {
                 // avoid restart if first initialization not passed yet
-                if (si.getEntity().getStatus() == Status.UNKNOWN) {
+                if (si.getEntityHashCode() == 0) {
                     return null;
                 }
                 if (!si.getEntity().isStart()) {

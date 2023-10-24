@@ -61,6 +61,7 @@ import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.SecureString;
 import org.homio.api.workspace.WorkspaceBlock;
+import org.homio.api.workspace.scratch.Scratch3Block.ScratchSettingBaseEntity;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -267,7 +268,7 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
 
     @Getter
     @Setter
-    public static class HttpRequestEntity implements EntityFieldMetadata {
+    public static class HttpRequestEntity implements ScratchSettingBaseEntity {
 
         @UIField(order = 1)
         private HttpMethod httpMethod = HttpMethod.GET;

@@ -29,7 +29,7 @@ public class Scratch3FFmpegBlocks extends Scratch3ExtensionBlocks {
 
     public Scratch3FFmpegBlocks(Context context, CameraEntrypoint cameraEntrypoint) {
         super("#87B023", context, cameraEntrypoint, "ffmpeg");
-        setParent("media");
+        setParent(ScratchParent.media);
 
         blockCommand(10, FFmpegApplyHandler.argsInput.name(), "Input arg [VALUE]", this::skipHandler, block ->
             block.addArgument(VALUE, ""));

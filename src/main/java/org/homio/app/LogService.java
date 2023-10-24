@@ -23,8 +23,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.logging.FileHandler;
@@ -84,6 +86,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
                     "org.hibernate");
 
     private final Map<String, Map<String, FileLoggerImpl>> fileLoggers = new ConcurrentHashMap<>();
+    private static final BlockingQueue<LogEvent> eventQueue = new LinkedBlockingQueue<>();
 
     static {
         Log.setDefaultContext(new DefaultLoggerContext() {
@@ -107,6 +110,16 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
                 };
             }
         });
+
+        new Thread(() -> {
+            while (true) {
+                try {
+                    globalAppender.append(eventQueue.take());
+                } catch (Exception ex) {
+                    log.error("Error while execute log event handler", ex);
+                }
+            }
+        }, "EntityLogHandler").start();
     }
 
     public Set<String> getTabs() {
@@ -191,7 +204,8 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
                     }
                     if (level.intLevel() <= Level.DEBUG.intLevel()) {
                         Message msg = messageFactory.newMessage(message, params);
-                        globalAppender.append(log4jLogEventFactory.createEvent(logger.getName(), marker, null, level, msg, null, msg.getThrowable()));
+                        LogEvent event = log4jLogEventFactory.createEvent(logger.getName(), marker, null, level, msg, null, msg.getThrowable());
+                        eventQueue.add(event);
                     }
                 }
 
@@ -396,6 +410,11 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
         private final @NotNull Class<?> targetClass;
         private final @NotNull Path logFile;
         private boolean debug;
+
+        @Override
+        public String toString() {
+            return entityID;
+        }
     }
 
     private record EntityLogBuilderImpl(BaseEntity entity, LogConsumer logConsumer) implements EntityLogBuilder {

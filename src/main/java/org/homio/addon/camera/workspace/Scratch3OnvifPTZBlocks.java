@@ -39,7 +39,7 @@ public class Scratch3OnvifPTZBlocks extends Scratch3ExtensionBlocks {
 
     public Scratch3OnvifPTZBlocks(Context context, CameraEntrypoint cameraEntrypoint) {
         super("#4F4BA6", context, cameraEntrypoint, "onvifptz");
-        setParent("media");
+        setParent(ScratchParent.media);
 
         // Menu
         this.menuPanTiltCamera = menuServer("panMenu", "rest/media/video/devices/pan", "Tilt/Pan camera");

@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -22,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -77,6 +79,7 @@ public class ContextEventImpl implements ContextEvent {
     private final @Getter Map<String, State> lastValues = new ConcurrentHashMap<>();
 
     private final Map<String, Map<String, Consumer<State>>> eventListeners = new ConcurrentHashMap<>();
+    private final Map<String, Map<Pattern, BiConsumer<String, State>>> eventRegexpListeners = new ConcurrentHashMap<>();
 
     @Getter
     private final List<BiConsumer<String, Object>> globalEvenListeners = new ArrayList<>();
@@ -127,6 +130,17 @@ public class ContextEventImpl implements ContextEvent {
     @Override
     public ContextEvent addEventListener(String key, String discriminator, Consumer<State> listener) {
         eventListeners.computeIfAbsent(discriminator, d -> new ConcurrentHashMap<>()).put(key, listener);
+        return this;
+    }
+
+    @Override
+    public ContextEvent addEventBehaviourListener(Pattern regexp, String discriminator, BiConsumer<String, State> listener) {
+        for (Entry<String, State> entry : lastValues.entrySet()) {
+            if (regexp.matcher(entry.getKey()).matches()) {
+                listener.accept(entry.getKey(), lastValues.get(entry.getKey()));
+            }
+        }
+        eventRegexpListeners.computeIfAbsent(discriminator, d -> new ConcurrentHashMap<>()).put(regexp, listener);
         return this;
     }
 
@@ -284,15 +298,23 @@ public class ContextEventImpl implements ContextEvent {
                     log.error("Error while execute postUpdate action", ex);
                 }
             }
-        }).start();
+        }, "EntityChangeHandler").start();
         // event handler
         new Thread(() -> {
             while (true) {
                 try {
                     Event event = eventQueue.take();
                     for (Map<String, Consumer<State>> eventListenerMap : eventListeners.values()) {
-                        if (eventListenerMap.containsKey(event.key)) {
-                            eventListenerMap.get(event.key).accept(event.value);
+                        Consumer<State> listener = eventListenerMap.get(event.key);
+                        if (listener != null) {
+                            listener.accept(event.value);
+                        }
+                    }
+                    for (Map<Pattern, BiConsumer<String, State>> entry : eventRegexpListeners.values()) {
+                        for (Entry<Pattern, BiConsumer<String, State>> options : entry.entrySet()) {
+                            if (options.getKey().matcher(event.key).matches()) {
+                                options.getValue().accept(event.key, event.value);
+                            }
                         }
                     }
                     globalEvenListeners.forEach(l -> l.accept(event.key, event.value));
@@ -301,7 +323,7 @@ public class ContextEventImpl implements ContextEvent {
                     log.error("Error while execute event handler", ex);
                 }
             }
-        }).start();
+        }, "EventHandler").start();
     }
 
     private @NotNull ContextEventImpl fireEvent(@NotNull String key, @Nullable State value, boolean compareValues) {
@@ -568,11 +590,7 @@ public class ContextEventImpl implements ContextEvent {
         }
     }
 
-    private record Event(String key, State value) {
+    private record Event(String key, State value) {}
 
-    }
-
-    private record EntityUpdate(Object entity, EntityUpdateAction itemAction) {
-
-    }
+    private record EntityUpdate(Object entity, EntityUpdateAction itemAction) {}
 }

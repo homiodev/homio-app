@@ -25,7 +25,7 @@ public class StringComplexSerializer extends StdSerializer<String> implements Co
         // Check if the field has the ReferenceToBean annotation
         if (property != null) {
             UIFieldLinkToEntity annotation = property.getAnnotation(UIFieldLinkToEntity.class);
-            if (annotation != null) {
+            if (annotation != null && annotation.applyTitle()) {
                 return createFieldLinkSerializer();
             }
         }
