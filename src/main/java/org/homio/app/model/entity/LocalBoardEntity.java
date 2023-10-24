@@ -109,6 +109,11 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
     }
 
     @Override
+    public @Nullable Set<String> getConfigurationErrors() {
+        return null;
+    }
+
+    @Override
     public long getEntityServiceHashCode() {
         return getJsonDataHashCode("cpu_interval", "fs_root");
     }

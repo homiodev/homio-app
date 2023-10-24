@@ -3,7 +3,6 @@ package org.homio.app.service;
 import static org.homio.hquery.hardware.other.MachineHardwareRepository.osBean;
 
 import java.time.Duration;
-import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
 import org.homio.api.ContextVar.VariableType;
 import org.homio.api.model.HasEntityIdentifier;
@@ -12,7 +11,6 @@ import org.homio.api.service.EntityService.ServiceInstance;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.jetbrains.annotations.NotNull;
 
-@Log4j2
 public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
     implements HasEntityIdentifier {
 
@@ -77,6 +75,6 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
     }
 
     @Override
-    public void destroy() {
+    public void destroy(boolean forRestart) {
     }
 }

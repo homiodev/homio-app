@@ -26,7 +26,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
 import org.homio.api.Context;
 import org.homio.api.ContextBGP;
@@ -47,7 +46,6 @@ import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-@Log4j2
 public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     implements HasEntityIdentifier {
 
@@ -100,7 +98,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     }
 
     @Override
-    public void destroy() {
+    public void destroy(boolean forRestart) {
         this.dispose(null);
     }
 
@@ -135,7 +133,6 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
 
     @Override
     public String isRequireRestartService() {
-        if (!entity.isStart()) {return null;}
         if (!entity.getStatus().isOnline()) {return "Status: " + entity.getStatus();}
         int status = getApiStatus();
         if (status != 200) {return "API status[%s]".formatted(status);}
@@ -203,16 +200,13 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
 
     @Override
     protected void initialize() {
-        destroy();
-        if (entity.isStart()) {
-            syncConfiguration();
-            isRunningLocally = getApiStatus() != 200;
-            if (isRunningLocally) {
-                startLocalProcess();
-            } else {
-                entity.setStatusOnline();
-                registerAllSources();
-            }
+        syncConfiguration();
+        isRunningLocally = getApiStatus() != 200;
+        if (isRunningLocally) {
+            startLocalProcess();
+        } else {
+            entity.setStatusOnline();
+            registerAllSources();
         }
     }
 
@@ -276,20 +270,6 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
             })
             .execute(processStr);
     }
-
-    /*private void updateNotificationBlock() {
-        context.ui().notification().addBlock(entityID, "MediaMTX", new Icon("fas fa-square-rss", "#308BB3"), builder -> {
-            builder.setStatus(entity.getStatus());
-            builder.linkToEntity(entity);
-            builder.setUpdatable(entity);
-
-            if (entity.getStatus().isOnline()) {
-                builder.addInfo("ACTION.SUCCESS", new Icon("fas fa-seedling", Color.GREEN));
-            } else {
-                builder.addErrorStatusInfo(entity.getStatusMessage());
-            }
-        });
-    }*/
 
     @SneakyThrows
     private void syncConfiguration() {

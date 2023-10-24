@@ -266,7 +266,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
     }
 
     private static Path createLogFile(@NotNull BaseEntity entity, @NotNull String suffix) {
-        Path path = CommonUtils.getLogsPath().resolve("entities").resolve(entity.getType());
+        Path path = CommonUtils.getLogsEntitiesPath().resolve(entity.getType());
         CommonUtils.createDirectoriesIfNotExists(path);
         Path file = path.resolve(entity.getEntityID() + suffix + ".log");
         try {

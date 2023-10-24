@@ -38,7 +38,7 @@ public class ContextServiceImpl implements ContextService {
         context.bgp().executeOnExit(() ->
             entityToService.values().forEach(serviceInstance -> {
                 try {
-                    serviceInstance.destroy();
+                    serviceInstance.destroy(false);
                 } catch (Exception ignore) {
                 }
             }));

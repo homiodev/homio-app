@@ -5,6 +5,7 @@ import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 import jakarta.persistence.Entity;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -46,6 +47,11 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
     @Override
     public String getDescriptionImpl() {
         return Lang.getServerMessage("TMATE_DESCRIPTION");
+    }
+
+    @Override
+    public @Nullable Set<String> getConfigurationErrors() {
+        return null;
     }
 
     @Override
@@ -105,7 +111,6 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
         });
     }
 
-    @Log4j2
     public static class SshTmateService extends ServiceInstance<SshTmateEntity> implements SshProviderService<SshTmateEntity> {
 
         private SshSession sshSession;
@@ -155,7 +160,7 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
         }
 
         @Override
-        public void destroy() {
+        public void destroy(boolean forRestart) {
             closeSshSession(null);
         }
 

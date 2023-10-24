@@ -18,6 +18,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -38,6 +39,7 @@ import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.version.HasFirmwareVersion;
 import org.homio.api.exception.ServerException;
+import org.homio.api.fs.TreeNode;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
@@ -88,6 +90,10 @@ public class ContextUIImpl implements ContextUI {
     private final @Getter @Accessors(fluent = true) ContextImpl context;
     private final SimpMessagingTemplate messagingTemplate;
     private final Map<String, SendUpdateContext> sendToUIMap = new ConcurrentHashMap<>();
+
+    private final ReentrantLock treeNodeLock = new ReentrantLock();
+    private final Map<String, TreeNode> treeNodesSendToUIMap = new ConcurrentHashMap<>();
+
     private final @Getter @Accessors(fluent = true) EntityContextUIToastrImpl toastr = new EntityContextUIToastrImpl();
     private final @Getter @Accessors(fluent = true) EntityContextUINotificationImpl notification = new EntityContextUINotificationImpl();
     private final @Getter @Accessors(fluent = true) EntityContextUIConsoleImpl console = new EntityContextUIConsoleImpl();
@@ -116,6 +122,22 @@ public class ContextUIImpl implements ContextUI {
                 }
                 iterator.remove();
             }
+            // update tree separately because mqtt updates much faster
+            try {
+                treeNodeLock.lock();
+                for (Entry<String, TreeNode> entry : treeNodesSendToUIMap.entrySet()) {
+                    try {
+                        sendDynamicUpdateSupplied(new DynamicUpdateRequest(entry.getKey(), null),
+                            () -> OBJECT_MAPPER.createObjectNode().putPOJO("value", entry.getValue()));
+                    } catch (Exception ex) {
+                        log.warn("Unable to send dynamic update for: {}. {}", entry.getKey(), CommonUtils.getErrorMessage(ex));
+                    }
+                }
+                treeNodesSendToUIMap.clear();
+            } finally {
+                treeNodeLock.unlock();
+            }
+
             for (Iterator<Entry<String, Object>> iterator = refreshConsolePlugin.entrySet().iterator(); iterator.hasNext(); ) {
                 Entry<String, Object> entry = iterator.next();
                 ConsolePlugin<?> plugin = consolePluginsMap.get(entry.getKey());
@@ -231,6 +253,21 @@ public class ContextUIImpl implements ContextUI {
 
     @Override
     public void sendDynamicUpdate(@NotNull String dynamicUpdateID, @NotNull Object value) {
+        if (dynamicUpdateID.startsWith("tree-")) {
+            try {
+                treeNodeLock.lock();
+                TreeNode node = treeNodesSendToUIMap.get(dynamicUpdateID);
+                if (node != null) {
+                    TreeNode update = (TreeNode) value;
+                    node.merge(update);
+                } else {
+                    treeNodesSendToUIMap.put(dynamicUpdateID, (TreeNode) value);
+                }
+            } finally {
+                treeNodeLock.unlock();
+            }
+            return;
+        }
         this.sendToUIMap.put(dynamicUpdateID, new SendUpdateContext(dynamicUpdateID, () ->
             OBJECT_MAPPER.createObjectNode().putPOJO("value", value)));
     }

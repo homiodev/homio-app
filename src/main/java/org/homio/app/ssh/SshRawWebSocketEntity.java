@@ -2,7 +2,9 @@ package org.homio.app.ssh;
 
 import jakarta.persistence.Entity;
 import java.net.URI;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -51,6 +53,14 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
     }
 
     @Override
+    public @Nullable Set<String> getConfigurationErrors() {
+        if (getRawWebSocketAddress().isEmpty()) {
+            return Set.of("W.ERROR.NO_SOCKET");
+        }
+        return null;
+    }
+
+    @Override
     public long getEntityServiceHashCode() {
         return getRawWebSocketAddress().hashCode();
     }
@@ -77,7 +87,7 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
         }
 
         @Override
-        public void destroy() throws Exception {
+        public void destroy(boolean forRestart) throws Exception {
 
         }
 

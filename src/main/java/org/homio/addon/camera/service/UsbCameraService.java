@@ -93,7 +93,7 @@ public class UsbCameraService extends BaseCameraService<UsbCameraEntity, UsbCame
     }
 
     @Override
-    protected void updateNotificationBlock() {
+    public void updateNotificationBlock() {
         CameraEntrypoint.updateCamera(context, getEntity(),
                 null,
                 new Icon("fas fa-users-viewfinder", "#669618"),

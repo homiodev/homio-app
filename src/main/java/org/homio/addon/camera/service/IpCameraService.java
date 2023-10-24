@@ -447,7 +447,7 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
     }
 
     @Override
-    protected void updateNotificationBlock() {
+    public void updateNotificationBlock() {
         CameraEntrypoint.updateCamera(context, getEntity(),
             () -> {
                 val brand = getCameraBrands(context).get(entity.getCameraType());
@@ -589,8 +589,8 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
     }
 
     @Override
-    public void destroy() {
-        super.destroy();
+    public void destroy(boolean forRestart) {
+        super.destroy(forRestart);
         mainEventLoopGroup.shutdownGracefully();
     }
 

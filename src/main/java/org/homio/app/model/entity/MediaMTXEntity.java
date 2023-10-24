@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
@@ -131,6 +132,11 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     @Override
     public MediaMTXService createService(@NotNull Context context) {
         return new MediaMTXService(context, this);
+    }
+
+    @Override
+    public @Nullable Set<String> getConfigurationErrors() {
+        return null;
     }
 
     @Override

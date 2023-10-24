@@ -1,5 +1,6 @@
 package org.homio.app.rest;
 
+import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE_AUTHORIZE;
@@ -35,11 +36,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -54,12 +57,17 @@ import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
+import org.homio.addon.z2m.model.Z2MLocalCoordinatorEntity;
+import org.homio.addon.z2m.service.Z2MDeviceService;
 import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
+import org.homio.api.entity.HasStatusAndMsg;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.log.HasEntitySourceLog;
 import org.homio.api.entity.version.HasFirmwareVersion;
+import org.homio.api.entity.zigbee.ZigBeeDeviceBaseEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
@@ -68,6 +76,7 @@ import org.homio.api.model.FileModel;
 import org.homio.api.model.OptionModel;
 import org.homio.api.service.EntityService;
 import org.homio.api.ui.UISidebarChildren;
+import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.UIFilterOptions;
@@ -103,6 +112,9 @@ import org.homio.app.utils.OptionUtil;
 import org.homio.app.utils.UIFieldUtils;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
+import org.springframework.core.annotation.MergedAnnotation;
+import org.springframework.core.annotation.MergedAnnotations;
+import org.springframework.core.annotation.MergedAnnotations.SearchStrategy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -662,6 +674,44 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             throw new IllegalStateException("SelectedEntity getDynamicParameterFields returned null");
         }
         return OptionUtil.loadOptions(dynamicParameterFields, context, fieldName, selectedClassEntity, null, null);
+    }
+
+    // get all device that able to get status
+    @GetMapping("/deviceWithStatus")
+    public List<OptionModel> getItemOptionsByType() {
+        List<BaseEntity> entities = new ArrayList<>(context.db().findAll(DeviceBaseEntity.class));
+        for (Z2MLocalCoordinatorEntity coordinator : context.db().findAll(Z2MLocalCoordinatorEntity.class)) {
+            entities.addAll(coordinator.getService().getDeviceHandlers().values().stream()
+                                       .map(Z2MDeviceService::getDeviceEntity).toList());
+        }
+        entities.removeIf(e -> !(e instanceof HasStatusAndMsg) || isRemoveItemFromResult(e));
+        Map<String, List<BaseEntity>> groups =
+            entities.stream().collect(Collectors.groupingBy(obj -> {
+
+                Class<?> superClass = (Class<?>) MergedAnnotations
+                    .from(obj.getClass(), SearchStrategy.SUPERCLASS)
+                    .get(UISidebarMenu.class, MergedAnnotation::isDirectlyPresent)
+                    .getSource();
+                if (superClass != null && !DeviceBaseEntity.class.getSimpleName().equals(superClass.getSimpleName())) {
+                    return superClass.getSimpleName();
+                }
+                return obj.getClass().getSimpleName();
+            }));
+
+        List<OptionModel> models = new ArrayList<>();
+        for (Entry<String, List<BaseEntity>> entry : groups.entrySet()) {
+            OptionModel parent = OptionModel.of(entry.getKey(), "DEVICE_TYPE." + entry.getKey());
+            models.add(parent);
+            BiConsumer<BaseEntity, OptionModel> configurator = null;
+            if (!entry.getKey().equals(ZigBeeDeviceBaseEntity.class.getSimpleName())) {
+                configurator = (entity, optionModel) -> optionModel
+                    .setTitle(format("${SELECTION.%s}: %s", entity.getClass().getSimpleName(), entity.getTitle()));
+            }
+            parent.setChildren(OptionModel.entityList(entry.getValue(), configurator));
+        }
+
+        Collections.sort(models);
+        return models;
     }
 
     /*@PostMapping("/{entityID}/uploadImageBase64")

@@ -83,9 +83,6 @@ import org.springframework.security.authentication.BadCredentialsException;
 public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S extends BaseCameraService<T, S>>
     extends EntityService.ServiceInstance<T> implements FFMPEGHandler {
 
-    @Getter
-    public static final Logger log = LogManager.getLogger();
-
     public static final Path SHARE_DIR = CommonUtils.getTmpPath();
     public static final ConfigDeviceDefinitionService CONFIG_DEVICE_SERVICE =
         new ConfigDeviceDefinitionService("camera-devices.json");
@@ -131,7 +128,7 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         return FFMPEG.check(ffmpeg, f -> f.getFileLogger().getFileInputStream(), null);
     }
 
-    protected abstract void updateNotificationBlock();
+    public abstract void updateNotificationBlock();
 
     protected abstract boolean pingCamera();
 
@@ -235,9 +232,11 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
     }
 
     @Override
-    public void destroy() {
+    public void destroy(boolean forRestart) {
         dispose();
-        deleteDirectories();
+        if(!forRestart) {
+            deleteDirectories();
+        }
     }
 
     public final void initializeCamera() {

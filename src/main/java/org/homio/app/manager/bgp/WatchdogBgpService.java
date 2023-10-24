@@ -5,11 +5,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.LogManager;
+import org.homio.api.model.Status;
+import org.homio.api.service.EntityService;
 import org.homio.api.service.EntityService.WatchdogService;
 import org.homio.app.manager.common.impl.ContextBGPImpl;
 
@@ -54,6 +57,19 @@ public class WatchdogBgpService {
 
     private static String isRequireRestartService(Entry<String, WatchdogService> entry) {
         try {
+            if (entry.getValue() instanceof EntityService.ServiceInstance<?> si) {
+                // avoid restart if first initialization not passed yet
+                if (si.getEntity().getStatus() == Status.UNKNOWN) {
+                    return null;
+                }
+                if (!si.getEntity().isStart()) {
+                    return null;
+                }
+                Set<String> errors = si.getEntity().getConfigurationErrors();
+                if (errors != null && !errors.isEmpty()) {
+                    return null;
+                }
+            }
             return entry.getValue().isRequireRestartService();
         } catch (Exception ex) {
             return null;

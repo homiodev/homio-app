@@ -9,9 +9,11 @@ import jakarta.persistence.Entity;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
@@ -54,6 +56,15 @@ public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraSer
     HasDynamicContextMenuActions,
     CameraPlaybackStorage,
     HasDynamicUIFields {
+
+    @Override
+    public @Nullable Set<String> getConfigurationErrors() {
+        Set<String> errors = new HashSet<>();
+        if (isRequireAuth()) {
+            errors.add("W.ERROR.CAMERA_REQ_AUTH_DESCRIPTION");
+        }
+        return errors;
+    }
 
     @UIField(order = 20)
     @UIFieldDynamicSelection(SelectCameraBrand.class)

@@ -4,6 +4,7 @@ import jakarta.persistence.Entity;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.service.UsbCameraService;
 import org.homio.api.Context;
@@ -77,6 +78,14 @@ public class UsbCameraEntity extends BaseCameraEntity<UsbCameraEntity, UsbCamera
     @Override
     public String getDefaultName() {
         return "Usb camera";
+    }
+
+    @Override
+    public @Nullable Set<String> getConfigurationErrors() {
+        if(StringUtils.isEmpty(getIeeeAddress())) {
+            return Set.of("W.ERROR.NO_VIDEO_SOURCE_SELECTED");
+        }
+        return null;
     }
 
     @Override

@@ -20,6 +20,7 @@ import com.sshtools.common.publickey.SshPublicKeyFileFactory;
 import com.sshtools.common.ssh.components.SshKeyPair;
 import jakarta.persistence.Entity;
 import java.util.Objects;
+import java.util.Set;
 import lombok.SneakyThrows;
 import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
@@ -385,6 +386,14 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @Override
+    public @Nullable Set<String> getConfigurationErrors() {
+        if(getHost().isEmpty()) {
+            return Set.of("W.ERROR.NO_HOST");
+        }
+        return null;
+    }
+
+    @Override
     public long getEntityServiceHashCode() {
         return getJsonDataHashCode("host", "port", "user", "pwd", "key_pwd", "prv_key", "ct");
     }
@@ -421,7 +430,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         }
 
         @Override
-        public void destroy() {
+        public void destroy(boolean forRestart) {
 
         }
 
