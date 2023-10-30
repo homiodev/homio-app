@@ -28,6 +28,7 @@ import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.log.HasEntitySourceLog;
 import org.homio.api.entity.types.MediaEntity;
 import org.homio.api.entity.version.HasFirmwareVersion;
+import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
@@ -229,7 +230,7 @@ public class FFMPEGEntity extends MediaEntity implements
         }
 
         @Override
-        public @Nullable String getExecutablePath(@NotNull String execPath) {
+        public @Nullable String getExecutablePath(@NotNull Path execPath) {
             return getVersion() == null ? null : FFMPEG_LOCATION;
         }
 
@@ -266,7 +267,7 @@ public class FFMPEGEntity extends MediaEntity implements
                 if (url == null) {
                     throw new IllegalStateException("Unable to find ffmpeg download url");
                 }
-                CommonUtils.downloadAndExtract(url, "ffmpeg.7z",
+                ArchiveUtil.downloadAndExtract(url, "ffmpeg.7z",
                     (progress, message, error) -> {
                         progressBar.progress(progress, message);
                         log.info("FFMPEG: {}", message);

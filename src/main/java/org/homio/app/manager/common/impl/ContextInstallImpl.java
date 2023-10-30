@@ -1,5 +1,7 @@
 package org.homio.app.manager.common.impl;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -7,10 +9,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.Context;
 import org.homio.api.ContextInstall;
 import org.homio.api.service.DependencyExecutableInstaller;
 import org.homio.app.manager.install.NodeJsInstaller;
+import org.homio.app.manager.install.PythonInstaller;
 import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -24,6 +28,22 @@ public class ContextInstallImpl implements ContextInstall {
     @SneakyThrows
     public ContextInstallImpl(Context context) {
         this.context = context;
+        python().requireAsync(null, (installed, exception) -> {
+            if (installed) {
+                log.info("Python service successfully installed");
+            }
+        });
+    }
+
+    @Override
+    public void pipInstall(@NotNull String code) {
+        String pip = SystemUtils.IS_OS_LINUX ? "pip" : python().getExecutablePath(Paths.get("Scripts/pip.exe"));
+        context.hardware().execute(pip + " " + code);
+
+    }
+
+    public @NotNull InstallContext python() {
+        return createContext(PythonInstaller.class);
     }
 
     @Override
@@ -95,7 +115,7 @@ public class ContextInstallImpl implements ContextInstall {
                 }
 
                 @Override
-                public synchronized @Nullable String getPath(@NotNull String execName) {
+                public synchronized @Nullable String getExecutablePath(@NotNull Path execName) {
                     return installer.getExecutablePath(execName);
                 }
             });

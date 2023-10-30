@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
 import org.homio.api.ContextHardware;
+import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.repository.GitHubProject.VersionedFile;
 import org.homio.api.service.DependencyExecutableInstaller;
 import org.homio.api.util.CommonUtils;
@@ -56,7 +57,7 @@ public class NodeJsInstaller extends DependencyExecutableInstaller {
             if (url == null) {
                 throw new IllegalStateException("Unable to find nodejs download url");
             }
-            CommonUtils.downloadAndExtract(url,
+            ArchiveUtil.downloadAndExtract(url,
                     "nodejs.7z", (progress, message, error) -> {
                         progressBar.progress(progress, message);
                         log.info("NodeJS: {}", message);
