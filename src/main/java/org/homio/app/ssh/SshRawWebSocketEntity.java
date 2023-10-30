@@ -2,7 +2,6 @@ package org.homio.app.ssh;
 
 import jakarta.persistence.Entity;
 import java.net.URI;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -87,7 +86,7 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
         }
 
         @Override
-        public void destroy(boolean forRestart) throws Exception {
+        public void destroy(boolean forRestart, Exception ex) {
 
         }
 

@@ -46,7 +46,7 @@ import org.json.JSONObject;
 @Entity
 @UISidebarChildren(icon = "fas fa-square-rss", color = "#308BB3", allowCreateItem = false)
 public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
-    HasGitHubFirmwareVersion, EntityService<MediaMTXService, MediaMTXEntity>,
+    HasGitHubFirmwareVersion, EntityService<MediaMTXService>,
     DeviceEndpointsBehaviourContractStub {
 
     public static final int RTSP_PORT = 8554;
@@ -281,6 +281,8 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     }
 
     @Override
+    @JsonIgnore
+    @UIFieldIgnore
     public @Nullable String getIeeeAddress() {
         return getEntityID();
     }

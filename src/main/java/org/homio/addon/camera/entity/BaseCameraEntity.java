@@ -80,7 +80,7 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
     HasFirmwareVersion,
     HasVideoSources,
     DeviceEndpointsBehaviourContract,
-    EntityService<S, T> {
+    EntityService<S> {
 
     public static final String RUN_CMD = "<span class=\"chip\" style=\"color:%s;border-color: %s;\">%s</span>";
     public static final String FOLDER = "camera";

@@ -24,6 +24,7 @@ import org.homio.addon.camera.setting.onvif.ScanOnvifHttpDefaultUserAuthSetting;
 import org.homio.addon.camera.setting.onvif.ScanOnvifHttpMaxPingTimeoutSetting;
 import org.homio.addon.camera.setting.onvif.ScanOnvifPortsSetting;
 import org.homio.api.Context;
+import org.homio.api.ContextNetwork;
 import org.homio.api.service.discovery.VideoStreamScanner;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.HardwareUtils;
@@ -119,7 +120,7 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
     }
 
     private static void testCamera(String ipAddress, Integer port, OnvifDeviceState onvifDeviceState) throws ConnectException {
-        HardwareUtils.ping(ipAddress, port);
+        ContextNetwork.ping(ipAddress, port);
         // check for Authentication validation
         onvifDeviceState.getInitialDevices().getDeviceInformation();
     }

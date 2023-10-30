@@ -429,14 +429,14 @@ public class ContextEventImpl implements ContextEvent {
     private static void loadEntityService(ContextImpl context, Object entity) {
         if (entity instanceof EntityService es) {
             try {
-                Optional<?> serviceOptional = ((EntityService<?, ?>) entity).getOrCreateService(context);
+                Optional<?> serviceOptional = ((EntityService<?>) entity).getOrCreateService(context);
                 // Update entity into service
                 if (serviceOptional.isPresent()) {
                     try {
                         EntityService.ServiceInstance service = (ServiceInstance) serviceOptional.get();
                         service.entityUpdated((EntityService) entity);
                     } catch (Exception ex) {
-                        ((EntityService<?, ?>) entity).setStatusError(ex);
+                        ((EntityService<?>) entity).setStatusError(ex);
                     }
                 }
             } catch (Exception ex) {
@@ -480,7 +480,7 @@ public class ContextEventImpl implements ContextEvent {
                            // destroy any additional services
                            if (be instanceof EntityService) {
                                try {
-                                   ((EntityService<?, ?>) be).destroyService();
+                                   ((EntityService<?>) be).destroyService(null);
                                } catch (Exception ex) {
                                    log.warn("Unable to destroy service for entity: {}", getTitle());
                                }

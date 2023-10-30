@@ -10,6 +10,7 @@ import com.pivovarit.function.ThrowingConsumer;
 import com.pivovarit.function.ThrowingFunction;
 import com.pivovarit.function.ThrowingRunnable;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,6 +28,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,9 +38,11 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -90,6 +94,9 @@ public class ContextBGPImpl implements ContextBGP {
     private final InternetAvailabilityBgpService internetAvailabilityService;
     @Getter
     private final WatchdogBgpService watchdogBgpService;
+
+    private final Map<String, Map<String, Consumer<Boolean>>> pingMap = new ConcurrentHashMap<>();
+    private ThreadContext<Void> pingProcess;
 
     public ContextBGPImpl(ContextImpl context, ThreadPoolTaskScheduler taskScheduler) {
         this.context = context;
@@ -227,9 +234,34 @@ public class ContextBGPImpl implements ContextBGP {
     }
 
     @Override
+    public synchronized void ping(@NotNull String discriminator, @NotNull String ipAddress, @NotNull Consumer<Boolean> availableStatus) {
+        pingMap.computeIfAbsent(discriminator, s -> new ConcurrentHashMap<>())
+               .put(ipAddress, availableStatus);
+        if (pingProcess == null) {
+            pingProcess = createPingService();
+        }
+    }
+
+    @Override
+    public synchronized void unPing(@NotNull String discriminator, @Nullable String ipAddress) {
+        if (ipAddress == null) {
+            pingMap.remove(discriminator);
+        } else {
+            Map<String, Consumer<Boolean>> map = pingMap.get(discriminator);
+            if (map != null && map.remove(ipAddress) != null && map.isEmpty()) {
+                pingMap.remove(discriminator);
+            }
+        }
+        if (pingMap.isEmpty() && pingProcess != null) {
+            ContextBGP.cancel(pingProcess);
+            pingProcess = null;
+        }
+    }
+
+    @Override
     public void execute(@Nullable Duration delay, @NotNull ThrowingRunnable<Exception> runnable) {
         Date startDate = new Date();
-        if (delay != null) {
+        if (delay != null && delay.toMillis() > 100) {
             startDate = new Date(System.currentTimeMillis() + delay.toMillis());
         }
         taskScheduler.schedule(() -> {
@@ -747,9 +779,9 @@ public class ContextBGPImpl implements ContextBGP {
         }
 
         @Override
-        public void cancel() {
+        public void cancel(boolean mayInterruptIfRunning) {
             log.info("Cancel process: '{}'", name);
-            cancelProcessInternal();
+            cancelProcessInternal(mayInterruptIfRunning);
         }
 
         @Override
@@ -809,9 +841,9 @@ public class ContextBGPImpl implements ContextBGP {
             }
         }
 
-        private void cancelProcessInternal() {
+        private void cancelProcessInternal(boolean mayInterruptIfRunning) {
             if (scheduledFuture != null) {
-                if (scheduledFuture.isCancelled() || scheduledFuture.isDone() || scheduledFuture.cancel(true)) {
+                if (scheduledFuture.isCancelled() || scheduledFuture.isDone() || scheduledFuture.cancel(mayInterruptIfRunning)) {
                     processFinished();
                 }
             }
@@ -957,5 +989,31 @@ public class ContextBGPImpl implements ContextBGP {
         try {
             Thread.sleep(timeout);
         } catch (Exception ignore) {}
+    }
+
+    private ThreadContext<Void> createPingService() {
+        return context
+            .bgp()
+            .builder("ping")
+            .interval(Duration.ofSeconds(60))
+            .cancelOnError(false)
+            .execute(() -> {
+                Map<String, List<Consumer<Boolean>>> pingers =
+                    pingMap.values().stream()
+                           .flatMap(value -> value.entrySet().stream())
+                           .collect(Collectors.groupingBy(
+                               Entry::getKey,
+                               Collectors.mapping(Entry::getValue, Collectors.toList())
+                           ));
+                pingers.entrySet().stream().parallel().forEach(ping -> {
+                    AtomicBoolean isReachable = new AtomicBoolean(false);
+                    try {
+                        InetAddress address = InetAddress.getByName(ping.getKey());
+                        isReachable.set(address.isReachable(5000));
+                    } catch (IOException ignore) {
+                    }
+                    ping.getValue().forEach(booleanConsumer -> booleanConsumer.accept(isReachable.get()));
+                });
+            });
     }
 }

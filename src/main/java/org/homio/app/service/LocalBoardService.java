@@ -75,6 +75,6 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
     }
 
     @Override
-    public void destroy(boolean forRestart) {
+    public void destroy(boolean forRestart, Exception ex) {
     }
 }

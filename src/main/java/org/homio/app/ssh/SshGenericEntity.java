@@ -283,7 +283,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     @UIContextMenuAction(value = "DOWNLOAD_PUBLIC_KEY", icon = "fas fa-download")
     public ActionResponseModel downloadPublicKey(Context context, JSONObject params) {
         if (!isHasPrivateKey()) {
-            return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_NOT_FOUND");
+            return ActionResponseModel.showError("ERROR.PRIVATE_KEY_NOT_FOUND");
         }
         String publicKey = getJsonData("pub_key");
         FileModel publicKeyModel = new FileModel("Public key", publicKey, FileContentType.plaintext);
@@ -300,7 +300,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
 
     public static ActionResponseModel execDeletePrivateKey(IdentityEntity entity, Context context, JSONObject params) {
         if (!entity.getJsonData().has("prv_key")) {
-            return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_NOT_FOUND");
+            return ActionResponseModel.showError("ERROR.PRIVATE_KEY_NOT_FOUND");
         }
         String passphrase = trimToNull(params.optString("passphrase"));
         if (!Objects.equals(passphrase, trimToNull(entity.getJsonData("key_pwd")))) {
@@ -430,7 +430,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         }
 
         @Override
-        public void destroy(boolean forRestart) {
+        public void destroy(boolean forRestart, Exception ex) {
 
         }
 

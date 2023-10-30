@@ -561,12 +561,12 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     public List<EntityService> getItemsByEntityServiceType(@PathVariable("esName") String esName) {
         return context.getEntityServices(EntityService.class)
                             .stream().filter(e -> {
-                for (Class<?> anInterface : ClassUtils.getAllInterfaces(((EntityService<?, ?>) e).getEntityServiceItemClass())) {
+                for (Class<?> anInterface : ClassUtils.getAllInterfaces(((EntityService<?>) e).getEntityServiceItemClass())) {
                     if (anInterface.getSimpleName().equals(esName)) {
                         return true;
                     }
                 }
-                for (Class<?> anInterface : ClassUtils.getAllSuperclasses(((EntityService<?, ?>) e).getEntityServiceItemClass())) {
+                for (Class<?> anInterface : ClassUtils.getAllSuperclasses(((EntityService<?>) e).getEntityServiceItemClass())) {
                     if (anInterface.getSimpleName().equals(esName)) {
                         return true;
                     }

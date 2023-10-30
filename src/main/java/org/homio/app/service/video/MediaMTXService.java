@@ -98,8 +98,8 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     }
 
     @Override
-    public void destroy(boolean forRestart) {
-        this.dispose(null);
+    public void destroy(boolean forRestart, Exception ex) {
+        this.dispose(ex);
     }
 
     @SneakyThrows

@@ -11,5 +11,5 @@ import org.homio.api.service.EntityService;
  */
 @SuppressWarnings({"rawtypes"})
 public abstract class SshBaseEntity<T extends SshBaseEntity, S extends EntityService.ServiceInstance & SshProviderService<T>> extends IdentityEntity
-        implements EntityService<S, T> {
+    implements EntityService<S> {
 }

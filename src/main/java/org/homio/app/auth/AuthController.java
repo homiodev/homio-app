@@ -13,6 +13,7 @@ import org.homio.api.Context;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.UserEntity.UserType;
 import org.homio.api.model.Icon;
+import org.homio.api.util.HardwareUtils;
 import org.homio.app.manager.common.impl.ContextAddonImpl;
 import org.homio.app.model.entity.user.UserAdminEntity;
 import org.homio.app.model.entity.user.UserBaseEntity;
@@ -51,7 +52,7 @@ public class AuthController {
 
         addUserNotificationBlock(userEntityID, email, false);
         String version = format("%s-%s-%s", context.setting().getApplicationVersion(),
-            ContextAddonImpl.ADDON_UPDATE_COUNT, JwtTokenProvider.RUN_COUNT);
+            ContextAddonImpl.ADDON_UPDATE_COUNT, HardwareUtils.RUN_COUNT);
         return new StatusResponse(200, version);
     }
 

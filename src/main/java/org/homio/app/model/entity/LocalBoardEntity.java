@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
 @Log4j2
 @UISidebarChildren(icon = "", color = "", allowCreateItem = false)
 public class LocalBoardEntity extends MicroControllerBaseEntity
-        implements EntityService<LocalBoardService, LocalBoardEntity>,
+    implements EntityService<LocalBoardService>,
     BaseFileSystemEntity<LocalBoardEntity, LocalFileSystemProvider> {
 
     @Override

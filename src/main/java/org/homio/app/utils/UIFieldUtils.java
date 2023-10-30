@@ -1027,7 +1027,11 @@ public class UIFieldUtils {
                 throw new IllegalStateException(message);
             }
             this.name = uiField.name();
-            this.methodName = CommonUtils.getMethodShortName(fieldMethod);
+            this.methodName = getMethodShortName(fieldMethod);
+        }
+
+        private static String getMethodShortName(Method method) {
+            return StringUtils.uncapitalize(method.getName().substring(method.getName().startsWith("is") ? 2 : 3));
         }
 
         @Override

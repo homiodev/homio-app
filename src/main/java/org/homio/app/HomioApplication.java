@@ -4,11 +4,16 @@ import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 import java.util.Properties;
+import javax.jmdns.JmDNS;
+import javax.jmdns.ServiceInfo;
 import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.logging.log4j.LogManager;
@@ -26,6 +31,7 @@ import org.springframework.boot.system.ApplicationHome;
 import org.springframework.core.NestedExceptionUtils;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+@Log4j2
 @EnableHQuery(scanBaseClassesPackage = "org.homio")
 @SpringBootApplication(exclude = {
         ErrorMvcAutoConfiguration.class,

@@ -23,7 +23,7 @@ public class WatchdogBgpService {
 
     public WatchdogBgpService(ContextBGPImpl ContextBGP) {
         ContextBGP.builder("watchdog")
-                .intervalWithDelay(Duration.ofMinutes(1))
+                .intervalWithDelay(Duration.ofSeconds(60))
                 .execute(this::runWatchDogService);
     }
 

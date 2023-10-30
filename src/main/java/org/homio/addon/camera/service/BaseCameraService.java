@@ -40,8 +40,6 @@ import lombok.SneakyThrows;
 import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.homio.addon.camera.CameraConstants;
 import org.homio.addon.camera.CameraController;
 import org.homio.addon.camera.CameraController.OpenStreamsContainer;
@@ -70,7 +68,6 @@ import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
-import org.homio.api.ui.UI;
 import org.homio.api.ui.UI.Image.Snapshot;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
@@ -232,7 +229,7 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
     }
 
     @Override
-    public void destroy(boolean forRestart) {
+    public void destroy(boolean forRestart, Exception ex) {
         dispose();
         if(!forRestart) {
             deleteDirectories();

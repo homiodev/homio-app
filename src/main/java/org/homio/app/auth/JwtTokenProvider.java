@@ -11,10 +11,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.entity.UserEntity;
+import org.homio.api.util.HardwareUtils;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.setting.system.SystemClearCacheButtonSetting;
 import org.homio.app.setting.system.SystemLogoutButtonSetting;
@@ -31,9 +31,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class JwtTokenProvider implements ContextCreated {
 
-    @Getter
-    public static int RUN_COUNT = -1;
-
     private final UserEntityDetailsService userEntityDetailsService;
     private final Object NULL = new Object();
     private final Map<String, Authentication> userCache = new ConcurrentHashMap<>();
@@ -42,25 +39,23 @@ public class JwtTokenProvider implements ContextCreated {
     private boolean regenerateSecurityIdOnRestart;
     private int jwtValidityTimeout;
     private byte[] securityId;
-    private String appId;
 
     @Override
     public void onContextCreated(ContextImpl context) throws Exception {
-        this.appId = context.setting().getEnv("appId", String.valueOf(System.currentTimeMillis()), true);
-        RUN_COUNT = context.setting().getEnv("runCount", 1, true);
-        context.setting().setEnv("runCount", RUN_COUNT + 1);
-
         context.setting().listenValue(SystemClearCacheButtonSetting.class, "jwt-clear-cache", () -> {
             userCache.clear();
             blockedTokens.clear();
         });
 
-        context.setting().listenValueAndGet(SystemJWTTokenValidSetting.class, "jwt-valid", value -> {
+        this.jwtValidityTimeout = context.setting().getValue(SystemJWTTokenValidSetting.class);
+        this.regenerateSecurityIdOnRestart = context.setting().getValue(SystemDisableAuthTokenOnRestartSetting.class);
+        regenerateSecurityID(context);
+        context.setting().listenValue(SystemJWTTokenValidSetting.class, "jwt-valid", value -> {
             this.jwtValidityTimeout = value;
             regenerateSecurityID(context);
             log.info("Generated securityID: {} on change timeout: {}", securityId, value);
         });
-        context.setting().listenValueAndGet(SystemDisableAuthTokenOnRestartSetting.class, "jwt-req-app", value -> {
+        context.setting().listenValue(SystemDisableAuthTokenOnRestartSetting.class, "jwt-req-app", value -> {
             this.regenerateSecurityIdOnRestart = value;
             regenerateSecurityID(context);
             log.info("Generated securityID: {} on disable auth on restart: {}", securityId, value);
@@ -137,7 +132,7 @@ public class JwtTokenProvider implements ContextCreated {
 
     private void regenerateSecurityID(ContextImpl context) {
         this.securityId = buildSecurityId();
-        this.jwtParser = Jwts.parser().setSigningKey(securityId);
+        this.jwtParser = Jwts.parser().setSigningKey(securityId).requireIssuer("homio_app");
         context.ui().dialog().reloadWindow("sys.auth_changed");
     }
 
@@ -160,9 +155,9 @@ public class JwtTokenProvider implements ContextCreated {
 
     private byte[] buildSecurityId() {
         userCache.clear();
-        String securityId = appId + "_" + jwtValidityTimeout;
+        String securityId = HardwareUtils.APP_ID + "_" + jwtValidityTimeout;
         if (regenerateSecurityIdOnRestart) {
-            securityId += "_" + RUN_COUNT;
+            securityId += "_" + HardwareUtils.RUN_COUNT;
         }
         return Base64.getEncoder().encode(securityId.getBytes());
     }

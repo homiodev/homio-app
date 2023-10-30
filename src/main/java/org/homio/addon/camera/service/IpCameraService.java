@@ -79,6 +79,7 @@ import org.homio.addon.camera.service.util.CommonCameraHandler;
 import org.homio.api.Context;
 import org.homio.api.Context.FileLogger;
 import org.homio.api.ContextMedia.MediaMTXSource;
+import org.homio.api.ContextNetwork;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
@@ -202,7 +203,7 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
     @Override
     protected boolean pingCamera() {
         try {
-            HardwareUtils.ping(entity.getIp(), entity.getRestPort());
+            ContextNetwork.ping(entity.getIp(), entity.getRestPort());
             return true;
         } catch (Exception ignore) {
         }
@@ -589,8 +590,8 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
     }
 
     @Override
-    public void destroy(boolean forRestart) {
-        super.destroy(forRestart);
+    public void destroy(boolean forRestart, Exception ex) {
+        super.destroy(forRestart, ex);
         mainEventLoopGroup.shutdownGracefully();
     }
 
@@ -701,7 +702,7 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
                 IpCameraEntity entity = context.db().getEntityRequire(getEntityID());
                 OnvifDeviceState onvifDeviceState = new OnvifDeviceState(getEntityID());
                 onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(), user, password);
-                HardwareUtils.ping(entity.getIp(), entity.getRestPort());
+                ContextNetwork.ping(entity.getIp(), entity.getRestPort());
                 progressBar.progress(20, "Ping done");
                 entity.setInfo(onvifDeviceState, false);
                 context.db().save(entity);

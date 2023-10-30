@@ -13,6 +13,7 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.Context;
 import org.homio.api.exception.NotFoundException;
+import org.homio.api.exception.ServerException;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.springframework.http.MediaType;
@@ -52,7 +53,8 @@ public class ImageService {
         if (stream == null) {
             URL image = addonEntrypoint.getResource(imageID);
             if (image == null) {
-                throw new NotFoundException("Unable to find image <" + imageID + "> of addon: " + addonID);
+                throw new ServerException("Unable to find image <" + imageID + "> of addon: " + addonID)
+                    .setLog(false);
             }
             stream = image.openStream();
         }

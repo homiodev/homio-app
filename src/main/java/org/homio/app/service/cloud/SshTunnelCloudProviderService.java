@@ -59,7 +59,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
     @Override
     public void start() throws Exception {
         if (!entity.isHasPrivateKey()) {
-            throw new IllegalArgumentException("W.ERROR.PRIVATE_KEY_NOT_FOUND");
+            throw new IllegalArgumentException("ERROR.PRIVATE_KEY_NOT_FOUND");
         }
         log.info("SSH cloud: create client context");
         SshClientContext sshClientContext = new SshClientContext();

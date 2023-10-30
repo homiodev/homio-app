@@ -9,8 +9,8 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
 import org.homio.api.ContextBGP.ScheduleBuilder;
 import org.homio.api.ContextBGP.ThreadContext;
+import org.homio.api.ContextNetwork;
 import org.homio.api.state.OnOffType;
-import org.homio.api.util.HardwareUtils;
 import org.homio.app.manager.common.impl.ContextBGPImpl;
 
 @Log4j2
@@ -36,7 +36,7 @@ public class InternetAvailabilityBgpService {
                 })
                 .tap(tc -> internetThreadContext = tc);
 
-        internetAccessBuilder.execute(tc -> HardwareUtils.ping("google.com", 80) != null);
+        internetAccessBuilder.execute(tc -> ContextNetwork.ping("google.com", 80) != null);
     }
 
     @SneakyThrows

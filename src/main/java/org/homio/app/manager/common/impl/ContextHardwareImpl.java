@@ -13,8 +13,10 @@ import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.ContextHardware;
+import org.homio.api.util.HardwareUtils;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.hquery.ProgressBar;
+import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -24,7 +26,29 @@ import org.jetbrains.annotations.Nullable;
 public class ContextHardwareImpl implements ContextHardware {
 
     private final @Getter @Accessors(fluent = true) ContextImpl context;
+    private final NetworkHardwareRepository networkHardwareRepository;
     private final MachineHardwareRepository hardwareRepository;
+    private final @Getter @Accessors(fluent = true) ContextNetworkImpl network;
+
+    public ContextHardwareImpl(
+        ContextImpl context,
+        MachineHardwareRepository hardwareRepository,
+        NetworkHardwareRepository networkHardwareRepository) {
+
+        this.context = context;
+        this.networkHardwareRepository = networkHardwareRepository;
+        this.network = new ContextNetworkImpl(context, hardwareRepository);
+        this.hardwareRepository = hardwareRepository;
+    }
+
+    public void onContextCreated() throws Exception {
+        HardwareUtils.APP_ID = context.setting().getEnv("appId", String.valueOf(System.currentTimeMillis()), true);
+        HardwareUtils.MACHINE_IP_ADDRESS = networkHardwareRepository.getIPAddress();
+        HardwareUtils.RUN_COUNT = context.setting().getEnv("runCount", 1, true);
+        context.setting().setEnv("runCount", HardwareUtils.RUN_COUNT + 1);
+
+        network.onContextCreated();
+    }
 
     @Override
     public @NotNull String execute(@NotNull String command) {
@@ -89,11 +113,6 @@ public class ContextHardwareImpl implements ContextHardware {
     @Override
     public void stopSystemCtl(@NotNull String soft) {
         hardwareRepository.stopSystemCtl(soft);
-    }
-
-    @Override
-    public @NotNull String getHostname() {
-        return hardwareRepository.getMachineInfo().getNetworkNodeHostname();
     }
 
     @Override

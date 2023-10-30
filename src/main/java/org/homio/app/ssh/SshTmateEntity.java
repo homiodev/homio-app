@@ -11,7 +11,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.Context;
@@ -160,7 +159,7 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
         }
 
         @Override
-        public void destroy(boolean forRestart) {
+        public void destroy(boolean forRestart, Exception ex) {
             closeSshSession(null);
         }
 

@@ -72,7 +72,12 @@
             </resource>
         </resources>
     </build>
+
     <dependencies>
+      <dependency>
+        <groupId>com.google.protobuf</groupId>
+        <artifactId>protobuf-java</artifactId>
+      </dependency>
       <dependency>
         <groupId>org.homio</groupId>
         <artifactId>onvif</artifactId>
@@ -157,6 +162,12 @@
 
       <dependency>
         <artifactId>addon-tasmota</artifactId>
+        <groupId>org.homio.addon</groupId>
+        <version>1.0.0-SNAPSHOT</version>
+      </dependency>
+
+      <dependency>
+        <artifactId>addon-esphome</artifactId>
         <groupId>org.homio.addon</groupId>
         <version>1.0.0-SNAPSHOT</version>
       </dependency>

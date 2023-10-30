@@ -41,7 +41,6 @@ import org.homio.api.service.discovery.VideoStreamScanner;
 import org.homio.api.state.StringType;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
-import org.homio.api.util.HardwareUtils;
 import org.homio.api.util.Lang;
 import org.homio.app.LogService;
 import org.homio.app.audio.AudioService;
@@ -184,6 +183,7 @@ public class ContextImpl implements Context {
             VariableBackupRepository variableBackupRepository,
             EntityManagerFactory entityManagerFactory,
             MachineHardwareRepository mhr,
+            NetworkHardwareRepository nhr,
             FfmpegHardwareRepository ffmpegHardwareRepository) {
         this.classFinder = classFinder;
         this.cacheService = cacheService;
@@ -194,7 +194,7 @@ public class ContextImpl implements Context {
                         .filter(r -> !r.getClass().equals(AllDeviceRepository.class))
                         .collect(Collectors.toMap(AbstractRepository::getPrefix, r -> r));
 
-        this.contextHardware = new ContextHardwareImpl(this, mhr);
+        this.contextHardware = new ContextHardwareImpl(this, mhr, nhr);
         this.contextSetting = new ContextSettingImpl(this, environment, classFinder);
         this.contextUI = new ContextUIImpl(this, messagingTemplate);
         this.contextBGP = new ContextBGPImpl(this, taskScheduler);
@@ -223,7 +223,6 @@ public class ContextImpl implements Context {
         this.addon.setApplicationContext(applicationContext);
         this.allApplicationContexts.add(applicationContext);
         this.applicationContext = applicationContext;
-        HardwareUtils.MACHINE_IP_ADDRESS = applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress();
 
         this.workspaceService = applicationContext.getBean(WorkspaceService.class);
 
@@ -243,6 +242,7 @@ public class ContextImpl implements Context {
         contextVar.onContextCreated();
         contextUI.onContextCreated();
         contextBGP.onContextCreated();
+        contextHardware.onContextCreated();
         // initialize all addons
         addon.onContextCreated();
         contextWorkspace.onContextCreated(workspaceService);
