@@ -75,6 +75,33 @@
 
     <dependencies>
       <dependency>
+        <groupId>com.jcraft</groupId>
+        <artifactId>jsch</artifactId>
+        <version>0.1.55</version>
+      </dependency>
+      <dependency>
+        <artifactId>firmata4j</artifactId>
+        <groupId>com.github.kurbatov</groupId>
+        <version>2.3.8</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.zafarkhaja</groupId>
+        <artifactId>java-semver</artifactId>
+        <version>0.9.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcpg-jdk18on</artifactId>
+      </dependency>
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcprov-jdk18on</artifactId>
+      </dependency>
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcpkix-jdk18on</artifactId>
+      </dependency>
+      <dependency>
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
       </dependency>
