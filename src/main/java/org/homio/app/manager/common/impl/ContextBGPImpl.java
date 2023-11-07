@@ -78,6 +78,7 @@ public class ContextBGPImpl implements ContextBGP {
     @Getter
     private final @Accessors(fluent = true) ContextImpl context;
     private final ThreadPoolTaskScheduler taskScheduler;
+    private final Map<String, ThrowingRunnable<Exception>> lowPriorityRequests = new ConcurrentHashMap<>();
 
     @Getter
     private final Map<String, ThreadContextImpl<?>> schedulers = new ConcurrentHashMap<>();
@@ -107,10 +108,23 @@ public class ContextBGPImpl implements ContextBGP {
 
     public void onContextCreated() {
         // send update to UI about changed processes. Send only of user open console with thread/scheduler tab!
-        this.builder("send-bgp-to-ui")
+        builder("send-bgp-to-ui")
                 .interval(Duration.ofSeconds(1))
                 .cancelOnError(false)
             .execute(() -> this.context.ui().sendDynamicUpdate("bgp", getProcesses()));
+
+        builder("low-priority-requests")
+            .interval(Duration.ofSeconds(60))
+            .cancelOnError(false)
+            .execute(() -> {
+                for (Entry<String, ThrowingRunnable<Exception>> entry : lowPriorityRequests.entrySet()) {
+                    try {
+                        entry.getValue().run();
+                    } catch (Exception ex) {
+                        log.warn("Unable to run low priority request: {}. {}", entry.getKey(), CommonUtils.getErrorMessage(ex));
+                    }
+                }
+            });
     }
 
     public BgpProcessResponse getProcesses() {
@@ -209,6 +223,16 @@ public class ContextBGPImpl implements ContextBGP {
     @Override
     public void executeOnExit(ThrowingRunnable runnable) {
         executeOnExitImpl(runnable);
+    }
+
+    @Override
+    public void addLowPriorityRequest(String key, ThrowingRunnable<Exception> handler) {
+        lowPriorityRequests.put(key, handler);
+    }
+
+    @Override
+    public void removeLowPriorityRequest(String key) {
+        lowPriorityRequests.remove(key);
     }
 
     private static void executeOnExitImpl(ThrowingRunnable runnable) {

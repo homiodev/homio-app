@@ -121,8 +121,10 @@ public class SettingEntity extends BaseEntity {
         this.settingType = settingTypeRaw;
     }
 
-    public SettingEntity setSettingType(SettingType settingType) {
-        this.settingType = settingType.name();
+    public SettingEntity setSettingType(@NotNull SettingType settingType) {
+        if (this.settingType == null) {
+            this.settingType = settingType.name();
+        }
         return this;
     }
 
@@ -163,5 +165,23 @@ public class SettingEntity extends BaseEntity {
         // dynamic settings(firmata has no parameters)
         SettingPlugin plugin = ContextSettingImpl.settingPluginsByPluginKey.get(getEntityID());
         return plugin == null ? null : SettingRepository.getSettingAddonName(context(), plugin.getClass());
+    }
+
+    @Override
+    @JsonIgnore
+    public boolean isDisableEdit() {
+        return super.isDisableEdit();
+    }
+
+    @Override
+    @JsonIgnore
+    public boolean isDisableDelete() {
+        return super.isDisableDelete();
+    }
+
+    @Override
+    @JsonIgnore
+    public @NotNull String getTitle() {
+        return super.getTitle();
     }
 }

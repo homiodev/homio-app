@@ -1,0 +1,85 @@
+{
+  "COMM_SUCCESS": "Communicator restarted successfully",
+  "W": {
+    "ERROR": {
+      "NOT_FOUND": "Communicator not found",
+      "ALREADY_RUN": "Communicator already run",
+      "RESTART_TOO_OFTEN": "Communicator restart calls too often",
+      "UNABLE_CREATE": "Unable to create communicator for such device",
+      "UNKNOWN_ERROR": "Unknown error while restart communicator. See logs"
+    }
+  },
+  "WORKSPACE": {
+    "firmata": "Firmata",
+    "firmata-onewire": "Firmata 1-Wire sensors",
+    "firmata-ic": "Firmata I2C devices",
+    "firmata_pin_read": "Get pin value",
+    "firmata_digital_write": "Write digital pin value",
+    "firmata_analog_write": "Write analog pin value",
+    "firmata_pwm_write": "Write pwm(0-255) pin value",
+    "firmata_invert_pin": "Invert pin",
+    "firmata_ready": "Ready firmata",
+    "firmata_when_pin_changed": "Event when pin changed",
+    "firmata_when_pin_op_value": "Event when pin changed and match condition",
+    "firmata_when_ready": "Event when firmata device ready",
+    "firmata_set_mode": "Set pin mode",
+    "firmata_set_sampling_interval": "Set pin sampling interval. The sampling interval sets how often analog data and i2c data is reported to the client. The default value is 19 milliseconds.",
+    "firmata_set_servo_config": "Set servo pulse configuration",
+    "firmata_delay": "Tells firmata to not do anything for the passed amount of ms",
+    "firmata_time": "Get device current time",
+    "firmata_protocol": "Returns the name of a protocol that the device uses.",
+    "firmata-onewire_DS18B20": "Get DS18B20 temperature value"
+  },
+  "PLACEHOLDER": {
+    "st_FirmataScanPortRangeSetting": "Scan port range i.e.: 192.168.0.0-255",
+    "st_ConsoleHeaderArduinoIncludeLibrarySetting": "Include library",
+    "st_ConsoleHeaderArduinoIncludeLibrarySetting_unavailable": "Select board first",
+    "st_ConsoleHeaderArduinoPortSetting": "Arduino port",
+    "st_ConsoleHeaderArduinoPortSetting_unavailable": "No ports available",
+    "st_ConsoleHeaderArduinoGetBoardsSetting": "Board",
+    "st_ConsoleHeaderArduinoProgrammerSetting": "Programmer",
+    "st_ConsoleHeaderArduinoProgrammerSetting_unavailable": "No programmers available for this board"
+  },
+  "FIRMATA": {
+    "NAME": "Firmata",
+    "PASSWORD_DESCRIPTION": "Board password to upload a new sketch",
+    "SETTING": {
+      "LABEL": "Firmata settings",
+      "st_FirmataScanPortRangeSetting": "Scan port range",
+      "st_FirmataWatchDogIntervalSetting": "Watch dog max inactivity",
+      "st_ConsoleHeaderArduinoPortSetting": "Select arduino port",
+      "st_ConsoleHeaderArduinoGetBoardInfoSetting": "Get board info",
+      "st_ConsoleHeaderArduinoDeploySketchSetting": "Deploy sketch to board",
+      "st_ConsoleHeaderArduinoBuildSketchSetting": "Verify/Compile sketch",
+      "st_ConsoleHeaderArduinoGetBoardsSetting": "Select board",
+      "st_ConsoleHeaderGetBoardsDynamicSetting": "Additional settings",
+      "st_ConsoleHeaderArduinoIncludeLibrarySetting": "Load example",
+      "st_ConsoleHeaderGetBoardInfoSetting": "Get board info"
+    }
+  },
+  "SELECTION": {
+    "FirmataUsbEntity": "Firmata Usb device",
+    "FirmataNetworkEntity": "Firmata Network device"
+  },
+  "CONTEXT": {
+    "ACTION": {
+      "UPLOAD_SKETCH": "Upload sketch automatically",
+      "UPLOAD_SKETCH_MANUALLY": "Upload sketch manually"
+    }
+  },
+  "CONSOLE": {
+    "firmata": "Arduino editor"
+  },
+  "SETTING": {
+    "CONSOLE": {
+      "firmata": "Arduino editor",
+      "st_ConsoleArduinoFetchEsp8266PackagesSetting": "Download esp8266 boards",
+      "st_ConsoleArduinoLibraryManagerSetting": "Library Manager",
+      "st_ConsoleArduinoBoardManagerSetting": "Boards Manager",
+      "st_ConsoleArduinoBoardPasswordSetting": "Board password",
+      "st_ConsoleArduinoUploadUsingProgrammerSetting": "Upload Using Programmer",
+      "st_ConsoleArduinoProgrammerSetting": "Programmer",
+      "st_ConsoleArduinoVerboseSetting": "Verbose"
+    }
+  }
+}

@@ -12,13 +12,19 @@ import static org.homio.addon.camera.CameraConstants.AlarmEvent.TamperAlarm;
 import static org.homio.addon.camera.CameraConstants.AlarmEvent.TooBlurryAlarm;
 import static org.homio.addon.camera.CameraConstants.AlarmEvent.TooBrightAlarm;
 import static org.homio.addon.camera.CameraConstants.AlarmEvent.TooDarkAlarm;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_DELETE_PRESET;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_GOTO_HOME;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_GOTO_PRESET;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_PAN;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_PAN_COMMAND;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_PAN_CONTINUOUS;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_PAN_RELATIVE;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_SAVE_GOTO_HOME;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_SAVE_PRESET;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_TILT;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_TILT_COMMAND;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_TILT_CONTINUOUS;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_TILT_RELATIVE;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ZOOM;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_ZOOM_COMMAND;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ZOOM_CONTINUOUS;
 import static org.homio.api.ContextSetting.SERVER_PORT;
 import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
@@ -27,6 +33,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pivovarit.function.ThrowingRunnable;
 import de.onvif.soap.OnvifDeviceState;
 import de.onvif.soap.OnvifUrl;
+import de.onvif.soap.devices.PtzDevices;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
@@ -78,19 +85,22 @@ import org.homio.addon.camera.service.util.CameraUtils;
 import org.homio.addon.camera.service.util.CommonCameraHandler;
 import org.homio.api.Context;
 import org.homio.api.Context.FileLogger;
-import org.homio.api.ContextMedia.MediaMTXSource;
 import org.homio.api.ContextNetwork;
+import org.homio.api.ContextUI.DialogResponseType;
+import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.state.DecimalType;
+import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.field.action.ActionInputParameter;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.api.util.HardwareUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.onvif.ver10.schema.PTZNode;
 import org.onvif.ver10.schema.PTZPreset;
+import org.onvif.ver10.schema.PTZSpaces;
 import org.onvif.ver10.schema.Profile;
 import org.onvif.ver10.schema.VideoResolution;
 
@@ -172,6 +182,12 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
             "VideoSource/ImageTooBlurry/AnalyticsService",
             "VideoSource/ImageTooBlurry/ImagingService",
             "VideoSource/ImageTooBlurry/RecordingService");
+
+        onvifDeviceState.getEventDevices().subscribe(
+            (dataName, dataValue) -> {
+                // do nothing
+            },
+            "Device/Trigger/DigitalInput");
 
         if (entity.getCameraType() != null && getCameraBrands(context).containsKey(entity.getCameraType())) {
             CameraBrandHandlerDescription cameraBrandHandlerDescription = getCameraBrands(context).get(entity.getCameraType());
@@ -468,73 +484,126 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
     }
 
     public @NotNull List<OptionModel> getPtzPresets() {
-        List<PTZPreset> ptzPresets = onvifDeviceState.getPtzDevices().getPresets();
-        if (ptzPresets != null) {
-            return ptzPresets
-                .stream()
-                .map(p -> OptionModel.of(p.getToken(), p.getName()).setDescription(p.getPTZPosition().toString()))
-                .sorted()
-                .toList();
-        }
-        return List.of();
+        List<PTZPreset> ptzPresets = onvifDeviceState.getPtzDevices().getPresets(getProfile());
+        return ptzPresets
+            .stream()
+            .map(p -> {
+                String description = p.getToken();
+                if (p.getPTZPosition() != null) {
+                    description += " " + p.getPTZPosition().toString();
+                }
+                return OptionModel.of(p.getToken(), p.getName()).setDescription(description);
+            })
+            .sorted()
+            .toList();
     }
 
     private void addEndpoints() {
         if (isSupportPtz()) {
-            if (onvifDeviceState.getPtzDevices().isMoveSupported()) {
-                addTiltEndpoint();
-                addPanEndpoint();
-            }
-            if (onvifDeviceState.getPtzDevices().isZoomSupported()) {
-                addZoomEndpoint();
-            }
+            PtzDevices ptz = onvifDeviceState.getPtzDevices();
+            PTZNode ptzNode = ptz.getNode(getProfile());
 
-            List<OptionModel> presets = getPtzPresets();
-            if (!presets.isEmpty()) {
-                addEndpointEnum(ENDPOINT_GOTO_PRESET, presets, state ->
-                    onvifDeviceState.getPtzDevices().gotoPreset(state.stringValue(), getProfile()));
+            if (ptzNode != null) {
+                PTZSpaces ptzSpaces = ptzNode.getSupportedPTZSpaces();
+                if (ptz.isMoveSupported()) {
+                    if (!ptzSpaces.getAbsolutePanTiltPositionSpace().isEmpty()) {
+                        addAbsolutePanTilt();
+                    }
+                    if (!ptzSpaces.getContinuousPanTiltVelocitySpace().isEmpty()) {
+                        addPanTilt(ENDPOINT_TILT_CONTINUOUS, ENDPOINT_PAN_CONTINUOUS, true);
+                    }
+                    if (!ptzSpaces.getRelativePanTiltTranslationSpace().isEmpty()) {
+                        addPanTilt(ENDPOINT_TILT_RELATIVE, ENDPOINT_PAN_RELATIVE, false);
+                    }
+                }
+                if (ptz.isZoomSupported()) {
+                    addZoomEndpoint(ptzSpaces);
+                }
+
+                if (ptzNode.isHomeSupported()) {
+                    addEndpointTrigger(ENDPOINT_GOTO_HOME, new Icon("fas fa-house", "##56628c"), null, null, null, state ->
+                        ptz.gotoHome(getProfile()));
+
+                    addEndpointTrigger(ENDPOINT_SAVE_GOTO_HOME, new Icon("fas fa-person-shelter", "#2B9679"), null, null, null, state ->
+                        ptz.saveHomePosition(getProfile()));
+                }
+
+                addEndpointEnum(ENDPOINT_GOTO_PRESET, getPtzPresets(), state ->
+                    ptz.gotoPreset(getProfile(), state.stringValue()));
+
+                addEndpointTrigger(ENDPOINT_SAVE_PRESET, new Icon("fas fa-floppy-disk", "#FFD44D"), null, null, null, state ->
+                    context.ui().dialog().sendDialogRequest("goto-preset-name", "DIALOG.TITLE.CREATE_GOTO_PRESET",
+                        (responseType, pressedButton, parameters) -> {
+                            if (responseType == DialogResponseType.Accepted) {
+                                String gotoName = parameters.get("name").asText();
+                                ptz.savePreset(getProfile(), gotoName, null);
+                                refreshGotoPresets();
+                            }
+                        }, builder -> {
+                            builder.disableKeepOnUi();
+                            builder.appearance(new Icon("fas fa-camera"), null);
+                            List<ActionInputParameter> inputs = new ArrayList<>();
+                            inputs.add(ActionInputParameter.text("name", "Sample preset", "min:3"));
+                            builder.group("General", inputs);
+                        }));
+
+                addEndpointTrigger(ENDPOINT_DELETE_PRESET, new Icon("fas fa-trash"), null, null, null, state -> {
+                    List<OptionModel> presets = getPtzPresets();
+                    if (presets.isEmpty()) {
+                        throw new ServerException("W.ERROR.NO_GOTO_PRESETS");
+                    }
+                    context.ui().dialog().sendDialogRequest("remove-goto-preset", "DIALOG.TITLE.REMOVE_GOTO_PRESET",
+                        (responseType, pressedButton, parameters) -> {
+                            String gotoName = parameters.get("name").asText();
+                            PTZPreset preset = ptz.getPresets(getProfile()).stream().filter(p -> p.getToken().equals(gotoName)).findAny().orElse(null);
+                            if (preset != null) {
+                                ptz.removePreset(getProfile(), preset);
+                                refreshGotoPresets();
+                            }
+                        }, builder -> {
+                            builder.appearance(new Icon("fas fa-trash"), Color.ERROR_DIALOG);
+                            builder.group("General",
+                                List.of(ActionInputParameter.select("name", presets.get(0).getKey(), presets)));
+                        });
+                });
             }
         }
     }
 
-    private void addPanEndpoint() {
-        addEndpointSlider(ENDPOINT_PAN, 0F, 100F, state ->
-            onvifDeviceState.getPtzDevices().setAbsolutePan(state.floatValue(), getProfile()), true).setValue(
-            new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentPanPercentage())), false);
-
-        addEndpointButtons(ENDPOINT_PAN_COMMAND, List.of(
-            OptionModel.of("LEFT").setIcon("fas fa-caret-left"),
-            OptionModel.of("OFF").setIcon("fas fa-power-off"),
-            OptionModel.of("RIGHT").setIcon("fas fa-caret-right")
-        ), state -> {
-            String command = state.stringValue();
-            if ("LEFT".equals(command)) {
-                onvifDeviceState.getPtzDevices().moveLeft(entity.isPtzContinuous(), getProfile());
-            } else if ("RIGHT".equals(command)) {
-                onvifDeviceState.getPtzDevices().moveRight(entity.isPtzContinuous(), getProfile());
-            } else if ("OFF".equals(command)) {
-                onvifDeviceState.getPtzDevices().stopMove(getProfile());
-            } else {
-                throw new IllegalStateException("Illegal TILT command: " + command);
-            }
-        });
+    private void refreshGotoPresets() {
+        CameraDeviceEndpoint gotoPreset = getEndpoints().get(ENDPOINT_GOTO_PRESET);
+        gotoPreset.setRange(getPtzPresets());
+        gotoPreset.updateUI();
     }
 
-    private void addTiltEndpoint() {
-        addEndpointSlider(ENDPOINT_TILT, 0F, 100F, state ->
-            onvifDeviceState.getPtzDevices().setAbsoluteTilt(state.floatValue(), getProfile()), true).setValue(
-            new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentTiltPercentage())), false);
-
-        addEndpointButtons(ENDPOINT_TILT_COMMAND, List.of(
+    private void addPanTilt(String tiltId, String panId, boolean continuous) {
+        addEndpointButtons(tiltId, List.of(
             OptionModel.of("UP").setIcon("fas fa-caret-up"),
             OptionModel.of("OFF").setIcon("fas fa-power-off"),
             OptionModel.of("DOWN").setIcon("fas fa-caret-down")
         ), state -> {
             String command = state.stringValue();
             if ("UP".equals(command)) {
-                onvifDeviceState.getPtzDevices().moveUp(entity.isPtzContinuous(), getProfile());
+                onvifDeviceState.getPtzDevices().moveUp(continuous, getProfile());
             } else if ("DOWN".equals(command)) {
-                onvifDeviceState.getPtzDevices().moveDown(entity.isPtzContinuous(), getProfile());
+                onvifDeviceState.getPtzDevices().moveDown(continuous, getProfile());
+            } else if ("OFF".equals(command)) {
+                onvifDeviceState.getPtzDevices().stopMove(getProfile());
+            } else {
+                throw new IllegalStateException("Illegal TILT command: " + command);
+            }
+        });
+
+        addEndpointButtons(panId, List.of(
+            OptionModel.of("LEFT").setIcon("fas fa-caret-left"),
+            OptionModel.of("OFF").setIcon("fas fa-power-off"),
+            OptionModel.of("RIGHT").setIcon("fas fa-caret-right")
+        ), state -> {
+            String command = state.stringValue();
+            if ("LEFT".equals(command)) {
+                onvifDeviceState.getPtzDevices().moveLeft(continuous, getProfile());
+            } else if ("RIGHT".equals(command)) {
+                onvifDeviceState.getPtzDevices().moveRight(continuous, getProfile());
             } else if ("OFF".equals(command)) {
                 onvifDeviceState.getPtzDevices().stopMove(getProfile());
             } else {
@@ -543,27 +612,42 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
         });
     }
 
-    private void addZoomEndpoint() {
-        addEndpointSlider(ENDPOINT_ZOOM, 0F, 100F, state ->
-            onvifDeviceState.getPtzDevices().setAbsoluteZoom(state.floatValue(), getProfile()), true).setValue(
-            new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentZoomPercentage())), false);
+    private void addAbsolutePanTilt() {
+        PtzDevices ptz = onvifDeviceState.getPtzDevices();
+        addEndpointSlider(ENDPOINT_TILT, 0F, 100F, state ->
+            ptz.setAbsoluteTilt(state.floatValue(), getProfile()), true).setValue(
+            new DecimalType(Math.round(ptz.getCurrentTiltPercentage())), false);
 
-        addEndpointButtons(ENDPOINT_ZOOM_COMMAND, List.of(
-            OptionModel.of("IN").setIcon("fas fa-search-plus"),
-            OptionModel.of("OFF").setIcon("fas fa-power-off"),
-            OptionModel.of("OUT").setIcon("fas fa-search-minus")
-        ), state -> {
-            String command = state.stringValue();
-            if ("IN".equals(command)) {
-                onvifDeviceState.getPtzDevices().moveIn(entity.isPtzContinuous(), getProfile());
-            } else if ("OUT".equals(command)) {
-                onvifDeviceState.getPtzDevices().moveOut(entity.isPtzContinuous(), getProfile());
-            } else if ("OFF".equals(command)) {
-                onvifDeviceState.getPtzDevices().stopMove(getProfile());
-            } else {
-                throw new IllegalStateException("Illegal ZOOM command: " + command);
-            }
-        });
+        addEndpointSlider(ENDPOINT_PAN, 0F, 100F, state ->
+            ptz.setAbsolutePan(state.floatValue(), getProfile()), true)
+            .setValue(new DecimalType(Math.round(ptz.getCurrentPanPercentage())), false);
+    }
+
+    private void addZoomEndpoint(PTZSpaces ptzSpaces) {
+        if (!ptzSpaces.getAbsoluteZoomPositionSpace().isEmpty()) {
+            addEndpointSlider(ENDPOINT_ZOOM, 0F, 100F, state ->
+                onvifDeviceState.getPtzDevices().setAbsoluteZoom(state.floatValue(), getProfile()), true).setValue(
+                new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentZoomPercentage())), false);
+        }
+
+        if (!ptzSpaces.getContinuousZoomVelocitySpace().isEmpty()) {
+            addEndpointButtons(ENDPOINT_ZOOM_CONTINUOUS, List.of(
+                OptionModel.of("IN").setIcon("fas fa-search-plus"),
+                OptionModel.of("OFF").setIcon("fas fa-power-off"),
+                OptionModel.of("OUT").setIcon("fas fa-search-minus")
+            ), state -> {
+                String command = state.stringValue();
+                if ("IN".equals(command)) {
+                    onvifDeviceState.getPtzDevices().moveIn(false, getProfile());
+                } else if ("OUT".equals(command)) {
+                    onvifDeviceState.getPtzDevices().moveOut(false, getProfile());
+                } else if ("OFF".equals(command)) {
+                    onvifDeviceState.getPtzDevices().stopMove(getProfile());
+                } else {
+                    throw new IllegalStateException("Illegal ZOOM command: " + command);
+                }
+            });
+        }
     }
 
     @Override
@@ -646,13 +730,21 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
             onvifDeviceState.getEventDevices().initFully(subscribeUrl);
         }
         for (Profile profile : onvifDeviceState.getProfiles()) {
-            OnvifUrl rtspStreamUri = onvifDeviceState.getMediaDevices().getRTSPStreamUri(profile.getToken());
-            if (rtspStreamUri != null) {
-                urls.setRtspUri(rtspStreamUri.getFullUrl(), profile.getName());
+            try {
+                OnvifUrl rtspStreamUri = onvifDeviceState.getMediaDevices().getRTSPStreamUri(profile.getToken());
+                if (rtspStreamUri != null) {
+                    urls.setRtspUri(rtspStreamUri.getFullUrl(), profile.getName());
+                }
+            } catch (Exception ex) {
+                log.warn("[{}]: Unable to fetch rtsp url for profile: {}", entityID, profile.getName());
             }
+            try {
             OnvifUrl snapshotUri = onvifDeviceState.getMediaDevices().getSnapshotUri(profile.getToken());
             if (snapshotUri != null) {
                 urls.setSnapshotUri(snapshotUri.getXAddr(), profile.getName());
+            }
+            } catch (Exception ex) {
+                log.warn("[{}]: Unable to fetch snapshot url for profile: {}", entityID, profile.getName());
             }
         }
         List<Dimension> resolutions = onvifDeviceState
@@ -688,7 +780,7 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
         if (rtspUri.startsWith("rtsp://") && !rtspUri.contains("@") && isNotEmpty(entity.getUser())) {
             rtspUri = "rtsp://" + entity.getUser() + ":" + entity.getPassword().asString() + "@" + rtspUri.substring("rtsp://".length());
         }
-        context.media().registerMediaMTXSource(getEntityID(), new MediaMTXSource(rtspUri));
+        context.media().registerVideoSource(getEntityID(), rtspUri);
 
         super.pollCameraConnection();
     }

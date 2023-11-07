@@ -37,9 +37,12 @@ import org.homio.addon.camera.service.BaseCameraService;
 import org.homio.addon.camera.service.IpCameraService;
 import org.homio.api.Context;
 import org.homio.api.ContextMedia.FFMPEG;
+import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
+import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader.DynamicOptionLoaderParameters;
+import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity.VideoSeriesDataSourceDynamicOptionLoader;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.onvif.ver10.schema.PTZPreset;
@@ -70,6 +73,14 @@ public class CameraController {
     private final Context context;
     public static final Map<String, OpenStreamsContainer> camerasOpenStreams = new ConcurrentHashMap<>();
 
+    @GetMapping("/{entityID}/sources")
+    public List<OptionModel> getVideoSources(@PathVariable("entityID") String entityID) {
+        BaseEntity baseEntity = getEntity(entityID);
+        var parameters = new DynamicOptionLoaderParameters(baseEntity, context, new String[0], null);
+        List<OptionModel> models = new VideoSeriesDataSourceDynamicOptionLoader().loadOptions(parameters);
+        return models.isEmpty() ? models : models.get(0).getChildren();
+    }
+
     @GetMapping("/devices/pan")
     public List<OptionModel> getPanDevices() {
         return filterCameraDevices(ipCameraService -> ipCameraService.getOnvifDeviceState().getPtzDevices().isMoveSupported());
@@ -82,10 +93,7 @@ public class CameraController {
 
     @GetMapping("/devices/presets")
     public List<OptionModel> getPresetsDevices() {
-        return filterCameraDevices(ipCameraService -> {
-            List<PTZPreset> presets = ipCameraService.getOnvifDeviceState().getPtzDevices().getPresets();
-            return presets != null && !presets.isEmpty();
-        });
+        return filterCameraDevices(ipCameraService -> !ipCameraService.getPtzPresets().isEmpty());
     }
 
     @GetMapping("/presets")

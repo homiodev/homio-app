@@ -64,11 +64,13 @@ public class CameraConstants {
     public static final String ENDPOINT_ENABLE_PIR_ALARM = "enable_pir_alarm";
 
     public static final String ENDPOINT_PAN = "pan";
-    public static final String ENDPOINT_PAN_COMMAND = "pan_cmd";
+    public static final String ENDPOINT_PAN_CONTINUOUS = "pan_continuous";
+    public static final String ENDPOINT_PAN_RELATIVE = "pan_relative";
     public static final String ENDPOINT_TILT = "tilt";
-    public static final String ENDPOINT_TILT_COMMAND = "tilt_cmd";
+    public static final String ENDPOINT_TILT_CONTINUOUS = "tilt_continuous";
+    public static final String ENDPOINT_TILT_RELATIVE = "tilt_relative";
     public static final String ENDPOINT_ZOOM = "zoom";
-    public static final String ENDPOINT_ZOOM_COMMAND = "zoom_cmd";
+    public static final String ENDPOINT_ZOOM_CONTINUOUS = "zoom_continuous";
 
     public static final String ENDPOINT_ACTIVATE_ALARM_OUTPUT = "activate_alarm_output";
     public static final String ENDPOINT_ACTIVATE_ALARM_OUTPUT2 = "activate_alarm_output2";
@@ -76,10 +78,14 @@ public class CameraConstants {
     public static final String ENDPOINT_EXTERNAL_ALARM_INPUT = "external_alarm_input";
     public static final String ENDPOINT_EXTERNAL_ALARM_INPUT2 = "external_alarm_input2";
 
+    public static final String ENDPOINT_GOTO_HOME = "goto_home";
+    public static final String ENDPOINT_SAVE_GOTO_HOME = "save_home";
     public static final String ENDPOINT_TEXT_OVERLAY = "text_overlay";
     public static final String ENDPOINT_EXTERNAL_LIGHT = "external_light";
     public static final String ENDPOINT_DOORBELL = "door_bell";
     public static final String ENDPOINT_GOTO_PRESET = "goto_preset";
+    public static final String ENDPOINT_SAVE_PRESET = "save_preset";
+    public static final String ENDPOINT_DELETE_PRESET = "delete_preset";
     public static final String ENDPOINT_ENABLE_PRIVACY_MODE = "enable_privacy_mode";
 
     public static final String ENDPOINT_MOTION_ALARM = "motion_alarm";

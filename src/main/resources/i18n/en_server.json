@@ -1,4 +1,18 @@
 {
+  "FIRMATA": {
+    "EVENT": {
+      "FIRMATA_WRONG_DEVICE_TYPE": "Got UDP event with deviceID <{{ID}}> but attached device <{{NAME}}> has not type FirmataNetworkEntity",
+      "FOUND_FIRMATA_DEVICE": "Found device '{{BOARD}}' with device id '{{ID}}' and ip address '{{IP}}'",
+      "CHANGED_IP": "Detected change IP for firmata device: <DEVICE> from <OLD> to <NEW>"
+    },
+    "NEW_DEVICE_QUESTION": "Do you want create new firmata network device?",
+    "NEW_DEVICE_BOARD": "Board     '{{BOARD}}'",
+    "NEW_DEVICE_ID": "Device ID '{{DEVICE_ID}}'",
+    "NEW_DEVICE_ADDRESS": "Address   '{{ADDRESS}}'"
+  },
+  "INSTALL_ERROR": "Error during installation",
+  "BOARD_INFO": "Board info",
+  "NO_BOARD_SELECTED": "No selected board",
   "TITLE": {
     "DEVICES_STAT": "Online {{ONLINE}} of {{TOTAL}} devices"
   },

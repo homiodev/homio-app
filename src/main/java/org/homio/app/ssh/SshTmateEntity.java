@@ -155,7 +155,7 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
 
         @Override
         protected long getEntityHashCode(SshTmateEntity entity) {
-            return 0;
+            return 1;
         }
 
         @Override

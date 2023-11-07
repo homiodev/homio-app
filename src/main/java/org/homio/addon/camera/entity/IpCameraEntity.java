@@ -8,35 +8,40 @@ import de.onvif.soap.devices.InitialDevices;
 import jakarta.persistence.Entity;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.onvif.impl.UnknownBrandHandler;
 import org.homio.addon.camera.service.IpCameraService;
 import org.homio.api.Context;
+import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
+import org.homio.api.model.WebAddress;
 import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldPort;
 import org.homio.api.ui.field.UIFieldType;
+import org.homio.api.ui.field.action.ActionInputParameter;
 import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.HasDynamicUIFields;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIEntityItemBuilder;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.ui.field.action.v1.item.UITextInputItemBuilder.InputType;
 import org.homio.api.ui.field.color.UIFieldColorStatusMatch;
-import org.homio.api.ui.field.condition.UIFieldDisableEditOnCondition;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.api.util.SecureString;
@@ -44,6 +49,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.onvif.ver10.device.wsdl.GetDeviceInformationResponse;
+import org.onvif.ver10.schema.User;
+import org.onvif.ver10.schema.UserLevel;
 
 @SuppressWarnings("unused")
 @Log4j2
@@ -117,8 +124,8 @@ public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraSer
 
     @UIField(order = 1, hideInEdit = true)
     @UIFieldGroup("CONNECTION")
-    public String getHost() {
-        return "%s:%s".formatted(getIp(), getRestPort());
+    public WebAddress getHost() {
+        return new WebAddress("%s:%s".formatted(getIp(), getRestPort()), null, new Icon("fas fa-camera", "#9E9035"));
     }
 
     @UIFieldPort
@@ -206,19 +213,8 @@ public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraSer
         return getIeeeAddress() == null;
     }
 
-    @UIField(order = 155, hideInView = true)
-    @UIFieldGroup("ONVIF")
-    @UIFieldDisableEditOnCondition("return !context.get('supportPtz')")
-    public boolean isPtzContinuous() {
-        return getJsonData("ptzContinuous", false);
-    }
-
     public boolean isSupportPtz() {
         return optService().map(IpCameraService::isSupportPtz).orElse(false);
-    }
-
-    public void setPtzContinuous(boolean value) {
-        setJsonData("ptzContinuous", value);
     }
 
     @Override
@@ -229,12 +225,6 @@ public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraSer
     @Override
     public String toString() {
         return "ipcam:%s:%d".formatted(getIp(), getOnvifPort());
-    }
-
-    @Override
-    public long getEntityServiceHashCode() {
-        return Objects.hash(getIeeeAddress(), getName()) + getJsonDataHashCode("start", "ip", "cameraType", "onvifPort", "restPort",
-                "onvifMediaProfile", "user", "pwd");
     }
 
     @Override
@@ -276,6 +266,7 @@ public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraSer
     public UIInputBuilder assembleActions() {
         UIInputBuilder uiInputBuilder = super.assembleActions();
         if (uiInputBuilder != null) {
+            IpCameraService service = getService();
             if (this.isRequireAuth()) {
                 for (UIEntityItemBuilder<?, ?> uiEntity : uiInputBuilder.getUiEntityItemBuilders(true)) {
                     if (!"AUTHENTICATE".equals(uiEntity.getEntityID())) {
@@ -283,8 +274,61 @@ public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraSer
                     }
                 }
                 uiInputBuilder.addSelectableButton("AUTHENTICATE", new Icon("fas fa-sign-in-alt", Color.GREEN),
-                    (context, params) -> getService().authenticate());
+                    (context, params) -> service.authenticate());
             }
+
+            uiInputBuilder.addSelectableButton("GET_INFO", new Icon("fas fa-info"), (context, params) -> {
+                JSONObject object = new JSONObject();
+                OnvifDeviceState state = service.getOnvifDeviceState();
+                object.put("Users", state.getInitialDevices().getUsers());
+                object.put("Profiles", state.getProfiles());
+                object.put("PTZNode", state.getPtzDevices().getNode(service.getProfile()));
+                return ActionResponseModel.showJson("INFO", object);
+            });
+
+            uiInputBuilder.addOpenDialogSelectableButton("CREATE_USER", new Icon("fas fa-users", "#009CC4"), null, (context, params) -> {
+                String user = params.getString("user");
+                String pwd = params.getString("password");
+                UserLevel role = UserLevel.valueOf(params.getString("role"));
+                if (service.getOnvifDeviceState().getInitialDevices().createUsers(user, role, pwd)) {
+                    return ActionResponseModel.success();
+                }
+                return ActionResponseModel.showError("W.ERROR.UE");
+            }).editDialog(builder -> {
+                builder.addFlex("main").edit(flex -> {
+                    flex.addInput("user", "User name", InputType.Text, true);
+                    flex.addInput("password", "Password", InputType.Text, true);
+                    List<OptionModel> levels = Stream.of(UserLevel.values())
+                                                     .map(l -> OptionModel.of(l.name(), l.value()))
+                                                     .collect(Collectors.toList());
+                    flex.addSelectBox("role", (context, params) -> null)
+                        .setValue(UserLevel.USER.name())
+                        .setOptions(levels);
+                });
+            });
+
+            uiInputBuilder.addSelectableButton("DELETE_USER", new Icon("fas fa-users", "#A02216"), (context, params) -> {
+                context.ui().dialog().sendDialogRequest("du", "DELETE_USER", (responseType, pressedButton, parameters) -> {
+                    String user = parameters.get("user").asText();
+                    if (service.getOnvifDeviceState().getInitialDevices().deleteUser(user)) {
+                        context.ui().toastr().success("ACTION.RESPONSE.SUCCESS");
+                    }
+                    context.ui().toastr().error("W.ERROR.UE");
+                }, builder -> {
+                    List<User> users = service.getOnvifDeviceState().getInitialDevices().getUsers();
+                    if (users.size() < 2) {
+                        throw new ServerException("W.ERROR.UNABLE_DELETE_SINGLE_USER");
+                    }
+                    builder.disableKeepOnUi();
+                    builder.appearance(new Icon("fas fa-users"), Color.ERROR_DIALOG);
+                    List<ActionInputParameter> inputs = new ArrayList<>();
+                    List<OptionModel> userOptions = users.stream().map(u ->
+                        OptionModel.of(u.getUsername()).setDescription(u.getUserLevel().toString())).toList();
+                    inputs.add(ActionInputParameter.select("user", users.get(0).getUsername(), userOptions));
+                    builder.group("General", inputs);
+                });
+                return null;
+            });
         }
 
         return uiInputBuilder;
@@ -376,12 +420,10 @@ public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraSer
     }
 
     @Override
-    public long getVideoParametersHashCode() {
-        return super.getVideoParametersHashCode() +
-                getJsonDataHashCode("cameraType", "ip", "onvifPort", "restPort",
-                        "onvifMediaProfile", "user", "pwd", "alarmInputUrl", "nvrChannel", "snapshotUrl",
-                        "customMotionAlarmUrl", "customAudioAlarmUrl", "mjpegUrl", "ffmpegInput",
-                        "ffmpegInputOptions");
+    public long getEntityServiceHashCode() {
+        return getJsonDataHashCode("cameraType", "ip", "map",
+            "customMotionAlarmUrl", "customAudioAlarmUrl", "nvrChannel",
+            "onvifPort", "restPort") + super.getEntityServiceHashCode();
     }
 
     @Override

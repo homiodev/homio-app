@@ -86,8 +86,9 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
                 entity.setMultiSelect(true);
             }
             if (entity.isStorable()) {
-                if (entity.getSettingType().equals(UIFieldType.SelectBoxButton.name())
-                        || entity.getSettingType().equals(UIFieldType.SelectBox.name())) {
+                boolean isSelectBox = entity.getSettingType().equals(UIFieldType.SelectBoxButton.name())
+                    || entity.getSettingType().equals(UIFieldType.SelectBox.name());
+                if (isSelectBox && !entity.isLazyLoad()) {
                     entity.setAvailableValues(SettingRepository.getOptions((SettingPluginOptions<?>) plugin, context, null));
                 }
             }

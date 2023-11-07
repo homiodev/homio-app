@@ -501,8 +501,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements 
         JsonNode localLink = objectNode.value.get("LocalLink");
         String link = localLink.path("activeLink").asText("");
         String mac = localLink.path("mac").asText("").toUpperCase();
-        if ((isEmpty(getEntity().getMac()) && isNotEmpty(mac))
-            || (isEmpty(getEntity().getActiveLink()) && isNotEmpty(link))) {
+        if ((isEmpty(getEntity().getMac()) && isNotEmpty(mac)) || (isEmpty(getEntity().getActiveLink()) && isNotEmpty(link))) {
             context().db().updateDelayed(getEntity(), entity -> {
                 entity.setActiveLink(link);
                 entity.setMac(mac);

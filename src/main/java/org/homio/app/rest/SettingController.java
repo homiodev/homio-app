@@ -79,8 +79,12 @@ public class SettingController implements ContextRefreshed {
     @GetMapping("/{entityID}/options")
     public Collection<OptionModel> loadSettingAvailableValues(@PathVariable("entityID") String entityID,
                                                               @RequestParam(value = "param0", required = false) String param0) {
-        SettingPluginOptions<?> settingPlugin = (SettingPluginOptions<?>) ContextSettingImpl.settingPluginsByPluginKey.get(entityID);
-        return SettingRepository.getOptions(settingPlugin, context, new JSONObject().put("param0", param0));
+        try {
+            SettingPluginOptions<?> settingPlugin = (SettingPluginOptions<?>) ContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+            return SettingRepository.getOptions(settingPlugin, context, new JSONObject().put("param0", param0));
+        } catch (Exception ex) {
+            return List.of();
+        }
     }
 
     @GetMapping("/{entityID}/package/all")
@@ -211,7 +215,11 @@ public class SettingController implements ContextRefreshed {
             settingEntity.setValue(context.setting().getRawValue((Class) entry.getKey()));
             if (DynamicConsoleHeaderContainerSettingPlugin.class.isAssignableFrom(entry.getKey())) {
                 settingEntity.setSettingTypeRaw("Container");
+                settingEntity.setLazyLoad(true);
                 List<SettingEntity> options = ContextSettingImpl.dynamicHeaderSettings.get(entry.getKey());
+                if (settingEntity.getParameters() == null) {
+                    settingEntity.setParameters(new JSONObject());
+                }
                 settingEntity.getParameters().put("dynamicOptions", options);
             } else if (SettingPluginPackageInstall.class.isAssignableFrom(entry.getKey())) {
                 settingEntity.setSettingTypeRaw("AddonInstaller");

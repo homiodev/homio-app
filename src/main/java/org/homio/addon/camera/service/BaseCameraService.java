@@ -7,7 +7,6 @@ import static org.homio.addon.camera.CameraConstants.ENDPOINT_MOTION_SCORE;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_MOTION_THRESHOLD;
 import static org.homio.addon.camera.CameraController.camerasOpenStreams;
 import static org.homio.addon.camera.entity.StreamMJPEG.mp4OutOptions;
-import static org.homio.api.model.Status.DONE;
 import static org.homio.api.model.Status.ERROR;
 import static org.homio.api.model.Status.INITIALIZE;
 import static org.homio.api.model.Status.OFFLINE;
@@ -236,24 +235,6 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
         }
     }
 
-    public final void initializeCamera() {
-        this.urls.clear();
-        createOrUpdateDeviceGroup();
-        addPrimaryEndpoint();
-        updateEntityStatus(INITIALIZE, null);
-        log.info("[{}]: Initialize camera: <{}>", entityID, getEntity());
-        camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer(entity));
-
-        try {
-            postInitializeCamera();
-            recreateFFmpeg();
-
-            createConnectionJob();
-        } catch (Exception ex) {
-            disposeAndSetStatus(Status.ERROR, CommonUtils.getErrorMessage(ex));
-        }
-    }
-
     // assemble camera actions and cache every minute
     public UIInputBuilder assembleActions() {
         return uiInputBuilder.getFreshValue(Duration.ofSeconds(60), () -> {
@@ -392,11 +373,20 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
     @Override
     @SneakyThrows
     protected final void initialize() {
-        if (!entity.isStart() || !entity.isConfigured()) {
-            dispose();
-        } else if (videoStreamParametersHashCode != entity.getVideoParametersHashCode()) {
-            dispose();
-            initializeCamera();
+        this.urls.clear();
+        createOrUpdateDeviceGroup();
+        addPrimaryEndpoint();
+        updateEntityStatus(INITIALIZE, null);
+        log.info("[{}]: Initialize camera: <{}>", entityID, getEntity());
+        camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer(entity));
+
+        try {
+            postInitializeCamera();
+            recreateFFmpeg();
+
+            createConnectionJob();
+        } catch (Exception ex) {
+            disposeAndSetStatus(Status.ERROR, CommonUtils.getErrorMessage(ex));
         }
     }
 
@@ -456,11 +446,6 @@ public abstract class BaseCameraService<T extends BaseCameraEntity<T, S>, S exte
     }
 
     private synchronized void dispose() {
-        if (entity.getStatus() == DONE) {
-            return;
-        }
-        entity.setStatus(DONE);
-        videoStreamParametersHashCode = entity.getVideoParametersHashCode();
         log.info("[{}]: Dispose camera: <{}>", entityID, getEntity());
         offline();
 

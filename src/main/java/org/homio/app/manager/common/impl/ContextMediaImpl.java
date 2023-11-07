@@ -1,5 +1,6 @@
 package org.homio.app.manager.common.impl;
 
+import java.util.Map;
 import java.util.Set;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -7,8 +8,10 @@ import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.ContextMedia;
+import org.homio.api.model.OptionModel;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.model.entity.Go2RTCEntity;
 import org.homio.app.model.entity.MediaMTXEntity;
 import org.homio.app.video.ffmpeg.FFMPEGImpl;
 import org.homio.app.video.ffmpeg.FfmpegHardwareRepository;
@@ -30,19 +33,21 @@ public class ContextMediaImpl implements ContextMedia {
     }
 
     @Override
-    public void registerMediaMTXSource(@NotNull String path, @NotNull MediaMTXSource source) {
-        MediaMTXEntity.ensureEntityExists(context)
-                      .getService().addSource(path, source);
+    public void addSourceInfo(@NotNull String path, @NotNull Map<String, OptionModel> videoSources) {
+        MediaMTXEntity.ensureEntityExists(context).getService().addSourceInfo(path, videoSources);
+        Go2RTCEntity.ensureEntityExists(context).getService().addSourceInfo(path, videoSources);
     }
 
     @Override
-    public void unRegisterMediaMTXSource(@NotNull String path) {
+    public void registerVideoSource(@NotNull String path, @NotNull String source) {
+        MediaMTXEntity.ensureEntityExists(context).getService().addSource(path, source);
+        Go2RTCEntity.ensureEntityExists(context).getService().addSource(path, source);
+    }
+
+    @Override
+    public void unRegisterVideoSource(@NotNull String path) {
         MediaMTXEntity.ensureEntityExists(context).getService().removeSource(path);
-    }
-
-    @Override
-    public @NotNull MediaMTXInfo getMediaMTXInfo(@NotNull String path) {
-        return MediaMTXEntity.ensureEntityExists(context).getService().getMediaMTXInfo(path);
+        Go2RTCEntity.ensureEntityExists(context).getService().removeSource(path);
     }
 
     @Override

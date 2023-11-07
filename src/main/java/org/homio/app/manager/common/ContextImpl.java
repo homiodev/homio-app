@@ -66,6 +66,7 @@ import org.homio.app.manager.common.impl.ContextUIImpl;
 import org.homio.app.manager.common.impl.ContextVarImpl;
 import org.homio.app.manager.common.impl.ContextWorkspaceImpl;
 import org.homio.app.model.entity.FFMPEGEntity;
+import org.homio.app.model.entity.Go2RTCEntity;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.app.model.entity.MediaMTXEntity;
 import org.homio.app.model.entity.user.UserAdminEntity;
@@ -235,6 +236,7 @@ public class ContextImpl implements Context {
         LocalBoardEntity.ensureDeviceExists(this);
         SshTmateEntity.ensureEntityExists(this);
         MediaMTXEntity.ensureEntityExists(this);
+        Go2RTCEntity.ensureEntityExists(this);
         FFMPEGEntity.ensureEntityExists(this);
         TelegramEntity.ensureEntityExists(this);
 

@@ -3,7 +3,6 @@ package org.homio.addon.camera.entity;
 import jakarta.persistence.Entity;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.service.UsbCameraService;
@@ -27,11 +26,6 @@ import org.jetbrains.annotations.Nullable;
 @Entity
 @UISidebarChildren(icon = "fab fa-usb", color = "#AE21B8")
 public class UsbCameraEntity extends BaseCameraEntity<UsbCameraEntity, UsbCameraService> {
-
-    @Override
-    public boolean isConfigured() {
-        return StringUtils.isNotEmpty(getIeeeAddress());
-    }
 
     @Override
     @UIField(order = 1, label = "usbSource")
@@ -86,11 +80,6 @@ public class UsbCameraEntity extends BaseCameraEntity<UsbCameraEntity, UsbCamera
             return Set.of("W.ERROR.NO_VIDEO_SOURCE_SELECTED");
         }
         return null;
-    }
-
-    @Override
-    public long getEntityServiceHashCode() {
-        return Objects.hashCode(getIeeeAddress()) + getJsonDataHashCode("start", "asource", "stream", "streamPort");
     }
 
     @Override
@@ -170,10 +159,8 @@ public class UsbCameraEntity extends BaseCameraEntity<UsbCameraEntity, UsbCamera
     }
 
     @Override
-    public long getVideoParametersHashCode() {
-        return super.getVideoParametersHashCode() +
-                (getIeeeAddress() == null ? 0 : getIeeeAddress().hashCode()) +
-            getJsonDataHashCode("asource", "stream", "streamPort", "sfps", "sbr", "map");
+    public long getEntityServiceHashCode() {
+        return getJsonDataHashCode("asource", "streamPort", "map") + super.getEntityServiceHashCode();
     }
 
     @UIContextMenuAction(value = "GET_INFO", icon = "fab fa-quinscape", iconColor = "#899343")

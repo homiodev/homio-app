@@ -496,11 +496,18 @@
       "iconColor": "#8035A6"
     },
     {
-      "name": "pan_cmd",
+      "name": "pan_continuous",
       "stateless": true,
       "order": 500,
       "icon": "fa-panorama",
       "iconColor": "#8035A6"
+    },
+    {
+      "name": "pan_relative",
+      "stateless": true,
+      "order": 501,
+      "icon": "fa-panorama",
+      "iconColor": "#A635A3"
     },
     {
       "name": "tilt",
@@ -510,11 +517,18 @@
       "iconColor": "#B0922E"
     },
     {
-      "name": "tilt_cmd",
+      "name": "tilt_continuous",
       "stateless": true,
       "order": 511,
       "icon": "fa-sort",
       "iconColor": "#B0922E"
+    },
+    {
+      "name": "tilt_relative",
+      "stateless": true,
+      "order": 512,
+      "icon": "fa-sort",
+      "iconColor": "#A5B027"
     },
     {
       "name": "zoom",
@@ -524,7 +538,7 @@
       "iconColor": "#32A15E"
     },
     {
-      "name": "zoom_cmd",
+      "name": "zoom_continuous",
       "stateless": true,
       "order": 521,
       "icon": "fa-magnifying-glass-plus",
@@ -593,9 +607,37 @@
       "iconColor": "#8035A6"
     },
     {
+      "name": "save_preset",
+      "stateless": true,
+      "order": 521,
+      "icon": "fa-floppy-disk",
+      "iconColor": "#2E7EA6"
+    },
+    {
+      "name": "delete_preset",
+      "stateless": true,
+      "order": 522,
+      "icon": "fa-trash",
+      "iconColor": "#C4231F"
+    },
+    {
+      "name": "goto_home",
+      "stateless": true,
+      "order": 523,
+      "icon": "fa-house",
+      "iconColor": "#094283"
+    },
+    {
+      "name": "save_home",
+      "stateless": true,
+      "order": 524,
+      "icon": "fa-person-shelter",
+      "iconColor": "#56628c"
+    },
+    {
       "name": "enable_privacy_mode",
       "stateless": true,
-      "order": 520,
+      "order": 526,
       "icon": "fa-lock",
       "iconColor": "#8035A6"
     },

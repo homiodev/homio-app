@@ -185,11 +185,11 @@ public class TransactionManagerContext {
         RetryTemplate retryTemplate = new RetryTemplate();
 
         FixedBackOffPolicy fixedBackOffPolicy = new FixedBackOffPolicy();
-        fixedBackOffPolicy.setBackOffPeriod(200L);
+        fixedBackOffPolicy.setBackOffPeriod(500L);
         retryTemplate.setBackOffPolicy(fixedBackOffPolicy);
 
         Map<Class<? extends Throwable>, RetryPolicy> exceptionMap = new HashMap<>();
-        exceptionMap.put(SQLException.class, new SimpleRetryPolicy(3));
+        exceptionMap.put(SQLException.class, new SimpleRetryPolicy(10));
         exceptionMap.put(CannotAcquireLockException.class, new SimpleRetryPolicy(10));
 
         ExceptionClassifierRetryPolicy retryPolicy = new ExceptionClassifierRetryPolicy();

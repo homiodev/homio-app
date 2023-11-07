@@ -18,18 +18,18 @@ public class CameraServiceVideoSourceResolver implements WidgetVideoSourceResolv
     private final Context context;
 
     @Override
-    public VideoEntityResponse resolveDataSource(WidgetVideoSeriesEntity item) {
-        String ds = DataSourceUtil.getSelection(item.getValueDataSource()).getValue();
+    public VideoEntityResponse resolveDataSource(String valueDataSource) {
+        String ds = DataSourceUtil.getSelection(valueDataSource).getValue();
         String[] keys = ds.split("-->");
         String entityID = keys[0];
         DeviceBaseEntity entity = context.db().getEntity(entityID);
         if (entity != null && keys.length >= 2) {
             String videoIdentifier = keys[keys.length - 1];
             if (videoIdentifier.startsWith("http") || videoIdentifier.startsWith("$DEVICE_URL")) {
-                return new VideoEntityResponse(item.getValueDataSource(), videoIdentifier, videoIdentifier, getVideoType(videoIdentifier));
+                return new VideoEntityResponse(valueDataSource, videoIdentifier, videoIdentifier, getVideoType(videoIdentifier));
             }
             String url = getUrl(videoIdentifier, entityID);
-            VideoEntityResponse response = new VideoEntityResponse(item.getValueDataSource(), ds, url, getVideoType(url));
+            VideoEntityResponse response = new VideoEntityResponse(valueDataSource, ds, url, getVideoType(url));
 
             if (entity instanceof BaseCameraEntity<?, ?> camera) {
                 UIInputBuilder uiInputBuilder = context.ui().inputBuilder();

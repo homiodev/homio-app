@@ -3,7 +3,7 @@ package org.homio.app.model.entity.widget.impl.video;
 import jakarta.persistence.Entity;
 import java.util.ArrayList;
 import java.util.List;
-import org.homio.addon.camera.entity.BaseCameraEntity;
+import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.video.HasVideoSources;
 import org.homio.api.model.OptionModel;
@@ -77,16 +77,25 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
         @Override
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
             List<OptionModel> list = new ArrayList<>();
-            for (DeviceBaseEntity entity : parameters.context().db().findAll(DeviceBaseEntity.class)) {
-                if(entity instanceof HasVideoSources vs) {
-                    OptionModel model = OptionModel
-                        .of(entity.getEntityID(), entity.getTitle())
-                        .setIcon(entity.getEntityIcon());
-                    model.setChildren(vs.getVideoSources());
-                    list.add(model);
+            BaseEntity baseEntity = parameters.getBaseEntity();
+            if (baseEntity instanceof HasVideoSources) {
+                addOptions(baseEntity, list);
+            } else {
+                for (DeviceBaseEntity entity : parameters.context().db().findAll(DeviceBaseEntity.class)) {
+                    addOptions(entity, list);
                 }
             }
             return list;
+        }
+
+        private static void addOptions(BaseEntity entity, List<OptionModel> list) {
+            if (entity instanceof HasVideoSources vs) {
+                OptionModel model = OptionModel
+                    .of(entity.getEntityID(), entity.getTitle())
+                    .setIcon(entity.getEntityIcon());
+                model.setChildren(vs.getVideoSources());
+                list.add(model);
+            }
         }
     }
 

@@ -168,6 +168,17 @@ public class WidgetController {
         return nodes;
     }
 
+    @PostMapping("/videoSource")
+    public WidgetVideoSourceResolver.VideoEntityResponse getVideoSource(@RequestBody VideoSourceRequest request) {
+        for (WidgetVideoSourceResolver videoSourceResolver : videoSourceResolvers) {
+            WidgetVideoSourceResolver.VideoEntityResponse response = videoSourceResolver.resolveDataSource(request.source);
+            if (response != null) {
+                return response;
+            }
+        }
+        throw new ServerException("W.ERROR.NO_VIDEO_FOUND");
+    }
+
     @GetMapping("/video/{entityID}")
     public List<WidgetVideoSourceResolver.VideoEntityResponse> getCameraData(@PathVariable("entityID") String entityID) {
         WidgetVideoEntity entity = getEntity(entityID);
@@ -581,5 +592,12 @@ public class WidgetController {
     @Setter
     private static class Sources {
         private String[] sources;
+    }
+
+    @Getter
+    @Setter
+    public static class VideoSourceRequest {
+
+        private String source;
     }
 }

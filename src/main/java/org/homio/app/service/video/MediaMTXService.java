@@ -25,16 +25,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.logging.log4j.Level;
 import org.homio.api.Context;
 import org.homio.api.ContextBGP;
 import org.homio.api.ContextBGP.ProcessContext;
-import org.homio.api.ContextMedia.MediaMTXInfo;
-import org.homio.api.ContextMedia.MediaMTXSource;
+import org.homio.api.ContextMedia.FFMPEGFormat;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.HasEntityIdentifier;
+import org.homio.api.model.Icon;
+import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.model.UpdatableValue;
 import org.homio.api.service.EntityService.ServiceInstance;
@@ -49,8 +51,8 @@ import org.jetbrains.annotations.Nullable;
 public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     implements HasEntityIdentifier {
 
-    private final Map<String, MediaMTXSource> successRegistered = new ConcurrentHashMap<>();
-    private final Map<String, MediaMTXSource> pendingRegistrations = new ConcurrentHashMap<>();
+    private final Map<String, String> successRegistered = new ConcurrentHashMap<>();
+    private final Map<String, String> pendingRegistrations = new ConcurrentHashMap<>();
     private final Path configurationPath = mediamtxGitHub.getLocalProjectPath().resolve("mediamtx.yml");
     private @Getter @Nullable String apiURL;
     private @Nullable UpdatableValue<JsonNode> pathData;
@@ -62,6 +64,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
 
     public MediaMTXService(@NotNull Context context, @NotNull MediaMTXEntity entity) {
         super(context, entity, true);
+        context.bgp().addLowPriorityRequest("register-mediamtx", this::scheduleRegisterSources);
     }
 
     public JsonNode getApiList() {
@@ -70,10 +73,10 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         }
         try {
             if (pathData == null) {
-                pathData = UpdatableValue.wrap(Curl.get(apiURL + "/v2/paths/list", JsonNode.class), "paths");
+                pathData = UpdatableValue.wrap(Curl.get(getApi("paths/list"), JsonNode.class), "paths");
             }
             return pathData.getFreshValue(Duration.ofSeconds(60), () ->
-                Curl.sendAsync(Curl.createGetRequest(apiURL + "/v2/paths/list"), JsonNode.class, (data, code) -> {
+                Curl.sendAsync(Curl.createGetRequest(getApi("paths/list")), JsonNode.class, (data, code) -> {
                     if (code == 200) {
                         pathData.update(data);
                     }
@@ -83,7 +86,12 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         }
     }
 
+    private String getApi(String path) {
+        return "%s/v%s/%s".formatted(apiURL, entity.getApiVersion(), path);
+    }
+
     public void dispose(@Nullable Exception ex) {
+        context.bgp().removeLowPriorityRequest("register-mediamtx");
         if (ex != null) {
             this.entity.setStatusError(ex);
         } else {
@@ -131,6 +139,11 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         restartService();
     }
 
+    private void setStatusOnline() {
+        entity.setStatusOnline();
+        context.bgp().addLowPriorityRequest("register-mediamtx", this::scheduleRegisterSources);
+    }
+
     @Override
     public String isRequireRestartService() {
         if (!entity.getStatus().isOnline()) {return "Status: " + entity.getStatus();}
@@ -139,36 +152,37 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         return null;
     }
 
-    public void addSource(@NotNull String path, MediaMTXSource source) {
+    public void addSource(@NotNull String path, @NotNull String source) {
         if (!successRegistered.containsKey(path) && !pendingRegistrations.containsKey(path)) {
             pendingRegistrations.put(path, source);
-            if (entity.getStatus().isOnline()) {
-                registerAllSources();
-            }
+            scheduleRegisterSources();
         }
     }
 
     public void removeSource(String path) {
         pendingRegistrations.remove(path);
-        MediaMTXSource source = successRegistered.remove(path);
+        String source = successRegistered.remove(path);
         // if source was registered already
         if (source == null) {
-            HttpRequest request = Curl.createPostRequest("%s/v2/config/paths/remove/%s".formatted(apiURL, path));
+            String url = getApi("config/paths/remove/%s".formatted(path));
+            HttpRequest request = Curl.createPostRequest(url);
             Curl.sendAsync(request, Void.class, (unused, code) -> {
                 if (code == 200) {
                     log.error("[{}]: MediaMTX: Video source with path /{} successfully removed", entityID, path);
+                } else {
+                    log.error("[{}]: MediaMTX: Unable to remove video source with path /{}", entityID, path);
                 }
             });
         }
     }
 
-    public MediaMTXInfo getMediaMTXInfo(String path) {
+    private boolean isMediaMtxAvailable(String path) {
         for (JsonNode node : getApiList().get("items")) {
-            if (node.get("name").asText().equals(path)) {
-                return new MediaMTXInfoImpl(path, true, node.get("ready").asBoolean());
+            if (node.get("name").asText().equals(path) && node.get("ready").asBoolean()) {
+                return true;
             }
         }
-        return new MediaMTXInfoImpl(path, false, false);
+        return false;
     }
 
     @SneakyThrows
@@ -181,7 +195,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
                 projectUpdate.getGitHubProject().deleteProject();
             } catch (Exception ex) {
                 context().ui().toastr().error(
-                    Lang.getServerMessage("ZIGBEE.ERROR.DELETE",
+                    Lang.getServerMessage("W.ERROR.DELETE_PROJECT",
                         projectUpdate.getGitHubProject().getLocalProjectPath().toString()));
                 throw ex;
             }
@@ -198,6 +212,18 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         }, null);
     }
 
+    public void addSourceInfo(String path, Map<String, OptionModel> videoSources) {
+        if (isMediaMtxAvailable(path)) {
+            OptionModel webrtc = videoSources.get("webrtc");
+            webrtc.addChild(OptionModel.of("mediamtx/video.webrtc", "MediaMTX WebRTC")
+                                       .setIcon(new Icon("fab fa-stumbleupon-circle", "#22725A")));
+
+            OptionModel hls = videoSources.get("hls");
+            hls.addChild(OptionModel.of("mediamtx/index.m3u8", "MediaMTX HLS")
+                                     .setIcon(FFMPEGFormat.HLS.getIconModel()));
+        }
+    }
+
     @Override
     protected void initialize() {
         syncConfiguration();
@@ -205,14 +231,13 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         if (isRunningLocally) {
             startLocalProcess();
         } else {
-            entity.setStatusOnline();
-            registerAllSources();
+            setStatusOnline();
         }
     }
 
     private int getApiStatus() {
         try {
-            URL url = new URL(apiURL + "/v2/paths/list");
+            URL url = new URL(getApi("paths/list"));
             HttpURLConnection huc = (HttpURLConnection) url.openConnection();
             huc.setRequestMethod("GET");
             return huc.getResponseCode();
@@ -239,13 +264,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
             .bgp().processBuilder(getEntityID())
             .attachLogger(log)
             .attachEntityStatus(entity)
-            .onStarted(() -> {
-                registerAllSources();
-                // re-register all path if MediaMTX was restarted
-                for (Entry<String, MediaMTXSource> entry : successRegistered.entrySet()) {
-                    registerPath(entry.getKey(), entry.getValue());
-                }
-            })
+            .onStarted(this::setStatusOnline)
             .onFinished((ex, responseCode) -> {
                 if (ex == null) {
                     if (errorRef.get() != null) {
@@ -266,9 +285,37 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
                         errorRef.set("W.ERROR.MTX_CONFIG");
                     }
                 }
-                log.log(level, "[{}]: MediaMTX: {}", getEntity(), msg);
+                log.log(level, "[{}]: MediaMTX: {}", entityID, msg);
             })
             .execute(processStr);
+    }
+
+    private synchronized void scheduleRegisterSources() {
+        if (pendingRegistrations.isEmpty() && !successRegistered.isEmpty() || !entity.getStatus().isOnline()) {
+            return;
+        }
+        context.bgp().builder("MediaMTX-register-sources").delay(Duration.ofSeconds(10)).execute(() -> {
+            // re-register all path if MediaMTX was restarted
+                   /*for (Entry<String, MediaMTXSource> entry : successRegistered.entrySet()) {
+                       registerPath(entry.getKey(), entry.getValue());
+                   }*/
+            if (!successRegistered.isEmpty()) {
+                Set<String> nodes = new HashSet<>();
+                for (JsonNode node : getApiList().path("items")) {
+                    nodes.add(node.get("name").asText());
+                }
+                for (Iterator<Entry<String, String>> iterator = successRegistered.entrySet().iterator(); iterator.hasNext(); ) {
+                    Entry<String, String> entry = iterator.next();
+                    if (!nodes.contains(entry.getKey())) {
+                        iterator.remove();
+                        pendingRegistrations.put(entry.getKey(), entry.getValue());
+                    }
+                }
+            }
+            for (Entry<String, String> entry : pendingRegistrations.entrySet()) {
+                registerPath(entry.getKey(), entry.getValue());
+            }
+        });
     }
 
     @SneakyThrows
@@ -326,45 +373,33 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         Files.copy(configurationPath, backupContext.getBackupPath().resolve(configurationPath.getFileName()));
     }
 
-    private void registerAllSources() {
-        if (!successRegistered.isEmpty()) {
-            Set<String> nodes = new HashSet<>();
-            for (JsonNode node : getApiList().path("items")) {
-                nodes.add(node.get("name").asText());
-            }
-            for (Iterator<Entry<String, MediaMTXSource>> iterator = successRegistered.entrySet().iterator(); iterator.hasNext(); ) {
-                Entry<String, MediaMTXSource> entry = iterator.next();
-                if (!nodes.contains(entry.getKey())) {
-                    iterator.remove();
-                    pendingRegistrations.put(entry.getKey(), entry.getValue());
-                }
-            }
-        }
-        for (Entry<String, MediaMTXSource> entry : pendingRegistrations.entrySet()) {
-            registerPath(entry.getKey(), entry.getValue());
-        }
-    }
-
-    private void registerPath(@NotNull String path, @NotNull MediaMTXSource source) {
-        HttpRequest request = Curl.createPostRequest("%s/v2/config/paths/add/%s".formatted(apiURL, path), source);
+    private void registerPath(@NotNull String path, @NotNull String source) {
+        String url = getApi("config/paths/add/%s".formatted(path));
+        HttpRequest request = Curl.createPostRequest(url, new MediaMTXSource(source));
         Curl.sendAsync(request, Void.class, (unused, code) -> {
             if (code == 200) {
-                log.info("[{}]: MediaMTX: Video source with path /{} successfully registered. Source: {}", entityID, path, source.getSource());
+                log.info("[{}]: MediaMTX: Video source with path /{} successfully registered. Source: {}", entityID, path, source);
                 pendingRegistrations.remove(path);
                 successRegistered.put(path, source);
             } else {
-                log.info("[{}]: MediaMTX: Unable to register path /{}. Source: {}. Code: {}", entityID, path, source.getSource(), code);
+                log.info("[{}]: MediaMTX: Unable to register path /{}. Source: {}. Code: {}", entityID, path, source, code);
             }
         });
     }
 
     @Getter
+    @Setter
     @RequiredArgsConstructor
-    private static class MediaMTXInfoImpl implements MediaMTXInfo {
+    private static class MediaMTXSource {
 
-        private final String path;
-        private final boolean exists;
-        private final boolean ready;
+        private final @NotNull String source;
+        private boolean sourceOnDemand = false;
+        private boolean sourceAnyPortEnable = false;
+        private @NotNull SourceProtocol sourceProtocol = SourceProtocol.automatic;
+
+        public enum SourceProtocol {
+            automatic, udp, multicast, tcp
+        }
     }
 
     private int intervalToInt(String key) {

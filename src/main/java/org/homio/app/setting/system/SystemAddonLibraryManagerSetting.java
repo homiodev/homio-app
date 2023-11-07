@@ -125,11 +125,6 @@ public class SystemAddonLibraryManagerSetting
         });
     }
 
-    @Override
-    public String getConfirmMsg() {
-        return null;
-    }
-
     private PackageModel build(AddonContext addonContext) {
         return new PackageModel()
             .setName(addonContext.getAddonID())

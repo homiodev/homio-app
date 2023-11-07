@@ -10,10 +10,10 @@ import org.springframework.stereotype.Component;
 public class URLWidgetVideoSourceResolver implements WidgetVideoSourceResolver {
 
     @Override
-    public VideoEntityResponse resolveDataSource(WidgetVideoSeriesEntity item) {
-        String dataSource = DataSourceUtil.getSelection(item.getValueDataSource()).getValue();
+    public VideoEntityResponse resolveDataSource(String valueDataSource) {
+        String dataSource = DataSourceUtil.getSelection(valueDataSource).getValue();
         if (dataSource.startsWith("http") || dataSource.startsWith("$DEVICE_URL")) {
-            return new VideoEntityResponse(item.getValueDataSource(), dataSource, dataSource, getVideoType(dataSource));
+            return new VideoEntityResponse(valueDataSource, dataSource, dataSource, getVideoType(dataSource));
         }
         return null;
     }

@@ -20,7 +20,11 @@ public interface WidgetVideoSourceResolver {
     Pattern VIDEO_FORMATS = Pattern.compile("webrtc|webm|ogv|flv|avi|mp4|ts|m3u8|mjpeg");
     Pattern IMAGE_FORMATS = Pattern.compile("jpg|png|gif");
 
-    VideoEntityResponse resolveDataSource(WidgetVideoSeriesEntity item);
+    default VideoEntityResponse resolveDataSource(WidgetVideoSeriesEntity item) {
+        return resolveDataSource(item.getValueDataSource());
+    }
+
+    VideoEntityResponse resolveDataSource(String valueDataSource);
 
     @Getter
     @RequiredArgsConstructor

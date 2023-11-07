@@ -1,11 +1,11 @@
 package org.homio.addon.camera.workspace;
 
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_PAN;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_PAN_COMMAND;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_PAN_CONTINUOUS;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_TILT;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_TILT_COMMAND;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_TILT_CONTINUOUS;
 import static org.homio.addon.camera.CameraConstants.ENDPOINT_ZOOM;
-import static org.homio.addon.camera.CameraConstants.ENDPOINT_ZOOM_COMMAND;
+import static org.homio.addon.camera.CameraConstants.ENDPOINT_ZOOM_CONTINUOUS;
 
 import de.onvif.soap.devices.PtzDevices;
 import java.util.function.Function;
@@ -109,12 +109,12 @@ public class Scratch3OnvifPTZBlocks extends Scratch3ExtensionBlocks {
     private void fireGoToPresetCommand(WorkspaceBlock workspaceBlock) {
         String token = workspaceBlock.getMenuValue("presets", this.menuPreset);
         IpCameraService service = getOnvifService(workspaceBlock, menuPresetCamera);
-        service.getOnvifDeviceState().getPtzDevices().gotoPreset(token, service.getProfile());
+        service.getOnvifDeviceState().getPtzDevices().gotoPreset(service.getProfile(), token);
     }
 
     private void fireZoomActionCommand(WorkspaceBlock workspaceBlock) {
         String command = workspaceBlock.getMenuValue(VALUE, this.menuZoomActionType).name().toUpperCase();
-        setEndpointValue(menuZoomCamera, workspaceBlock, ENDPOINT_ZOOM_COMMAND, new StringType(command));
+        setEndpointValue(menuZoomCamera, workspaceBlock, ENDPOINT_ZOOM_CONTINUOUS, new StringType(command));
     }
 
     private void fireZoomCommand(WorkspaceBlock workspaceBlock) {
@@ -123,7 +123,7 @@ public class Scratch3OnvifPTZBlocks extends Scratch3ExtensionBlocks {
 
     private void fireTiltActionCommand(WorkspaceBlock workspaceBlock) {
         String command = workspaceBlock.getMenuValue(VALUE, this.menuTiltActionType).name().toUpperCase();
-        setEndpointValue(menuPanTiltCamera, workspaceBlock, ENDPOINT_TILT_COMMAND, new StringType(command));
+        setEndpointValue(menuPanTiltCamera, workspaceBlock, ENDPOINT_TILT_CONTINUOUS, new StringType(command));
     }
 
     private void fireTiltCommand(WorkspaceBlock workspaceBlock) {
@@ -132,7 +132,7 @@ public class Scratch3OnvifPTZBlocks extends Scratch3ExtensionBlocks {
 
     private void firePanActionCommand(WorkspaceBlock workspaceBlock) {
         String command = workspaceBlock.getMenuValue(VALUE, this.menuPanActionType).name().toUpperCase();
-        setEndpointValue(menuPanTiltCamera, workspaceBlock, ENDPOINT_PAN_COMMAND, new StringType(command));
+        setEndpointValue(menuPanTiltCamera, workspaceBlock, ENDPOINT_PAN_CONTINUOUS, new StringType(command));
     }
 
     private void firePanCommand(WorkspaceBlock workspaceBlock) {

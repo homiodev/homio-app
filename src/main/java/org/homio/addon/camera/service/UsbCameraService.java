@@ -21,17 +21,17 @@ import org.homio.addon.camera.ConfigurationException;
 import org.homio.addon.camera.entity.UsbCameraEntity;
 import org.homio.api.Context;
 import org.homio.api.ContextMedia.FFMPEG;
-import org.homio.api.ContextMedia.MediaMTXSource;
 import org.homio.api.ContextMedia.VideoInputDevice;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.util.CommonUtils;
-import org.homio.app.model.entity.MediaMTXEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Getter
 public class UsbCameraService extends BaseCameraService<UsbCameraEntity, UsbCameraService> {
+
+    public static final int RTSP_PORT = 8554;
 
     private FFMPEG ffmpegReStream;
     private @Nullable VideoInputDevice input;
@@ -102,7 +102,7 @@ public class UsbCameraService extends BaseCameraService<UsbCameraEntity, UsbCame
 
     @Override
     protected void postInitializeCamera() {
-        urls.setRtspUri("rtsp://127.0.0.1:%s/%s".formatted(MediaMTXEntity.RTSP_PORT, getEntityID()));
+        urls.setRtspUri("rtsp://127.0.0.1:%s/%s".formatted(RTSP_PORT, getEntityID()));
         String ieeeAddress = Objects.requireNonNull(entity.getIeeeAddress());
         input = context.media().createVideoInputDevice(ieeeAddress);
         if (input.getResolutions().length > 0) {
@@ -164,7 +164,7 @@ public class UsbCameraService extends BaseCameraService<UsbCameraEntity, UsbCame
                 "", "");
             ffmpegReStream.startConverting();
         }
-        context.media().registerMediaMTXSource(getEntityID(), new MediaMTXSource(getUdpUrl()));
+        context.media().registerVideoSource(getEntityID(), getUdpUrl());
     }
 
     @Override

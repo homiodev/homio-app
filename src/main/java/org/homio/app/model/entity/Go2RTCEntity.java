@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.Set;
 import lombok.Getter;
 import lombok.SneakyThrows;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContractStub;
 import org.homio.api.entity.log.HasEntityLog;
@@ -34,33 +33,33 @@ import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;
-import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
-import org.homio.app.service.video.MediaMTXService;
+import org.homio.app.service.video.Go2RTCService;
 import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 
 @Entity
-@UISidebarChildren(icon = "fas fa-square-rss", color = "#308BB3", allowCreateItem = false)
-public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
-    HasGitHubFirmwareVersion, EntityService<MediaMTXService>,
+@UISidebarChildren(icon = "fab fa-golang", color = "#3DC4B1", allowCreateItem = false)
+public class Go2RTCEntity extends MediaEntity implements HasEntityLog,
+    HasGitHubFirmwareVersion, EntityService<Go2RTCService>,
     DeviceEndpointsBehaviourContractStub {
 
-    public static final GitHubProject mediamtxGitHub =
-        GitHubProject.of("bluenviron", "mediamtx")
+    public static final int RTSP_PORT = 8554;
+    public static final GitHubProject go2rtcGitHub =
+        GitHubProject.of("AlexxIT", "go2rtc")
                      .setInstalledVersionResolver((context, gitHubProject) -> {
                          Path executable = CommonUtils.getInstallPath().resolve("mediamtx").resolve("mediamtx");
                          return context.hardware().execute(executable + " --version");
                      });
 
-    public static MediaMTXEntity ensureEntityExists(Context context) {
-        MediaMTXEntity entity = context.db().getEntity(MediaMTXEntity.class, PRIMARY_DEVICE);
+    public static Go2RTCEntity ensureEntityExists(Context context) {
+        Go2RTCEntity entity = context.db().getEntity(Go2RTCEntity.class, PRIMARY_DEVICE);
         if (entity == null) {
-            entity = new MediaMTXEntity();
+            entity = new Go2RTCEntity();
             entity.setEntityID(PRIMARY_DEVICE);
             entity.setJsonData("dis_del", true);
             context.db().save(entity);
@@ -70,40 +69,22 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
 
     @Override
     public String getDescriptionImpl() {
-        if (!getStatus().isOnline()) {
-            String message = StringUtils.defaultString(getStatusMessage());
-            if (!message.isEmpty()) {
-                if (message.contains("Access is denied")) {
-                    return "W.ERROR.MTX_ACCESS_DENIED";
-                }
-                return message;
-            }
-        }
-        return "CAMERA.MTX_DESCRIPTION";
+        return "CAMERA.GO2RTC_DESCRIPTION";
     }
 
     @Override
     public String toString() {
-        return "MediaMTX" + getTitle();
+        return "Go2RTC" + getTitle();
     }
 
     @Override
     public String getDefaultName() {
-        return "MediaMTX server";
-    }
-
-    @UIField(order = 200)
-    public int getApiVersion() {
-        return getJsonData("av", 3);
-    }
-
-    public void setApiBasePath(int value) {
-        setJsonData("av", value);
+        return "Go2RTC server";
     }
 
     @Override
     public void logBuilder(@NotNull EntityLogBuilder builder) {
-        builder.addTopic(MediaMTXService.class);
+        builder.addTopic(Go2RTCService.class);
     }
 
     @UIField(order = 1, inlineEdit = true)
@@ -123,7 +104,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
 
     @Override
     public @NotNull GitHubProject getGitHubProject() {
-        return mediamtxGitHub;
+        return go2rtcGitHub;
     }
 
     @Override
@@ -134,13 +115,13 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     }
 
     @Override
-    public @NotNull Class<MediaMTXService> getEntityServiceItemClass() {
-        return MediaMTXService.class;
+    public @NotNull Class<Go2RTCService> getEntityServiceItemClass() {
+        return Go2RTCService.class;
     }
 
     @Override
-    public MediaMTXService createService(@NotNull Context context) {
-        return new MediaMTXService(context, this);
+    public Go2RTCService createService(@NotNull Context context) {
+        return new Go2RTCService(context, this);
     }
 
     @Override
@@ -150,67 +131,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
 
     @Override
     public long getEntityServiceHashCode() {
-        return getJsonDataHashCode("ll", "rt", "wt", "rbc", "umps", "av");
-    }
-
-    @UIField(order = 1)
-    @UIFieldSlider(min = 1, max = 60, header = "s")
-    @UIFieldGroup(order = 50, value = "CONNECTION", borderColor = "#479923")
-    public int getReadTimeout() {
-        return getJsonData("rt", 10);
-    }
-
-    public void setReadTimeout(int value) {
-        setJsonData("rt", value);
-    }
-
-    @UIField(order = 2)
-    @UIFieldSlider(min = 1, max = 60, header = "s")
-    @UIFieldGroup("CONNECTION")
-    public int getWriteTimeout() {
-        return getJsonData("wt", 10);
-    }
-
-    public void setWriteTimeout(int value) {
-        setJsonData("wt", value);
-    }
-
-    @UIField(order = 3)
-    @UIFieldSlider(min = 64, max = 1024, step = 8)
-    @UIFieldGroup("CONNECTION")
-    public int getReadBufferCount() {
-        return getJsonData("rbc", 512);
-    }
-
-    public void setReadBufferCount(int value) {
-        setJsonData("rbc", value);
-    }
-
-    @UIField(order = 4)
-    @UIFieldSlider(min = 64, max = 1472)
-    @UIFieldGroup("CONNECTION")
-    public int getUdpMaxPayloadSize() {
-        return getJsonData("umps", 1472);
-    }
-
-    public void setUdpMaxPayloadSize(int value) {
-        setJsonData("umps", value);
-    }
-
-    @UIField(order = 5)
-    @UIFieldGroup("CONNECTION")
-    public LogLevel getLogLevel() {
-        return getJsonDataEnum("ll", LogLevel.info);
-    }
-
-    public void setLogLevel(LogLevel value) {
-        setJsonDataEnum("ll", value);
-    }
-
-    @UIField(order = 1, hideInEdit = true, color = "#C4CC23")
-    @UIFieldGroup("STATUS")
-    public int getConnectedStreamsCount() {
-        return getService().getApiList().path("itemCount").asInt(-1);
+        return getJsonDataHashCode("api", "rtsp", "webrtc");
     }
 
     @UIField(order = 30, hideInEdit = true)
@@ -219,9 +140,39 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
         return getService().isRunningLocally();
     }
 
+    @UIField(order = 200)
+    @UIFieldGroup("CONFIGURATION")
+    public int getApiPort() {
+        return getJsonData("api", 1984);
+    }
+
+    public void setApiPort(int port) {
+        setJsonData("api", port);
+    }
+
+    @UIField(order = 210)
+    @UIFieldGroup("CONFIGURATION")
+    public int getRtspPort() {
+        return getJsonData("rtsp", 8554);
+    }
+
+    public void setRtspPort(int port) {
+        setJsonData("rtsp", port);
+    }
+
+    @UIField(order = 220)
+    @UIFieldGroup("CONFIGURATION")
+    public int getWebRtcPort() {
+        return getJsonData("webrtc", 8555);
+    }
+
+    public void setWebRtcPort(int port) {
+        setJsonData("webrtc", port);
+    }
+
     @Override
     protected @NotNull String getDevicePrefix() {
-        return "mediamtx";
+        return "go2rtc";
     }
 
     @Override
@@ -236,20 +187,13 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
 
     }
 
-    @UIContextMenuAction(value = "GET_LIST",
-                         icon = "fab fa-quinscape",
-                         iconColor = "#899343")
-    public ActionResponseModel apiGetList() {
-        return ActionResponseModel.showJson("GET_LIST", getService().getApiList());
-    }
-
     @SneakyThrows
     @UIContextMenuAction(value = "EDIT_CONFIG",
                          icon = "fas fa-keyboard",
                          iconColor = "#899343")
     public ActionResponseModel editConfig() {
-        String content = Files.readString(mediamtxGitHub.getLocalProjectPath().resolve("mediamtx.yml"));
-        return ActionResponseModel.showFile(new FileModel("mediamtx.yml", content, FileContentType.yaml)
+        String content = Files.readString(go2rtcGitHub.getLocalProjectPath().resolve("go2rtc.yaml"));
+        return ActionResponseModel.showFile(new FileModel("go2rtc.yaml", content, FileContentType.yaml)
             .setSaveHandler(mc -> getService().updateConfiguration(mc)));
     }
 
@@ -275,8 +219,11 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
         return ActionResponseModel.showError("W.ERROR.NO_HANDLER");
     }
 
-    public enum LogLevel {
-        error, warn, info, debug
+    @UIContextMenuAction(value = "GET_LIST",
+                         icon = "fab fa-quinscape",
+                         iconColor = "#899343")
+    public ActionResponseModel apiGetList() {
+        return ActionResponseModel.showJson("GET_LIST", getService().getApiList());
     }
 
     @Override
@@ -296,12 +243,12 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
         return getEntityID();
     }
 
-    public static class StreamEndpoint extends BaseDeviceEndpoint<MediaMTXEntity> {
+    public static class StreamEndpoint extends BaseDeviceEndpoint<Go2RTCEntity> {
 
         private final @Getter String description;
         private final JsonNode node;
 
-        public StreamEndpoint(JsonNode node, MediaMTXEntity entity) {
+        public StreamEndpoint(JsonNode node, Go2RTCEntity entity) {
             super(createIcon(node.get("source").get("type").asText()), "MTX",
                 entity.context(), entity, node.get("name").asText(), false, EndpointType.trigger);
             this.node = node;

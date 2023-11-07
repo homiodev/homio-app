@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
@@ -205,10 +206,6 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
         return this;
     }
 
-    public boolean isConfigured() {
-        return true;
-    }
-
     @UIContextMenuAction(value = "RECORD_GIF", icon = "fas fa-magic", inputs = {
         @UIActionInput(name = "fileName", value = "record_${timestamp}", min = 4, max = 30),
         @UIActionInput(name = "secondsToRecord", type = UIActionInput.Type.number, value = "3", min = 1, max = 10)
@@ -254,10 +251,6 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
 
     public void setPassword(String value) {
         setJsonDataSecure("pwd", value);
-    }
-
-    public void setAlarmInputUrl(String value) {
-        setJsonData("alarmInputUrl", value);
     }
 
     @Override
@@ -316,9 +309,13 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
     }
 
     @Override
-    public List<OptionModel> getVideoSources() {
+    public @Nullable String getPrimaryVideoSource() {
+        return "mjpeg-->video.mjpeg";
+    }
+
+    @Override
+    public @NotNull List<OptionModel> getVideoSources() {
         List<OptionModel> videoSources = new ArrayList<>();
-        boolean mediaMTXReady = context().media().getMediaMTXInfo(getEntityID()).isReady();
         assembleStream("hls", "Hls streams(.m3u8)", m3u8 -> {
             m3u8.setIcon(FFMPEGFormat.HLS.getIconModel());
             m3u8.addChild(of("video.m3u8", "HLS [default]")
@@ -331,33 +328,30 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
                 m3u8.addChild(of("video_high.m3u8", "HLS [%s]".formatted(getHlsHighResolution()))
                     .setIcon(FFMPEGFormat.HLS.getIconModel()));
             }
-            if (mediaMTXReady) {
-                m3u8.addChild(OptionModel.of("mediamtx/index.m3u8", "MediaMTX HLS")
-                                         .setIcon(FFMPEGFormat.HLS.getIconModel()));
-            }
             appendAdditionHLSStreams(m3u8);
         }, videoSources);
         assembleStream("mjpeg", "Mjpeg streams(.jpg)", mjpeg -> {
-            mjpeg.setIcon(new Icon(FFMPEGFormat.MJPEG.getIcon()));
+            mjpeg.setIcon(FFMPEGFormat.MJPEG.getIconModel());
             mjpeg.addChild(of("video.mjpeg", "Mjpeg(.mjpeg)")
                 .setIcon(FFMPEGFormat.MJPEG.getIconModel()));
             //videoSources.add(of("autofps.mjpeg", "MJPEG(autofps) stream"));
             appendAdditionMjpegStreams(mjpeg);
         }, videoSources);
         assembleStream("dash", "Mjpeg dash(.mpd)", dash -> {
-            dash.setIcon(new Icon(FFMPEGFormat.DASH.getIcon()));
+            dash.setIcon(FFMPEGFormat.DASH.getIconModel());
             dash.addChild(of("video.mpd", "Mpeg-dash(.mpd)")
                 .setIcon(FFMPEGFormat.DASH.getIconModel()));
             appendAdditionMjpegDashStreams(dash);
         }, videoSources);
         assembleStream("webrtc", "WebRTC", webrtc -> {
-            if (mediaMTXReady) {
-                webrtc.setIcon(new Icon("fab fa-stumbleupon-circle"));
-                webrtc.addChild(OptionModel.of("mediamtx/video.webrtc", "MediaMTX WebRTC")
-                                           .setIcon(new Icon("fab fa-stumbleupon-circle", "#22725A")));
-            }
+            webrtc.setIcon(new Icon("fab fa-stumbleupon-circle", "#627C63"));
             appendAdditionWebRTCStreams(webrtc);
         }, videoSources);
+
+        Map<String, OptionModel> sources = videoSources.stream().collect(Collectors.toMap(OptionModel::getKey, v -> v));
+        context().media().addSourceInfo(getEntityID(), sources);
+
+        videoSources.removeIf(source -> source.getChildren() == null || source.getChildren().isEmpty());
 
         return videoSources;
     }
@@ -396,10 +390,7 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
     private void assembleStream(String key, String title, Consumer<OptionModel> consumer, List<OptionModel> videoSources) {
         OptionModel optionModel = of(key, title);
         consumer.accept(optionModel);
-        List<OptionModel> children = optionModel.getChildren();
-        if (children != null && !children.isEmpty()) {
             videoSources.add(optionModel);
-        }
     }
 
     public String getUrl(String path) {
@@ -476,9 +467,9 @@ public abstract class BaseCameraEntity<T extends BaseCameraEntity, S extends Bas
         }
     }
 
-    public long getVideoParametersHashCode() {
-        return getJsonDataHashCode("start", "gifOutOptions", "mjpegOutOptions", "imgOutOptions",
-            "motionOptions", "mp4OutOptions");
+    @Override
+    public long getEntityServiceHashCode() {
+        return getJsonDataHashCode("user", "pwd");
     }
 
     @Override

@@ -46,6 +46,7 @@ import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
+import org.homio.api.model.WebAddress;
 import org.homio.api.model.endpoint.DeviceEndpointUI;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
@@ -91,7 +92,6 @@ import org.homio.api.ui.field.inline.UIFieldInlineEntities;
 import org.homio.api.ui.field.inline.UIFieldInlineEntityEditWidth;
 import org.homio.api.ui.field.inline.UIFieldInlineEntityWidth;
 import org.homio.api.ui.field.inline.UIFieldInlineGroup;
-import org.homio.api.ui.field.model.HrefModel;
 import org.homio.api.ui.field.selection.UIFieldBeanSelection;
 import org.homio.api.ui.field.selection.UIFieldDevicePortSelection;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
@@ -725,8 +725,8 @@ public class UIFieldUtils {
                         entityUIMetaData.setType(UIFieldType.String.name());
                     } else if (UIInputEntity.class.isAssignableFrom(type)) {
                         entityUIMetaData.setType("InputEntity");
-                    } else if (type.equals(HrefModel.class)) {
-                        entityUIMetaData.setType("Href");
+                    } else if(type.equals(WebAddress.class)) {
+                        entityUIMetaData.setType(UIFieldType.HTML.name());
                     } else {
                         entityUIMetaData.setType(type.getSimpleName());
                     }
