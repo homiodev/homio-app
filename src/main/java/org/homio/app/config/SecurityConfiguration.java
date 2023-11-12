@@ -68,7 +68,6 @@ public class SecurityConfiguration {
                 authorize.requestMatchers(
                         WEB_SOCKET_ENDPOINT,
                         CUSTOM_WEB_SOCKET_ENDPOINT + "/**",
-                        "/rest/test",
                         "/rest/auth/status",
                         "/rest/auth/login",
                         "/rest/auth/register",
@@ -78,6 +77,7 @@ public class SecurityConfiguration {
                         "/rest/media/video/playback/**",
                         "/rest/addon/image/**",
                         "/rest/media/image/**",
+                        "/rest/route/proxy/**",
                         "/rest/device/**").permitAll();
                 authorize.requestMatchers("/rest/**").authenticated();
             });

@@ -3,17 +3,22 @@ package org.homio.app.manager.common.impl;
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.api.ContextService;
+import org.homio.api.ContextService.RouteProxyBuilder.ProxyUrl;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.service.EntityService.ServiceInstance;
@@ -34,6 +39,7 @@ public class ContextServiceImpl implements ContextService {
     public static final Map<String, Class<? extends HasEntityIdentifier>> entitySelectMap = new ConcurrentHashMap<>();
     private static final Map<String, ServiceInstance> entityToService = new ConcurrentHashMap<>();
     private final @Getter @Accessors(fluent = true) ContextImpl context;
+    private final @Getter Map<String, RouteProxyImpl> proxy = new ConcurrentHashMap<>();
 
     public ContextServiceImpl(ContextImpl context) {
         this.context = context;
@@ -47,7 +53,7 @@ public class ContextServiceImpl implements ContextService {
     }
 
     @Override
-    public String getPrimaryMqttEntity() {
+    public @NotNull String getPrimaryMqttEntity() {
         return DeviceBaseEntity.PREFIX + "mqtt_" + PRIMARY_DEVICE;
     }
 
@@ -60,23 +66,47 @@ public class ContextServiceImpl implements ContextService {
     }
 
     @Override
-    public void registerUserRoleResource(String resource) {
+    public void registerUserRoleResource(@NotNull String resource) {
         UserBaseEntity.registerResource(resource);
     }
 
     @Override
-    public ServiceInstance getEntityService(String entityID) {
+    public boolean unRegisterUrlProxy(@NotNull String entityID) {
+        return proxy.remove(entityID) != null;
+    }
+
+    @Override
+    public @NotNull String registerUrlProxy(@NotNull String entityID, @NotNull String url, @NotNull Consumer<RouteProxyBuilder> builder) {
+        RouteProxyImpl routeProxy = new RouteProxyImpl(entityID, url);
+        builder.accept(new RouteProxyBuilder() {
+
+
+            @Override
+            public void setUrlProducer(Function<HttpServletRequest, ProxyUrl> urlBuilder) {
+                routeProxy.urlBuilder = urlBuilder;
+            }
+
+            @Override
+            public void setResponseHeaders(Function<ProxyUrl, Map<String, String>> responseHeaderBuilder) {
+                routeProxy.responseHeaderBuilder = responseHeaderBuilder;
+            }
+        });
+        proxy.put(entityID, routeProxy);
+        return "$DEVICE_URL/rest/route/proxy/" + entityID + "/proxy_index.html";
+    }
+    @Override
+    public ServiceInstance getEntityService(@NotNull String entityID) {
         return entityToService.get(entityID);
     }
 
     @Override
-    public void addEntityService(String entityID, ServiceInstance service) {
+    public void addEntityService(@NotNull String entityID, @NotNull ServiceInstance service) {
         entityToService.put(entityID, service);
         context.bgp().getWatchdogBgpService().addWatchDogService(entityID, service);
     }
 
     @Override
-    public ServiceInstance removeEntityService(String entityID) {
+    public ServiceInstance removeEntityService(@NotNull String entityID) {
         context.bgp().getWatchdogBgpService().removeWatchDogService(entityID);
         return entityToService.remove(entityID);
     }
@@ -107,6 +137,34 @@ public class ContextServiceImpl implements ContextService {
         @Override
         default void afterHandshake(@NotNull ServerHttpRequest request, @NotNull ServerHttpResponse response, @NotNull WebSocketHandler wsHandler,
                                     Exception exception) {
+        }
+    }
+
+    @Getter
+    @RequiredArgsConstructor
+    public static class RouteProxyImpl {
+
+        private final @NotNull String entityID;
+        private final @NotNull String url;
+        private Function<HttpServletRequest, ProxyUrl> urlBuilder;
+        private Function<ProxyUrl, Map<String, String>> responseHeaderBuilder;
+
+        public @NotNull ProxyUrl buildUrl(HttpServletRequest request) {
+            String subRequest = request.getRequestURI().substring(("/rest/route/proxy/" + entityID).length());
+            if (subRequest.equals("/proxy_index.html")) {
+                subRequest = "";
+            }
+            if (urlBuilder != null) {
+                return urlBuilder.apply(request);
+            }
+            return new ProxyUrl(url + subRequest, null);
+        }
+
+        public Map<String, String> applyResponseHeaders(ProxyUrl proxyUrl) {
+            if (responseHeaderBuilder != null) {
+                return responseHeaderBuilder.apply(proxyUrl);
+            }
+            return null;
         }
     }
 }

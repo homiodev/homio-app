@@ -187,7 +187,8 @@ public class IpCameraService extends BaseCameraService<IpCameraEntity, IpCameraS
             (dataName, dataValue) -> {
                 // do nothing
             },
-            "Device/Trigger/DigitalInput");
+            "Device/Trigger/DigitalInput",
+            "Device/Trigger/Relay");
 
         if (entity.getCameraType() != null && getCameraBrands(context).containsKey(entity.getCameraType())) {
             CameraBrandHandlerDescription cameraBrandHandlerDescription = getCameraBrands(context).get(entity.getCameraType());

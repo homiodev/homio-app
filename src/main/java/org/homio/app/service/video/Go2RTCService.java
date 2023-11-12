@@ -29,6 +29,7 @@ import org.homio.api.Context;
 import org.homio.api.ContextBGP;
 import org.homio.api.ContextBGP.ProcessContext;
 import org.homio.api.ContextMedia.FFMPEGFormat;
+import org.homio.api.console.ConsolePluginFrame.FrameConfiguration;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.HasEntityIdentifier;
@@ -39,6 +40,7 @@ import org.homio.api.model.UpdatableValue;
 import org.homio.api.service.EntityService.ServiceInstance;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.Lang;
+import org.homio.app.console.Go2RTCConsolePlugin;
 import org.homio.app.model.entity.Go2RTCEntity;
 import org.homio.hquery.Curl;
 import org.homio.hquery.ProgressBar;
@@ -50,7 +52,7 @@ public class Go2RTCService extends ServiceInstance<Go2RTCEntity>
 
     private final Map<String, String> successRegistered = new ConcurrentHashMap<>();
     private final Map<String, String> pendingRegistrations = new ConcurrentHashMap<>();
-    private final Path configurationPath;
+    private final @Getter Path configurationPath;
     private @Getter String apiURL;
     private @Nullable UpdatableValue<JsonNode> pathData;
 
@@ -86,6 +88,8 @@ public class Go2RTCService extends ServiceInstance<Go2RTCEntity>
     }
 
     public void dispose(@Nullable Exception ex) {
+        context.service().unRegisterUrlProxy("go2rtc");
+        context.ui().console().unRegisterPlugin("go2rtc");
         context.bgp().removeLowPriorityRequest("register-go2rtc");
         if (ex != null) {
             this.entity.setStatusError(ex);
@@ -233,6 +237,12 @@ public class Go2RTCService extends ServiceInstance<Go2RTCEntity>
     private void setStatusOnline() {
         entity.setStatusOnline();
         context.bgp().addLowPriorityRequest("register-go2rtc", this::scheduleRegisterSources);
+        String url = "http://localhost:%s".formatted(entity.getApiPort());
+        String proxyHost = context.service().registerUrlProxy("go2rtc", url, builder -> {
+
+        });
+        context.ui().console().registerPlugin("go2rtc",
+            new Go2RTCConsolePlugin(context, new FrameConfiguration(proxyHost)));
     }
 
     private synchronized void scheduleRegisterSources() {

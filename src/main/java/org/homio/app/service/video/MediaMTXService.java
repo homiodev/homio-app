@@ -12,7 +12,6 @@ import java.net.URL;
 import java.net.http.HttpRequest;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
@@ -40,9 +39,9 @@ import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.model.UpdatableValue;
 import org.homio.api.service.EntityService.ServiceInstance;
+import org.homio.api.util.CommonUtils;
 import org.homio.api.util.Lang;
 import org.homio.app.model.entity.MediaMTXEntity;
-import org.homio.app.model.entity.MediaMTXEntity.LogLevel;
 import org.homio.hquery.Curl;
 import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
@@ -53,7 +52,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
 
     private final Map<String, String> successRegistered = new ConcurrentHashMap<>();
     private final Map<String, String> pendingRegistrations = new ConcurrentHashMap<>();
-    private final Path configurationPath = mediamtxGitHub.getLocalProjectPath().resolve("mediamtx.yml");
+    private final @Getter Path configurationPath;
     private @Getter @Nullable String apiURL;
     private @Nullable UpdatableValue<JsonNode> pathData;
 
@@ -64,6 +63,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
 
     public MediaMTXService(@NotNull Context context, @NotNull MediaMTXEntity entity) {
         super(context, entity, true);
+        configurationPath = CommonUtils.getConfigPath().resolve("mediamtx.yml");
         context.bgp().addLowPriorityRequest("register-mediamtx", this::scheduleRegisterSources);
     }
 
@@ -119,23 +119,12 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
 
     @SneakyThrows
     public void resetConfiguration() {
-        Path backupFile = mediamtxGitHub.getLocalProjectPath().resolve("mediamtx_initial.yml");
+        Path backupFile = mediamtxGitHub.getLocalProjectPath().resolve("mediamtx.yml");
         if (!Files.exists(backupFile)) {
             throw new ServerException("W.ERROR.BACKUP_NOT_FOUND");
         }
         Files.copy(backupFile, configurationPath, StandardCopyOption.REPLACE_EXISTING);
-        configuration = YAML_OBJECT_MAPPER.readValue(configurationPath.toFile(), ObjectNode.class);
-        configuration.put("api", true);
-        long hashCode = entity.getEntityServiceHashCode();
-        entity.setLogLevel(LogLevel.valueOf(configuration.get("logLevel").asText()));
-        entity.setUdpMaxPayloadSize(configuration.get("udpMaxPayloadSize").asInt());
-        entity.setReadBufferCount(configuration.get("readBufferCount").asInt());
-        entity.setReadTimeout(intervalToInt("readTimeout"));
-        entity.setWriteTimeout(intervalToInt("writeTimeout"));
-        if (hashCode != entity.getEntityServiceHashCode()) {
-            context.db().save(entity);
-        }
-        saveConfiguration();
+        syncConfiguration();
         restartService();
     }
 
@@ -201,11 +190,9 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
             }
             mediamtxGitHub.downloadReleaseAndInstall(context, version, (progress, message, error) ->
                 progressBar.progress(progress, message));
-            if (projectUpdate.isHasBackup()) {
-                projectUpdate.copyFromBackup(Set.of(Path.of("mediamtx_initial.yml"), Path.of("mediamtx.yml")));
-            } else {
-                mediamtxGitHub.backup(Paths.get("mediamtx.yml"), Paths.get("mediamtx_initial.yml"));
-            }
+            Files.copy(projectUpdate.getGitHubProject().getLocalProjectPath().resolve("mediamtx.yml"),
+                configurationPath, StandardCopyOption.REPLACE_EXISTING);
+            syncConfiguration();
             // fire restart service
             initialize();
             return ActionResponseModel.success();
@@ -226,7 +213,6 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
 
     @Override
     protected void initialize() {
-        syncConfiguration();
         isRunningLocally = getApiStatus() != 200;
         if (isRunningLocally) {
             startLocalProcess();
@@ -246,18 +232,19 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         return 500;
     }
 
+    @SneakyThrows
     private void startLocalProcess() {
         log.info("Starting MediaMTX");
         // not need internet because we should fail create service if no internet
         if (!mediamtxGitHub.isLocalProjectInstalled()) {
             mediamtxGitHub.installLatestRelease(context);
-            mediamtxGitHub.backup(Paths.get("mediamtx.yml"), Paths.get("mediamtx_initial.yml"));
+            Files.copy(mediamtxGitHub.getLocalProjectPath().resolve("mediamtx.yml"),
+                configurationPath, StandardCopyOption.REPLACE_EXISTING);
         }
-
-        //updateNotificationBlock();
+        syncConfiguration();
 
         String processStr = mediamtxGitHub.getLocalProjectPath().resolve("mediamtx")
-            + " " + mediamtxGitHub.getLocalProjectPath().resolve("mediamtx.yml");
+            + " " + configurationPath;
 
         AtomicReference<String> errorRef = new AtomicReference<>();
         this.processContext = context
@@ -321,8 +308,6 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     @SneakyThrows
     private void syncConfiguration() {
         configuration = YAML_OBJECT_MAPPER.readValue(configurationPath.toFile(), ObjectNode.class);
-        apiURL = "http://" + configuration.get("apiAddress").asText();
-
         boolean updated = false;
 
         if (!configuration.get("api").asText().equals("yes") && !configuration.get("api").asText().equals("true")) {
@@ -330,34 +315,25 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
             updated = true;
         }
 
-        if (!configuration.get("logLevel").asText().equals(entity.getLogLevel().name())) {
-            configuration.put("logLevel", entity.getLogLevel().name());
-            log.debug("Update logLevel config");
-            updated = true;
-        }
-        if (configuration.get("udpMaxPayloadSize").asInt() != entity.getUdpMaxPayloadSize()) {
-            configuration.put("udpMaxPayloadSize", entity.getUdpMaxPayloadSize());
-            log.debug("Update udpMaxPayloadSize config");
-            updated = true;
-        }
-        if (configuration.get("readBufferCount").asInt() != entity.getReadBufferCount()) {
-            configuration.put("readBufferCount", entity.getReadBufferCount());
-            log.debug("Update readBufferCount config");
-            updated = true;
-        }
-        if (!configuration.get("readTimeout").asText().equals(entity.getReadTimeout() + "s")) {
-            configuration.put("readTimeout", entity.getReadTimeout() + "s");
-            log.debug("Update readTimeout config");
-            updated = true;
-        }
-        if (!configuration.get("writeTimeout").asText().equals(entity.getReadTimeout() + "s")) {
-            configuration.put("writeTimeout", entity.getReadTimeout() + "s");
-            log.debug("Update writeTimeout config");
-            updated = true;
-        }
+        updated |= checkPort(entity.getApiPort(), "apiAddress");
+        updated |= checkPort(entity.getRtspPort(), "rtspAddress");
+        updated |= checkPort(entity.getWebRtcPort(), "webrtcAddress");
+        updated |= checkPort(entity.getHlsPort(), "hlsAddress");
+
         if (updated) {
             saveConfiguration();
         }
+        apiURL = "http://" + configuration.get("apiAddress").asText();
+    }
+
+    private boolean checkPort(int port, String key) {
+        String address = configuration.get(key).asText();
+        if (!address.endsWith(":" + port)) {
+            String value = address.substring(0, address.indexOf(":") + 1) + port;
+            configuration.put(key, value);
+            return true;
+        }
+        return false;
     }
 
     @SneakyThrows
@@ -400,9 +376,5 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         public enum SourceProtocol {
             automatic, udp, multicast, tcp
         }
-    }
-
-    private int intervalToInt(String key) {
-        return (int) Duration.parse("PT" + configuration.get(key).asText()).getSeconds();
     }
 }

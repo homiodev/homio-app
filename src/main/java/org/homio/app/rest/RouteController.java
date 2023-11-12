@@ -1,23 +1,41 @@
 package org.homio.app.rest;
 
+import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
+
+import jakarta.servlet.http.HttpServletRequest;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
+import org.homio.api.ContextService.RouteProxyBuilder.ProxyUrl;
+import org.homio.api.exception.ServerException;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.app.manager.AddonService;
 import org.homio.app.manager.AddonService.AddonJson;
 import org.homio.app.manager.common.ClassFinder;
+import org.homio.app.manager.common.impl.ContextServiceImpl;
+import org.homio.app.manager.common.impl.ContextServiceImpl.RouteProxyImpl;
 import org.homio.app.manager.common.impl.ContextUIImpl;
 import org.homio.app.model.entity.SettingEntity;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.cloud.gateway.mvc.ProxyExchange;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.WebRequest;
@@ -56,6 +74,58 @@ public class RouteController {
             return null;
         }
         return bootstrapContext;
+    }
+
+    @GetMapping("/proxy/{entityID}/**")
+    public ResponseEntity<?> proxyGet(@PathVariable("entityID") String entityID, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
+        return proxyUrl(proxy, request, entityID, ProxyExchange::get);
+    }
+
+    @PostMapping("/proxy/{entityID}/**")
+    public ResponseEntity<?> proxyPost(@PathVariable("entityID") String entityID, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
+        return proxyUrl(proxy, request, entityID, ProxyExchange::post);
+    }
+
+    @DeleteMapping("/proxy/{entityID}/**")
+    public ResponseEntity<?> proxyDelete(@PathVariable("entityID") String entityID, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
+        return proxyUrl(proxy, request, entityID, ProxyExchange::delete);
+    }
+
+    @SneakyThrows
+    private ResponseEntity<?> proxyUrl(
+        @NotNull ProxyExchange<byte[]> proxy,
+        @NotNull HttpServletRequest request,
+        @NotNull String entityID,
+        @NotNull Function<ProxyExchange<byte[]>, ResponseEntity<byte[]>> handler) {
+        RouteProxyImpl routeProxy = ((ContextServiceImpl) context.service()).getProxy().get(entityID);
+        if (routeProxy == null) {
+            throw new ServerException("No proxy found for entity: " + entityID);
+        }
+        ProxyUrl proxyUrl = routeProxy.buildUrl(request);
+        URI uri = new URI(proxyUrl.url());
+        uri = new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), request.getQueryString(), null);
+        ProxyExchange<byte[]> proxyExchange = proxy.uri(uri);
+        if (proxyUrl.headers() != null) {
+            for (Entry<String, List<String>> header : proxyUrl.headers().entrySet()) {
+                proxyExchange.header(header.getKey(), header.getValue().toArray(new String[0]));
+            }
+        }
+
+        ResponseEntity<byte[]> response = handler.apply(proxyExchange);
+        HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.addAll(response.getHeaders());
+
+        Map<String, String> applyHeader = routeProxy.applyResponseHeaders(proxyUrl);
+        if (applyHeader != null) {
+            for (Entry<String, String> entry : applyHeader.entrySet()) {
+                responseHeaders.add(entry.getKey(), entry.getValue());
+            }
+        }
+
+        responseHeaders.add(ACCESS_CONTROL_EXPOSE_HEADERS, "*");
+        return ResponseEntity.status(response.getStatusCode())
+                             .headers(responseHeaders)
+                             .body(response.getBody());
     }
 
     private Map<String, List<SidebarMenuItem>> getMenu() {
@@ -105,7 +175,7 @@ public class RouteController {
         routes.add(route);
     }
 
-    private static class BootstrapContext {
+    public static class BootstrapContext {
 
         public List<RouteDTO> routes;
         public Map<String, List<SidebarMenuItem>> menu;

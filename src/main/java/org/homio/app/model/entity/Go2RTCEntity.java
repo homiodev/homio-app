@@ -23,6 +23,7 @@ import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.FileContentType;
 import org.homio.api.model.FileModel;
 import org.homio.api.model.Icon;
+import org.homio.api.model.WebAddress;
 import org.homio.api.model.endpoint.BaseDeviceEndpoint;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.repository.GitHubProject;
@@ -48,7 +49,6 @@ public class Go2RTCEntity extends MediaEntity implements HasEntityLog,
     HasGitHubFirmwareVersion, EntityService<Go2RTCService>,
     DeviceEndpointsBehaviourContractStub {
 
-    public static final int RTSP_PORT = 8554;
     public static final GitHubProject go2rtcGitHub =
         GitHubProject.of("AlexxIT", "go2rtc")
                      .setInstalledVersionResolver((context, gitHubProject) -> {
@@ -140,6 +140,12 @@ public class Go2RTCEntity extends MediaEntity implements HasEntityLog,
         return getService().isRunningLocally();
     }
 
+    @UIField(order = 31, hideInEdit = true)
+    @UIFieldGroup("STATUS")
+    public WebAddress getHost() {
+        return new WebAddress("localhost:%s".formatted(getApiPort()), null, new Icon("fas fa-code", "#31623D"));
+    }
+
     @UIField(order = 200)
     @UIFieldGroup("CONFIGURATION")
     public int getApiPort() {
@@ -192,7 +198,7 @@ public class Go2RTCEntity extends MediaEntity implements HasEntityLog,
                          icon = "fas fa-keyboard",
                          iconColor = "#899343")
     public ActionResponseModel editConfig() {
-        String content = Files.readString(go2rtcGitHub.getLocalProjectPath().resolve("go2rtc.yaml"));
+        String content = Files.readString(getService().getConfigurationPath());
         return ActionResponseModel.showFile(new FileModel("go2rtc.yaml", content, FileContentType.yaml)
             .setSaveHandler(mc -> getService().updateConfiguration(mc)));
     }

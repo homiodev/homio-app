@@ -24,6 +24,7 @@ import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.FileContentType;
 import org.homio.api.model.FileModel;
 import org.homio.api.model.Icon;
+import org.homio.api.model.WebAddress;
 import org.homio.api.model.endpoint.BaseDeviceEndpoint;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.repository.GitHubProject;
@@ -153,60 +154,6 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
         return getJsonDataHashCode("ll", "rt", "wt", "rbc", "umps", "av");
     }
 
-    @UIField(order = 1)
-    @UIFieldSlider(min = 1, max = 60, header = "s")
-    @UIFieldGroup(order = 50, value = "CONNECTION", borderColor = "#479923")
-    public int getReadTimeout() {
-        return getJsonData("rt", 10);
-    }
-
-    public void setReadTimeout(int value) {
-        setJsonData("rt", value);
-    }
-
-    @UIField(order = 2)
-    @UIFieldSlider(min = 1, max = 60, header = "s")
-    @UIFieldGroup("CONNECTION")
-    public int getWriteTimeout() {
-        return getJsonData("wt", 10);
-    }
-
-    public void setWriteTimeout(int value) {
-        setJsonData("wt", value);
-    }
-
-    @UIField(order = 3)
-    @UIFieldSlider(min = 64, max = 1024, step = 8)
-    @UIFieldGroup("CONNECTION")
-    public int getReadBufferCount() {
-        return getJsonData("rbc", 512);
-    }
-
-    public void setReadBufferCount(int value) {
-        setJsonData("rbc", value);
-    }
-
-    @UIField(order = 4)
-    @UIFieldSlider(min = 64, max = 1472)
-    @UIFieldGroup("CONNECTION")
-    public int getUdpMaxPayloadSize() {
-        return getJsonData("umps", 1472);
-    }
-
-    public void setUdpMaxPayloadSize(int value) {
-        setJsonData("umps", value);
-    }
-
-    @UIField(order = 5)
-    @UIFieldGroup("CONNECTION")
-    public LogLevel getLogLevel() {
-        return getJsonDataEnum("ll", LogLevel.info);
-    }
-
-    public void setLogLevel(LogLevel value) {
-        setJsonDataEnum("ll", value);
-    }
-
     @UIField(order = 1, hideInEdit = true, color = "#C4CC23")
     @UIFieldGroup("STATUS")
     public int getConnectedStreamsCount() {
@@ -217,6 +164,46 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     @UIFieldGroup("STATUS")
     public boolean isRunningLocally() {
         return getService().isRunningLocally();
+    }
+
+    @UIField(order = 200)
+    @UIFieldGroup("CONFIGURATION")
+    public int getApiPort() {
+        return getJsonData("api", 9997);
+    }
+
+    public void setApiPort(int port) {
+        setJsonData("api", port);
+    }
+
+    @UIField(order = 210)
+    @UIFieldGroup("CONFIGURATION")
+    public int getRtspPort() {
+        return getJsonData("rtsp", 8654);
+    }
+
+    public void setRtspPort(int port) {
+        setJsonData("rtsp", port);
+    }
+
+    @UIField(order = 220)
+    @UIFieldGroup("CONFIGURATION")
+    public int getWebRtcPort() {
+        return getJsonData("webrtc", 8655);
+    }
+
+    public void setWebRtcPort(int port) {
+        setJsonData("webrtc", port);
+    }
+
+    @UIField(order = 230)
+    @UIFieldGroup("CONFIGURATION")
+    public int getHlsPort() {
+        return getJsonData("hls", 8888);
+    }
+
+    public void setHlsPort(int port) {
+        setJsonData("hls", port);
     }
 
     @Override
@@ -248,7 +235,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
                          icon = "fas fa-keyboard",
                          iconColor = "#899343")
     public ActionResponseModel editConfig() {
-        String content = Files.readString(mediamtxGitHub.getLocalProjectPath().resolve("mediamtx.yml"));
+        String content = Files.readString(getService().getConfigurationPath());
         return ActionResponseModel.showFile(new FileModel("mediamtx.yml", content, FileContentType.yaml)
             .setSaveHandler(mc -> getService().updateConfiguration(mc)));
     }
@@ -273,10 +260,6 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
             return editConfig();
         }
         return ActionResponseModel.showError("W.ERROR.NO_HANDLER");
-    }
-
-    public enum LogLevel {
-        error, warn, info, debug
     }
 
     @Override
@@ -311,7 +294,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
                 getIcon().setColor(Color.RED);
             }
             setValue(new DecimalType(BigDecimal.valueOf(node.get("readers").size()), 0), false);
-            this.description = node.get("conf").get("source").asText();
+            this.description = node.path("conf").path("source").asText();
         }
 
         @Override
