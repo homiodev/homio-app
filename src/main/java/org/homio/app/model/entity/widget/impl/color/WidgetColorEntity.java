@@ -42,7 +42,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @Override
-    @UIField(order = 3, isRevert = true)
+    @UIField(order = 3)
     @UIFieldColorPicker // disable thresholding
     @UIFieldGroup("NAME")
     @UIFieldReadDefaultValue
@@ -72,7 +72,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
         return super.getBackground();
     }
 
-    @UIField(order = 10, isRevert = true)
+    @UIField(order = 10)
     @UIFieldLayout(options = {"colors", "icon", "name", "brightness", "colorTemp", "onOff"})
     @UIFieldReadDefaultValue
     public String getLayout() {
@@ -117,7 +117,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
         setJsonData("clrds", value);
     }
 
-    @UIField(order = 4, isRevert = true)
+    @UIField(order = 4)
     @UIFieldSlider(min = 0, max = 40)
     @UIFieldGroup("COLORS")
     @UIFieldReadDefaultValue
@@ -129,7 +129,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
         setJsonData("space", value);
     }
 
-    @UIField(order = 5, isRevert = true)
+    @UIField(order = 5)
     @UIFieldSlider(min = 10, max = 40)
     @UIFieldGroup("COLORS")
     @UIFieldReadDefaultValue

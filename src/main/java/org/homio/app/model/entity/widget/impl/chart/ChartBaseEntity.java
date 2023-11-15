@@ -36,7 +36,7 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
         setJsonData("sdl", value);
     }
 
-    @UIField(order = 2, isRevert = true)
+    @UIField(order = 2)
     @UIFieldGroup("DATA_LABELS")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
@@ -68,7 +68,8 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
         setJsonData("sfsb", value);
     }
 
-    @UIField(order = 10, isRevert = true)
+    @UIField(order = 10)
+    @UIFieldReadDefaultValue
     @UIFieldSlider(min = 10, max = 600)
     @UIFieldGroup("CHART_UI")
     public int getFetchDataFromServerInterval() {

@@ -78,6 +78,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 public class ContextUIImpl implements ContextUI {
 
     public static final Map<String, ConsolePlugin<?>> consolePluginsMap = new HashMap<>();
+    public static final Map<String, ConsolePlugin<?>> consoleRemovablePluginsMap = new HashMap<>();
 
     public static final Map<String, String> customConsolePluginNames = new HashMap<>();
 
@@ -271,6 +272,14 @@ public class ContextUIImpl implements ContextUI {
         }
         this.sendToUIMap.put(dynamicUpdateID, new SendUpdateContext(dynamicUpdateID, () ->
             OBJECT_MAPPER.createObjectNode().putPOJO("value", value)));
+    }
+
+    public static ConsolePlugin<?> getPlugin(String tab) {
+        ConsolePlugin<?> consolePlugin = consolePluginsMap.get(tab);
+        if (consolePlugin == null) {
+            consolePlugin = consoleRemovablePluginsMap.get(tab);
+        }
+        return consolePlugin;
     }
 
     private boolean isUpdateNotRegistered(@NotNull BaseEntityIdentifier parentEntity) {
@@ -802,15 +811,30 @@ public class ContextUIImpl implements ContextUI {
             consolePluginsMap.put(name, plugin);
         }
 
+        public <T extends ConsolePlugin> void registerPlugin(@NotNull String name, @NotNull T plugin, boolean removable) {
+            if (removable) {
+                consoleRemovablePluginsMap.put(name, plugin);
+            } else {
+                consolePluginsMap.put(name, plugin);
+            }
+        }
+
         @Override
         public <T extends ConsolePlugin> @Nullable T getRegisteredPlugin(@NotNull String name) {
-            return (T) consolePluginsMap.get(name);
+            if (consolePluginsMap.containsKey(name)) {
+                return (T) consolePluginsMap.get(name);
+            }
+            return (T) consoleRemovablePluginsMap.get(name);
         }
 
         @Override
         public boolean unRegisterPlugin(@NotNull String name) {
-            if (consolePluginsMap.containsKey(name)) {
+            if (consolePluginsMap.remove(name) != null) {
                 consolePluginsMap.remove(name);
+                return true;
+            }
+            if (consoleRemovablePluginsMap.remove(name) != null) {
+                consoleRemovablePluginsMap.remove(name);
                 return true;
             }
             return false;

@@ -1,10 +1,14 @@
 package org.homio.app.rest;
 
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
 import static org.homio.app.model.entity.user.UserBaseEntity.SSH_RESOURCE_AUTHORIZE;
 import static org.homio.app.model.entity.user.UserBaseEntity.log;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -20,11 +24,15 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.val;
+import org.homio.api.Context;
+import org.homio.api.ContextNetwork;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.console.ConsolePluginEditor;
+import org.homio.api.console.ConsolePluginFrame;
 import org.homio.api.console.ConsolePluginTable;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.NotFoundException;
+import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.OptionModel;
@@ -40,12 +48,15 @@ import org.homio.app.manager.common.impl.ContextUIImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.rest.ItemController.ActionModelRequest;
+import org.homio.app.setting.system.SystemFramesSetting;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.ssh.SshBaseEntity;
 import org.homio.app.ssh.SshProviderService;
 import org.homio.app.ssh.SshProviderService.SshSession;
 import org.homio.app.utils.OptionUtil;
 import org.homio.app.utils.UIFieldUtils;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -82,11 +93,22 @@ public class ConsoleController implements ContextCreated {
         for (ConsolePlugin<?> consolePlugin : consolePlugins) {
             ContextUIImpl.consolePluginsMap.put(consolePlugin.getName(), consolePlugin);
         }
+
+        ObjectNode nodes = context.setting().getValue(SystemFramesSetting.class);
+        nodes.fields().forEachRemaining(entry -> {
+            entry.getValue().fields().forEachRemaining(child -> {
+                JsonNode node = child.getValue();
+                String host = node.get("host").asText();
+                String tabName = child.getKey();
+                String targetHost = buildTargetHost(host, node.get("proxy").asBoolean());
+                addFramePlugin(tabName, entry.getKey(), targetHost);
+            });
+        });
     }
 
     @GetMapping("/tab/{tab}/content")
     public Object getTabContent(@PathVariable("tab") String tab) {
-        ConsolePlugin<?> consolePlugin = ContextUIImpl.consolePluginsMap.get(tab);
+        ConsolePlugin<?> consolePlugin = ContextUIImpl.getPlugin(tab);
         if (consolePlugin == null) {
             consolePlugin = logsConsolePluginsMap.get(tab);
             if (consolePlugin == null) {
@@ -108,7 +130,7 @@ public class ConsoleController implements ContextCreated {
     @GetMapping("/tab/{tab}/actions")
     public Collection<UIInputEntity> getConsoleTabActions(@PathVariable("tab") String tab) {
         UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
-        ConsolePlugin<?> consolePlugin = ContextUIImpl.consolePluginsMap.get(tab);
+        ConsolePlugin<?> consolePlugin = ContextUIImpl.getPlugin(tab);
         if (consolePlugin != null) {
             fetchUIHeaderActions(consolePlugin, uiInputBuilder);
         }
@@ -120,7 +142,7 @@ public class ConsoleController implements ContextCreated {
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public ActionResponseModel executeAction(@PathVariable("tab") String tab, @RequestBody ActionModelRequest request) {
         String entityID = request.getEntityID();
-        ConsolePlugin<?> consolePlugin = ContextUIImpl.consolePluginsMap.get(tab);
+        ConsolePlugin<?> consolePlugin = ContextUIImpl.getPlugin(tab);
         if (consolePlugin instanceof ConsolePluginTable table) {
             HasEntityIdentifier identifier = table.findEntity(entityID);
             return itemController.executeAction(request, identifier, context.db().getEntity(identifier.getEntityID()));
@@ -133,7 +155,7 @@ public class ConsoleController implements ContextCreated {
             @PathVariable("tab") String tab,
             @PathVariable("entityID") String entityID,
             @PathVariable("fieldName") String fieldName) {
-        ConsolePlugin<?> consolePlugin = ContextUIImpl.consolePluginsMap.get(tab);
+        ConsolePlugin<?> consolePlugin = ContextUIImpl.getPlugin(tab);
         if (consolePlugin instanceof ConsolePluginTable) {
             Collection<? extends HasEntityIdentifier> baseEntities = ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
             HasEntityIdentifier identifier =
@@ -154,25 +176,11 @@ public class ConsoleController implements ContextCreated {
         }
 
         Map<String, ConsoleTab> parens = new HashMap<>();
-        for (Map.Entry<String, ConsolePlugin<?>> entry :
-            ContextUIImpl.consolePluginsMap.entrySet()) {
-            if (entry.getKey().equals("icl")) {
-                continue;
-            }
-            ConsolePlugin<?> consolePlugin = entry.getValue();
-            if (!consolePlugin.isEnabled()) {
-                continue;
-            }
-            String parentName = consolePlugin.getParentTab();
-            ConsoleTab consoleTab = new ConsoleTab(entry.getKey(), consolePlugin.getRenderType(), consolePlugin.getOptions());
-            consolePlugin.assembleOptions(consoleTab.getOptions());
-
-            if (parentName != null) {
-                parens.putIfAbsent(parentName, new ConsoleTab(parentName, null, consolePlugin.getOptions()));
-                parens.get(parentName).addChild(consoleTab);
-            } else {
-                tabs.add(consoleTab);
-            }
+        for (Map.Entry<String, ConsolePlugin<?>> entry : ContextUIImpl.consolePluginsMap.entrySet()) {
+            addConsolePlugin(entry, parens, tabs, false);
+        }
+        for (Map.Entry<String, ConsolePlugin<?>> entry : ContextUIImpl.consoleRemovablePluginsMap.entrySet()) {
+            addConsolePlugin(entry, parens, tabs, true);
         }
         tabs.addAll(parens.values());
 
@@ -186,7 +194,49 @@ public class ConsoleController implements ContextCreated {
             }
         }
 
+        /*ObjectNode nodes = context.setting().getValue(SystemFramesSetting.class);
+        Map<String, ConsoleTab> userTabs = new HashMap<>();
+        nodes.fields().forEachRemaining(entry -> {
+            ConsoleTab parentTab = userTabs.computeIfAbsent(entry.getKey(), s -> new ConsoleTab(entry.getKey(), null, null));
+            entry.getValue().fields().forEachRemaining(child -> {
+                String host = child.getValue().get("host").asText();
+                if (child.getValue().get("proxy").asBoolean()) {
+                    host = context.service().registerUrlProxy(host, host, builder -> {
+                    });
+                }
+                parentTab.addChild(new ConsoleTab(child.getKey(), RenderType.frame,
+                    new JSONObject().put("host", host)));
+            });
+        });
+        tabs.addAll(userTabs.values());*/
+
         return tabs;
+    }
+
+    private static void addConsolePlugin(Entry<String, ConsolePlugin<?>> entry,
+        Map<String, ConsoleTab> parens,
+        Set<ConsoleTab> tabs,
+        boolean removable) {
+        if (entry.getKey().equals("icl")) {
+            return;
+        }
+        ConsolePlugin<?> consolePlugin = entry.getValue();
+        if (!consolePlugin.isEnabled()) {
+            return;
+        }
+        String parentName = consolePlugin.getParentTab();
+        ConsoleTab consoleTab = new ConsoleTab(entry.getKey(), consolePlugin.getRenderType(), consolePlugin.getOptions());
+        if (removable) {
+            consoleTab.setDeletable(true);
+        }
+        consolePlugin.assembleOptions(consoleTab.getOptions());
+
+        if (parentName != null) {
+            parens.putIfAbsent(parentName, new ConsoleTab(parentName, null, null));
+            parens.get(parentName).addChild(consoleTab);
+        } else {
+            tabs.add(consoleTab);
+        }
     }
 
     @PostMapping("/{entityID}/ssh")
@@ -224,6 +274,62 @@ public class ConsoleController implements ContextCreated {
         }
     }
 
+    @SneakyThrows
+    @PostMapping("/frame")
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    public void createFrame(@RequestBody CreateFrameRequest request) {
+        URL url = new URL(request.host);
+        ContextNetwork.ping(url.getHost(), url.getPort());
+        if (context.ui().console().getRegisteredPlugin(request.name) != null) {
+            throw new ServerException("Console plugin %s already exists".formatted(request.name));
+        }
+        ObjectNode nodes = context.setting().getValue(SystemFramesSetting.class);
+        nodes.putIfAbsent(request.getParent(), OBJECT_MAPPER.createObjectNode());
+        ObjectNode node = (ObjectNode) nodes.get(request.getParent());
+        ObjectNode pluginData = OBJECT_MAPPER.createObjectNode()
+                                             .put("proxy", request.proxy)
+                                             .put("host", request.host);
+        node.set(request.getName(), pluginData);
+        context.setting().setValue(SystemFramesSetting.class, nodes);
+
+        String targetHost = buildTargetHost(request.host, request.proxy);
+        addFramePlugin(request.name, request.parent, targetHost);
+    }
+
+    private String buildTargetHost(String targetHost, boolean proxy) {
+        if (proxy) {
+            return context.service().registerUrlProxy(String.valueOf(Math.abs(targetHost.hashCode())), targetHost, builder -> {
+            });
+        }
+        return targetHost;
+    }
+
+    @SneakyThrows
+    @DeleteMapping("/frame/{parent}/{name}")
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    public boolean removeFrame(@PathVariable("parent") String parent, @PathVariable("name") String name) {
+        ObjectNode nodes = context.setting().getValue(SystemFramesSetting.class);
+        if (!nodes.has(parent)) {
+            throw new ServerException("No parent tab: " + parent + " found");
+        }
+        ObjectNode parentNode = (ObjectNode) nodes.get(parent);
+        JsonNode pluginData = parentNode.remove(name);
+        if (pluginData == null) {
+            throw new ServerException("No tab: " + name + " found");
+        }
+        if (pluginData.has("proxyHost")) {
+            context.service().unRegisterUrlProxy(pluginData.get("host").asText());
+        }
+
+        context.ui().console().unRegisterPlugin(name);
+        if (parentNode.isEmpty()) {
+            nodes.remove(parent);
+        }
+
+        context.setting().setValue(SystemFramesSetting.class, nodes);
+        return nodes.isEmpty();
+    }
+
     /**
      * Get header actions for console plugin
      *
@@ -255,12 +361,13 @@ public class ConsoleController implements ContextCreated {
     @RequiredArgsConstructor
     public static class ConsoleTab {
 
-        private final String name;
-        private final ConsolePlugin.RenderType renderType;
+        private final @NotNull String name;
+        private final @Nullable ConsolePlugin.RenderType renderType;
+        private boolean deletable;
         private List<ConsoleTab> children;
         private JSONObject options;
 
-        public ConsoleTab(String name, ConsolePlugin.RenderType renderType, JSONObject options) {
+        public ConsoleTab(@NotNull String name, @Nullable ConsolePlugin.RenderType renderType, @Nullable JSONObject options) {
             this(name, renderType);
             this.options = options == null ? new JSONObject() : options;
         }
@@ -287,5 +394,35 @@ public class ConsoleController implements ContextCreated {
     public static class SshResizeRequest {
 
         private int cols;
+    }
+
+    @Getter
+    @Setter
+    public static class CreateFrameRequest {
+
+        private String name;
+        private String parent;
+        private String host;
+        private boolean proxy;
+    }
+
+    private void addFramePlugin(String host, String parent, String targetHost) {
+        context.ui().console().registerPlugin(host, new ConsolePluginFrame() {
+
+            @Override
+            public @Nullable String getParentTab() {
+                return parent;
+            }
+
+            @Override
+            public @NotNull Context context() {
+                return context;
+            }
+
+            @Override
+            public FrameConfiguration getValue() {
+                return new FrameConfiguration(targetHost);
+            }
+        }, true);
     }
 }

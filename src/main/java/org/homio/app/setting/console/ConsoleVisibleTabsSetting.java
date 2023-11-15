@@ -32,7 +32,8 @@ public class ConsoleVisibleTabsSetting
     public @NotNull Collection<OptionModel> getOptions(Context context, JSONObject params) {
         Map<String, OptionModel> result = new HashMap<>();
         result.put("logs", OptionModel.key("logs").setDisabled(!context.accessEnabled(LOG_RESOURCE)));
-        Map<String, ConsolePlugin<?>> map = ContextUIImpl.consolePluginsMap;
+        Map<String, ConsolePlugin<?>> map = new HashMap<>(ContextUIImpl.consolePluginsMap);
+        map.putAll(ContextUIImpl.consoleRemovablePluginsMap);
         for (Map.Entry<String, ConsolePlugin<?>> entry : map.entrySet()) {
             if (entry.getKey().equals("icl")) {
                 continue;

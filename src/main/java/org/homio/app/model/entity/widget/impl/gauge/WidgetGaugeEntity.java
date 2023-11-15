@@ -70,7 +70,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
         setJsonDataEnum("gaugeCapType", lineType);
     }
 
-    @UIField(order = 6, isRevert = true)
+    @UIField(order = 6)
     @UIFieldGroup("UI")
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldReadDefaultValue
@@ -112,7 +112,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
         setJsonData("unitFS", value);
     }
 
-    @UIField(order = 2, isRevert = true)
+    @UIField(order = 2)
     @UIFieldGroup("TEXT")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
@@ -130,7 +130,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
         return super.getName();
     }
 
-    @UIField(order = 4, isRevert = true)
+    @UIField(order = 4)
     @UIFieldGroup("TEXT")
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldReadDefaultValue

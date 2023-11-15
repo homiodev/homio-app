@@ -246,7 +246,6 @@ public class SshCloudEntity extends IdentityEntity implements
         return execUploadPrivateKey(this, context, params);
     }
 
-    @SneakyThrows
     @UIContextMenuAction(value = "DELETE_PRIVATE_KEY", icon = "fas fa-trash-can", inputs = {
             @UIActionInput(name = "passphrase", type = text)
     })
@@ -254,14 +253,12 @@ public class SshCloudEntity extends IdentityEntity implements
         return execDeletePrivateKey(this, context, params);
     }
 
-    @SneakyThrows
     @UIContextMenuAction(value = "CONNECT", icon = "fas fa-rss")
     public ActionResponseModel connect(Context context) {
         context.getBean(CloudService.class).restart(this);
         return ActionResponseModel.fired();
     }
 
-    @SneakyThrows
     @UIContextMenuAction(value = "STOP", icon = "fas fa-circle-stop")
     public ActionResponseModel stop(Context context) {
         context.getBean(CloudService.class).stop(this);

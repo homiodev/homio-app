@@ -51,7 +51,7 @@ public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorE
         setJsonData("colors", value);
     }
 
-    @UIField(order = 4, isRevert = true)
+    @UIField(order = 4)
     @UIFieldSlider(min = 0, max = 40)
     @UIFieldGroup("COLORS")
     @UIFieldReadDefaultValue
@@ -63,7 +63,7 @@ public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorE
         setJsonData("space", value);
     }
 
-    @UIField(order = 5, isRevert = true)
+    @UIField(order = 5)
     @UIFieldSlider(min = 10, max = 40)
     @UIFieldGroup("COLORS")
     @UIFieldReadDefaultValue

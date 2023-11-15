@@ -27,7 +27,7 @@ public class WidgetToggleEntity
     }
 
     @Override
-    @UIField(order = 50, isRevert = true)
+    @UIField(order = 50)
     @UIFieldLayout(options = {"name", "value", "icon", "button"})
     @UIFieldReadDefaultValue
     public String getLayout() {

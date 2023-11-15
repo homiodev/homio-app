@@ -11,7 +11,7 @@ import org.homio.app.model.entity.widget.attributes.HasValueConverter;
 public class WidgetDoughnutChartSeriesEntity extends WidgetSeriesEntity<WidgetDoughnutChartEntity>
         implements HasSingleValueDataSource, HasValueConverter {
 
-    @UIField(order = 20, isRevert = true)
+    @UIField(order = 20)
     @UIFieldGroup("CHART_UI")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue

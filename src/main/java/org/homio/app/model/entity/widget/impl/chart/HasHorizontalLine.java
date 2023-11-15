@@ -17,7 +17,7 @@ public interface HasHorizontalLine extends HasJsonData {
         setJsonData("slpos", value);
     }
 
-    @UIField(order = 2, isRevert = true)
+    @UIField(order = 2)
     @UIFieldGroup("CHART_HL")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
@@ -50,7 +50,7 @@ public interface HasHorizontalLine extends HasJsonData {
         setJsonData("sdyn", value);
     }
 
-    @UIField(order = 5, isRevert = true)
+    @UIField(order = 5)
     @UIFieldGroup("CHART_HL")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue

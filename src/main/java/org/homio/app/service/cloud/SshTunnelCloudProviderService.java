@@ -24,6 +24,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
 import org.homio.api.ContextUI.NotificationBlockBuilder;
+import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.service.CloudProviderService;
@@ -59,7 +60,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
     @Override
     public void start() throws Exception {
         if (!entity.isHasPrivateKey()) {
-            throw new IllegalArgumentException("ERROR.PRIVATE_KEY_NOT_FOUND");
+            throw new ServerException("ERROR.PRIVATE_KEY_NOT_FOUND").setLog(false);
         }
         log.info("SSH cloud: create client context");
         SshClientContext sshClientContext = new SshClientContext();

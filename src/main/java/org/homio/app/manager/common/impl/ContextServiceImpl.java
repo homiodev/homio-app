@@ -80,7 +80,6 @@ public class ContextServiceImpl implements ContextService {
         RouteProxyImpl routeProxy = new RouteProxyImpl(entityID, url);
         builder.accept(new RouteProxyBuilder() {
 
-
             @Override
             public void setUrlProducer(Function<HttpServletRequest, ProxyUrl> urlBuilder) {
                 routeProxy.urlBuilder = urlBuilder;

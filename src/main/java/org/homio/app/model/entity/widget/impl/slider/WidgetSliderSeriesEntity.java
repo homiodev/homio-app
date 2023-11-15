@@ -19,7 +19,7 @@ public class WidgetSliderSeriesEntity
         HasPadding,
         HasTextConverter {
 
-    @UIField(order = 1, isRevert = true)
+    @UIField(order = 1)
     @UIFieldGroup(order = 2, value = "SLIDER", borderColor = "#6AA427")
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldReadDefaultValue

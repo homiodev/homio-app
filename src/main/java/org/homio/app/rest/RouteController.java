@@ -4,6 +4,7 @@ import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -31,6 +32,7 @@ import org.homio.app.model.entity.SettingEntity;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.cloud.gateway.mvc.ProxyExchange;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -114,6 +116,20 @@ public class RouteController {
         ResponseEntity<byte[]> response = handler.apply(proxyExchange);
         HttpHeaders responseHeaders = new HttpHeaders();
         responseHeaders.addAll(response.getHeaders());
+        byte[] body = response.getBody();
+        /*if (request.getRequestURI().endsWith("/proxy_index.html")) {
+            MediaType contentType = responseHeaders.getContentType();
+            if (contentType != null && contentType.toString().startsWith(MediaType.TEXT_HTML_VALUE)) {
+                StringBuilder stringBuilder = new StringBuilder(new String(body, StandardCharsets.UTF_8));
+                int headIndex = stringBuilder.indexOf("<head>");
+                if(headIndex >= 0) {
+                    String hp = "http://%s:%s".formatted(request.getRemoteHost(), request.getLocalPort());
+                    String base = request.getRequestURI().substring(0, request.getRequestURI().lastIndexOf("/"));
+                    stringBuilder.insert(headIndex + "<head>".length(), "<base href=\"%s%s/test/\">".formatted(hp, base));
+                    body = stringBuilder.toString().getBytes();
+                }
+            }
+        }*/
 
         Map<String, String> applyHeader = routeProxy.applyResponseHeaders(proxyUrl);
         if (applyHeader != null) {
@@ -125,7 +141,7 @@ public class RouteController {
         responseHeaders.add(ACCESS_CONTROL_EXPOSE_HEADERS, "*");
         return ResponseEntity.status(response.getStatusCode())
                              .headers(responseHeaders)
-                             .body(response.getBody());
+                             .body(body);
     }
 
     private Map<String, List<SidebarMenuItem>> getMenu() {

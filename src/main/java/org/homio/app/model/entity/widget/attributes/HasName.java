@@ -27,7 +27,7 @@ public interface HasName extends HasJsonData {
         setJsonData("shn", value);
     }
 
-    @UIField(order = 3, isRevert = true)
+    @UIField(order = 3)
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldGroup("NAME")
     @UIFieldReadDefaultValue

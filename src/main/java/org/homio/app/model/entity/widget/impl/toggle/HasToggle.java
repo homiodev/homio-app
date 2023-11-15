@@ -21,7 +21,7 @@ public interface HasToggle extends HasSingleValueDataSource, HasSetSingleValueDa
         return HasSetSingleValueDataSource.super.getSetValueDataSource();
     }
 
-    @UIField(order = 3, isRevert = true)
+    @UIField(order = 3)
     @UIFieldColorPicker
     @UIFieldGroup("UI")
     @UIFieldReadDefaultValue

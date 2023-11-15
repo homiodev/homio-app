@@ -1,7 +1,5 @@
 package org.homio.app.setting.system;
 
-import static org.homio.api.util.Constants.DANGER_COLOR;
-
 import org.homio.api.Context;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.model.Icon;
@@ -22,7 +20,7 @@ public class SystemLogoutButtonSetting
 
     @Override
     public @NotNull Icon getIcon() {
-        return new Icon("fas fa-right-from-bracket", DANGER_COLOR);
+        return new Icon("fas fa-right-from-bracket", Color.ERROR_DIALOG);
     }
 
     @Override

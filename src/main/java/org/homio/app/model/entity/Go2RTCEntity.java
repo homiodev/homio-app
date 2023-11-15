@@ -1,16 +1,15 @@
 package org.homio.app.model.entity;
 
-import static org.homio.api.util.Constants.DANGER_COLOR;
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.Entity;
-import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -34,6 +33,7 @@ import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
@@ -52,8 +52,12 @@ public class Go2RTCEntity extends MediaEntity implements HasEntityLog,
     public static final GitHubProject go2rtcGitHub =
         GitHubProject.of("AlexxIT", "go2rtc")
                      .setInstalledVersionResolver((context, gitHubProject) -> {
-                         Path executable = CommonUtils.getInstallPath().resolve("mediamtx").resolve("mediamtx");
-                         return context.hardware().execute(executable + " --version");
+                         Path executable = CommonUtils.getInstallPath().resolve("go2rtc").resolve("go2rtc");
+                         String version = context.hardware().execute(executable + " --version");
+                         if (version.startsWith("Current version: ")) {
+                             return "v" + version.substring("Current version: ".length()).trim();
+                         }
+                         return version;
                      });
 
     public static Go2RTCEntity ensureEntityExists(Context context) {
@@ -134,10 +138,16 @@ public class Go2RTCEntity extends MediaEntity implements HasEntityLog,
         return getJsonDataHashCode("api", "rtsp", "webrtc");
     }
 
+    @UIField(order = 1, hideInEdit = true, color = "#C4CC23")
+    @UIFieldGroup("STATUS")
+    public int getConnectedStreamsCount() {
+        return optService().stream().map(s -> s.getApiListStreams().size()).findAny().orElse(-1);
+    }
+
     @UIField(order = 30, hideInEdit = true)
     @UIFieldGroup("STATUS")
     public boolean isRunningLocally() {
-        return getService().isRunningLocally();
+        return optService().map(Go2RTCService::isRunningLocally).orElse(false);
     }
 
     @UIField(order = 31, hideInEdit = true)
@@ -148,6 +158,7 @@ public class Go2RTCEntity extends MediaEntity implements HasEntityLog,
 
     @UIField(order = 200)
     @UIFieldGroup("CONFIGURATION")
+    @UIFieldReadDefaultValue
     public int getApiPort() {
         return getJsonData("api", 1984);
     }
@@ -158,6 +169,7 @@ public class Go2RTCEntity extends MediaEntity implements HasEntityLog,
 
     @UIField(order = 210)
     @UIFieldGroup("CONFIGURATION")
+    @UIFieldReadDefaultValue
     public int getRtspPort() {
         return getJsonData("rtsp", 8554);
     }
@@ -168,6 +180,7 @@ public class Go2RTCEntity extends MediaEntity implements HasEntityLog,
 
     @UIField(order = 220)
     @UIFieldGroup("CONFIGURATION")
+    @UIFieldReadDefaultValue
     public int getWebRtcPort() {
         return getJsonData("webrtc", 8555);
     }
@@ -206,7 +219,7 @@ public class Go2RTCEntity extends MediaEntity implements HasEntityLog,
     @SneakyThrows
     @UIContextMenuAction(value = "RESET_CONFIG",
                          confirmMessage = "RESET_CONFIG",
-                         confirmMessageDialogColor = DANGER_COLOR,
+                         confirmMessageDialogColor = Color.ERROR_DIALOG,
                          icon = "fas fa-clock-rotate-left",
                          iconColor = "#91293E")
     public ActionResponseModel resetConfiguration() {
@@ -235,11 +248,16 @@ public class Go2RTCEntity extends MediaEntity implements HasEntityLog,
     @Override
     public @NotNull Map<String, ? extends DeviceEndpoint> getDeviceEndpoints() {
         Map<String, StreamEndpoint> streams = new HashMap<>();
-        JsonNode list = getService().getApiList();
-        for (JsonNode node : list.path("items")) {
-            streams.put(node.toString(), new StreamEndpoint(node, this));
+        for (Entry<String, JsonNode> entry : getService().getApiListStreams().entrySet()) {
+            streams.put(entry.getKey(), new StreamEndpoint(entry.getKey(), entry.getValue(), this));
         }
         return streams;
+    }
+
+    @Override
+    @UIFieldIgnore
+    public @Nullable String getImageIdentifier() {
+        return super.getImageIdentifier();
     }
 
     @Override
@@ -254,38 +272,28 @@ public class Go2RTCEntity extends MediaEntity implements HasEntityLog,
         private final @Getter String description;
         private final JsonNode node;
 
-        public StreamEndpoint(JsonNode node, Go2RTCEntity entity) {
-            super(createIcon(node.get("source").get("type").asText()), "MTX",
-                entity.context(), entity, node.get("name").asText(), false, EndpointType.trigger);
+        public StreamEndpoint(String key, JsonNode node, Go2RTCEntity entity) {
+            super(new Icon(), "GO2RTC", entity.context(), entity, key, false, EndpointType.trigger);
             this.node = node;
+            setIcon(createIcon(node.get("producers").path(0).path("url").asText()));
 
-            boolean ready = node.get("ready").asBoolean();
-            if (!ready) {
-                getIcon().setColor(Color.RED);
-            }
-            setValue(new DecimalType(BigDecimal.valueOf(node.get("readers").size()), 0), false);
-            this.description = node.get("conf").get("source").asText();
+            setValue(new DecimalType(node.get("consumers").size(), 0), false);
+            this.description = node.get("producers").path(0).path("url").asText();
         }
 
         @Override
         public UIInputBuilder createTriggerActionBuilder(@NotNull UIInputBuilder uiInputBuilder) {
             uiInputBuilder.addButton(getEntityID(), null, (context, params) ->
-                              ActionResponseModel.showJson("TITLE.MEDIA_MTX_NODE_INFO", node))
+                              ActionResponseModel.showJson("TITLE.NODE_INFO", node))
                           .setText(getValue().toString());
             return uiInputBuilder;
         }
 
         private static Icon createIcon(String sourceType) {
-            return switch (sourceType) {
-                case "srtSource" -> new Icon("fas fa-disease", "#6259B8");
-                case "hlsSource" -> new Icon("fas fa-square-rss", "#A62D79");
-                case "rpiCameraSource" -> new Icon("fab fa-raspberry-pi", "#B81E00");
-                case "rtmpSource" -> new Icon("fas fa-tower-cell", "#9BAA2A");
-                case "rtspSource" -> new Icon("fas fa-blog", "#399AAA");
-                case "webRTCSource" -> new Icon("fas fa-globe", "#A71ABD");
-                case "udpSource" -> new Icon("fas fa-kip-sign", "#3AB2BA");
-                default -> new Icon("fas fa-film", "#767873");
-            };
+            if (sourceType.startsWith("rtsp://")) {
+                return new Icon("fas fa-blog", "#399AAA");
+            }
+            return new Icon("fas fa-film", "#767873");
         }
 
         @Override

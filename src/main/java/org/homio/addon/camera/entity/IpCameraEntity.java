@@ -1,7 +1,5 @@
 package org.homio.addon.camera.entity;
 
-import static org.homio.api.util.Constants.DANGER_COLOR;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.onvif.soap.OnvifDeviceState;
 import de.onvif.soap.devices.InitialDevices;
@@ -256,7 +254,7 @@ public class IpCameraEntity extends BaseCameraEntity<IpCameraEntity, IpCameraSer
 
     @UIContextMenuAction(value = "RESTART_CAMERA", icon = "fas fa-power-off", iconColor = Color.RED,
                          confirmMessage = "W.CONFIRM.RESTART_CAMERA",
-                         confirmMessageDialogColor = DANGER_COLOR)
+                         confirmMessageDialogColor = Color.ERROR_DIALOG)
     public ActionResponseModel reboot() {
         String response = getService().getOnvifDeviceState().getInitialDevices().reboot();
         return ActionResponseModel.showSuccess(response);

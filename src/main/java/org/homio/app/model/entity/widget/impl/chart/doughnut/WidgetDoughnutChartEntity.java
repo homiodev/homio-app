@@ -28,7 +28,7 @@ public class WidgetDoughnutChartEntity
         setJsonData("vfs", value);
     }*/
 
-    @UIField(order = 4, isRevert = true)
+    @UIField(order = 4)
     @UIFieldGroup("VALUE")
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldReadDefaultValue

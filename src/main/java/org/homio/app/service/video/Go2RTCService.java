@@ -266,7 +266,7 @@ public class Go2RTCService extends ServiceInstance<Go2RTCEntity>
         });
     }
 
-    private Map<String, JsonNode> getApiListStreams() {
+    public Map<String, JsonNode> getApiListStreams() {
         JsonNode list = getApiList();
         Map<String, JsonNode> nodes = new HashMap<>();
         list.fields().forEachRemaining(entry -> nodes.put(entry.getKey(), entry.getValue()));

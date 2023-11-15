@@ -64,7 +64,7 @@ public class WidgetDisplayEntity
         return "display";
     }
 
-    @UIField(order = 50, isRevert = true)
+    @UIField(order = 50)
     @UIFieldLayout(options = {"name", "value", "icon"}, rows = "1:10")
     @UIFieldReadDefaultValue
     public String getLayout() {

@@ -280,6 +280,13 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @SneakyThrows
+    @UIContextMenuAction(value = "TEST_CONNECTION", icon = "fas fa-flask-vial")
+    public ActionResponseModel testConnection(Context context, JSONObject params) {
+        getService().testService();
+        return ActionResponseModel.success();
+    }
+
+    @SneakyThrows
     @UIContextMenuAction(value = "DOWNLOAD_PUBLIC_KEY", icon = "fas fa-download")
     public ActionResponseModel downloadPublicKey(Context context, JSONObject params) {
         if (!isHasPrivateKey()) {
@@ -425,6 +432,9 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
                 sshClient.executeCommand("ls");
                 // success tested
             } catch (Exception e) {
+                if (e.getMessage().contains("Task did not succeed")) {
+                    e = new RuntimeException("Unknown error during execute 'ls' command");
+                }
                 throw new RuntimeException(e);
             }
         }

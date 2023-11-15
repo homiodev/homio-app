@@ -13,7 +13,7 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
         implements HasSingleValueDataSource, HasIcon, HasValueTemplate,
         HasName, HasStyle, HasValueConverter {
 
-    @UIField(order = 1, isRevert = true)
+    @UIField(order = 1)
     @UIFieldGroup("UI")
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldReadDefaultValue

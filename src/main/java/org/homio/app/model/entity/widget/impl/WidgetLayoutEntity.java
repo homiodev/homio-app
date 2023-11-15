@@ -38,7 +38,7 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
         return null;
     }
 
-    @UIField(order = 24, isRevert = true)
+    @UIField(order = 24)
     @UIFieldGroup("UI")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue

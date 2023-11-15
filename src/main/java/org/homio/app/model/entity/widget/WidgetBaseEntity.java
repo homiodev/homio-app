@@ -94,7 +94,7 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
 
     public abstract @NotNull String getImage();
 
-    @UIField(order = 21, isRevert = true)
+    @UIField(order = 21)
     @UIFieldGroup("UI")
     @UIFieldColorPicker(allowThreshold = true, pulseColorCondition = true, thresholdSource = true)
     @UIFieldReadDefaultValue

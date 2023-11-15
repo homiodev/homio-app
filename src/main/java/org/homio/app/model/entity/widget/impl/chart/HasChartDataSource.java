@@ -58,7 +58,7 @@ public interface HasChartDataSource extends HasJsonData {
         setJsonData("finValConv", value);
     }
 
-    @UIField(order = 1, isRevert = true)
+    @UIField(order = 1)
     @UIFieldGroup(order = 54, value = "CHART_UI", borderColor = "#673AB7")
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldReadDefaultValue
@@ -70,7 +70,7 @@ public interface HasChartDataSource extends HasJsonData {
         setJsonData("chartC", value);
     }
 
-    @UIField(order = 2, isRevert = true)
+    @UIField(order = 2)
     @UIFieldSlider(min = 0, max = 100, step = 5)
     @UIFieldGroup("CHART_UI")
     @UIFieldReadDefaultValue

@@ -41,7 +41,7 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
         return null;
     }
 
-    @UIField(order = 24, isRevert = true)
+    @UIField(order = 24)
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
     public String getBorderColor() {
@@ -105,7 +105,7 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
         return this;
     }
 
-    @UIField(order = 54, isRevert = true)
+    @UIField(order = 54)
     @UIFieldColorPicker
     @UIFieldGroup("FILE_NAME")
     @UIFieldReadDefaultValue

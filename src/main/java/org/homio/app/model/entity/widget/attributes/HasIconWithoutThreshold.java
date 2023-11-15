@@ -25,7 +25,7 @@ public interface HasIconWithoutThreshold extends HasJsonData {
         setJsonData("icon", value);
     }
 
-    @UIField(order = 2, isRevert = true)
+    @UIField(order = 2)
     @UIFieldColorPicker
     @UIFieldGroup("ICON")
     @UIFieldReadDefaultValue

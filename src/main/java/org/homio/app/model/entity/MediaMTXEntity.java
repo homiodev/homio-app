@@ -1,6 +1,5 @@
 package org.homio.app.model.entity;
 
-import static org.homio.api.util.Constants.DANGER_COLOR;
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -24,7 +23,6 @@ import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.FileContentType;
 import org.homio.api.model.FileModel;
 import org.homio.api.model.Icon;
-import org.homio.api.model.WebAddress;
 import org.homio.api.model.endpoint.BaseDeviceEndpoint;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.repository.GitHubProject;
@@ -35,7 +33,7 @@ import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;
-import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
@@ -151,35 +149,37 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
 
     @Override
     public long getEntityServiceHashCode() {
-        return getJsonDataHashCode("ll", "rt", "wt", "rbc", "umps", "av");
+        return getJsonDataHashCode("ll", "rt", "wt", "rbc", "umps", "av", "ap", "rtsp", "webrtc", "hls");
     }
 
     @UIField(order = 1, hideInEdit = true, color = "#C4CC23")
     @UIFieldGroup("STATUS")
     public int getConnectedStreamsCount() {
-        return getService().getApiList().path("itemCount").asInt(-1);
+        return optService().map(s -> s.getApiList().path("itemCount").asInt(-1)).orElse(-1);
     }
 
     @UIField(order = 30, hideInEdit = true)
     @UIFieldGroup("STATUS")
     public boolean isRunningLocally() {
-        return getService().isRunningLocally();
+        return optService().map(MediaMTXService::isRunningLocally).orElse(false);
     }
 
     @UIField(order = 200)
+    @UIFieldReadDefaultValue
     @UIFieldGroup("CONFIGURATION")
     public int getApiPort() {
-        return getJsonData("api", 9997);
+        return getJsonData("ap", 9997);
     }
 
     public void setApiPort(int port) {
-        setJsonData("api", port);
+        setJsonData("ap", port);
     }
 
     @UIField(order = 210)
+    @UIFieldReadDefaultValue
     @UIFieldGroup("CONFIGURATION")
     public int getRtspPort() {
-        return getJsonData("rtsp", 8654);
+        return getJsonData("rtsp", 8564);
     }
 
     public void setRtspPort(int port) {
@@ -187,9 +187,10 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     }
 
     @UIField(order = 220)
+    @UIFieldReadDefaultValue
     @UIFieldGroup("CONFIGURATION")
     public int getWebRtcPort() {
-        return getJsonData("webrtc", 8655);
+        return getJsonData("webrtc", 8889);
     }
 
     public void setWebRtcPort(int port) {
@@ -197,6 +198,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     }
 
     @UIField(order = 230)
+    @UIFieldReadDefaultValue
     @UIFieldGroup("CONFIGURATION")
     public int getHlsPort() {
         return getJsonData("hls", 8888);
@@ -243,7 +245,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     @SneakyThrows
     @UIContextMenuAction(value = "RESET_CONFIG",
                          confirmMessage = "RESET_CONFIG",
-                         confirmMessageDialogColor = DANGER_COLOR,
+                         confirmMessageDialogColor = Color.ERROR_DIALOG,
                          icon = "fas fa-clock-rotate-left",
                          iconColor = "#91293E")
     public ActionResponseModel resetConfiguration() {
@@ -279,6 +281,12 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
         return getEntityID();
     }
 
+    @Override
+    @UIFieldIgnore
+    public @Nullable String getImageIdentifier() {
+        return super.getImageIdentifier();
+    }
+
     public static class StreamEndpoint extends BaseDeviceEndpoint<MediaMTXEntity> {
 
         private final @Getter String description;
@@ -300,7 +308,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
         @Override
         public UIInputBuilder createTriggerActionBuilder(@NotNull UIInputBuilder uiInputBuilder) {
             uiInputBuilder.addButton(getEntityID(), null, (context, params) ->
-                              ActionResponseModel.showJson("TITLE.MEDIA_MTX_NODE_INFO", node))
+                              ActionResponseModel.showJson("TITLE.NODE_INFO", node))
                           .setText(getValue().toString());
             return uiInputBuilder;
         }

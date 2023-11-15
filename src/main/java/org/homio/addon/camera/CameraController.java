@@ -42,6 +42,8 @@ import org.homio.api.exception.ServerException;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader.DynamicOptionLoaderParameters;
+import org.homio.app.model.entity.Go2RTCEntity;
+import org.homio.app.model.entity.MediaMTXEntity;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity.VideoSeriesDataSourceDynamicOptionLoader;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -125,9 +127,16 @@ public class CameraController {
         entity.getService().getOnvifDeviceState().getEventDevices().fireEvent(req.getReader().toString());
     }
 
+    @PostMapping("/{entityID}/go2rtc/video.webrtc")
+    public ResponseEntity<?> postGo2RTCWebRTC(@PathVariable("entityID") String entityID, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
+        Go2RTCEntity mtx = Go2RTCEntity.ensureEntityExists(context);
+        return proxyUrl(proxy, 8889, entityID, "whep", request.getQueryString(), ProxyExchange::post);
+    }
+
     @PostMapping("/{entityID}/mediamtx/video.webrtc")
     public ResponseEntity<?> postMediaMtxWebRTC(@PathVariable("entityID") String entityID, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
-        return proxyUrl(proxy, 8889, entityID, "whep", request.getQueryString(), ProxyExchange::post);
+        MediaMTXEntity mtx = MediaMTXEntity.ensureEntityExists(context);
+        return proxyUrl(proxy, mtx.getWebRtcPort(), entityID, "whep", request.getQueryString(), ProxyExchange::post);
     }
 
     @PatchMapping("/{entityID}/mediamtx/video.webrtc")
@@ -138,13 +147,15 @@ public class CameraController {
     @GetMapping("/{entityID}/mediamtx/{filename}.m3u8")
     public ResponseEntity<?> getMediaMtxHls(@PathVariable("entityID") String entityID,
         @PathVariable("filename") String filename, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
-        return proxyUrl(proxy, 8888, entityID, filename + ".m3u8", request.getQueryString(), ProxyExchange::get);
+        MediaMTXEntity mtx = MediaMTXEntity.ensureEntityExists(context);
+        return proxyUrl(proxy, mtx.getHlsPort(), entityID, filename + ".m3u8", request.getQueryString(), ProxyExchange::get);
     }
 
     @GetMapping("/{entityID}/mediamtx/{filename}.mp4")
     public ResponseEntity<?> getMediaMtxHlsMp4(@PathVariable("entityID") String entityID,
         @PathVariable("filename") String filename, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
-        return proxyUrl(proxy, 8888, entityID, filename + ".mp4", request.getQueryString(), ProxyExchange::get);
+        MediaMTXEntity mtx = MediaMTXEntity.ensureEntityExists(context);
+        return proxyUrl(proxy, mtx.getHlsPort(), entityID, filename + ".mp4", request.getQueryString(), ProxyExchange::get);
     }
 
     /**

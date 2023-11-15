@@ -186,6 +186,12 @@ public class FFMPEGEntity extends MediaEntity implements
         return streams;
     }
 
+    @Override
+    @UIFieldIgnore
+    public @Nullable String getImageIdentifier() {
+        return super.getImageIdentifier();
+    }
+
     @Getter
     public static class FfmpegInstanceEndpoint extends BaseDeviceEndpoint<FFMPEGEntity> {
 

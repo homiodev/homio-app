@@ -10,7 +10,7 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChartEntity>
         implements HasSingleValueDataSource {
 
-    @UIField(order = 50, isRevert = true)
+    @UIField(order = 50)
     @UIFieldGroup(value = "CHART_UI", order = 54, borderColor = "#673AB7")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
