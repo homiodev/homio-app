@@ -22,6 +22,7 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.map.PassiveExpiringMap;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.api.ContextBGP;
 import org.homio.api.ContextBGP.ThreadContext;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.impl.ContextServiceImpl.DynamicWebSocketHandler;
@@ -117,7 +118,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
     }
 
     public void resizeSshConsole(SshSession<SshGenericEntity> session, int cols) {
-        SessionContext sessionContext = sessionByToken.remove(session.getToken());
+        SessionContext sessionContext = sessionByToken.get(session.getToken());
         if (sessionContext != null && sessionContext.sshChannel != null) {
             sessionContext.sshChannel.changeTerminalDimensions(cols, 30, 0, 0);
         }
@@ -214,6 +215,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
         private ThreadContext<Void> threadContext;
         private SshClient sshClient;
         private SessionChannelNG sshChannel;
+        private boolean closed;
 
         public void onMessage(BinaryMessage buffer) {
             MessageUnpacker payload = MessagePack.newDefaultUnpacker(buffer.getPayload());
@@ -245,16 +247,19 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
 
         @SneakyThrows
         private void closeSessionContext() {
+            if (this.closed) {
+                return;
+            }
+            this.closed = true;
             ConsoleController.getSessions().remove(session.getToken());
             log.info("SSH close connection: {}", session);
             try {
-                wsSession.close(CloseStatus.NORMAL);
+                sessionByToken.remove(session.getToken());
+                // wsSession.close(CloseStatus.NORMAL);
                 if (sshClient != null) {
                     sshClient.close();
                 }
-                if (threadContext != null) {
-                    threadContext.cancel();
-                }
+                ContextBGP.cancel(threadContext);
             } catch (Exception ex) {
                 log.error("SSH error while close ssh session", ex);
             }
@@ -273,6 +278,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
                 this.sshClient = sshClient;
                 log.info("SSH connected: {}", session);
                 sshClient.runTask(createShellTask(cols, sshClient));
+                closed = false;
             }
         }
 

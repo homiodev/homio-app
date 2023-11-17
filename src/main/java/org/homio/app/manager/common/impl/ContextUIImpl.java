@@ -95,11 +95,11 @@ public class ContextUIImpl implements ContextUI {
     private final ReentrantLock treeNodeLock = new ReentrantLock();
     private final Map<String, TreeNode> treeNodesSendToUIMap = new ConcurrentHashMap<>();
 
-    private final @Getter @Accessors(fluent = true) EntityContextUIToastrImpl toastr = new EntityContextUIToastrImpl();
-    private final @Getter @Accessors(fluent = true) EntityContextUINotificationImpl notification = new EntityContextUINotificationImpl();
-    private final @Getter @Accessors(fluent = true) EntityContextUIConsoleImpl console = new EntityContextUIConsoleImpl();
-    private final @Getter @Accessors(fluent = true) EntityContextUIDialogImpl dialog = new EntityContextUIDialogImpl();
-    private final @Getter @Accessors(fluent = true) EntityContextUIProgressImpl progress = new EntityContextUIProgressImpl();
+    private final @Getter @Accessors(fluent = true) ContextUIToastrImpl toastr = new ContextUIToastrImpl();
+    private final @Getter @Accessors(fluent = true) ContextUINotificationImpl notification = new ContextUINotificationImpl();
+    private final @Getter @Accessors(fluent = true) ContextUIConsoleImpl console = new ContextUIConsoleImpl();
+    private final @Getter @Accessors(fluent = true) ContextUIDialogImpl dialog = new ContextUIDialogImpl();
+    private final @Getter @Accessors(fluent = true) ContextUIProgressImpl progress = new ContextUIProgressImpl();
     private final Map<String, Object> refreshConsolePlugin = new ConcurrentHashMap<>();
     private static final Object EMPTY = new Object();
 
@@ -741,7 +741,7 @@ public class ContextUIImpl implements ContextUI {
 
     }
 
-    public class EntityContextUIToastrImpl implements ContextUIToastr {
+    public class ContextUIToastrImpl implements ContextUIToastr {
 
         @Override
         public void sendMessage(@Nullable String title, @Nullable String message, @Nullable NotificationLevel level) {
@@ -753,7 +753,7 @@ public class ContextUIImpl implements ContextUI {
         }
     }
 
-    public class EntityContextUINotificationImpl implements ContextUINotification {
+    public class ContextUINotificationImpl implements ContextUINotification {
 
         @Override
         public void removeEmptyBlock(@NotNull String entityID) {
@@ -799,7 +799,7 @@ public class ContextUIImpl implements ContextUI {
         }
     }
 
-    public class EntityContextUIConsoleImpl implements ContextUIConsole {
+    public class ContextUIConsoleImpl implements ContextUIConsole {
 
         @Override
         public void registerPluginName(@NotNull String name, @Nullable String resource) {
@@ -859,7 +859,7 @@ public class ContextUIImpl implements ContextUI {
         }
     }
 
-    public class EntityContextUIDialogImpl implements ContextUIDialog {
+    public class ContextUIDialogImpl implements ContextUIDialog {
 
         @Override
         public void sendDialogRequest(@NotNull DialogModel dialogModel) {
@@ -898,7 +898,7 @@ public class ContextUIImpl implements ContextUI {
         }
     }
 
-    public class EntityContextUIProgressImpl implements ContextUIProgress {
+    public class ContextUIProgressImpl implements ContextUIProgress {
 
         private final Map<String, Pair<ProgressBar, Runnable>> simpleProgressBars = new ConcurrentHashMap<>();
 

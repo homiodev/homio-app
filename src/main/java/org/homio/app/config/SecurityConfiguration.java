@@ -56,7 +56,7 @@ public class SecurityConfiguration {
         if (ContextSettingImpl.getHomioProperties().getProperty("security-disable", "false").equalsIgnoreCase("true")) {
             log.warn("""
                     -----------------------------------
-                    !!! TouchHome security disabled !!!
+                    !!! HOMIO security disabled !!!
                     -----------------------------------
                     """);
             http.authorizeHttpRequests(authorize ->

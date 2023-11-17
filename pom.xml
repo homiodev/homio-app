@@ -12,7 +12,7 @@
   </parent>
 
   <properties>
-    <graalvm.version>23.1.1</graalvm.version>
+    <graalvm.version>23.0.1</graalvm.version>
     <homio-api.version>1.3.2-SNAPSHOT</homio-api.version>
     <homio-primary-addons.version>1.3.0-SNAPSHOT</homio-primary-addons.version>
     <start-class>org.homio.app.HomioApplication</start-class>
