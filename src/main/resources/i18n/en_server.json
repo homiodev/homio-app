@@ -21,6 +21,7 @@
   "PACKAGE_UPDATE_QUESTION": "Are you sure update {{NAME}}-{{VERSION}} package?",
   "SERVER_STARTED": "Started: {{VALUE}}. Uptime: {{TIME}}",
   "ERROR": {
+    "NO_FONT_FOUND": "No font name {{VALUE}} found",
     "PRIVATE_KEY_NOT_FOUND": "Private key not found",
     "NO_TG_BOT_NAME": "Bot name not specified",
     "NO_PORT_SELECTED": "No port selected",

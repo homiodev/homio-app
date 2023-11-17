@@ -33,7 +33,12 @@ public class FileManagerConsolePlugin implements ConsolePlugin<Object> {
     }
 
     @Override
-    public String getName() {
+    public @NotNull String getName() {
         return "fm";
+    }
+
+    @Override
+    public boolean hasRefreshIntervalSetting() {
+        return false;
     }
 }

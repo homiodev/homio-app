@@ -4,13 +4,11 @@ import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import lombok.Getter;
@@ -49,7 +47,6 @@ public class DeviceController {
     private static final String PREFIX = "13333333-3333-3333-3333-3333333330";
     private static final String WIFI_UUID = PREFIX + "10";
     private static final String DATA_UUID = PREFIX + "20";
-    private static final String selectedWifiInterface = "wlan0";
 
     private final NetworkHardwareRepository networkHardwareRepository;
     private final MachineHardwareRepository machineHardwareRepository;
@@ -85,11 +82,19 @@ public class DeviceController {
                     if (SystemUtils.IS_OS_LINUX) {
                         log.info("Writing wifi credentials");
                         networkHardwareRepository.setWifiCredentials(split[0], split[1], split[2]);
-                        networkHardwareRepository.restartNetworkInterface(selectedWifiInterface);
+                        networkHardwareRepository.restartNetworkInterface(getWifiInterface());
                     }
                 }
             }
         }
+    }
+
+    private String getWifiInterface() {
+        List<NetworkInterface> list = NetworkHardwareRepository.getActiveNetworkInterfaces();
+        if (!list.isEmpty()) {
+            return list.get(0).getName();
+        }
+        return "";
     }
 
     @GetMapping("/{endpoint}")
@@ -217,10 +222,11 @@ public class DeviceController {
 
     private String readWifiList() {
         if (SystemUtils.IS_OS_LINUX) {
-            return networkHardwareRepository
-                    .scan(selectedWifiInterface).stream()
-                    .filter(distinctByKey(Network::getSsid))
-                    .map(n -> n.getSsid() + "%&%" + n.getStrength()).collect(Collectors.joining("%#%"));
+            List<String> wifiList = new ArrayList<>();
+            for (Network network : networkHardwareRepository.scan(getWifiInterface())) {
+                wifiList.add(network.getSsid() + "%&%" + network.getStrength());
+            }
+            return String.join("%#%", wifiList);
         }
         ArrayList<String> result = machineHardwareRepository
                 .executeNoErrorThrowList("netsh wlan show profiles", 60, null);
@@ -228,10 +234,5 @@ public class DeviceController {
                 .filter(s -> s.contains("All User Profile"))
                 .map(s -> s.substring(s.indexOf(":") + 1).trim())
                 .map(s -> s + "%&%-").collect(Collectors.joining("%#%"));
-    }
-
-    protected <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
-        Set<Object> seen = ConcurrentHashMap.newKeySet();
-        return t -> seen.add(keyExtractor.apply(t));
     }
 }

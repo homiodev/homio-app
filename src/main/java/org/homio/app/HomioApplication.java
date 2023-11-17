@@ -4,6 +4,7 @@ import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -47,17 +48,32 @@ public class HomioApplication implements WebMvcConfigurer {
         setProperty("server.port", "port", "9111");
         Logger log = LogManager.getLogger(HomioApplication.class);
         setDatabaseProperties(log);
+        redirectConsoleOutput(log);
 
         try {
-            new SpringApplicationBuilder(AppConfig.class)
-                    .listeners(new LogService())
-                    .run(args);
+            new SpringApplicationBuilder(AppConfig.class).listeners(new LogService()).run(args);
         } catch (Exception ex) {
             Throwable cause = NestedExceptionUtils.getRootCause(ex);
             cause = cause == null ? ex : cause;
             log.error("Unable to start Homio application: {}", getErrorMessage(cause));
             throw ex;
         }
+    }
+
+    private static void redirectConsoleOutput(Logger log) {
+        System.setOut(new PrintStream(System.out) {
+            @Override
+            public void println(String message) {
+                log.info(message);
+            }
+        });
+
+        System.setErr(new PrintStream(System.err) {
+            @Override
+            public void println(String message) {
+                log.error(message);
+            }
+        });
     }
 
     @SneakyThrows

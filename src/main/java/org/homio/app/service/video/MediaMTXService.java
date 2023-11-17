@@ -26,6 +26,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.SystemUtils;
 import org.apache.logging.log4j.Level;
 import org.homio.api.Context;
 import org.homio.api.ContextBGP;
@@ -236,15 +237,18 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     private void startLocalProcess() {
         log.info("Starting MediaMTX");
         // not need internet because we should fail create service if no internet
+        Path executable = mediamtxGitHub.getLocalProjectPath().resolve("mediamtx");
         if (!mediamtxGitHub.isLocalProjectInstalled()) {
             mediamtxGitHub.installLatestRelease(context);
             Files.copy(mediamtxGitHub.getLocalProjectPath().resolve("mediamtx.yml"),
                 configurationPath, StandardCopyOption.REPLACE_EXISTING);
+            if (SystemUtils.IS_OS_LINUX) {
+                context.hardware().execute("chmod +x " + executable);
+            }
         }
         syncConfiguration();
 
-        String processStr = mediamtxGitHub.getLocalProjectPath().resolve("mediamtx")
-            + " " + configurationPath;
+        String processStr = executable + " " + configurationPath;
 
         AtomicReference<String> errorRef = new AtomicReference<>();
         this.processContext = context

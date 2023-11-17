@@ -70,7 +70,7 @@ public class PythonInstaller extends DependencyExecutableInstaller {
             executable = "python";
             if (IS_OS_LINUX) {
                 ContextHardware hardware = context.hardware();
-                hardware.installSoftware("python", 600);
+                hardware.installSoftware("python", 600, progressBar);
             } else {
                 String url = context.setting().getEnv("source-python");
                 if (url == null) {

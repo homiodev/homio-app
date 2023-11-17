@@ -72,6 +72,7 @@ public class SecurityConfiguration {
                         "/rest/auth/login",
                         "/rest/auth/register",
                         "/rest/frame/**",
+                        "rest/resource/**",
                         "/rest/media/audio/**",
                         "/rest/media/video/**",
                         "/rest/media/video/playback/**",

@@ -48,7 +48,7 @@ public class NodeJsInstaller extends DependencyExecutableInstaller {
         if (IS_OS_LINUX) {
             ContextHardware hardware = context.hardware();
             hardware.execute("curl -fsSL https://deb.nodesource.com/setup_current.x | sudo -E bash -");
-            hardware.installSoftware("nodejs", 600);
+            hardware.installSoftware("nodejs", 600, progressBar);
         } else {
             String url = context.setting().getEnv("source-nodejs");
             if (url == null) {

@@ -58,7 +58,7 @@ public class Go2RTCEntity extends MediaEntity implements HasEntityLog,
                              return "v" + version.substring("Current version: ".length()).trim();
                          }
                          return version;
-                     });
+                     }).setLinuxExecutableAsset("go2rtc");
 
     public static Go2RTCEntity ensureEntityExists(Context context) {
         Go2RTCEntity entity = context.db().getEntity(Go2RTCEntity.class, PRIMARY_DEVICE);

@@ -4,7 +4,6 @@ import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -28,11 +27,11 @@ import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.impl.ContextServiceImpl;
 import org.homio.app.manager.common.impl.ContextServiceImpl.RouteProxyImpl;
 import org.homio.app.manager.common.impl.ContextUIImpl;
+import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.app.model.entity.SettingEntity;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.cloud.gateway.mvc.ProxyExchange;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;

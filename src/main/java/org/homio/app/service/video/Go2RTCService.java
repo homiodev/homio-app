@@ -24,7 +24,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.Getter;
 import lombok.SneakyThrows;
-import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.Context;
 import org.homio.api.ContextBGP;
 import org.homio.api.ContextBGP.ProcessContext;
@@ -209,9 +208,6 @@ public class Go2RTCService extends ServiceInstance<Go2RTCEntity>
         // not need internet because we should fail create service if no internet
         if (!go2rtcGitHub.isLocalProjectInstalled()) {
             go2rtcGitHub.installLatestRelease(context);
-            if (SystemUtils.IS_OS_LINUX) {
-                context.hardware().execute("chmod +x " + go2rtcGitHub.getLocalProjectPath().resolve("go2rtc_") + "*");
-            }
         }
 
         String processStr = go2rtcGitHub.getLocalProjectPath().resolve("go2rtc")

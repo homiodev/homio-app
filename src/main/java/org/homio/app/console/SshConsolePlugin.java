@@ -36,4 +36,9 @@ public class SshConsolePlugin implements ConsolePlugin<Object> {
     public boolean isEnabled() {
         return context.accessEnabled(SSH_RESOURCE);
     }
+
+    @Override
+    public boolean hasRefreshIntervalSetting() {
+        return false;
+    }
 }

@@ -59,14 +59,13 @@ public class FFMPEGEntity extends MediaEntity implements
     private static FfmpegInstaller FFMPEG_INSTALLER;
 
     public static void ensureEntityExists(Context context) {
-        context.install().createInstallContext(FfmpegInstaller.class)
+        /*context.install().createInstallContext(FfmpegInstaller.class)
                      .requireAsync(null, (installed, exception) -> {
                          if (installed) {
                              log.info("FFPMEG service successfully installed");
                          }
-                     });
-        FFMPEGEntity.getFfmpegInstaller(context)
-                    .installLatestAsync();
+                     });*/
+        FFMPEGEntity.getFfmpegInstaller(context).installLatestAsync();
 
         FFMPEGEntity entity = context.db().getEntity(FFMPEGEntity.class, PRIMARY_DEVICE);
         if (entity == null) {
@@ -244,16 +243,22 @@ public class FFMPEGEntity extends MediaEntity implements
         protected @Nullable String getInstalledVersion() {
             ContextHardware hardware = context.hardware();
             String version = null;
-            if (IS_OS_WINDOWS) {
-                Path targetPath = CommonUtils.getInstallPath().resolve("ffmpeg").resolve("ffmpeg.exe");
-                if (Files.isRegularFile(targetPath)) {
-                    version = hardware.executeNoErrorThrow(targetPath + " -version", 60, null);
+            try {
+                if (IS_OS_WINDOWS) {
+                    Path targetPath = CommonUtils.getInstallPath().resolve("ffmpeg").resolve("ffmpeg.exe");
+                    if (Files.isRegularFile(targetPath)) {
+                        version = hardware.execute(targetPath + " -version", 60, null);
+                    }
+                } else {
+                    version = hardware.execute("ffmpeg -version", 60, null);
                 }
-            } else {
-                version = hardware.executeNoErrorThrow("ffmpeg -version", 60, null);
-            }
-            if (version != null && version.startsWith("ffmpeg version 6.0-essentials")) {
-                version = "6.0";
+            } catch (Exception ignore) {}
+
+            if (version != null && version.startsWith("ffmpeg version")) {
+                version = version.substring("ffmpeg version".length()).trim().split(" ")[0].trim();
+                if (version.contains("-")) {
+                    version = version.substring(0, version.indexOf("-"));
+                }
             }
             return version;
         }
@@ -263,7 +268,7 @@ public class FFMPEGEntity extends MediaEntity implements
             if (IS_OS_LINUX) {
                 ContextHardware hardware = context.hardware();
                 if (!hardware.isSoftwareInstalled("ffmpeg")) {
-                    hardware.installSoftware("ffmpeg", 600);
+                    hardware.installSoftware("ffmpeg", 600, progressBar);
                 }
             } else {
                 String url = context.setting().getEnv("source-ffmpeg");

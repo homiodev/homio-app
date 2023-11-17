@@ -6,15 +6,21 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import java.awt.Font;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.types.MicroControllerBaseEntity;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
+import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.service.EntityService;
@@ -22,12 +28,15 @@ import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.action.UIContextMenuUploadAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.service.LocalBoardService;
 import org.homio.app.service.LocalFileSystemProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONObject;
+import org.springframework.web.multipart.MultipartFile;
 
 @Entity
 @Log4j2
@@ -91,9 +100,19 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
         return true;
     }
 
-    @Override
-    public void assembleActions(UIInputBuilder uiInputBuilder) {
-
+    @SneakyThrows
+    @UIContextMenuUploadAction(value = "UPLOAD_FONT", icon = "fas fa-font", supportedFormats = {".ttf"})
+    public ActionResponseModel uploadFont(JSONObject params) {
+        MultipartFile[] files = (MultipartFile[]) params.get("files");
+        for (MultipartFile file : files) {
+            String filename = file.getOriginalFilename();
+            if (filename != null && filename.endsWith(".ttf")) {
+                Path fonts = CommonUtils.createDirectoriesIfNotExists(CommonUtils.getConfigPath().resolve("fonts"));
+                file.transferTo(fonts.resolve(filename));
+            }
+        }
+        context().ui().dialog().reloadWindow("Apply new fonts", 5);
+        return ActionResponseModel.success();
     }
 
     @Override
@@ -126,6 +145,11 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
     @Override
     public @Nullable LocalBoardService createService(@NotNull Context context) {
         return new LocalBoardService(context, this);
+    }
+
+    @Override
+    public void assembleActions(UIInputBuilder uiInputBuilder) {
+
     }
 
     @Override
