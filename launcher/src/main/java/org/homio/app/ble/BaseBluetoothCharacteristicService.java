@@ -1,14 +1,19 @@
 package org.homio.app.ble;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -108,20 +113,39 @@ public abstract class BaseBluetoothCharacteristicService {
 
     private void rebootDevice(byte[] ignore) {
         if (SystemUtils.IS_OS_LINUX) {
+            System.out.println("Reboot device");
             machineHardwareRepository.reboot();
         }
     }
 
+    @SneakyThrows
     private void writeWifiSSID(byte[] bytes) {
-        String[] split = new String(bytes).split("%&%");
-        if (split.length == 3 && split[1].length() >= 6) {
-            if (SystemUtils.IS_OS_LINUX) {
-                System.out.println("Writing wifi credentials");
+        if (SystemUtils.IS_OS_LINUX) {
+            String[] split = new String(bytes).split("%&%");
+            if (split.length == 3 && !split[0].isEmpty() && !split[2].isEmpty() && split[1].length() >= 6) {
+                System.out.printf("Writing wifi credentials: SSID: %s. PWD: %s. COUNTRY: %s%n", split[0], split[1], split[2]);
                 networkHardwareRepository.setWifiCredentials(split[0], split[1], split[2]);
-                networkHardwareRepository.restartNetworkInterface(selectedWifiInterface);
+                updateHostapdConfigCountryCode(split);
+                // this script should connect to router or run hotspot
+                machineHardwareRepository.execute("/usr/bin/autohotspot", 60);
             }
-            // this script should connect to router or run hotspot
-            // TODO: do we need this???             machineHardwareRepository.execute("/usr/bin/autohotspot", 60);
+        }
+    }
+
+    private static void updateHostapdConfigCountryCode(String[] split) {
+        try {
+            Path hostapdConf = Paths.get("/etc/hostapd/hostapd.conf");
+            Properties properties = new Properties();
+            try (InputStream inputStream = Files.newInputStream(hostapdConf)) {
+                properties.load(inputStream);
+            }
+            properties.setProperty("country_code", split[2]);
+            try (OutputStream outputStream = Files.newOutputStream(hostapdConf)) {
+                properties.store(outputStream, null);
+            }
+            System.out.println("Hostapd country_code updated successfully.");
+        } catch (Exception ex) {
+            System.err.printf("Error while update hostapd country_code: %s%n", ex.getMessage());
         }
     }
 
@@ -143,14 +167,34 @@ public abstract class BaseBluetoothCharacteristicService {
     @Getter
     public class MachineSummary {
 
-        private final String mac = networkHardwareRepository.getMacAddress();
-        private final String model = SystemUtils.OS_NAME;
-        private final String wifi = networkHardwareRepository.getWifiName();
-        private final String ip = networkHardwareRepository.getIPAddress();
-        private final String time = machineHardwareRepository.getUptime();
-        private final String memory = machineHardwareRepository.getRamMemory();
-        private final String disc = machineHardwareRepository.getDiscCapacity();
-        private final boolean net = networkHardwareRepository.pingAddress("www.google.com", 80, 5000);
         private final boolean linux = SystemUtils.IS_OS_LINUX;
+        private final String model = SystemUtils.OS_NAME;
+        private final String mac;
+        private final String wifi;
+        private final String ip;
+        private final String time;
+        private final String memory;
+        private final String disc;
+        private final boolean net;
+
+        public MachineSummary() {
+            mac = get("mac", networkHardwareRepository::getMacAddress);
+            wifi = get("wifi", networkHardwareRepository::getWifiName);
+            ip = get("ip", networkHardwareRepository::getIPAddress);
+            time = get("time", machineHardwareRepository::getUptime);
+            memory = get("memory", machineHardwareRepository::getRamMemory);
+            disc = get("disk", machineHardwareRepository::getDiscCapacity);
+            net = Boolean.TRUE.equals(get("net", () ->
+                networkHardwareRepository.pingAddress("www.google.com", 80, 5000)));
+        }
+
+        private <T> T get(String name, Supplier<T> handler) {
+            try {
+                return handler.get();
+            } catch (Exception ex) {
+                System.err.println("Error while get: " + name + ": " + ex.getMessage());
+                return null;
+            }
+        }
     }
 }

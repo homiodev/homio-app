@@ -7,10 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-
 import org.bluez.GattCharacteristic1;
 import org.dbus.PropertiesChangedSignal;
 import org.freedesktop.DBus.Properties;
@@ -39,12 +37,6 @@ class BleCharacteristic implements GattCharacteristic1, Properties {
 
     @Setter
     private Supplier<byte[]> readListener;
-
-    @Setter
-    private int minReadTimeout = 5000;
-
-    private long lastReadTime = -1;
-    private long lastWriteTime = -1;
 
     @Setter
     private byte[] value = new byte[0];
@@ -127,14 +119,16 @@ class BleCharacteristic implements GattCharacteristic1, Properties {
             offset = (vOffset.getValue() != null) ? vOffset.getValue().intValue() : offset;
         }
 
-        if (readListener != null && System.currentTimeMillis() - lastReadTime >= minReadTimeout) {
-            lastReadTime = System.currentTimeMillis();
+        if (readListener != null) {
             try {
                 value = readListener.get();
+                System.out.printf("Read value: %s for uuid: %s%n", new String(value), uuid);
             } catch (Exception ex) {
                 System.err.printf("Error while read from ble: '%s'%n", ex.getMessage());
                 value = new byte[0];
             }
+        } else {
+            System.err.printf("No read listener for uuid: %s%n", uuid);
         }
         System.out.printf("Request value from characteristic: '%s', value: '%s'%n", path, new String(value));
         return Arrays.copyOfRange(value, offset, value.length);
@@ -180,7 +174,6 @@ class BleCharacteristic implements GattCharacteristic1, Properties {
                 return;
             }
 
-            lastWriteTime = System.currentTimeMillis();
             try {
                 writeListener.accept(this.packet);
                 this.resetWrite();
@@ -199,7 +192,7 @@ class BleCharacteristic implements GattCharacteristic1, Properties {
     @Override
     public void StartNotify() {
         if (isNotifying) {
-            System.err.printf("Characteristic already notifying");
+            System.err.printf("Characteristic already notifying: %s", uuid);
             return;
         }
         this.isNotifying = true;
@@ -208,7 +201,7 @@ class BleCharacteristic implements GattCharacteristic1, Properties {
     @Override
     public void StopNotify() {
         if (!isNotifying) {
-            System.err.printf("Characteristic already not notifying");
+            System.err.printf("Characteristic already not notifying %s", uuid);
             return;
         }
         this.isNotifying = false;

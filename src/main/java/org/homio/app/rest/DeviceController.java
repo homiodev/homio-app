@@ -3,20 +3,17 @@ package org.homio.app.rest;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.SystemUtils;
+import org.homio.addon.bluetooth.BluetoothCharacteristicService;
 import org.homio.api.Context;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
@@ -24,9 +21,6 @@ import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.model.endpoint.DeviceEndpoint.EndpointType;
-import org.homio.hquery.hardware.network.Network;
-import org.homio.hquery.hardware.network.NetworkHardwareRepository;
-import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -44,57 +38,20 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class DeviceController {
 
-    private static final String PREFIX = "13333333-3333-3333-3333-3333333330";
-    private static final String WIFI_UUID = PREFIX + "10";
-    private static final String DATA_UUID = PREFIX + "20";
-
-    private final NetworkHardwareRepository networkHardwareRepository;
-    private final MachineHardwareRepository machineHardwareRepository;
+    private final BluetoothCharacteristicService bluetoothService;
     private final Context context;
 
     @SneakyThrows
     @GetMapping("/characteristic/{uuid}")
     public OptionModel getDeviceCharacteristic(@PathVariable("uuid") String uuid) {
-        switch (uuid) {
-            case DATA_UUID -> {
-                return OptionModel.key(new ObjectMapper().writeValueAsString(new MachineSummary()));
-            }
-            case WIFI_UUID -> {
-                return OptionModel.key(readWifiList());
-            }
-        }
-        return null;
+        String characteristic = bluetoothService.getDeviceCharacteristic(uuid);
+        return characteristic == null ? null : OptionModel.key(characteristic);
     }
 
     @PutMapping("/characteristic/{uuid}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void setDeviceCharacteristic(@PathVariable("uuid") String uuid, @RequestBody byte[] value) {
-        switch (uuid) {
-            case DATA_UUID -> {
-                log.info("Reboot device");
-                if (SystemUtils.IS_OS_LINUX) {
-                    machineHardwareRepository.reboot();
-                }
-            }
-            case WIFI_UUID -> {
-                String[] split = new String(value).split("%&%");
-                if (split.length == 3 && split[1].length() >= 6) {
-                    if (SystemUtils.IS_OS_LINUX) {
-                        log.info("Writing wifi credentials");
-                        networkHardwareRepository.setWifiCredentials(split[0], split[1], split[2]);
-                        networkHardwareRepository.restartNetworkInterface(getWifiInterface());
-                    }
-                }
-            }
-        }
-    }
-
-    private String getWifiInterface() {
-        List<NetworkInterface> list = NetworkHardwareRepository.getActiveNetworkInterfaces();
-        if (!list.isEmpty()) {
-            return list.get(0).getName();
-        }
-        return "";
+        bluetoothService.setDeviceCharacteristic(uuid, value);
     }
 
     @GetMapping("/{endpoint}")
@@ -204,35 +161,5 @@ public class DeviceController {
                 .setDescription(endpoint.getDescription())
                 .setIcon(endpoint.getIcon().getIcon())
                 .setColor(endpoint.getIcon().getColor());
-    }
-
-    @Getter
-    public class MachineSummary {
-
-        private final String mac = networkHardwareRepository.getMacAddress();
-        private final String model = SystemUtils.OS_NAME;
-        private final String wifi = networkHardwareRepository.getWifiName();
-        private final String ip = networkHardwareRepository.getIPAddress();
-        private final String time = machineHardwareRepository.getUptime();
-        private final String memory = machineHardwareRepository.getRamMemory();
-        private final String disc = machineHardwareRepository.getDiscCapacity();
-        private final boolean net = networkHardwareRepository.pingAddress("www.google.com", 80, 5000);
-        private final boolean linux = SystemUtils.IS_OS_LINUX;
-    }
-
-    private String readWifiList() {
-        if (SystemUtils.IS_OS_LINUX) {
-            List<String> wifiList = new ArrayList<>();
-            for (Network network : networkHardwareRepository.scan(getWifiInterface())) {
-                wifiList.add(network.getSsid() + "%&%" + network.getStrength());
-            }
-            return String.join("%#%", wifiList);
-        }
-        ArrayList<String> result = machineHardwareRepository
-                .executeNoErrorThrowList("netsh wlan show profiles", 60, null);
-        return result.stream()
-                .filter(s -> s.contains("All User Profile"))
-                .map(s -> s.substring(s.indexOf(":") + 1).trim())
-                .map(s -> s + "%&%-").collect(Collectors.joining("%#%"));
     }
 }

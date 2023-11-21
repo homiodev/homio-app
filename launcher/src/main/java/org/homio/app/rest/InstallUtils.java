@@ -6,12 +6,11 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
-
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.SystemUtils;
+import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.homio.app.rest.InstallUtils.GitHubDescription.Asset;
 import org.homio.hquery.Curl;
 import org.homio.hquery.ProgressBar;
@@ -36,16 +35,19 @@ public final class InstallUtils {
                     Files.deleteIfExists(target);
                     Path unpackedTmate = rootPath.resolve("tmate-2.4.0-static-linux-%s".formatted(arm));
                     Files.createDirectories(Paths.get("ssh"));
-                    Files.move(unpackedTmate.resolve("tmate"), Paths.get("ssh/tmate"), StandardCopyOption.REPLACE_EXISTING);
+                    Path tmate = Paths.get("ssh/tmate");
+                    Files.move(unpackedTmate.resolve("tmate"), tmate, StandardCopyOption.REPLACE_EXISTING);
                     FileUtils.deleteDirectory(unpackedTmate.toFile());
-                    repository.setPermissions(Paths.get("ssh/tmate"), 555); // r+w for all
+                    repository.setPermissions(tmate, 555); // r+w for all
+                } else {
+                    System.err.println("Unable to find device arm");
                 }
             }
         }
     }
 
     @SneakyThrows
-    public static void downloadApp(ProgressBar progressBar, MachineHardwareRepository repository, Path rootPath) {
+    public static void downloadApp(ProgressBar progressBar, Path rootPath, MachineHardwareRepository repository) {
         Path archiveAppPath = rootPath.resolve("homio-app.zip");
         Files.deleteIfExists(archiveAppPath);
 
@@ -61,6 +63,11 @@ public final class InstallUtils {
         }
         System.out.printf("Downloading '%s' to '%s'%n", archiveAppPath.getFileName(), archiveAppPath);
         Curl.downloadWithProgress(asset.browser_download_url, archiveAppPath, progressBar);
+
+        System.out.println("Extracting homio-app.zip");
+        repository.execute("unzip -o " + archiveAppPath, 300, progressBar);
+        Files.delete(archiveAppPath);
+        System.out.println("Finished extract homio-app.zip");
     }
 
     private static String getTmateArm(MachineHardwareRepository repository) {
@@ -69,10 +76,10 @@ public final class InstallUtils {
             return "arm32v6";
         } else if (architecture.startsWith("armv7")) {
             return "arm32v7";
-        } else if (architecture.startsWith("armv8")) {
+        } else if (architecture.startsWith("i386")) {
+            return "i386";
+        } else if (architecture.startsWith("armv8") || architecture.startsWith("aarch64")) {
             return "arm64v8";
-        } else if (architecture.startsWith("aarch64")) {
-            return "arm64";
         } else if (architecture.startsWith("x86_64")) {
             return "amd64";
         }

@@ -96,7 +96,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
         return getJsonData("av", 3);
     }
 
-    public void setApiBasePath(int value) {
+    public void setApiVersion(int value) {
         setJsonData("av", value);
     }
 
@@ -108,7 +108,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     @UIField(order = 1, inlineEdit = true)
     @UIFieldGroup("GENERAL")
     public boolean isStart() {
-        return getJsonData("start", true);
+        return getJsonData("start", false);
     }
 
     public void setStart(boolean start) {
