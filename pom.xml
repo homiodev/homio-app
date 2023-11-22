@@ -13,8 +13,8 @@
 
   <properties>
     <graalvm.version>23.0.1</graalvm.version>
-    <homio-api.version>1.3.2-SNAPSHOT</homio-api.version>
-    <homio-primary-addons.version>1.3.0-SNAPSHOT</homio-primary-addons.version>
+    <homio-api.version>1.3.2</homio-api.version>
+    <homio-primary-addons.version>1.3.2</homio-primary-addons.version>
     <start-class>org.homio.app.HomioApplication</start-class>
   </properties>
 
@@ -98,11 +98,6 @@
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.homio</groupId>
-      <artifactId>onvif</artifactId>
-      <version>1.0.5-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.cloud</groupId>

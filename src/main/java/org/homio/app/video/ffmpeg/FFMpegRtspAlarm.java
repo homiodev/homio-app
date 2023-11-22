@@ -1,4 +1,4 @@
-package org.homio.addon.camera.service.util;
+package org.homio.app.video.ffmpeg;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -15,7 +15,6 @@ import org.homio.addon.camera.entity.VideoMotionAlarmProvider;
 import org.homio.api.ContextMedia.FFMPEG;
 import org.homio.api.ContextMedia.FFMPEGFormat;
 import org.homio.api.state.DecimalType;
-import org.homio.app.video.ffmpeg.FFMPEGImpl;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;

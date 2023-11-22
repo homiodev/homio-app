@@ -4,6 +4,7 @@ import static java.lang.String.format;
 import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION;
+import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
 import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
 import static org.springframework.http.HttpHeaders.ETAG;
 import static org.springframework.http.HttpHeaders.LAST_MODIFIED;
@@ -14,6 +15,7 @@ import dev.failsafe.ExecutionContext;
 import dev.failsafe.Failsafe;
 import dev.failsafe.Fallback;
 import dev.failsafe.RetryPolicy;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,6 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -38,22 +41,30 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.addon.camera.entity.CameraPlaybackStorage;
 import org.homio.addon.camera.entity.CameraPlaybackStorage.DownloadFile;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.Context;
 import org.homio.api.audio.AudioSink;
 import org.homio.api.audio.SelfContainedAudioSourceContainer;
+import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.NotFoundException;
+import org.homio.api.exception.ServerException;
 import org.homio.api.fs.FileSystemProvider;
 import org.homio.api.model.OptionModel;
+import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader.DynamicOptionLoaderParameters;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.audio.AudioService;
 import org.homio.app.manager.AddonService;
 import org.homio.app.manager.ImageService;
 import org.homio.app.manager.ImageService.ImageResponse;
+import org.homio.app.model.entity.Go2RTCEntity;
+import org.homio.app.model.entity.MediaMTXEntity;
+import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity.VideoSeriesDataSourceDynamicOptionLoader;
 import org.homio.app.video.ffmpeg.FfmpegHardwareRepository;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.cloud.gateway.mvc.ProxyExchange;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -66,6 +77,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -80,6 +92,45 @@ import org.springframework.web.context.request.WebRequest;
 @RequestMapping("/rest/media")
 @RequiredArgsConstructor
 public class MediaController {
+
+    @GetMapping("/video/{entityID}/sources")
+    public List<OptionModel> getVideoSources(@PathVariable("entityID") String entityID) {
+        BaseEntity baseEntity = getEntity(entityID);
+        var parameters = new DynamicOptionLoaderParameters(baseEntity, context, new String[0], null);
+        List<OptionModel> models = new VideoSeriesDataSourceDynamicOptionLoader().loadOptions(parameters);
+        return models.isEmpty() ? models : models.get(0).getChildren();
+    }
+
+    @PostMapping("/{entityID}/go2rtc/video.webrtc")
+    public ResponseEntity<?> postGo2RTCWebRTC(@PathVariable("entityID") String entityID, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
+        Go2RTCEntity mtx = Go2RTCEntity.ensureEntityExists(context);
+        return proxyUrl(proxy, 8889, entityID, "whep", request.getQueryString(), ProxyExchange::post);
+    }
+
+    @PostMapping("/{entityID}/mediamtx/video.webrtc")
+    public ResponseEntity<?> postMediaMtxWebRTC(@PathVariable("entityID") String entityID, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
+        MediaMTXEntity mtx = MediaMTXEntity.ensureEntityExists(context);
+        return proxyUrl(proxy, mtx.getWebRtcPort(), entityID, "whep", request.getQueryString(), ProxyExchange::post);
+    }
+
+    @PatchMapping("/{entityID}/mediamtx/video.webrtc")
+    public ResponseEntity<?> patchMediaMtxWebRTC(@PathVariable("entityID") String ignore) {
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    @GetMapping("/{entityID}/mediamtx/{filename}.m3u8")
+    public ResponseEntity<?> getMediaMtxHls(@PathVariable("entityID") String entityID,
+        @PathVariable("filename") String filename, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
+        MediaMTXEntity mtx = MediaMTXEntity.ensureEntityExists(context);
+        return proxyUrl(proxy, mtx.getHlsPort(), entityID, filename + ".m3u8", request.getQueryString(), ProxyExchange::get);
+    }
+
+    @GetMapping("/{entityID}/mediamtx/{filename}.mp4")
+    public ResponseEntity<?> getMediaMtxHlsMp4(@PathVariable("entityID") String entityID,
+        @PathVariable("filename") String filename, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
+        MediaMTXEntity mtx = MediaMTXEntity.ensureEntityExists(context);
+        return proxyUrl(proxy, mtx.getHlsPort(), entityID, filename + ".mp4", request.getQueryString(), ProxyExchange::get);
+    }
 
     private static final Cache<String, MediaPlayContext> fileIdToMedia = CacheBuilder
         .newBuilder().expireAfterAccess(Duration.ofHours(24)).build();
@@ -372,5 +423,29 @@ public class MediaController {
 
     private record MediaPlayContext(@NotNull FileSystemProvider fileSystem, @NotNull String dataSource, @NotNull String id, long size, @NotNull String type) {
 
+    }
+
+    private ResponseEntity<?> proxyUrl(ProxyExchange<byte[]> proxy, int port, String entityID, String path,
+        String queryString, Function<ProxyExchange<byte[]>, ResponseEntity<byte[]>> handler) {
+        if (queryString != null) {
+            path += "?" + queryString;
+        }
+        ResponseEntity<byte[]> response = handler.apply(proxy.uri("http://localhost:%s/%s/%s".formatted(port, entityID, path)));
+        HttpHeaders responseHeaders = new HttpHeaders();
+
+        responseHeaders.add(ACCESS_CONTROL_EXPOSE_HEADERS, "*");
+        return ResponseEntity.status(response.getStatusCode())
+                             .headers(responseHeaders)
+                             .body(response.getBody());
+    }
+
+    @SneakyThrows
+    private @NotNull BaseCameraEntity<?, ?> getEntity(String entityID) {
+        BaseCameraEntity<?, ?> entity = context.db().getEntityRequire(entityID);
+        if (!entity.getStatus().isOnline()) {
+            throw new ServerException("Unable to run execute request. Video entity: %s has wrong status: %s".formatted(entity.getTitle(), entity.getStatus()))
+                .setStatus(HttpStatus.PRECONDITION_FAILED);
+        }
+        return entity;
     }
 }
