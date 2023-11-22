@@ -1,17 +1,16 @@
 package org.homio.app.model.entity.widget.impl.video;
 
 import jakarta.persistence.Entity;
-import java.util.Set;
 import org.homio.api.entity.validation.MaxItems;
 import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Set;
+
 @Entity
 public class WidgetVideoEntity
-    extends WidgetBaseEntityAndSeries<WidgetVideoEntity, WidgetVideoSeriesEntity> {
-
-    public static final String PREFIX = "wgtvid_";
+        extends WidgetBaseEntityAndSeries<WidgetVideoEntity, WidgetVideoSeriesEntity> {
 
     @Override
     public WidgetGroup getGroup() {
@@ -34,12 +33,12 @@ public class WidgetVideoEntity
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "video";
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         setBh(3);
         setBw(3);
         super.beforePersist();

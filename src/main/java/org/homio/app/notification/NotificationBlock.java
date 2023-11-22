@@ -1,26 +1,27 @@
 package org.homio.app.notification;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.pivovarit.function.ThrowingBiFunction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContextUI.NotificationBlockBuilder;
-import org.homio.api.EntityContextUI.NotificationInfoLineBuilder;
+import org.homio.api.ContextUI.NotificationBlockBuilder;
+import org.homio.api.ContextUI.NotificationInfoLineBuilder;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
+import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
-import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.ui.field.action.v1.layout.UILayoutBuilder;
 import org.homio.app.builder.ui.layout.UIStickyDialogItemBuilderImpl;
@@ -43,7 +44,7 @@ public class NotificationBlock {
     private @Nullable Status status;
     private @Nullable String statusColor;
     private @Nullable Boolean updating;
-    private @Nullable List<String> versions;
+    private @Nullable List<OptionModel> versions;
     private @Nullable String link;
     private @Nullable String linkType;
     private @Nullable String borderColor;
@@ -57,7 +58,7 @@ public class NotificationBlock {
     private @NotNull Map<String, Collection<UIInputEntity>> keyValueActions = new HashMap<>();
 
     @JsonIgnore
-    private @Nullable BiFunction<ProgressBar, String, ActionResponseModel> updateHandler;
+    private @Nullable ThrowingBiFunction<ProgressBar, String, ActionResponseModel, Exception> updateHandler;
 
     @JsonIgnore
     private Runnable fireOnFetchHandler;
@@ -86,7 +87,8 @@ public class NotificationBlock {
         return infoItem;
     }
 
-    public void setUpdatable(BiFunction<ProgressBar, String, ActionResponseModel> updateHandler, List<String> versions) {
+    public void setUpdatable(@NotNull ThrowingBiFunction<ProgressBar, String, ActionResponseModel, Exception> updateHandler,
+        @NotNull List<OptionModel> versions) {
         this.versions = versions;
         this.updateHandler = updateHandler;
     }
@@ -107,7 +109,6 @@ public class NotificationBlock {
         private String link;
         private String linkType;
 
-
         private String rightText;
         private Icon rightTextIcon;
         private String rightTextColor;
@@ -115,7 +116,8 @@ public class NotificationBlock {
         private Icon buttonIcon;
         private String buttonText;
         private String confirmMessage;
-        @JsonIgnore private UIActionHandler handler;
+        @JsonIgnore
+        private UIActionHandler handler;
 
         private Icon settingIcon;
         private UIInputEntity settingButton;
@@ -136,7 +138,7 @@ public class NotificationBlock {
         }
 
         @Override
-        public @NotNull NotificationInfoLineBuilder setRightText(@NotNull String text, @Nullable Icon icon, @Nullable String color) {
+        public @NotNull NotificationInfoLineBuilder setRightText(@Nullable String text, @Nullable Icon icon, @Nullable String color) {
             this.rightText = text;
             this.rightTextIcon = icon;
             this.rightTextColor = color;
@@ -146,7 +148,7 @@ public class NotificationBlock {
         @Override
         public @NotNull NotificationInfoLineBuilder setStatus(@NotNull HasStatusAndMsg entity) {
             this.status = entity.getStatus();
-            if(StringUtils.isNotEmpty(entity.getStatusMessage())) {
+            if (StringUtils.isNotEmpty(entity.getStatusMessage())) {
                 this.description = entity.getStatusMessage();
             }
             return this;
@@ -154,7 +156,7 @@ public class NotificationBlock {
 
         @Override
         public @NotNull NotificationInfoLineBuilder setRightButton(@Nullable Icon buttonIcon, @Nullable String buttonText, @Nullable String confirmMessage,
-            @Nullable UIActionHandler handler) {
+                                                                   @Nullable UIActionHandler handler) {
             this.buttonIcon = buttonIcon;
             this.buttonText = buttonText;
             this.confirmMessage = confirmMessage;
@@ -164,7 +166,7 @@ public class NotificationBlock {
 
         @Override
         public @NotNull NotificationInfoLineBuilder setRightSettingsButton(@NotNull Icon buttonIcon,
-            @NotNull Consumer<UILayoutBuilder> assembler) {
+                                                                           @NotNull Consumer<UILayoutBuilder> assembler) {
             UIStickyDialogItemBuilderImpl builder = new UIStickyDialogItemBuilderImpl("actions");
             assembler.accept(builder);
             settingIcon = buttonIcon;

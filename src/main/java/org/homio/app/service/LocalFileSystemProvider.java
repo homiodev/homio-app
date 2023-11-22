@@ -3,7 +3,7 @@ package org.homio.app.service;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 import static org.homio.api.fs.BaseCachedFileSystemProvider.fixPath;
-import static org.homio.app.utils.InternalUtil.TIKA;
+import static org.homio.api.util.CommonUtils.TIKA;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -36,10 +36,13 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.homio.api.fs.FileSystemProvider;
 import org.homio.api.fs.TreeNode;
 import org.homio.api.fs.archive.ArchiveUtil;
+import org.homio.api.ui.UI.Color;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 
 @AllArgsConstructor
 public class LocalFileSystemProvider implements FileSystemProvider {
@@ -71,12 +74,12 @@ public class LocalFileSystemProvider implements FileSystemProvider {
             if (archivePath != null) {
                 List<File> children = ArchiveUtil.getChildren(archivePath, archivePath.relativize(fullPath).toString());
                 return children.stream().map(c -> buildTreeNode(true, c, c.isDirectory(),
-                                   archivePath.resolve(c.getPath()).toString(), null))
-                               .collect(Collectors.toSet());
+                                archivePath.resolve(c.getPath()).toString(), null))
+                        .collect(Collectors.toSet());
             }
         }
         try (Stream<Path> stream = Files.list(fullPath)) {
-            for (Path path : stream.collect(Collectors.toList())) {
+            for (Path path : stream.toList()) {
                 try {
                     if (!Files.isHidden(path)) {
                         fmPaths.add(buildTreeNode(path, path.toFile()));
@@ -119,7 +122,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
         for (Map.Entry<Path, Set<Path>> entry : archiveIds.entrySet()) {
             List<File> archiveEntries = ArchiveUtil.getArchiveEntries(entry.getKey(), null);
             Map<String, Path> valueToKey =
-                entry.getValue().stream().collect(Collectors.toMap(p -> entry.getKey().relativize(p).toString(), p -> p));
+                    entry.getValue().stream().collect(Collectors.toMap(p -> entry.getKey().relativize(p).toString(), p -> p));
 
             for (File archiveEntry : archiveEntries) {
                 Path path = valueToKey.get(archiveEntry.toString());
@@ -133,7 +136,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
 
     @Override
     @SneakyThrows
-    public InputStream getEntryInputStream(@NotNull String id) {
+    public @NotNull InputStream getEntryInputStream(@NotNull String id) {
         Path path = buildPath(id);
         if (!Files.exists(path)) {
             // try check if path is archive;
@@ -145,6 +148,12 @@ public class LocalFileSystemProvider implements FileSystemProvider {
             return Files.newInputStream(path);
         }
         throw new IllegalArgumentException("Unable to find entry: " + path);
+    }
+
+    @SneakyThrows
+    public @NotNull Resource getEntryResource(@NotNull String id) {
+        Path path = buildPath(id);
+        return new UrlResource(path.toUri());
     }
 
     @Override
@@ -167,6 +176,17 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     public void setEntity(Object entity) {
         this.entity = (LocalBoardEntity) entity;
 
+    }
+
+    @Override
+    public boolean exists(@NotNull String id) {
+        return Files.exists(buildPath(id));
+    }
+
+    @Override
+    @SneakyThrows
+    public long size(@NotNull String id) {
+        return Files.size(buildPath(id));
     }
 
     @Override
@@ -290,14 +310,13 @@ public class LocalFileSystemProvider implements FileSystemProvider {
         }
         Set<TreeNode> rootChildren = getChildren(trimToEmpty(rootPath));
         Set<TreeNode> currentChildren = rootChildren;
-        List<Path> items = StreamSupport.stream(Paths.get(id).spliterator(), false)
-                                        .collect(Collectors.toList());
+        List<Path> items = StreamSupport.stream(Paths.get(id).spliterator(), false).toList();
         for (int i = 0; i < items.size() - 1; i++) {
             Path pathItemId = items.get(i);
             String pathItemIdStr = fixPath(pathItemId);
             TreeNode foundedObject =
-                currentChildren.stream().filter(c -> c.getId().equals(pathItemIdStr)).findAny().orElseThrow(() ->
-                    new IllegalStateException("Unable find object: " + pathItemIdStr));
+                currentChildren.stream().filter(c -> Objects.equals(c.getId(), pathItemIdStr)).findAny().orElseThrow(() ->
+                            new IllegalStateException("Unable find object: " + pathItemIdStr));
             currentChildren = getChildren(pathItemIdStr);
             foundedObject.addChildren(currentChildren);
         }
@@ -305,7 +324,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     }
 
     public void copyEntries(Collection<TreeNode> entries, Path targetPath, CopyOption[] options, List<Path> result)
-        throws IOException {
+            throws IOException {
         // if copying to archive
         Path archivePath = getArchivePath(targetPath);
         if (archivePath != null) {
@@ -358,7 +377,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     // not optimised
     private void buildTreeNodeRecursively(Path parentPath, TreeNode root) throws IOException {
         try (Stream<Path> stream = Files.list(parentPath)) {
-            for (Path path : stream.collect(Collectors.toList())) {
+            for (Path path : stream.toList()) {
                 try {
                     if (!Files.isHidden(path)) {
                         TreeNode childTreeNode = root.addChild(buildTreeNode(path, path.toFile()));
@@ -372,7 +391,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
         }
     }
 
-    private Path buildPath(String id) {
+    private @NotNull Path buildPath(String id) {
         if (!id.startsWith(entity.getFileSystemRoot())) {
             return Paths.get(entity.getFileSystemRoot()).resolve(id);
         }
@@ -390,16 +409,26 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     }
 
     @SneakyThrows
-    private TreeNode buildTreeNode(Path path, File file) {
+    private @NotNull TreeNode buildTreeNode(Path path, File file) {
         String fullPath = fixPath(path.toAbsolutePath()).substring(entity.getFileSystemRoot().length());
         if (fullPath.startsWith("/")) {
             fullPath = fullPath.substring(1);
         }
         boolean isDirectory = file.isDirectory();
         boolean exists = file.exists();
-        String contentType =
-            !isDirectory && exists ? StringUtils.defaultString(Files.probeContentType(path), TIKA.detect(path)) : null;
-        return buildTreeNode(exists, file, isDirectory, fullPath, contentType);
+        String contentType;
+        boolean ade = false;
+        try {
+            contentType = !isDirectory && exists ? StringUtils.defaultString(Files.probeContentType(path), TIKA.detect(path)) : null;
+        } catch (AccessDeniedException e) {
+            contentType = "";
+            ade = true;
+        }
+        TreeNode treeNode = buildTreeNode(exists, file, isDirectory, fullPath, contentType);
+        if (ade) {
+            treeNode.getAttributes().setIcon("fas fa-ban").setColor(Color.RED);
+        }
+        return treeNode;
     }
 
     private TreeNode buildTreeNode(boolean exists, File file, boolean isDirectory, String fullPath, String contentType) {

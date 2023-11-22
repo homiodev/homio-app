@@ -28,12 +28,11 @@ JVM' (https://medium.com/@menchukanton/setup-intellij-idea-for-remote-debugging-
 Application starts as spring boot application with main class HomioApplication.java
 To avoid errors with installing linux packages when starts application you need setup env variable -Ddevelopment=true
 
+VM options:
+--add-opens=java.base/java.net=ALL-UNNAMED
+--add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED
+-Ddevelopment=true
+
 [releases-shield]: https://img.shields.io/github/v/release/homiodev/homio-app.svg
 
 [releases]: https://github.com/homiodev/homio-app/releases
-
---add-opens=java.base/java.net=ALL-UNNAMED
---add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED
---add-opens=java.base/jdk.internal.loader=ALL-UNNAMED
--Djava.system.class.loader=org.homio.app.HomioClassLoader
--Ddevelopment=true

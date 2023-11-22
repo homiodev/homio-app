@@ -1,17 +1,20 @@
 package org.homio.app.notification;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.function.Supplier;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.ui.dialog.DialogModel;
 
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.function.Supplier;
+
 @Getter
 @Setter
 @Accessors(chain = true)
+@EqualsAndHashCode
 public class HeaderButtonNotification extends BaseNotificationModel<HeaderButtonNotification> {
 
     private final Set<DialogModel> dialogs = new LinkedHashSet<>();

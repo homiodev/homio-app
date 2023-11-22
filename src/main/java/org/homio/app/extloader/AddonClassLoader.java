@@ -1,5 +1,12 @@
 package org.homio.app.extloader;
 
+import lombok.SneakyThrows;
+import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.commons.lang3.reflect.MethodUtils;
+import org.homio.app.HomioClassLoader;
+import org.xeustechnologies.jcl.JarClassLoader;
+import org.xeustechnologies.jcl.ProxyClassLoader;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,18 +15,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.jar.JarFile;
-import lombok.SneakyThrows;
-import org.apache.commons.lang3.reflect.FieldUtils;
-import org.apache.commons.lang3.reflect.MethodUtils;
-import org.xeustechnologies.jcl.JarClassLoader;
-import org.xeustechnologies.jcl.ProxyClassLoader;
 
 public class AddonClassLoader extends JarClassLoader {
 
@@ -80,7 +77,7 @@ public class AddonClassLoader extends JarClassLoader {
                     protected URLConnection openConnection(URL u) throws IOException {
                         try {
                             URLConnection urlConnection = (URLConnection) MethodUtils
-                                .invokeMethod(urlHandler, true, "openConnection", u);
+                                    .invokeMethod(urlHandler, true, "openConnection", u);
                             resourceConnections.putIfAbsent(u, new ArrayList<>());
                             resourceConnections.get(u).add(urlConnection);
                             return urlConnection;
@@ -138,8 +135,8 @@ public class AddonClassLoader extends JarClassLoader {
             } else {
                 if (c <= 0x007F) {
                     if (c >= 'a' && c <= 'z' ||
-                        c >= 'A' && c <= 'Z' ||
-                        c >= '0' && c <= '9') {
+                            c >= 'A' && c <= 'Z' ||
+                            c >= '0' && c <= '9') {
                         retCC[retLen++] = c;
                     } else if (match(c, L_ENCODED, H_ENCODED)) {
                         retLen = escape(retCC, c, retLen);
@@ -186,8 +183,8 @@ public class AddonClassLoader extends JarClassLoader {
             // in the symbol range '&'-':' (includes '.', '/' and '0'-'9')
             // and more rarely in the A-Z range.
             if (c >= 'a' && c <= 'z' ||
-                c >= '&' && c <= ':' ||
-                c >= 'A' && c <= 'Z') {
+                    c >= '&' && c <= ':' ||
+                    c >= 'A' && c <= 'Z') {
                 continue;
             } else if (c > 0x007F || match(c, L_ENCODED, H_ENCODED)) {
                 return i;
@@ -208,11 +205,7 @@ public class AddonClassLoader extends JarClassLoader {
 
     private static class JvmLoader extends ProxyClassLoader {
 
-        private final ClassLoader classLoader;
-
-        public JvmLoader() {
-            classLoader = ClassLoader.getSystemClassLoader().getParent();
-        }
+        private final ClassLoader classLoader = HomioClassLoader.class.getClassLoader();
 
         @Override
         public Class<?> loadClass(String className, boolean resolveIt) {

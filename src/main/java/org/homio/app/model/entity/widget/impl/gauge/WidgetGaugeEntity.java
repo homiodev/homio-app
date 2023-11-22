@@ -3,36 +3,21 @@ package org.homio.app.model.entity.widget.impl.gauge;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldIgnore;
-import org.homio.api.ui.field.UIFieldNumber;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.api.ui.field.UIFieldSlider;
-import org.homio.api.ui.field.UIFieldType;
+import org.homio.api.ui.field.*;
 import org.homio.app.model.entity.widget.UIFieldMarkers;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
-import org.homio.app.model.entity.widget.attributes.HasIcon;
-import org.homio.app.model.entity.widget.attributes.HasName;
-import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
-import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
-import org.homio.app.model.entity.widget.attributes.HasTextConverter;
-import org.homio.app.model.entity.widget.attributes.HasValueConverter;
-import org.homio.app.model.entity.widget.attributes.HasValueTemplate;
+import org.homio.app.model.entity.widget.attributes.*;
 import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
-    implements HasSingleValueDataSource,
-    HasIcon,
-    HasValueConverter,
-    HasTextConverter,
-    HasName,
-    HasValueTemplate,
-    HasSourceServerUpdates {
-
-    public static final String PREFIX = "wgtgg_";
+        implements HasSingleValueDataSource,
+        HasIcon,
+        HasValueConverter,
+        HasTextConverter,
+        HasName,
+        HasValueTemplate,
+        HasSourceServerUpdates {
 
     @UIField(order = 1)
     @UIFieldGroup("UI")
@@ -85,7 +70,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
         setJsonDataEnum("gaugeCapType", lineType);
     }
 
-    @UIField(order = 6, isRevert = true)
+    @UIField(order = 6)
     @UIFieldGroup("UI")
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldReadDefaultValue
@@ -127,7 +112,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
         setJsonData("unitFS", value);
     }
 
-    @UIField(order = 2, isRevert = true)
+    @UIField(order = 2)
     @UIFieldGroup("TEXT")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
@@ -145,7 +130,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
         return super.getName();
     }
 
-    @UIField(order = 4, isRevert = true)
+    @UIField(order = 4)
     @UIFieldGroup("TEXT")
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldReadDefaultValue
@@ -215,8 +200,8 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "gauge";
     }
 
     @Override
@@ -232,7 +217,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         if (!getJsonData().has("gfg")) {
             setGaugeForeground(UI.Color.random());
         }

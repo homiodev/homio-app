@@ -1,25 +1,42 @@
 package org.homio.app.video.ffmpeg;
 
-import static org.homio.api.EntityContextMedia.CHANNEL_FFMPEG_MOTION_ALARM;
-import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
+import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION;
 
+import com.pivovarit.function.ThrowingRunnable;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.Getter;
-import org.apache.logging.log4j.Logger;
-import org.homio.api.EntityContextMedia.FFMPEG;
-import org.homio.api.EntityContextMedia.FFMPEGFormat;
-import org.homio.api.EntityContextMedia.FFMPEGHandler;
+import lombok.Setter;
+import lombok.SneakyThrows;
+import lombok.experimental.Accessors;
+import org.apache.logging.log4j.Level;
+import org.homio.api.Context;
+import org.homio.api.Context.FileLogger;
+import org.homio.api.ContextHardware.ProcessStat;
+import org.homio.api.ContextMedia.FFMPEG;
+import org.homio.api.ContextMedia.FFMPEGFormat;
+import org.homio.api.ContextMedia.FFMPEGHandler;
+import org.homio.api.model.UpdatableValue;
 import org.homio.api.util.CommonUtils;
+import org.homio.app.manager.common.impl.ContextBGPImpl;
+import org.homio.app.manager.common.impl.ContextHardwareImpl.ProcessStatImpl;
+import org.homio.app.model.entity.FFMPEGEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONObject;
 
 /**
  * Responsible for handling multiple ffmpeg conversions which are used for many tasks
@@ -27,34 +44,83 @@ import org.jetbrains.annotations.Nullable;
 @SuppressWarnings("unused")
 public class FFMPEGImpl implements FFMPEG {
 
+    private static final Map<String, UpdatableValue<ProcessStat>> PROCESS_STAT_LOADING_CACHE = new ConcurrentHashMap<>();
+
     public static Map<String, FFMPEGImpl> ffmpegMap = new HashMap<>();
+    public static FFMPEGEntity entity;
 
-    private final FFMPEGHandler handler;
-    private final Logger log;
-    private final Runnable destroyListener;
-    @Getter private final String description;
-    @Getter private final Date creationDate = new Date();
-    private final FFMPEGFormat format;
-    @Getter private final List<String> commandArrayList = new ArrayList<>();
-    private Process process = null;
-    private IpVideoFfmpegThread ipVideoFfmpegThread;
+    private final @Getter Date creationDate = new Date();
+    private final @Getter JSONObject metadata = new JSONObject();
+    protected final @Getter List<String> commandArrayList = new ArrayList<>();
+
+    protected final FFMPEGHandler handler;
+    private final @Getter String description;
+    private final @Getter @NotNull FFMPEGFormat format;
+    private final @Getter String output;
+    protected final @NotNull Map<String, ThrowingRunnable<Exception>> destroyListeners = new HashMap<>();
+    private final @Getter String cmd;
+    protected final String entityID;
+    private final Context context;
+    private final @Getter int commandHashCode;
+    private final @Getter FileLogger fileLogger;
+    protected @Nullable Collection<ThrowingRunnable<Exception>> threadDestroyListeners;
+    protected Process process = null;
+    // this is indicator that tells if this ffmpeg command is still need by 3th part request
     private int keepAlive = 8;
-    private final String entityID;
+    private Thread ffmpegThread;
+    private long lastAnswerFromFFMPEG = 0;
+    private final @Getter AtomicBoolean running = new AtomicBoolean(false);
+    private @Setter @Accessors(chain = true) @Nullable Path workingDirectory;
 
-    public FFMPEGImpl(@NotNull String entityID, @NotNull String description,
-        @NotNull FFMPEGHandler handler, @NotNull Logger log, @NotNull FFMPEGFormat format,
-        @NotNull String inputArguments, @NotNull String input, @NotNull String outArguments,
-        @NotNull String output, @NotNull String username, @NotNull String password,
-        @Nullable Runnable destroyListener) {
+    @SneakyThrows
+    public FFMPEGImpl(@NotNull String entityID,
+        @NotNull String description,
+        @NotNull FFMPEGHandler handler,
+        @NotNull FFMPEGFormat format,
+        @NotNull String inputArguments,
+        @NotNull String input,
+        @NotNull String outArguments,
+        @NotNull String output,
+        @NotNull String username,
+        @NotNull String password,
+        @NotNull Context context) {
+        this(entityID, description, handler, format, output, buildCommand(inputArguments,
+            input, outArguments, output, username, password), context);
+    }
+
+    @SneakyThrows
+    public FFMPEGImpl(@NotNull String entityID,
+        @NotNull String description,
+        @NotNull FFMPEGHandler handler,
+        @NotNull FFMPEGFormat format,
+        @NotNull String output,
+        @NotNull String command,
+        @NotNull Context context) {
+        this.context = context;
         FFMPEGImpl.ffmpegMap.put(entityID + "_" + description, this);
 
+        this.fileLogger = context.getFileLogger(FFMPEGImpl.entity, description);
         this.entityID = entityID;
-        this.log = log;
         this.description = description;
         this.format = format;
-        this.destroyListener = destroyListener;
         this.handler = handler;
-        this.ipVideoFfmpegThread = new IpVideoFfmpegThread();
+        this.ffmpegThread = createFFMPEGThread();
+        this.output = output;
+        this.commandHashCode = command.hashCode();
+        Collections.addAll(commandArrayList, command.split("\\s+"));
+        cmd = "ffmpeg " + String.join(" ", commandArrayList);
+        // ffmpegLocation may have a space in its folder
+        commandArrayList.add(0, FFMPEG_LOCATION);
+        context.ui().updateItem(entity);
+    }
+
+    public static String buildCommand(
+        @NotNull String inputArguments,
+        @NotNull String input,
+        @NotNull String outArguments,
+        @NotNull String output,
+        @NotNull String username,
+        @NotNull String password) {
         inputArguments = inputArguments.trim();
         List<String> builder = new ArrayList<>();
         CommonUtils.addToListSafe(builder, inputArguments.trim());
@@ -71,11 +137,39 @@ public class FFMPEGImpl implements FFMPEG {
         }
         builder.add(outArguments.trim());
         builder.add(output.trim());
+        return String.join(" ", builder);
+    }
 
-        Collections.addAll(commandArrayList, String.join(" ", builder).split("\\s+"));
-        // ffmpegLocation may have a space in its folder
-        commandArrayList.add(0, FFMPEG_LOCATION);
-        log.warn("\n\n[{}]: Generated ffmpeg command for: {}.\n{}\n\n", entityID, format, String.join(" ", commandArrayList));
+    public synchronized boolean startConverting() {
+        if (keepAlive != -1) {
+            keepAlive = 8;
+        }
+        boolean processAlive = ffmpegThread.isAlive();
+        if (processAlive && System.currentTimeMillis() - lastAnswerFromFFMPEG > 30000) {
+            stopConverting();
+        }
+        if (!processAlive) {
+            ffmpegThread = createFFMPEGThread();
+            running.set(true);
+            FFMPEGImpl.ffmpegMap.put(entityID + "_" + description, this);
+            ffmpegThread.start();
+            context.ui().updateItem(entity);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public Path getOutputFile() {
+        if(workingDirectory == null) {
+            return Paths.get(output);
+        }
+        return workingDirectory.resolve(output);
+    }
+
+    @Override
+    public boolean isRunning() {
+        return running.get();
     }
 
     public void setKeepAlive(int seconds) {
@@ -86,97 +180,155 @@ public class FFMPEGImpl implements FFMPEG {
     }
 
     public boolean stopProcessIfNoKeepAlive() {
-        if (keepAlive == 1) {
-            stopConverting();
-        } else if (keepAlive <= -1 && !getIsAlive()) {
-            return startConverting();
-        }
-        if (keepAlive > 0) {
-            keepAlive--;
+        if (isRunning()) {
+            if (keepAlive == 0) {
+                return stopConverting();
+            }
+            if (keepAlive > 0) {
+                keepAlive--;
+            }
         }
         return false;
     }
 
-    public synchronized boolean startConverting() {
-        if (!ipVideoFfmpegThread.isAlive()) {
-            ipVideoFfmpegThread = new IpVideoFfmpegThread();
-            ipVideoFfmpegThread.start();
-            return true;
-        }
-        if (keepAlive != -1) {
-            keepAlive = 8;
-        }
-        return false;
+    @Override
+    public FFMPEG addDestroyListener(@NotNull String key, @NotNull ThrowingRunnable<Exception> destroyListener) {
+        destroyListeners.put(key, destroyListener);
+        return this;
     }
 
     public boolean getIsAlive() {
-        return process != null && process.isAlive();
+        return process != null && process.isAlive() && System.currentTimeMillis() - lastAnswerFromFFMPEG < 30000;
     }
 
-    public void stopConverting() {
-        if (ipVideoFfmpegThread.isAlive()) {
-            log.debug("[{}]: Stopping ffmpeg {} now when keepalive is:{}", entityID, format, keepAlive);
-            if (process != null) {
-                process.destroyForcibly();
+    @SneakyThrows
+    public ProcessStat getProcessStat(Runnable onRefreshUpdated) {
+        UpdatableValue<ProcessStat> cachedValue = PROCESS_STAT_LOADING_CACHE.computeIfAbsent(entityID,
+            s -> UpdatableValue.wrap(new ProcessStatImpl(0, 0, 0), entityID));
+        return cachedValue.getFreshValue(Duration.ofSeconds(10), () ->
+            context.bgp().builder("fetch-ffmpeg-proc-stat")
+                         .execute(() -> {
+                             cachedValue.update(context.hardware().getProcessStat(process.pid()));
+                             onRefreshUpdated.run();
+                         }));
+    }
+
+    @Override
+    public synchronized boolean stopConverting(Duration duration) {
+        try {
+            if (ffmpegThread.isAlive()) {
+                fileLogger.logWarn("Stopping '%s' ffmpeg %s now when keepalive is: %s".formatted(description, format, keepAlive));
+                if (process != null) {
+                    ContextBGPImpl.stopProcess(process, description);
+                    process.destroyForcibly();
+                }
+                if (duration != null) {
+                    waitRunningProcess(duration);
+                }
+                return true;
             }
-            if (destroyListener != null) {
-                destroyListener.run();
-            }
+            return false;
+        } finally {
+            context.ui().updateItem(entity);
         }
     }
 
-    private class IpVideoFfmpegThread extends Thread {
+    protected @NotNull Thread createFFMPEGThread() {
+        return new FFMPEGThread();
+    }
+
+    private void finishFFMPEG() {
+        logInfo("Finish ffmpeg command '%s'".formatted(description));
+        running.set(false);
+
+        Collection<ThrowingRunnable<Exception>> destroyListeners = threadDestroyListeners;
+        if (destroyListeners != null) {
+            destroyListeners.removeIf(runnable -> {
+                try {
+                    runnable.run();
+                } catch (Exception ex) {
+                    handler.ffmpegLog(Level.WARN, "Error during call destroy listener: %s".formatted(CommonUtils.getErrorMessage(ex)));
+                }
+                return true;
+            });
+        }
+
+        FFMPEGImpl.ffmpegMap.remove(entityID + "_" + description, this);
+        context.ui().updateItem(entity);
+    }
+
+    protected void logWarn(String message) {
+        handler.ffmpegLog(Level.WARN, message);
+        fileLogger.logWarn(message);
+    }
+
+    protected void logInfo(String message) {
+        handler.ffmpegLog(Level.INFO, message);
+        fileLogger.logInfo(message);
+    }
+
+    protected void logDebug(String message) {
+        handler.ffmpegLog(Level.DEBUG, message);
+        fileLogger.logDebug(message);
+    }
+
+    protected class FFMPEGThread extends Thread {
 
         public int countOfMotions;
 
-        IpVideoFfmpegThread() {
+        protected FFMPEGThread() {
             setDaemon(true);
-            setName("VideoThread_" + format + "_" + handler.getEntityID());
+            setName("FFMPEG_thread_" + format + "_" + entityID);
         }
 
         @Override
         public void run() {
             try {
-                process = Runtime.getRuntime().exec(commandArrayList.toArray(new String[0]));
-                Process localProcess = process;
-                if (localProcess != null) {
-                    InputStream errorStream = localProcess.getErrorStream();
-                    InputStreamReader errorStreamReader = new InputStreamReader(errorStream);
-                    BufferedReader bufferedReader = new BufferedReader(errorStreamReader);
-                    String line;
-                    while ((line = bufferedReader.readLine()) != null) {
-                        if (format.equals(FFMPEGFormat.RTSP_ALARMS)) {
-                            log.info("[{}]: {}", entityID, line);
-                            if (line.contains("lavfi.")) {
-                                if (countOfMotions == 4) {
-                                    handler.motionDetected(true, CHANNEL_FFMPEG_MOTION_ALARM);
-                                } else {
-                                    countOfMotions++;
-                                }
-                            } else if (line.contains("speed=")) {
-                                if (countOfMotions > 0) {
-                                    countOfMotions--;
-                                    countOfMotions--;
-                                    if (countOfMotions <= 0) {
-                                        handler.motionDetected(false, CHANNEL_FFMPEG_MOTION_ALARM);
-                                    }
-                                }
-                            } else if (line.contains("silence_start")) {
-                                handler.audioDetected(false);
-                            } else if (line.contains("silence_end")) {
-                                handler.audioDetected(true);
-                            }
-                        } else {
-                            log.info("[{}]: {}", entityID, line);
-                        }
-                        if (line.contains("No such file or directory")) {
-                            handler.ffmpegError(line);
-                        }
+                threadDestroyListeners = new ArrayList<>(destroyListeners.values());
+                logInfo("Starting ffmpeg[%s] command '%s'. Run: %s".formatted(format,
+                    description, String.join(" ", commandArrayList)));
+                ProcessBuilder builder = new ProcessBuilder(commandArrayList.toArray(new String[0]));
+                if (workingDirectory != null) {
+                    builder.directory(workingDirectory.toFile());
+                }
+                process = builder.start();
+                lastAnswerFromFFMPEG = System.currentTimeMillis();
+                InputStream errorStream = process.getErrorStream();
+                InputStreamReader errorStreamReader = new InputStreamReader(errorStream);
+                BufferedReader bufferedReader = new BufferedReader(errorStreamReader);
+                String line;
+                while ((line = bufferedReader.readLine()) != null) {
+                    lastAnswerFromFFMPEG = System.currentTimeMillis();
+                    handleLine(line);
+                    if (line.contains("No such file or directory") || line.contains("Could not run graph")) {
+                        handler.ffmpegError(line);
                     }
                 }
             } catch (Exception ex) {
                 handler.ffmpegError(CommonUtils.getErrorMessage(ex));
+            } finally {
+                finishFFMPEG();
             }
+        }
+
+        protected void handleLine(String line) {
+            logDebug(line);
+        }
+    }
+
+    @SneakyThrows
+    private void waitRunningProcess(Duration duration) {
+        long startTime = System.currentTimeMillis();
+        long timeoutMillis = duration.toMillis();
+        while (running.get()) {
+            if (System.currentTimeMillis() - startTime >= timeoutMillis) {
+                System.out.println("Timeout: AtomicBoolean did not become false within 10 seconds.");
+                break;
+            }
+            Thread.sleep(100);
+        }
+        if (running.get()) {
+            throw new IllegalStateException("Max timout occurs while waiting to stop ffmpeg process: " + getDescription());
         }
     }
 }

@@ -19,10 +19,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -31,10 +29,9 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
-import org.homio.api.entity.DeviceBaseEntity;
-import org.homio.api.util.ApplicationContextHolder;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.util.SecureString;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.config.cacheControl.CacheControlHandlerInterceptor;
@@ -42,7 +39,7 @@ import org.homio.app.json.jsog.JSOGGenerator;
 import org.homio.app.json.jsog.JSOGResolver;
 import org.homio.app.manager.CacheService;
 import org.homio.app.manager.common.ClassFinder;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.workspace.block.Scratch3Space;
 import org.jetbrains.annotations.NotNull;
@@ -75,11 +72,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.orm.jpa.persistenceunit.PersistenceUnitManager;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
-import org.springframework.retry.RetryPolicy;
-import org.springframework.retry.backoff.FixedBackOffPolicy;
-import org.springframework.retry.policy.ExceptionClassifierRetryPolicy;
-import org.springframework.retry.policy.SimpleRetryPolicy;
-import org.springframework.retry.support.RetryTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -112,12 +104,12 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
 
     @Bean
     public EntityManagerFactoryBuilder entityManagerFactoryBuilder(
-        JpaProperties jpaProperties,
-        ObjectProvider<PersistenceUnitManager> persistenceUnitManager,
-        ObjectProvider<EntityManagerFactoryBuilderCustomizer> customizers) {
+            JpaProperties jpaProperties,
+            ObjectProvider<PersistenceUnitManager> persistenceUnitManager,
+            ObjectProvider<EntityManagerFactoryBuilderCustomizer> customizers) {
         HibernateJpaVendorAdapter jpaVendorAdapter = new HibernateJpaVendorAdapter();
         EntityManagerFactoryBuilder builder = new EntityManagerFactoryBuilder(jpaVendorAdapter,
-            jpaProperties.getProperties(), persistenceUnitManager.getIfAvailable());
+                jpaProperties.getProperties(), persistenceUnitManager.getIfAvailable());
         customizers.orderedStream().forEach((customizer) -> customizer.customize(builder));
         return builder;
     }
@@ -193,10 +185,11 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
         hibernate5Module.disable(Hibernate5JakartaModule.Feature.USE_TRANSIENT_ANNOTATION);
 
         SimpleModule simpleModule = new SimpleModule();
+        simpleModule.addSerializer(String.class, new StringComplexSerializer());
         simpleModule.addSerializer(SecureString.class, new JsonSerializer<>() {
             @Override
             public void serialize(SecureString secureString, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
-                throws IOException {
+                    throws IOException {
                 jsonGenerator.writeString(secureString.toString());
             }
         });
@@ -204,7 +197,7 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
         simpleModule.addSerializer(Scratch3ExtensionBlocks.class, new JsonSerializer<>() {
             @Override
             public void serialize(Scratch3ExtensionBlocks block, JsonGenerator gen, SerializerProvider serializers)
-                throws IOException {
+                    throws IOException {
                 gen.writeStartObject();
                 gen.writeStringField("id", block.getId());
                 if (block.getName() != null) {
@@ -230,19 +223,19 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
         simpleModule.addDeserializer(DeviceBaseEntity.class, new JsonDeserializer<>() {
             @Override
             public DeviceBaseEntity deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-                return applicationContext.getBean(EntityContextImpl.class).getEntity(p.getText());
+                return applicationContext.getBean(ContextImpl.class).db().getEntity(p.getText());
             }
         });
 
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper
-            .disable(DeserializationFeature.FAIL_ON_UNRESOLVED_OBJECT_IDS)
-            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-            .registerModule(hibernate5Module)
-            .registerModule(new JsonOrgModule())
-            .registerModule(simpleModule)
-            .setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
-            .addMixIn(BaseEntity.class, Bean2MixIn.class);
+                .disable(DeserializationFeature.FAIL_ON_UNRESOLVED_OBJECT_IDS)
+                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .registerModule(hibernate5Module)
+                .registerModule(new JsonOrgModule())
+                .registerModule(simpleModule)
+                .setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
+                .addMixIn(BaseEntity.class, Bean2MixIn.class);
 
         return objectMapper;
     }
@@ -251,7 +244,7 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
     @Override
     public void addFormatters(final FormatterRegistry registry) {
         registry.addConverter(String.class, DeviceBaseEntity.class, source ->
-            applicationContext.getBean(EntityContext.class).getEntity(source));
+            applicationContext.getBean(Context.class).db().getEntity(source));
     }
 
     @Bean
@@ -263,11 +256,6 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
         return converter;
     }
 
-    @Bean
-    public ApplicationContextHolder applicationContextHolder() {
-        return new ApplicationContextHolder();
-    }
-
     /**
      * After spring context initialization
      */
@@ -277,8 +265,8 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
             this.applicationReady = true;
             this.printEnvVariables(cre.getApplicationContext().getEnvironment());
             ApplicationContext applicationContext = ((ContextRefreshedEvent) event).getApplicationContext();
-            EntityContextImpl entityContextImpl = applicationContext.getBean(EntityContextImpl.class);
-            entityContextImpl.afterContextStart(applicationContext);
+            ContextImpl contextImpl = applicationContext.getBean(ContextImpl.class);
+            contextImpl.afterContextStart(applicationContext);
         }
     }
 
@@ -287,21 +275,23 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
         StringBuilder props = new StringBuilder();
         props.append("\n\tActive profiles: %s\n".formatted(Arrays.toString(env.getActiveProfiles())));
         Map<String, String> variables = StreamSupport
-            .stream(sources.spliterator(), false)
-            .filter(ps -> ps instanceof EnumerablePropertySource)
-            .map(ps -> ((EnumerablePropertySource) ps).getPropertyNames())
-            .flatMap(Arrays::stream)
-            .distinct()
-            .filter(prop -> !(prop.contains("java.class.path") || prop.contains("Path") || prop.contains("java.library.path") || prop.contains("credentials")
-                || prop.contains("password")))
-            .collect(Collectors.toMap(prop -> prop, key -> env.getProperty(key, "---"),
-                (v1, v2) -> {throw new RuntimeException(String.format("Duplicate key for values %s and %s", v1, v2));},
-                TreeMap::new));
+                .stream(sources.spliterator(), false)
+                .filter(ps -> ps instanceof EnumerablePropertySource)
+                .map(ps -> ((EnumerablePropertySource) ps).getPropertyNames())
+                .flatMap(Arrays::stream)
+                .distinct()
+                .filter(prop -> !(prop.contains("java.class.path") || prop.contains("Path") || prop.contains("java.library.path") || prop.contains("credentials")
+                        || prop.contains("password")))
+                .collect(Collectors.toMap(prop -> prop, key -> env.getProperty(key, "---"),
+                        (v1, v2) -> {
+                            throw new RuntimeException(String.format("Duplicate key for values %s and %s", v1, v2));
+                        },
+                        TreeMap::new));
         for (Entry<String, String> entry : variables.entrySet()) {
             props.append("\t\t%s: %s\n".formatted(entry.getKey(), entry.getValue()));
         }
-        log.info("====== Environment and configuration ======{}", props.toString());
-        log.info("===========================================");
+        props.append("\n===========================================");
+        log.info("\n====== Environment and configuration ======{}", props.toString());
     }
 
     /**
@@ -313,12 +303,12 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
         registrationBean.setFilter(new OncePerRequestFilter() {
             @Override
             protected void doFilterInternal(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain filterChain)
-                throws IOException, ServletException {
+                    throws IOException, ServletException {
                 applicationContext.getBean(CacheService.class).flushDelayedUpdates();
                 filterChain.doFilter(request, response);
             }
         });
-        registrationBean.addUrlPatterns("/map", "/dashboard", "/items/*", "/hardware*/", "/one_wire/*", "/admin/*");
+        registrationBean.addUrlPatterns("/map", "/dashboard", "/items/*", "/media/*", "/hardware*/", "/devices/*");
 
         return registrationBean;
     }

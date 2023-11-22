@@ -5,12 +5,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
-/**
- * This object lets us persuade jackson into serializing JSOG structures. It is the id generated, and a special serializer knows how to convert it to an @id or
- *
- * @author Jeff Schnitzer <jeff@infohazard.org>
- * @ref as appropriate.
- */
 @JsonSerialize(using = JSOGRefSerializer.class)
 @JsonDeserialize(using = JSOGRefDeserializer.class)
 public class JSOGRef {

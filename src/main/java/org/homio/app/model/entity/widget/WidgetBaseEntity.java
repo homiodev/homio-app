@@ -28,10 +28,9 @@ import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.entity.widget.attributes.HasStyle;
-import org.homio.app.setting.dashboard.DashboardHorizontalBlockCountSetting;
-import org.homio.app.setting.dashboard.DashboardVerticalBlockCountSetting;
 import org.jetbrains.annotations.NotNull;
 
 @Getter
@@ -41,8 +40,17 @@ import org.jetbrains.annotations.NotNull;
 @UISidebarMenu(icon = "fas fa-tachometer-alt", bg = "#107d6b", overridePath = "widgets")
 @Accessors(chain = true)
 @NoArgsConstructor
-public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseEntity<T>
-    implements HasPosition<WidgetBaseEntity>, HasStyle, HasJsonData {
+public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseEntity
+        implements HasPosition<WidgetBaseEntity>, HasStyle, HasJsonData {
+
+    private static final String PREFIX = "widget_";
+
+    @Override
+    public final @NotNull String getEntityPrefix() {
+        return PREFIX + getWidgetPrefix() + "_";
+    }
+
+    protected abstract @NotNull String getWidgetPrefix();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnore
@@ -60,7 +68,7 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     }
 
     @UIField(order = 1000)
-    @UIFieldGroup(value = "UI", order = 10, borderColor = "#009688")
+    @UIFieldGroup(order = 10, value = "UI", borderColor = "#009688")
     public boolean isAdjustFontSize() {
         return getJsonData("adjfs", Boolean.FALSE);
     }
@@ -86,37 +94,7 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
 
     public abstract @NotNull String getImage();
 
-    /*protected boolean invalidateWrongEntity(EntityContext entityContext, Object item) {
-        boolean updated = false;
-        if (item instanceof HasSingleValueDataSource) {
-            HasSingleValueDataSource source = (HasSingleValueDataSource) item;
-            String valueDataSource = source.getValueDataSource();
-            if (isNotEmpty(valueDataSource) && isEntityNotExists(entityContext, valueDataSource)) {
-                updated = true;
-                source.setValueDataSource(null);
-            }
-
-            if (isNotEmpty(source.getSetValueDataSource()) && isEntityNotExists(entityContext, source.getSetValueDataSource())) {
-                updated = true;
-                source.setSetValueDataSource(null);
-            }
-        }
-        if (item instanceof HasChartDataSource) {
-            HasChartDataSource source = (HasChartDataSource) item;
-            if (isNotEmpty(source.getChartDataSource()) && isEntityNotExists(entityContext, source.getChartDataSource())) {
-                updated = true;
-                ((HasChartDataSource) item).setChartDataSource(null);
-            }
-        }
-        return updated;
-    }*/
-
-  /*  private boolean isEntityNotExists(EntityContext entityContext, String source) {
-        DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSource(entityContext, source);
-        return dsContext.getSource() == null;
-    }*/
-
-    @UIField(order = 21, isRevert = true)
+    @UIField(order = 21)
     @UIFieldGroup("UI")
     @UIFieldColorPicker(allowThreshold = true, pulseColorCondition = true, thresholdSource = true)
     @UIFieldReadDefaultValue
@@ -147,7 +125,7 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         super.beforePersist();
         this.findSuitablePosition();
     }
@@ -157,35 +135,10 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
         return "widget";
     }
 
-    /**
-     * Find free space in matrix for new item
-     */
-    private void findSuitablePosition() {
-        List<WidgetBaseEntity> widgets = getEntityContext().findAll(WidgetBaseEntity.class);
-        if (isNotEmpty(getParent())) {
-            WidgetBaseEntity layout = widgets.stream().filter(w -> w.getEntityID().equals(getParent())).findAny().orElse(null);
-            if (layout == null) {
-                throw new IllegalArgumentException("Widget: " + getTitle() + " has xbl/tbl and have to be belong to layout widget but it's not found");
-            }
-            // do not change position for widget which belong to layout
-            return;
-        }
-
-        var hBlockCount = getEntityContext().setting().getValue(DashboardHorizontalBlockCountSetting.class);
-        var vBlockCount = getEntityContext().setting().getValue(DashboardVerticalBlockCountSetting.class);
-        boolean[][] matrix = new boolean[vBlockCount][hBlockCount];
-        for (int j = 0; j < vBlockCount; j++) {
-            matrix[j] = new boolean[hBlockCount];
-        }
-        initMatrix(widgets, matrix);
-        if (!isSatisfyPosition(matrix, getXb(), getYb(), getBw(), getBh(), hBlockCount, vBlockCount)) {
-            Pair<Integer, Integer> freePosition = findMatrixFreePosition(matrix, getBw(), getBh(), hBlockCount, vBlockCount);
-            if (freePosition == null) {
-                throw new IllegalStateException("widget.no_free_position");
-            }
-            setXb(freePosition.getKey());
-            setYb(freePosition.getValue());
-        }
+    @Override
+    public void afterUpdate() {
+        super.afterUpdate();
+        ((ContextImpl) context()).event().removeEvents(getEntityID());
     }
 
     /**
@@ -222,6 +175,43 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
                     }
                 }
             }
+        }
+    }
+
+    @Override
+    protected long getChildEntityHashCode() {
+        return 0;
+    }
+
+    /**
+     * Find free space in matrix for new item
+     */
+    private void findSuitablePosition() {
+        List<WidgetBaseEntity> widgets = context().db().findAll(WidgetBaseEntity.class);
+        if (isNotEmpty(getParent())) {
+            WidgetBaseEntity layout = widgets.stream().filter(w -> w.getEntityID().equals(getParent())).findAny().orElse(null);
+            if (layout == null) {
+                throw new IllegalArgumentException("Widget: " + getTitle() + " has xbl/tbl and have to be belong to layout widget but it's not found");
+            }
+            // do not change position for widget which belong to layout
+            return;
+        }
+
+
+        var hBlockCount = this.widgetTabEntity.getHorizontalBlocks();
+        var vBlockCount = this.widgetTabEntity.getVerticalBlocks();
+        boolean[][] matrix = new boolean[vBlockCount][hBlockCount];
+        for (int j = 0; j < vBlockCount; j++) {
+            matrix[j] = new boolean[hBlockCount];
+        }
+        initMatrix(widgets, matrix);
+        if (!isSatisfyPosition(matrix, getXb(), getYb(), getBw(), getBh(), hBlockCount, vBlockCount)) {
+            Pair<Integer, Integer> freePosition = findMatrixFreePosition(matrix, getBw(), getBh(), hBlockCount, vBlockCount);
+            if (freePosition == null) {
+                throw new IllegalStateException("W.ERROR.NO_WIDGET_FREE_POSITION");
+            }
+            setXb(freePosition.getKey());
+            setYb(freePosition.getValue());
         }
     }
 }

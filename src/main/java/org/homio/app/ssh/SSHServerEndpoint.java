@@ -1,7 +1,8 @@
 package org.homio.app.ssh;
 
 import static java.lang.String.format;
-import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
+import static org.homio.api.ContextSetting.SERVER_PORT;
+import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
 
 import com.sshtools.client.SessionChannelNG;
@@ -21,9 +22,10 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.map.PassiveExpiringMap;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContextBGP.ThreadContext;
-import org.homio.app.manager.common.EntityContextImpl;
-import org.homio.app.manager.common.impl.EntityContextServiceImpl.DynamicWebSocketHandler;
+import org.homio.api.ContextBGP;
+import org.homio.api.ContextBGP.ThreadContext;
+import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.manager.common.impl.ContextServiceImpl.DynamicWebSocketHandler;
 import org.homio.app.rest.ConsoleController;
 import org.homio.app.ssh.SSHServerEndpoint.XtermMessage.XtermHandler;
 import org.homio.app.ssh.SSHServerEndpoint.XtermMessage.XtermMessageType;
@@ -49,14 +51,14 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
     private static final String TOKEN = "token";
     private static final String COLS = "cols";
     private static final String WEBSSH_PATH = CUSTOM_WEB_SOCKET_ENDPOINT + "/webssh";
-    private static final String FORMAT = "ws://%s:9111%s?%s=${TOKEN}&Authentication=${BEARER}&%s=${COLS}";
+    private static final String FORMAT = "ws://%s:%s%s?%s=${TOKEN}&Authentication=${BEARER}&%s=${COLS}";
 
     private static final PassiveExpiringMap<String, SessionContext> sessionByToken = new PassiveExpiringMap<>(24, TimeUnit.HOURS);
     private static final PassiveExpiringMap<String, SessionContext> sessionBySessionId = new PassiveExpiringMap<>(24, TimeUnit.HOURS);
-    private final EntityContextImpl entityContext;
+    private final ContextImpl context;
 
-    public SSHServerEndpoint(EntityContextImpl entityContext) {
-        this.entityContext = entityContext;
+    public SSHServerEndpoint(ContextImpl context) {
+        this.context = context;
     }
 
     @Override
@@ -93,11 +95,12 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
     }
 
     public SshSession openSession(SshGenericEntity entity) {
-        entityContext.service().registerWebSocketEndpoint(WEBSSH_PATH, this);
+        context.service().registerWebSocketEndpoint(WEBSSH_PATH, this);
 
         String token = UUID.randomUUID().toString();
 
-        SshSession<SshGenericEntity> session = new SshSession<>(token, format(FORMAT, MACHINE_IP_ADDRESS, WEBSSH_PATH, TOKEN, COLS), entity);
+        String url = format(FORMAT, MACHINE_IP_ADDRESS, SERVER_PORT, WEBSSH_PATH, TOKEN, COLS);
+        SshSession<SshGenericEntity> session = new SshSession<>(token, url, entity);
         sessionByToken.put(token, new SessionContext(session));
 
         return session;
@@ -115,7 +118,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
     }
 
     public void resizeSshConsole(SshSession<SshGenericEntity> session, int cols) {
-        SessionContext sessionContext = sessionByToken.remove(session.getToken());
+        SessionContext sessionContext = sessionByToken.get(session.getToken());
         if (sessionContext != null && sessionContext.sshChannel != null) {
             sessionContext.sshChannel.changeTerminalDimensions(cols, 30, 0, 0);
         }
@@ -185,7 +188,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
 
     @Override
     public boolean beforeHandshake(@NotNull ServerHttpRequest serverHttpRequest, @NotNull ServerHttpResponse response, @NotNull WebSocketHandler wsHandler,
-        @NotNull Map<String, Object> attributes) {
+                                   @NotNull Map<String, Object> attributes) {
         if (serverHttpRequest instanceof ServletServerHttpRequest request) {
             String token = request.getServletRequest().getParameter(TOKEN);
             if (!StringUtils.isEmpty(token) && sessionByToken.containsKey(token)) {
@@ -205,12 +208,14 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
     @RequiredArgsConstructor
     private class SessionContext {
 
-        private @NotNull final SshSession<SshGenericEntity> session;
+        private @NotNull
+        final SshSession<SshGenericEntity> session;
         private String sessionId;
         private WebSocketSession wsSession;
         private ThreadContext<Void> threadContext;
         private SshClient sshClient;
         private SessionChannelNG sshChannel;
+        private boolean closed;
 
         public void onMessage(BinaryMessage buffer) {
             MessageUnpacker payload = MessagePack.newDefaultUnpacker(buffer.getPayload());
@@ -230,7 +235,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
             if (threadContext != null && !threadContext.isStopped()) {
                 return;
             }
-            threadContext = entityContext.bgp().builder("ssh-shell-" + sessionId).execute(() -> {
+            threadContext = context.bgp().builder("ssh-shell-" + sessionId).execute(() -> {
                 try {
                     connect(cols);
                 } catch (Exception e) {
@@ -242,16 +247,19 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
 
         @SneakyThrows
         private void closeSessionContext() {
+            if (this.closed) {
+                return;
+            }
+            this.closed = true;
             ConsoleController.getSessions().remove(session.getToken());
             log.info("SSH close connection: {}", session);
             try {
-                wsSession.close(CloseStatus.NORMAL);
+                sessionByToken.remove(session.getToken());
+                // wsSession.close(CloseStatus.NORMAL);
                 if (sshClient != null) {
                     sshClient.close();
                 }
-                if (threadContext != null) {
-                    threadContext.cancel();
-                }
+                ContextBGP.cancel(threadContext);
             } catch (Exception ex) {
                 log.error("SSH error while close ssh session", ex);
             }
@@ -270,6 +278,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
                 this.sshClient = sshClient;
                 log.info("SSH connected: {}", session);
                 sshClient.runTask(createShellTask(cols, sshClient));
+                closed = false;
             }
         }
 

@@ -1,38 +1,39 @@
 package org.homio.app.rest.widget;
 
+import org.homio.api.entity.widget.AggregationType;
+import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
+import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
+import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import org.homio.api.entity.widget.AggregationType;
-import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
-import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
-import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
 
 public final class EvaluateDatesAndValues {
 
     public static List<Float> aggregate(List<List<Float>> values, AggregationType aggregationType) {
         return values.stream().map(items -> {
-                         if (items.isEmpty()) {
-                             return null;
-                         } else if (items.size() == 1) {
-                             return items.get(0);
-                         }
-                         Stream<Float> stream = items.stream();
-                         if (aggregationType.isRequireSorting()) {
-                             stream = stream.sorted();
-                         }
-                         return aggregationType.evaluate(stream);
-                     })
-                     .collect(Collectors.toList());
+                    if (items.isEmpty()) {
+                        return null;
+                    } else if (items.size() == 1) {
+                        return items.get(0);
+                    }
+                    Stream<Float> stream = items.stream();
+                    if (aggregationType.isRequireSorting()) {
+                        stream = stream.sorted();
+                    }
+                    return aggregationType.evaluate(stream);
+                })
+                .collect(Collectors.toList());
     }
 
     public static <T extends HasDynamicParameterFields & HasChartDataSource>
     List<Date> calculateDates(
-        HasChartTimePeriod.TimeRange timeRange,
-        List<TimeSeriesValues<T>> timeSeriesValues) {
+            HasChartTimePeriod.TimeRange timeRange,
+            List<TimeSeriesValues<T>> timeSeriesValues) {
         // get dates split by algorithm
         List<Date> dates = evaluateDates(timeRange, timeSeriesValues);
         // List<Date> initialDates = new ArrayList<>(dates);
@@ -58,7 +59,7 @@ public final class EvaluateDatesAndValues {
     }
 
     public static <T extends HasChartDataSource> List<Date> evaluateDates(
-        HasChartTimePeriod.TimeRange timeRange, List<TimeSeriesValues<T>> timeSeriesValues) {
+            HasChartTimePeriod.TimeRange timeRange, List<TimeSeriesValues<T>> timeSeriesValues) {
         List<Date> dates = timeRange.getRange();
         if (dates.isEmpty()) {
             // TODO: currently not invokes
@@ -74,8 +75,8 @@ public final class EvaluateDatesAndValues {
             long delta = (max - min) / 30;
             long finalMin = min;
             dates = IntStream.range(0, 30)
-                             .mapToObj(value -> new Date(finalMin + delta * value))
-                             .collect(Collectors.toList());
+                    .mapToObj(value -> new Date(finalMin + delta * value))
+                    .collect(Collectors.toList());
         }
         return dates;
     }
@@ -86,9 +87,9 @@ public final class EvaluateDatesAndValues {
         // push values to date between buckets
         for (Object[] chartItem : chartItems) {
             long time =
-                chartItem[0] instanceof Date
-                    ? ((Date) chartItem[0]).getTime()
-                    : (long) chartItem[0];
+                    chartItem[0] instanceof Date
+                            ? ((Date) chartItem[0]).getTime()
+                            : (long) chartItem[0];
             int index = getDateIndex(dates, time);
             if (index >= 0) {
                 values.get(index).add(((Number) chartItem[1]).floatValue());
@@ -98,7 +99,7 @@ public final class EvaluateDatesAndValues {
     }
 
     private static <T extends HasDynamicParameterFields & HasChartDataSource> void fulfillValues(
-        List<Date> dates, List<TimeSeriesValues<T>> timeSeriesValues) {
+            List<Date> dates, List<TimeSeriesValues<T>> timeSeriesValues) {
         //  List<Iterator<List<Float>>> fullChartValueIterators = new ArrayList<>();
 
         for (TimeSeriesValues<T> timeSeriesValue : timeSeriesValues) {

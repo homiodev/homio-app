@@ -1,7 +1,7 @@
 package org.homio.app.model.entity.widget.impl.toggle;
 
 import jakarta.persistence.Entity;
-import org.homio.api.EntityContextWidget.ToggleType;
+import org.homio.api.ContextWidget.ToggleType;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldLayout;
@@ -16,20 +16,18 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetToggleEntity
-    extends WidgetBaseEntityAndSeries<WidgetToggleEntity, WidgetToggleSeriesEntity>
-    implements HasLayout, HasPadding, HasSourceServerUpdates, HasName {
-
-    public static final String PREFIX = "wgttg_";
+        extends WidgetBaseEntityAndSeries<WidgetToggleEntity, WidgetToggleSeriesEntity>
+        implements HasLayout, HasPadding, HasSourceServerUpdates, HasName {
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "NAME", order = 3)
+    @UIFieldGroup(order = 3, value = "NAME")
     @UIFieldOptionFontSize
     public String getName() {
         return super.getName();
     }
 
     @Override
-    @UIField(order = 50, isRevert = true)
+    @UIField(order = 50)
     @UIFieldLayout(options = {"name", "value", "icon", "button"})
     @UIFieldReadDefaultValue
     public String getLayout() {
@@ -62,8 +60,8 @@ public class WidgetToggleEntity
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "toggle";
     }
 
     @Override
@@ -73,11 +71,11 @@ public class WidgetToggleEntity
 
     private String getDefaultLayout() {
         return UIFieldLayout.LayoutBuilder
-            .builder(10, 60, 30)
-            .addRow(rb ->
-                rb.addCol("icon", UIFieldLayout.HorizontalAlign.right)
-                  .addCol("name", UIFieldLayout.HorizontalAlign.left)
-                  .addCol("button", UIFieldLayout.HorizontalAlign.center))
-            .build();
+                .builder(10, 60, 30)
+                .addRow(rb ->
+                        rb.addCol("icon", UIFieldLayout.HorizontalAlign.right)
+                                .addCol("name", UIFieldLayout.HorizontalAlign.left)
+                                .addCol("button", UIFieldLayout.HorizontalAlign.center))
+                .build();
     }
 }

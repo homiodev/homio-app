@@ -2,6 +2,7 @@ package org.homio.app.auth;
 
 import static org.apache.commons.lang3.StringUtils.defaultString;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,8 +24,19 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain chain)
-        throws ServletException, IOException {
+            throws ServletException, IOException {
         log.debug("Request: {}. Host: {}", request.getRequestURI(), request.getHeader("Host"));
+        if (request.getRequestURI().equals("/")) {
+            response.setContentType("text/html");
+            response.getOutputStream().write("""
+                <html>
+                <body>
+                    Homio backend app. <div>Please, visit '<a href="https://homio.org">https://homio.org</a>' for usage</div>
+                </body>
+                </html>
+                """.getBytes());
+            return;
+        }
         String token = jwtTokenProvider.resolveToken(defaultString(request.getHeader("Authorization"), request.getParameter("Authorization")));
         try {
             if (token != null) {
@@ -40,6 +52,9 @@ public class JwtTokenFilter extends OncePerRequestFilter {
                 }
             }
             chain.doFilter(request, response);
+        } catch (ExpiredJwtException ex) {
+            SecurityContextHolder.clearContext();
+            response.sendError(420, ex.getMessage());
         } catch (BadCredentialsException ex) {
             SecurityContextHolder.clearContext();
             response.sendError(419, ex.getMessage());

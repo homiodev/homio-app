@@ -2,7 +2,7 @@ package org.homio.app;
 
 import static org.junit.Assert.assertNotNull;
 
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,10 +15,11 @@ import org.springframework.test.context.junit4.SpringRunner;
 @ActiveProfiles(profiles = {"test"})
 public class StartupTest {
 
-    @Autowired private EntityContext entityContext;
+    @Autowired
+    private Context context;
 
     @Test
     public void testStartup() {
-        assertNotNull(entityContext);
+        assertNotNull(context);
     }
 }

@@ -36,11 +36,11 @@ import org.apache.logging.log4j.message.ParameterizedNoReferenceMessageFactory;
 import org.apache.logging.log4j.simple.SimpleLogger;
 import org.apache.logging.log4j.util.PropertiesUtil;
 import org.apache.logging.log4j.util.Strings;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.ServerException;
 import org.homio.api.util.CommonUtils;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.spring.ContextCreated;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.StringUtils;
@@ -53,10 +53,10 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class LoggerService implements ContextCreated {
 
-    public final EntityContext entityContext;
+    public final Context context;
 
     @Override
-    public void onContextCreated(EntityContextImpl entityContext) throws Exception {
+    public void onContextCreated(ContextImpl context) throws Exception {
         Files.walkFileTree(CommonUtils.getLogsPath(), new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
@@ -77,7 +77,7 @@ public class LoggerService implements ContextCreated {
     }
 
     public Path getOrCreateLogFile(String key, BaseEntity entity, boolean allowCreate) {
-        BaseEntity targetEntity = entityContext.getEntity(entity);
+        BaseEntity targetEntity = context.db().getEntity(entity);
         return getOrCreateLogFile(targetEntity.getType(), "log_" + escapeName(key), allowCreate);
     }
 
@@ -188,7 +188,7 @@ public class LoggerService implements ContextCreated {
 
         InternalLogger(boolean showDateTime, PrintStream stream) {
             super("OutputStreamLogger", Level.DEBUG, false, false, showDateTime, false, Strings.EMPTY, ParameterizedNoReferenceMessageFactory.INSTANCE,
-                new PropertiesUtil(new Properties()), stream);
+                    new PropertiesUtil(new Properties()), stream);
             this.showDateTime = showDateTime;
             if (showDateTime) {
                 this.dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS zzz");
@@ -200,7 +200,7 @@ public class LoggerService implements ContextCreated {
 
         @Override
         public void logMessage(
-            String fqcn, Level mgsLevel, Marker marker, Message msg, Throwable throwable) {
+                String fqcn, Level mgsLevel, Marker marker, Message msg, Throwable throwable) {
             final StringBuilder sb = new StringBuilder();
             // Append date-time if so configured
             if (showDateTime) {
@@ -263,8 +263,8 @@ public class LoggerService implements ContextCreated {
                 }
             } catch (Exception ignore) {
                 log.warn(
-                    "Unable to fetch old logs from stream <{}>",
-                    stream.getClass().getSimpleName());
+                        "Unable to fetch old logs from stream <{}>",
+                        stream.getClass().getSimpleName());
             }
             return Collections.emptyList();
         }

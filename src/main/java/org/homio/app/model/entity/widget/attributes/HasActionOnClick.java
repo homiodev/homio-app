@@ -11,7 +11,6 @@ import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 public interface HasActionOnClick extends HasJsonData {
 
     @UIField(order = 1, label = "widget.pushValueDataSource")
-    @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
     @UIFieldGroup(value = "ACTION_ON_CLICK", order = 25, borderColor = "#71B12B")
     default String getSetValueDataSource() {

@@ -1,13 +1,13 @@
 package org.homio.app.builder.widget.hasBuilder;
 
-import org.homio.api.EntityContextWidget.Fill;
-import org.homio.api.EntityContextWidget.HasLineChartBehaviour;
-import org.homio.api.EntityContextWidget.PointStyle;
-import org.homio.api.EntityContextWidget.Stepped;
+import org.homio.api.ContextWidget.Fill;
+import org.homio.api.ContextWidget.HasLineChartBehaviour;
+import org.homio.api.ContextWidget.PointStyle;
+import org.homio.api.ContextWidget.Stepped;
 import org.jetbrains.annotations.Nullable;
 
 public interface HasLineChartBehaviourBuilder<T extends org.homio.app.model.entity.widget.impl.chart.HasLineChartBehaviour, R>
-    extends HasLineChartBehaviour<R> {
+        extends HasLineChartBehaviour<R> {
 
     T getWidget();
 

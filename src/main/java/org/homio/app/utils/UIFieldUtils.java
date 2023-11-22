@@ -4,7 +4,7 @@ import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
-import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -32,25 +32,26 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.validation.MaxItems;
 import org.homio.api.entity.validation.UIFieldValidationSize;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
-import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
+import org.homio.api.model.WebAddress;
+import org.homio.api.model.endpoint.DeviceEndpointUI;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldCodeEditor;
 import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldExpand;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIconPicker;
 import org.homio.api.ui.field.UIFieldIgnore;
@@ -60,7 +61,6 @@ import org.homio.api.ui.field.UIFieldKeyValue;
 import org.homio.api.ui.field.UIFieldLayout;
 import org.homio.api.ui.field.UIFieldLinkToEntity;
 import org.homio.api.ui.field.UIFieldNumber;
-import org.homio.api.ui.field.UIFieldOrder;
 import org.homio.api.ui.field.UIFieldPort;
 import org.homio.api.ui.field.UIFieldPosition;
 import org.homio.api.ui.field.UIFieldProgress;
@@ -69,7 +69,6 @@ import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.UIFieldTab;
 import org.homio.api.ui.field.UIFieldTableLayout;
-import org.homio.api.ui.field.UIFieldTitleRef;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.ActionInputParameter;
 import org.homio.api.ui.field.action.UIActionButton;
@@ -93,19 +92,15 @@ import org.homio.api.ui.field.inline.UIFieldInlineEntities;
 import org.homio.api.ui.field.inline.UIFieldInlineEntityEditWidth;
 import org.homio.api.ui.field.inline.UIFieldInlineEntityWidth;
 import org.homio.api.ui.field.inline.UIFieldInlineGroup;
-import org.homio.api.ui.field.model.HrefModel;
 import org.homio.api.ui.field.selection.UIFieldBeanSelection;
-import org.homio.api.ui.field.selection.UIFieldClassSelection;
 import org.homio.api.ui.field.selection.UIFieldDevicePortSelection;
-import org.homio.api.ui.field.selection.UIFieldEntityByClassListSelection;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.api.ui.field.selection.UIFieldEntityTypeSelection;
-import org.homio.api.ui.field.selection.UIFieldSelectNoValue;
-import org.homio.api.ui.field.selection.UIFieldSelectValueOnEmpty;
-import org.homio.api.ui.field.selection.UIFieldSelection;
+import org.homio.api.ui.field.selection.UIFieldSelectConfig;
 import org.homio.api.ui.field.selection.UIFieldStaticSelection;
 import org.homio.api.ui.field.selection.UIFieldTreeNodeSelection;
 import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
+import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.SecureString;
 import org.homio.app.builder.ui.UIInputBuilderImpl;
@@ -126,9 +121,10 @@ import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.core.annotation.AnnotationUtils;
 
+@Log4j2
 public class UIFieldUtils {
 
-    public static @NotNull JSONObject buildDynamicParameterMetadata(@NotNull Object requestedEntity, @Nullable Class<?> sourceClassType) {
+    public static @NotNull JSONObject buildDynamicParameterMetadata(@Nullable Object requestedEntity, @Nullable Class<?> sourceClassType) {
         JSONObject meta = new JSONObject();
         if (requestedEntity instanceof HasDynamicParameterFields && sourceClassType != null) {
             if (sourceClassType.equals(HasGetStatusValue.class)) {
@@ -140,9 +136,9 @@ public class UIFieldUtils {
         return meta;
     }
 
-    public static Collection<UIInputEntity> fetchUIActionsFromClass(Class<?> clazz, EntityContext entityContext) {
+    public static Collection<UIInputEntity> fetchUIActionsFromClass(Class<?> clazz, Context context) {
         if (clazz != null) {
-            UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
+            UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
             for (Method method : MethodUtils.getMethodsWithAnnotation(clazz, UIContextMenuAction.class)) {
                 UIContextMenuAction action = method.getDeclaredAnnotation(UIContextMenuAction.class);
                 Icon icon = new Icon(action.icon(), action.iconColor());
@@ -172,30 +168,45 @@ public class UIFieldUtils {
     }
 
     @SneakyThrows
-    public static List<EntityUIMetaData> fillEntityUIMetadataList(Class entityClassByType, EntityContext entityContext) {
-        return fillEntityUIMetadataList(entityClassByType, new HashSet<>(), entityContext);
+    public static List<EntityUIMetaData> fillEntityUIMetadataList(Class entityClassByType, Context context) {
+        return fillEntityUIMetadataList(entityClassByType, new HashSet<>(), context);
     }
 
     @SneakyThrows
     public static List<EntityUIMetaData> fillEntityUIMetadataList(Class entityClassByType,
         Set<EntityUIMetaData> entityUIMetaDataSet,
-        EntityContext entityContext) {
+        Context context) {
         if (entityClassByType == null) {
             return Collections.emptyList();
         }
         Object instance = CommonUtils.newInstance(entityClassByType);
-        if (instance == null) {
-            throw new NotFoundException("Unable to find empty constructor for class: " + entityClassByType.getName());
+        if (instance instanceof BaseEntity be) {
+            be.setEntityID("FETCH_UI_FIELD_SPECIFICATIONS");
+            be.setContext(context);
         }
-        List<EntityUIMetaData> result = fillEntityUIMetadataList(instance, entityUIMetaDataSet, entityContext, false);
+        List<EntityUIMetaData> result = fillEntityUIMetadataList(instance, entityUIMetaDataSet, context, false, null);
         if (instance instanceof ConfigureFieldsService configurator) {
             configurator.configure(result);
         }
         return result;
     }
 
-    public static List<EntityUIMetaData> fillEntityUIMetadataList(Object instance, Set<EntityUIMetaData> entityUIMetaDataSet,
-        EntityContext entityContext, boolean fullDisableEdit) {
+    public static List<EntityUIMetaData> fillEntityUIMetadataList(
+        @NotNull Object instance,
+        @NotNull Set<EntityUIMetaData> entityUIMetaDataSet,
+        @NotNull Context context,
+        boolean fullDisableEdit,
+        @Nullable EntityUIMetaData entityUIMetaData) {
+
+        if (instance instanceof DeviceEndpointUI) {
+            // special case for device endpoints
+            EntityUIMetaData deMetadata = new EntityUIMetaData().setEntityName("endpoints").setType("Endpoint");
+            if (entityUIMetaData != null) {
+                deMetadata.setEntityName(entityUIMetaData.getEntityName());
+            }
+            return List.of(deMetadata);
+        }
+
         Map<String, List<Method>> fieldNameToGettersMap = new HashMap<>();
 
         List<Class<?>> classes = getAllSuperclassesAndInterfaces(instance.getClass());
@@ -217,7 +228,7 @@ public class UIFieldUtils {
         }
 
         for (UIFieldMethodContext fieldMethodContext : fieldNameToGetters.values()) {
-            generateUIField(instance, entityUIMetaDataSet, fieldMethodContext, entityContext, fullDisableEdit);
+            generateUIField(instance, entityUIMetaDataSet, fieldMethodContext, context, fullDisableEdit);
         }
 
         Set<String> processedMethods = fieldNameToGetters.values().stream().map(UIFieldMethodContext::getMethodName).collect(toSet());
@@ -228,7 +239,7 @@ public class UIFieldUtils {
                 List<Method> fieldGetterMethods =
                     fieldNameToGettersMap.getOrDefault("get" + capitalizeMethodName, new ArrayList<>());
                 fieldGetterMethods.addAll(fieldNameToGettersMap.getOrDefault("is" + capitalizeMethodName, Collections.emptyList()));
-                generateUIField(instance, entityUIMetaDataSet, new UIFieldFieldContext(field, fieldGetterMethods), entityContext, fullDisableEdit);
+                generateUIField(instance, entityUIMetaDataSet, new UIFieldFieldContext(field, fieldGetterMethods), context, fullDisableEdit);
             }
         });
 
@@ -246,7 +257,7 @@ public class UIFieldUtils {
 
     @SneakyThrows
     private static void generateUIField(Object instance, Set<EntityUIMetaData> entityUIMetaDataList,
-        UIFieldContext fieldContext, EntityContext entityContext, boolean fullDisableEdit) {
+        UIFieldContext fieldContext, Context context, boolean fullDisableEdit) {
         EntityUIMetaData entityUIMetaData = new EntityUIMetaData();
         entityUIMetaData.setEntityName(fieldContext.getName());
         Type genericType = fieldContext.getGenericType();
@@ -265,6 +276,7 @@ public class UIFieldUtils {
         entityUIMetaData.setInlineEdit(nullIfFalse(field.inlineEdit()));
         entityUIMetaData.setCopyButton(nullIfFalse(field.copyButton()));
         entityUIMetaData.setInlineEditWhenEmpty(nullIfFalse(field.inlineEditWhenEmpty()));
+        entityUIMetaData.setSemiRequired(nullIfFalse(field.semiRequired()));
         entityUIMetaData.setHideOnEmpty(nullIfFalse(field.hideOnEmpty()));
 
         entityUIMetaData.setHideInEdit(nullIfFalse(field.hideInEdit()));
@@ -300,6 +312,7 @@ public class UIFieldUtils {
             }
         }
 
+        putIfNonEmpty(jsonTypeMetadata, "helpLabel", field.descriptionLabel());
         putIfTrue(jsonTypeMetadata, "fw", field.fullWidth());
         putIfTrue(jsonTypeMetadata, "showLabelInFw", field.hideLabelInFullWidth());
         putIfNonEmpty(jsonTypeMetadata, "bg", field.bg());
@@ -322,12 +335,6 @@ public class UIFieldUtils {
         UIFieldVariable fieldVariable = fieldContext.getDeclaredAnnotation(UIFieldVariable.class);
         if (fieldVariable != null) {
             entityUIMetaData.setType("Variable");
-        }
-
-        UIFieldTitleRef fieldTitleRef = fieldContext.getDeclaredAnnotation(UIFieldTitleRef.class);
-        if (fieldTitleRef != null) {
-            assertFieldExists(instance, fieldTitleRef.value());
-            jsonTypeMetadata.put("titleRef", fieldTitleRef.value());
         }
 
         UIFieldPosition fieldPosition = fieldContext.getDeclaredAnnotation(UIFieldPosition.class);
@@ -357,8 +364,7 @@ public class UIFieldUtils {
         }
 
         if (entityUIMetaData.getType() != null) {
-            UIFieldSelectionUtil.handleFieldSelections(
-                fieldContext, entityContext, entityUIMetaData, jsonTypeMetadata);
+            UIFieldSelectionUtil.handleFieldSelections(fieldContext, jsonTypeMetadata);
         }
 
         var fieldMarkers = fieldContext.getDeclaredAnnotation(UIFieldMarkers.class);
@@ -390,9 +396,7 @@ public class UIFieldUtils {
             if (fieldGroup.order() > 0) {
                 jsonTypeMetadata.put("groupOrder", fieldGroup.order());
             }
-            if (StringUtils.isNotEmpty(fieldGroup.borderColor())) {
-                jsonTypeMetadata.put("borderColor", fieldGroup.borderColor());
-            }
+            putIfNonEmpty(jsonTypeMetadata, "borderColor", fieldGroup.borderColor());
         }
 
         putIfTrue(jsonTypeMetadata, "reloadOnUpdate", fieldContext.isAnnotationPresent(UIEditReloadWidget.class));
@@ -512,13 +516,10 @@ public class UIFieldUtils {
             if (!field.inlineEdit()) {
                 throw new IllegalArgumentException("Annotate @UIFieldInlineEditConfirm without inlineEdit() is prohibited. " + fieldContext);
             }
-            jsonTypeMetadata.put("iec", fieldInlineEditConfirm.value());
+            jsonTypeMetadata.put("iec", "W.CONFIRM." + fieldInlineEditConfirm.value());
             putIfNonEmpty(jsonTypeMetadata, "iec_color", fieldInlineEditConfirm.dialogColor());
             putIfNonEmpty(jsonTypeMetadata, "iec_condition", fieldInlineEditConfirm.showCondition());
         }
-
-        var fieldExpand = fieldContext.getDeclaredAnnotation(UIFieldExpand.class);
-        putIfTrue(jsonTypeMetadata, "expand", fieldExpand != null && type.isAssignableFrom(List.class));
 
         var fieldTab = fieldContext.getDeclaredAnnotation(UIFieldTab.class);
         if (fieldTab != null) {
@@ -530,18 +531,18 @@ public class UIFieldUtils {
             entityUIMetaData.setNavLink(getClassEntityNavLink(field.name(), fieldLink.value()));
         }
 
-        var fieldSelectValueOnEmpty = fieldContext.getDeclaredAnnotation(UIFieldSelectValueOnEmpty.class);
-        if (fieldSelectValueOnEmpty != null) {
-            ObjectNode selectValueOnEmpty = OBJECT_MAPPER.createObjectNode();
-            selectValueOnEmpty.put("color", fieldSelectValueOnEmpty.color());
-            selectValueOnEmpty.put("label", fieldSelectValueOnEmpty.label());
-            selectValueOnEmpty.put("icon", fieldSelectValueOnEmpty.icon());
-            jsonTypeMetadata.set("selectValueOnEmpty", selectValueOnEmpty);
-        }
-
-        var fieldSelectNoValue = fieldContext.getDeclaredAnnotation(UIFieldSelectNoValue.class);
-        if (fieldSelectNoValue != null) {
-            jsonTypeMetadata.put("optionsNotFound", fieldSelectNoValue.value());
+        UIFieldSelectConfig selectConfig = fieldContext.getDeclaredAnnotation(UIFieldSelectConfig.class);
+        if (selectConfig != null) {
+            ObjectNode select = getSelectConfig(jsonTypeMetadata);
+            select.put("addEmptySelection", selectConfig.addEmptySelection());
+            select.putPOJO("icon", new Icon(selectConfig.icon(), selectConfig.iconColor()));
+            if (isNotEmpty(selectConfig.selectOnEmptyLabel())) {
+                ObjectNode selectValueOnEmpty = OBJECT_MAPPER.createObjectNode();
+                selectValueOnEmpty.put("label", selectConfig.selectOnEmptyLabel());
+                selectValueOnEmpty.putPOJO("icon", new Icon(selectConfig.selectOnEmptyIcon(), selectConfig.selectOnEmptyColor()));
+                select.set("selectValueOnEmpty", selectValueOnEmpty);
+            }
+            putIfNonEmpty(select, "optionsNotFound", selectConfig.selectNoValue());
         }
 
         if (String.class.getSimpleName().equals(entityUIMetaData.getType())) {
@@ -634,7 +635,7 @@ public class UIFieldUtils {
         var fieldInlineEdit = fieldContext.getDeclaredAnnotation(UIFieldInlineEditEntities.class);
         if (fieldInlineEdit != null) {
             if (genericType instanceof ParameterizedType && Collection.class.isAssignableFrom(type)) {
-                putUIInlineFieldIfRequire(instance, fieldContext, entityUIMetaData, (ParameterizedType) genericType, jsonTypeMetadata, entityContext);
+                putUIInlineFieldIfRequire(instance, fieldContext, entityUIMetaData, (ParameterizedType) genericType, jsonTypeMetadata, context);
                 entityUIMetaData.setStyle("padding: 0; background: " + fieldInlineEdit.bg() + ";");
 
                 jsonTypeMetadata.put("fw", true);
@@ -658,7 +659,7 @@ public class UIFieldUtils {
                     entityUIMetaData,
                     (ParameterizedType) genericType,
                     jsonTypeMetadata,
-                    entityContext);
+                    context);
 
                 entityUIMetaData.setStyle("padding: 0; background: " + fieldInline.bg() + ";");
                 jsonTypeMetadata.put("fw", true);
@@ -674,13 +675,11 @@ public class UIFieldUtils {
 
         entityUIMetaData.setShowInContextMenu(nullIfFalse(field.showInContextMenu() && entityUIMetaData.getType().equals(Boolean.class.getSimpleName())));
 
-        if (jsonTypeMetadata.size() != 0) {
+        if (!jsonTypeMetadata.isEmpty()) {
             entityUIMetaData.setTypeMetaData(jsonTypeMetadata.toString());
         }
         entityUIMetaData.setOrder(field.order());
-        if (fieldContext.isAnnotationPresent(UIFieldOrder.class)) {
-            entityUIMetaData.setOrder(fieldContext.getDeclaredAnnotation(UIFieldOrder.class).value());
-        }
+
         entityUIMetaData.setRequired(nullIfFalse(field.required()));
 
         if (BaseEntity.class.isAssignableFrom(type) && type.getDeclaredAnnotation(UISidebarMenu.class) != null) {
@@ -694,19 +693,18 @@ public class UIFieldUtils {
         entityUIMetaDataList.add(entityUIMetaData);
     }
 
+    private static ObjectNode getSelectConfig(ObjectNode jsonTypeMetadata) {
+        if(!jsonTypeMetadata.has("selectConfig")) {
+            ObjectNode select = OBJECT_MAPPER.createObjectNode();
+            jsonTypeMetadata.set("selectConfig", select);
+        }
+        return (ObjectNode) jsonTypeMetadata.get("selectConfig");
+    }
+
     private static void detectFieldType(Object instance, UIFieldContext fieldContext, EntityUIMetaData entityUIMetaData, Type genericType, Class<?> type,
         UIField field, ObjectNode jsonTypeMetadata) {
         if (field.type().equals(UIFieldType.AutoDetect)) {
-            if (type.isEnum()
-                || fieldContext.isAnnotationPresent(UIFieldTreeNodeSelection.class)
-                || fieldContext.isAnnotationPresent(UIFieldSelection.class)
-                || fieldContext.isAnnotationPresent(UIFieldDevicePortSelection.class)
-                || fieldContext.isAnnotationPresent(UIFieldStaticSelection.class)
-                || fieldContext.isAnnotationPresent(UIFieldEntityByClassListSelection.class)
-                || fieldContext.isAnnotationPresent(UIFieldEntityByClassSelection.class)
-                || fieldContext.isAnnotationPresent(UIFieldEntityTypeSelection.class)
-                || fieldContext.isAnnotationPresent(UIFieldClassSelection.class)
-                || fieldContext.isAnnotationPresent(UIFieldBeanSelection.class)) {
+            if (type.isEnum() || getSelectAnnotationCount(fieldContext) > 0) {
                 detectFieldSelectionType(fieldContext, entityUIMetaData, type, field, jsonTypeMetadata);
             } else {
                 if (genericType instanceof ParameterizedType
@@ -727,8 +725,8 @@ public class UIFieldUtils {
                         entityUIMetaData.setType(UIFieldType.String.name());
                     } else if (UIInputEntity.class.isAssignableFrom(type)) {
                         entityUIMetaData.setType("InputEntity");
-                    } else if (type.equals(HrefModel.class)) {
-                        entityUIMetaData.setType("Href");
+                    } else if(type.equals(WebAddress.class)) {
+                        entityUIMetaData.setType(UIFieldType.HTML.name());
                     } else {
                         entityUIMetaData.setType(type.getSimpleName());
                     }
@@ -742,22 +740,14 @@ public class UIFieldUtils {
     private static void detectFieldSelectionType(UIFieldContext fieldContext, EntityUIMetaData entityUIMetaData, Class<?> type, UIField field,
         ObjectNode jsonTypeMetadata) {
         // detect types
+
         UIFieldType fieldType = field.disableEdit() ? UIFieldType.String : UIFieldType.SelectBox;
-
-        if (isMatch(fieldContext, UIFieldSelection.class, UIFieldSelection::allowInputRawText)) {
-            fieldType = UIFieldType.TextSelectBoxDynamic;
-        }
-
-        if (isMatch(fieldContext, UIFieldStaticSelection.class, UIFieldStaticSelection::allowInputRawText)) {
-            fieldType = UIFieldType.TextSelectBoxDynamic;
-        }
-
-        if (isMatch(fieldContext, UIFieldTreeNodeSelection.class, UIFieldTreeNodeSelection::allowInputRawText)) {
-            fieldType = UIFieldType.TextSelectBoxDynamic;
-        }
-
-        if (isMatch(fieldContext, UIFieldDevicePortSelection.class, UIFieldDevicePortSelection::allowInputRawText)) {
-            fieldType = UIFieldType.TextSelectBoxDynamic;
+        if (fieldContext.isAnnotationPresent(UIFieldDevicePortSelection.class)
+            || isMatch(fieldContext, UIFieldStaticSelection.class, UIFieldStaticSelection::rawInput)
+            || isMatch(fieldContext, UIFieldTreeNodeSelection.class, UIFieldTreeNodeSelection::rawInput)
+            || isMatch(fieldContext, UIFieldDynamicSelection.class, UIFieldDynamicSelection::rawInput)
+            || getSelectAnnotationCount(fieldContext) > 1) {
+            getSelectConfig(jsonTypeMetadata).put("rawInput", true);
         }
 
         entityUIMetaData.setType(fieldType.name());
@@ -789,7 +779,7 @@ public class UIFieldUtils {
         }
     }
 
-    private static void putIfNonEmpty(ObjectNode metadata, String key, String value) {
+    public static void putIfNonEmpty(ObjectNode metadata, String key, String value) {
         if (StringUtils.isNotEmpty(value)) {
             metadata.put(key, value);
         }
@@ -805,14 +795,14 @@ public class UIFieldUtils {
         try {
             instance.getClass().getDeclaredField(fieldName);
         } catch (NoSuchFieldException ex) {
-            if (InternalUtil.findMethodByName(instance.getClass(), fieldName) == null) {
+            if (CommonUtils.findMethodByName(instance.getClass(), fieldName) == null) {
                 throw new ServerException("Unable to find field <" + fieldName + ">");
             }
         }
     }
 
     private static void putUIInlineFieldIfRequire(Object instance, UIFieldContext fieldContext, EntityUIMetaData entityUIMetaData,
-        ParameterizedType genericType, ObjectNode jsonTypeMetadata, EntityContext entityContext) {
+        ParameterizedType genericType, ObjectNode jsonTypeMetadata, Context context) {
         if (!jsonTypeMetadata.has("inlineTypeFields")) {
             Type inlineType = extractSetEntityType(instance, fieldContext, entityUIMetaData, genericType, jsonTypeMetadata);
             // for non BaseEntity types
@@ -821,12 +811,15 @@ public class UIFieldUtils {
             }
             Object childClassInstance = CommonUtils.newInstance((Class) inlineType);
             boolean fullDisableEdit = fieldContext.getUIField().disableEdit();
-            jsonTypeMetadata.set("inlineTypeFields",
-                OBJECT_MAPPER.valueToTree(UIFieldUtils.fillEntityUIMetadataList(childClassInstance, new HashSet<>(), entityContext, fullDisableEdit)));
+            JsonNode inlineTypeFields = OBJECT_MAPPER.valueToTree(
+                UIFieldUtils.fillEntityUIMetadataList(childClassInstance, new HashSet<>(), context, fullDisableEdit, entityUIMetaData));
+            if (!inlineTypeFields.isEmpty()) {
+                jsonTypeMetadata.set("inlineTypeFields", inlineTypeFields);
+            }
         }
     }
 
-    private static Boolean nullIfFalse(boolean value) {
+    public static Boolean nullIfFalse(boolean value) {
         return value ? true : null;
     }
 
@@ -1004,17 +997,15 @@ public class UIFieldUtils {
 
         @Override
         public String toString() {
-            return "UIFieldFieldContext{" +
-                "name=" + getName() +
-                "type=" + getType() +
-                '}';
+            return "UIFieldFieldContext{name=%stype=%s}".formatted(getName(), getType());
         }
     }
 
     public static class UIFieldMethodContext implements UIFieldContext {
 
         private final String name;
-        @Getter private final String methodName;
+        @Getter
+        private final String methodName;
         private final List<Method> methods = new ArrayList<>();
 
         public UIFieldMethodContext(Method fieldMethod, List<Method> allMethods) {
@@ -1028,8 +1019,19 @@ public class UIFieldUtils {
                     break;
                 }
             }
-            this.name = getDeclaredAnnotation(UIField.class).name();
-            this.methodName = InternalUtil.getMethodShortName(fieldMethod);
+            UIField uiField = getDeclaredAnnotation(UIField.class);
+            if (uiField == null) {
+                String message = "Unable to fetch @UIField annotations from method: " + fieldMethod.getName()
+                    + " of class: " + fieldMethod.getDeclaringClass().getSimpleName();
+                log.error(message);
+                throw new IllegalStateException(message);
+            }
+            this.name = uiField.name();
+            this.methodName = getMethodShortName(fieldMethod);
+        }
+
+        private static String getMethodShortName(Method method) {
+            return StringUtils.uncapitalize(method.getName().substring(method.getName().startsWith("is") ? 2 : 3));
         }
 
         @Override
@@ -1089,15 +1091,22 @@ public class UIFieldUtils {
 
         @Override
         public String toString() {
-            return "UIFieldMethodContext{" +
-                "name=" + getName() +
-                "type=" + getType() +
-                '}';
+            return "UIFieldMethodContext{name=%stype=%s}".formatted(getName(), getType());
         }
     }
 
     public interface ConfigureFieldsService {
 
         void configure(@NotNull List<EntityUIMetaData> result);
+    }
+
+    private static int getSelectAnnotationCount(UIFieldContext fieldContext) {
+        return fieldContext.getDeclaredAnnotationsByType(UIFieldTreeNodeSelection.class).size()
+            + fieldContext.getDeclaredAnnotationsByType(UIFieldDynamicSelection.class).size()
+            + fieldContext.getDeclaredAnnotationsByType(UIFieldDevicePortSelection.class).size()
+            + fieldContext.getDeclaredAnnotationsByType(UIFieldStaticSelection.class).size()
+            + fieldContext.getDeclaredAnnotationsByType(UIFieldEntityByClassSelection.class).size()
+            + fieldContext.getDeclaredAnnotationsByType(UIFieldEntityTypeSelection.class).size()
+            + fieldContext.getDeclaredAnnotationsByType(UIFieldBeanSelection.class).size();
     }
 }

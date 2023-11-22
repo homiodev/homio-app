@@ -9,24 +9,22 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 
 @Entity
 public class WidgetFMSeriesEntity extends WidgetSeriesEntity<WidgetFMEntity>
-    implements HasSingleValueDataSource {
-
-    public static final String PREFIX = "wgsfms_";
+        implements HasSingleValueDataSource {
 
     @Override
     @UIField(order = 14, required = true)
     @UIFieldTreeNodeSelection(
-        allowSelectDirs = true,
-        allowSelectFiles = false,
-        iconColor = "#14A669")
+            allowSelectDirs = true,
+            allowSelectFiles = false,
+            iconColor = "#14A669")
     @UIFieldIgnoreParent
     public String getValueDataSource() {
         return HasSingleValueDataSource.super.getValueDataSource();
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected String getSeriesPrefix() {
+        return "fm";
     }
 
     @Override

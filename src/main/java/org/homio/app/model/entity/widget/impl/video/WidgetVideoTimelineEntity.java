@@ -3,21 +3,19 @@ package org.homio.app.model.entity.widget.impl.video;
 import jakarta.persistence.Entity;
 import java.util.ArrayList;
 import java.util.List;
-import org.homio.addon.camera.entity.OnvifCameraEntity;
-import org.homio.addon.camera.entity.VideoPlaybackStorage;
+import org.homio.addon.camera.entity.CameraPlaybackStorage;
+import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.api.model.OptionModel;
-import org.homio.api.ui.action.DynamicOptionLoader;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldNumber;
-import org.homio.api.ui.field.selection.UIFieldSelection;
+import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
+import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimelineEntity> {
-
-    public static final String PREFIX = "wtvtl_";
 
     @Override
     public WidgetGroup getGroup() {
@@ -45,7 +43,7 @@ public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimel
     }
 
     @UIField(order = 14, required = true, label = "widget.video_dataSource")
-    @UIFieldSelection(WidgetVideoTimelineEntity.VideoTimelineDataSourceDynamicOptionLoader.class)
+    @UIFieldDynamicSelection(WidgetVideoTimelineEntity.VideoTimelineDataSourceDynamicOptionLoader.class)
     public String getDataSource() {
         return getJsonData("ds");
     }
@@ -66,12 +64,12 @@ public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimel
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "video-time";
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         setBh(4);
         setBw(3);
         super.beforePersist();
@@ -82,8 +80,8 @@ public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimel
         @Override
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
             List<OptionModel> list = new ArrayList<>();
-            for (OnvifCameraEntity entity : parameters.getEntityContext().findAll(OnvifCameraEntity.class)) {
-                if (entity.getService().getBrandHandler() instanceof VideoPlaybackStorage) {
+            for (IpCameraEntity entity : parameters.context().db().findAll(IpCameraEntity.class)) {
+                if (entity.getService().getBrandHandler() instanceof CameraPlaybackStorage) {
                     list.add(OptionModel.of(entity.getEntityID(), entity.getTitle()));
                 }
             }

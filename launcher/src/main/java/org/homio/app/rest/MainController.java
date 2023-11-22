@@ -1,10 +1,12 @@
 package org.homio.app.rest;
 
+import jakarta.annotation.PostConstruct;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +52,11 @@ public class MainController {
     private final MachineHardwareRepository repository;
     private boolean installing;
 
+    @PostConstruct
+    public void test() {
+        repository.getDiscCapacity();
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorHolderModel> handleException(Exception ex, WebRequest request) {
         String msg = getErrorMessage(ex);
@@ -58,9 +65,9 @@ public class MainController {
         }
         System.err.printf("Error '%s'%n", msg);
         Objects.requireNonNull(((ServletWebRequest) request).getResponse())
-               .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                             .body(new ErrorHolderModel("ERROR", msg, ex));
+                .body(new ErrorHolderModel("ERROR", msg, ex));
     }
 
     @GetMapping("/auth/status")
@@ -87,16 +94,25 @@ public class MainController {
         installing = true;
         new Thread(() -> {
             ProgressBar progressBar = (progress, message, error) ->
-                messagingTemplate.convertAndSend(WebSocketConfig.DESTINATION_PREFIX + "-global",
-                    new Progress(progress, message));
+                    messagingTemplate.convertAndSend(WebSocketConfig.DESTINATION_PREFIX + "-global",
+                            new Progress(progress, message));
             if (Files.exists(rootPath.resolve("homio-app.jar"))) {
                 System.err.println("homio-app.jar already downloaded. Made restart...");
                 finishInstallApp(progressBar);
                 return;
             }
             try {
-                InstallUtils.downloadTmate(progressBar, repository, rootPath);
-                InstallUtils.downloadApp(progressBar, repository, rootPath);
+                try {
+                    repository.update((int) TimeUnit.MINUTES.toMillis(10), progressBar);
+                } catch (Exception ex) {
+                    System.err.println("Error while made device update: " + ex.getMessage());
+                }
+                try {
+                    InstallUtils.downloadTmate(progressBar, repository, rootPath);
+                } catch (Exception te) {
+                    System.err.println("Error while install tmate: " + te.getMessage());
+                }
+                InstallUtils.downloadApp(progressBar, rootPath, repository);
 
                 finishInstallApp(progressBar);
             } catch (Exception ex) {
@@ -199,7 +215,7 @@ public class MainController {
     @SneakyThrows
     private static Path getHomioPropertiesLocation() {
         Path propertiesFile = (SystemUtils.IS_OS_WINDOWS ? SystemUtils.getUserHome().toPath().resolve("homio") :
-            createDirectoriesIfNotExists(Paths.get("/opt/homio"))).resolve("homio.properties");
+                createDirectoriesIfNotExists(Paths.get("/opt/homio"))).resolve("homio.properties");
         if (!Files.exists(propertiesFile)) {
             ApplicationHome applicationHome = new ApplicationHome();
             Path jarLocation = applicationHome.getDir().toPath();

@@ -12,11 +12,10 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.validator.internal.constraintvalidators.hv.EmailValidator;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.IdentityEntity;
-import org.homio.api.exception.ProhibitedExecution;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
@@ -32,8 +31,8 @@ import org.json.JSONObject;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Entity
-public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityEntity<T>
-    implements UserEntity, HasEntityLog, HasDynamicContextMenuActions {
+public abstract class UserBaseEntity extends IdentityEntity
+        implements UserEntity, HasEntityLog, HasDynamicContextMenuActions {
 
     public static final String LOG_RESOURCE = "ROLE_LOG";
     public static final String LOG_RESOURCE_AUTHORIZE = "hasRole('" + LOG_RESOURCE + "')";
@@ -83,10 +82,10 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
         if (value == null || value.length() < 6) {
             throw new IllegalArgumentException("USER.PASSWORD_TOO_SHORT");
         }
-        setJsonData("pwd", value);
+        setJsonDataSecure("pwd", value);
     }
 
-    @JsonIgnore
+    @UIField(order = 10)
     public abstract @NotNull UserType getUserType();
 
     @Override
@@ -96,7 +95,7 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
 
     @Override
     public void logBuilder(EntityLogBuilder logBuilder) {
-        logBuilder.addTopicFilterByEntityID("org.homio.app.model.entity.user");
+        logBuilder.addTopicFilterByEntityID(UserBaseEntity.class);
     }
 
     @JsonIgnore
@@ -124,7 +123,7 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
         return currentPassword.equals(password) || passwordEncoder != null && passwordEncoder.matches(password, currentPassword);
     }
 
-    public T setPassword(String password, PasswordEncoder passwordEncoder) {
+    public void setPassword(String password, PasswordEncoder passwordEncoder) {
         if (passwordEncoder != null) {
             try {
                 passwordEncoder.upgradeEncoding(password);
@@ -133,37 +132,36 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
             }
         }
         setPassword(password);
-        return (T) this;
     }
 
     @Override
     @UIFieldIgnore
     @JsonIgnore
-    public Status getStatus() {
-        return null;
+    public @NotNull Status getStatus() {
+        return Status.ONLINE;
     }
 
     @Override
     public void assembleActions(UIInputBuilder uiInputBuilder) {
-        UserEntity user = uiInputBuilder.getEntityContext().getUser();
+        UserEntity user = uiInputBuilder.context().getUser();
         if (user != null && user.isAdmin()) {
             uiInputBuilder.addOpenDialogSelectableButton("CHANGE_PASSWORD", new Icon("fas fa-unlock-keyhole",
-                              Color.RED), null, this::changePassword)
-                          .editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
-                              if (this.getUserType() == UserType.ADMIN) {
-                                  flex.addTextInput("field.currentPassword", "", true);
-                              }
-                              flex.addTextInput("field.newPassword", "", true);
-                              flex.addTextInput("field.repeatNewPassword", "", true);
-                          }));
+                            Color.RED), null, this::changePassword)
+                    .editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
+                        if (this.getUserType() == UserType.ADMIN) {
+                            flex.addTextInput("currentPassword", "", true);
+                        }
+                        flex.addTextInput("newPassword", "", true);
+                        flex.addTextInput("repeatNewPassword", "", true);
+                    }));
             uiInputBuilder.addOpenDialogSelectableButton("CHANGE_EMAIL", new Icon("fas fa-at",
-                              Color.PRIMARY_COLOR), null, this::changeEmail)
-                          .editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
-                              if (this.getUserType() == UserType.ADMIN) {
-                                  flex.addTextInput("field.currentPassword", "", true);
-                              }
-                              flex.addTextInput("field.email", "", true);
-                          }));
+                            Color.PRIMARY_COLOR), null, this::changeEmail)
+                    .editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
+                        if (this.getUserType() == UserType.ADMIN) {
+                            flex.addTextInput("currentPassword", "", true);
+                        }
+                        flex.addTextInput("email", "", true);
+                    }));
         }
     }
 
@@ -183,31 +181,32 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
         log.info(entityID + ": " + message);
     }
 
-    private ActionResponseModel changeEmail(EntityContext entityContext, JSONObject json) {
-        assertCorrectPassword(entityContext, json);
-        setEmail(json.getString("field.email"));
-        entityContext.save(setEmail(json.getString("field.email")));
+    private ActionResponseModel changeEmail(Context context, JSONObject json) {
+        assertCorrectPassword(context, json);
+        setEmail(json.getString("email"));
+        context.db().save(setEmail(json.getString("email")));
         return ActionResponseModel.showSuccess("USER.ALTERED");
     }
 
-    private ActionResponseModel changePassword(EntityContext entityContext, JSONObject json) {
-        assertCorrectPassword(entityContext, json);
-        String newPassword = json.getString("field.newPassword");
-        if (!newPassword.equals(json.getString("field.repeatNewPassword"))) {
+    private ActionResponseModel changePassword(Context context, JSONObject json) {
+        assertCorrectPassword(context, json);
+        String newPassword = json.getString("newPassword");
+        if (!newPassword.equals(json.getString("repeatNewPassword"))) {
             throw new IllegalArgumentException("USER.PASSWORD_NOT_MATCH");
         }
         if (newPassword.length() < 6) {
             throw new IllegalArgumentException("USER.PASSWORD_TOO_SHORT");
         }
-        PasswordEncoder passwordEncoder = entityContext.getBean(PasswordEncoder.class);
-        entityContext.save(setPassword(newPassword, passwordEncoder));
+        PasswordEncoder passwordEncoder = context.getBean(PasswordEncoder.class);
+        setPassword(newPassword, passwordEncoder);
+        context.db().save(this);
 
-        entityContext.ui().reloadWindow("USER.ALTERED_RELOAD");
+        context.ui().dialog().reloadWindow("USER.ALTERED_RELOAD");
         return ActionResponseModel.showSuccess("USER.ALTERED");
     }
 
-    private void assertCorrectPassword(EntityContext entityContext, JSONObject json) {
-        if (this.getUserType() == UserType.ADMIN && !matchPassword(json.getString("field.currentPassword"), entityContext.getBean(PasswordEncoder.class))) {
+    private void assertCorrectPassword(Context context, JSONObject json) {
+        if (this.getUserType() == UserType.ADMIN && !matchPassword(json.getString("currentPassword"), context.getBean(PasswordEncoder.class))) {
             throw new IllegalArgumentException("W.ERROR.PASSWORD_NOT_MATCH");
         }
     }

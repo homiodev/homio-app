@@ -13,7 +13,7 @@ import org.homio.app.auth.CacheAuthenticationProvider;
 import org.homio.app.auth.JwtTokenFilterConfigurer;
 import org.homio.app.auth.JwtTokenProvider;
 import org.homio.app.auth.UserEntityDetailsService;
-import org.homio.app.manager.common.impl.EntityContextSettingImpl;
+import org.homio.app.manager.common.impl.ContextSettingImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -50,35 +50,36 @@ public class SecurityConfiguration {
 
         // No session will be created or used by spring security
         http.sessionManagement(session ->
-            session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         // Entry points
-        if (EntityContextSettingImpl.getHomioProperties().getProperty("security-disable", "false").equalsIgnoreCase("true")) {
+        if (ContextSettingImpl.getHomioProperties().getProperty("security-disable", "false").equalsIgnoreCase("true")) {
             log.warn("""
-                -----------------------------------
-                !!! TouchHome security disabled !!!
-                -----------------------------------
-                """);
+                    -----------------------------------
+                    !!! HOMIO security disabled !!!
+                    -----------------------------------
+                    """);
             http.authorizeHttpRequests(authorize ->
-                authorize.requestMatchers(WEB_SOCKET_ENDPOINT, CUSTOM_WEB_SOCKET_ENDPOINT + "/**", "/rest/**").permitAll());
+                    authorize.requestMatchers(WEB_SOCKET_ENDPOINT, CUSTOM_WEB_SOCKET_ENDPOINT + "/**", "/rest/**").permitAll());
         } else {
             http.authorizeHttpRequests(authorize -> {
                 // to avoid issue with ResponseEntity<StreamingResponseBody>
                 authorize.dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD, DispatcherType.ASYNC).permitAll();
                 authorize.requestMatchers(
-                    WEB_SOCKET_ENDPOINT,
-                    CUSTOM_WEB_SOCKET_ENDPOINT + "/**",
-                    "/rest/test",
-                    "/rest/auth/status",
-                    "/rest/auth/login",
-                    "/rest/auth/register",
-                    "/rest/frame/**",
-                    "/rest/media/audio/**",
-                    "/rest/media/video/**",
-                    "/rest/media/video/playback/**",
-                    "/rest/addon/image/**",
-                    "/rest/media/image/**",
-                    "/rest/device/**").permitAll();
+                        WEB_SOCKET_ENDPOINT,
+                        CUSTOM_WEB_SOCKET_ENDPOINT + "/**",
+                        "/rest/auth/status",
+                        "/rest/auth/login",
+                        "/rest/auth/register",
+                        "/rest/frame/**",
+                        "rest/resource/**",
+                        "/rest/media/audio/**",
+                        "/rest/media/video/**",
+                        "/rest/media/video/playback/**",
+                        "/rest/addon/image/**",
+                        "/rest/media/image/**",
+                        "/rest/route/proxy/**",
+                        "/rest/device/**").permitAll();
                 authorize.requestMatchers("/rest/**").authenticated();
             });
             http.csrf(AbstractHttpConfigurer::disable);

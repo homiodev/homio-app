@@ -2,22 +2,20 @@ package org.homio.app.service.image;
 
 import com.pivovarit.function.ThrowingBiFunction;
 import com.pivovarit.function.ThrowingFunction;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
+import lombok.SneakyThrows;
+import org.apache.commons.lang3.tuple.Pair;
+import org.homio.api.model.StylePosition;
+import org.homio.api.service.ImageProviderService;
+import org.springframework.stereotype.Service;
+
+import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import javax.imageio.ImageIO;
-import lombok.SneakyThrows;
-import org.apache.commons.lang3.tuple.Pair;
-import org.homio.api.model.StylePosition;
-import org.homio.api.service.ImageProviderService;
-import org.springframework.stereotype.Service;
 
 @Service
 public class AwtImageProviderService implements ImageProviderService {
@@ -32,9 +30,9 @@ public class AwtImageProviderService implements ImageProviderService {
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g.drawImage(bgBufferedImage, 0, 0, null);
             g.drawImage(fgBufferedImage, x, y,
-                width <= 0 ? fgBufferedImage.getWidth() : width,
-                height <= 0 ? fgBufferedImage.getHeight() : height,
-                null);
+                    width <= 0 ? fgBufferedImage.getWidth() : width,
+                    height <= 0 ? fgBufferedImage.getHeight() : height,
+                    null);
             g.dispose();
             return bgBufferedImage;
         });
@@ -78,12 +76,12 @@ public class AwtImageProviderService implements ImageProviderService {
 
                     // set the new pixel
                     targetImage.getRaster().setPixel(j, i, new int[]{
-                        c.getRed(), c.getGreen(), c.getBlue(), pixel[3]
+                            c.getRed(), c.getGreen(), c.getBlue(), pixel[3]
                     });
                 }
-                }
-                return targetImage;
-            });
+            }
+            return targetImage;
+        });
     }
 
     @Override
@@ -193,7 +191,7 @@ public class AwtImageProviderService implements ImageProviderService {
     }
 
     private BufferedImage createBufferedImage(
-        int w, int h, BufferedImage bufferedImage, String formatType) {
+            int w, int h, BufferedImage bufferedImage, String formatType) {
         if (bufferedImage.getType() == BufferedImage.TYPE_BYTE_INDEXED) {
             return new BufferedImage(w, h, BufferedImage.TYPE_BYTE_INDEXED, (IndexColorModel) bufferedImage.getColorModel());
         } else if ("png".equals(formatType)) {

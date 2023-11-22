@@ -17,11 +17,13 @@ import org.jetbrains.annotations.NotNull;
 @Accessors(chain = true)
 public class WidgetJavaJsEntity /*TODO: fix:   extends WidgetBaseEntity<WidgetJsEntity>*/ implements HasJsonData {
 
-    public static final String PREFIX = "wgtjjs_";
+    public static final String PREFIX = "widget_js_";
 
-    @Transient private String javaScriptResponse;
+    @Transient
+    private String javaScriptResponse;
 
-    @Transient private String javaScriptErrorResponse;
+    @Transient
+    private String javaScriptErrorResponse;
 
     @UIField(order = 13)
     @UIFieldCodeEditor(editorType = MonacoLanguage.JavaScript)
@@ -70,7 +72,7 @@ public class WidgetJavaJsEntity /*TODO: fix:   extends WidgetBaseEntity<WidgetJs
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         super.beforePersist();
         setJavaScriptParameters("{\"text\":\"Hello world!\"}");
         setJavaScript("function run() {\n\treturn params.get('text');\n}");

@@ -41,36 +41,39 @@ sudo mkdir -p $root_path
 echo "root_path: '$root_path'"
 
 java_path=$(command -v java)
-if [[ -z "$java_path" || "$(java -version 2>&1 | awk 'NR==1{print $3}' | cut -d'"' -f2)" != "17" ]]; then
-	java_path="$root_path/jdk-17.0.7+7-jre/bin/java"
-    if [ -x "$java_path" ]; then
-	   echo "Java is installed at path $java_path"
-	else
-      echo "Java not installed or version is not 17. Installing..."
+if [[ -z "$java_path" || "$($java_path -version 2>&1 | grep -oP 'version "\K\d+')" != "17" ]]; then
+  echo "Unable to find java 17 in classpath"
+  java_path="$root_path/jdk-17.0.7+7-jre/bin/java"
+  if [ -x "$java_path" ]; then
+  	   echo "Java is installed at path $java_path"
+  	else
+        echo "Java not installed. Installing..."
 
-      # Download Java 17
-      wget -O "$root_path/jre.tar.gz" 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.7+7/OpenJDK17U-jre_x64_linux_hotspot_17.0.7_7.tar.gz'
+        # Download Java 17
+        wget -O "$root_path/jre.tar.gz" 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.7+7/OpenJDK17U-jre_x64_linux_hotspot_17.0.7_7.tar.gz'
 
-     # Extract Java archive
-      tar xzf "$root_path/jre.tar.gz" -C "$root_path"
+       # Extract Java archive
+        tar xzf "$root_path/jre.tar.gz" -C "$root_path"
 
-      # Remove the Java archive
-      rm "$root_path/jre.tar.gz"
-      echo "Java 17 has been installed  to $java_path"
-	fi
+        # Remove the Java archive
+        rm "$root_path/jre.tar.gz"
+        echo "Java 17 has been installed  to $java_path"
+  	fi
 else
-    echo "Java 17 already installed."
+  echo "Found java 17 in classpath"
 fi
 
+echo "Java path: $java_path"
+
 # Define the file name and path
-launcher="homio-launcher.jar"
+launcher="$root_path/homio-launcher.jar"
 
 # Check if the file exists locally
-if [[ ! -f "$root_path/$launcher" ]]; then
+if [[ ! -f "$launcher" ]]; then
     echo "$launcher does not exist locally. Downloading from GitHub..."
 
     # Download the file from GitHub
-    wget -O "$root_path/$launcher" 'https://github.com/homiodev/static-files/raw/master/homio-launcher.jar'
+    wget -O "$launcher" 'https://github.com/homiodev/static-files/raw/master/homio-launcher.jar'
 
     echo "File 'homio-launcher.jar' downloaded successfully."
 fi

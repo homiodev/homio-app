@@ -1,8 +1,19 @@
 package org.homio.addon.http;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.springframework.http.HttpHeaders.ACCEPT;
+import static org.springframework.http.HttpHeaders.ACCEPT_ENCODING;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
+import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
+import static org.springframework.http.HttpHeaders.HOST;
+import static org.springframework.http.HttpHeaders.LOCATION;
+import static org.springframework.http.HttpHeaders.USER_AGENT;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
+import static org.springframework.http.MediaType.TEXT_HTML_VALUE;
+import static org.springframework.http.MediaType.TEXT_PLAIN_VALUE;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.pivovarit.function.ThrowingBiConsumer;
@@ -35,7 +46,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.state.JsonType;
 import org.homio.api.state.RawType;
@@ -50,6 +61,7 @@ import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.SecureString;
 import org.homio.api.workspace.WorkspaceBlock;
+import org.homio.api.workspace.scratch.Scratch3Block.ScratchSettingBaseEntity;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -62,9 +74,9 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
 
     private final DatagramSocket udpSocket = new DatagramSocket();
 
-    public Scratch3NetworkBlocks(EntityContext entityContext)
-        throws SocketException {
-        super("#595F4B", entityContext, null, "net");
+    public Scratch3NetworkBlocks(Context context)
+            throws SocketException {
+        super("#595F4B", context, null, "net");
         this.udpSocket.setBroadcast(true);
 
         blockCommand(10, "request", "HTTP [URL] | [SETTING]", this::httpRequestHandler, block -> {
@@ -83,7 +95,7 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
         });
 
         blockCommand(40, HttpApplyHandler.update_bearer_auth.name(), "HTTP Bearer auth [TOKEN]", this::skipCommand, block ->
-            block.addArgument("TOKEN", "token"));
+                block.addArgument("TOKEN", "token"));
 
         blockCommand(50, HttpApplyHandler.update_payload.name(), "HTTP Body payload [PAYLOAD]", this::skipCommand, block -> {
             block.addArgument("PAYLOAD");
@@ -115,19 +127,33 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void onUdpEventHandler(WorkspaceBlock workspaceBlock) {
-        WorkspaceBlock substack = workspaceBlock.getNext();
-        if (substack != null) {
-            workspaceBlock.handleAndRelease(() ->
-                    entityContext.event().listenUdp(
-                        workspaceBlock.getId(),
-                        workspaceBlock.getInputString("HOST"),
-                        workspaceBlock.getInputInteger("PORT"),
-                        (datagramPacket, output) -> {
-                            workspaceBlock.setValue(new StringType(output));
-                            substack.getNext().handle();
-                        }),
-                () -> entityContext.event().stopListenUdp(workspaceBlock.getId()));
+        workspaceBlock.handleNextOptional(substack -> {
+            String host = workspaceBlock.getInputString("HOST");
+            Integer port = workspaceBlock.getInputInteger("PORT");
+            try (DatagramSocket socket = getDatagramSocket(host, port)) {
+                DatagramPacket datagramPacket = new DatagramPacket(new byte[1024], 1024);
+                while (!Thread.currentThread().isInterrupted()) {
+                    socket.receive(datagramPacket);
+                    byte[] data = datagramPacket.getData();
+                    String text = new String(data, 0, datagramPacket.getLength());
+                    workspaceBlock.setValue(new StringType(text));
+                    substack.handle();
+                }
+                workspaceBlock.logWarn("Finish listen udp: {}", port);
+            }
+        });
+    }
+
+    @NotNull
+    private static DatagramSocket getDatagramSocket(String host, Integer port) throws SocketException {
+        DatagramSocket socket;
+        if (StringUtils.isEmpty(host) || host.equals("255.255.255.255") || host.equals("0.0.0.0")) {
+            socket = new DatagramSocket(port);
+        } else {
+            socket = new DatagramSocket();
+            socket.bind(new InetSocketAddress(host, port));
         }
+        return socket;
     }
 
     @SneakyThrows
@@ -136,25 +162,23 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
         String url = workspaceBlock.getInputString("URL");
 
         RequestConfig config = RequestConfig.custom()
-                                            .setConnectTimeout(setting.connectTimeout * 1000)
-                                            .setSocketTimeout(setting.socketTimeout * 1000).build();
+                .setConnectTimeout(setting.connectTimeout * 1000)
+                .setSocketTimeout(setting.socketTimeout * 1000).build();
         HttpRequestBase request = CommonUtils.newInstance(setting.httpMethod.httpRequestBaseClass);
         switch (setting.auth) {
-            case Basic:
+            case Basic -> {
                 String auth = setting.user + ":" + setting.password.asString();
                 byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
                 request.setHeader(AUTHORIZATION, "Basic " + new String(encodedAuth));
-                break;
-            case Digest:
-                throw new IllegalStateException("Not implemented yet");
-            case Bearer:
-                request.setHeader(AUTHORIZATION, "Basic " + setting.token);
-                break;
+            }
+            case Digest -> throw new IllegalStateException("Not implemented yet");
+            case Bearer -> request.setHeader(AUTHORIZATION, "Basic " + setting.token);
         }
 
         // build headers
         if (setting.httpHeaders != null) {
-            Map<String, String> headers = OBJECT_MAPPER.readValue(setting.httpHeaders, new TypeReference<>() {});
+            Map<String, String> headers = OBJECT_MAPPER.readValue(setting.httpHeaders, new TypeReference<>() {
+            });
             for (Entry<String, String> headerEntry : headers.entrySet()) {
                 request.setHeader(headerEntry.getKey(), headerEntry.getValue());
             }
@@ -163,7 +187,8 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
         // Build query uri
         URIBuilder uriBuilder = new URIBuilder(URI.create(url));
         if (setting.queryParameters != null) {
-            Map<String, String> queries = OBJECT_MAPPER.readValue(setting.queryParameters, new TypeReference<>() {});
+            Map<String, String> queries = OBJECT_MAPPER.readValue(setting.queryParameters, new TypeReference<>() {
+            });
             for (Entry<String, String> queryEntry : queries.entrySet()) {
                 uriBuilder.addParameter(queryEntry.getKey(), queryEntry.getValue());
             }
@@ -182,12 +207,15 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
     @SneakyThrows
     private State convertResult(HttpResponse response, HttpRequestEntity setting) {
         switch (setting.responseType) {
-            case String:
+            case String -> {
                 return new StringType(IOUtils.toString(response.getEntity().getContent(), UTF_8));
-            case Binary:
+            }
+            case Binary -> {
                 return new RawType(IOUtils.toByteArray(response.getEntity().getContent()));
-            case Json:
+            }
+            case Json -> {
                 return new JsonType(IOUtils.toString(response.getEntity().getContent(), UTF_8));
+            }
         }
         Header contentType = response.getFirstHeader("Content-Type");
         String rawValue = IOUtils.toString(response.getEntity().getContent(), UTF_8);
@@ -221,9 +249,8 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
                 ((HttpEntityEnclosingRequestBase) request).setEntity(new StringEntity(payload));
             }
         }),
-        update_bearer_auth((workspaceBlock, request) -> {
-            request.setHeader(AUTHORIZATION, "Basic " + workspaceBlock.getInputString("TOKEN"));
-        }),
+        update_bearer_auth((workspaceBlock, request) ->
+                request.setHeader(AUTHORIZATION, "Basic " + workspaceBlock.getInputString("TOKEN"))),
         update_basic_auth((workspaceBlock, request) -> {
             String auth = workspaceBlock.getInputString("USER") + ":" + workspaceBlock.getInputString("PWD");
             byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
@@ -241,24 +268,30 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
 
     @Getter
     @Setter
-    public static class HttpRequestEntity implements EntityFieldMetadata {
+    public static class HttpRequestEntity implements ScratchSettingBaseEntity {
 
         @UIField(order = 1)
         private HttpMethod httpMethod = HttpMethod.GET;
 
         @UIField(order = 2, icon = "fa fa-list", fullWidth = true)
         @UIFieldKeyValue(maxSize = 10, keyPlaceholder = "Header name", valuePlaceholder = "Header value",
-                         options = {
-                             @Option(key = "Accept", values = {"text/plain", "text/html", "application/json", "application/xml"}),
-                             @Option(key = "Accept-Encoding", values = {"gzip", "deflate", "compress", "br"}),
-                             @Option(key = "Authorization", values = {}),
-                             @Option(key = "Content-Type", values = {"text/css", "text/plain", "text/html", "application/json", "application/xml",
-                                 "application/zip"}),
-                             @Option(key = "Cache-Control", values = {"max-age=0", "max-age=86400", "no-cache"}),
-                             @Option(key = "User-Agent", values = {"Mozilla/5.0"}),
-                             @Option(key = "Location", values = {}),
-                             @Option(key = "Host", values = {})
-                         })
+                options = {
+                        @Option(key = ACCEPT, values = {TEXT_PLAIN_VALUE, TEXT_HTML_VALUE, APPLICATION_JSON_VALUE, APPLICATION_XML_VALUE}),
+                        @Option(key = ACCEPT_ENCODING, values = {"gzip", "deflate", "compress", "br"}),
+                        @Option(key = AUTHORIZATION, values = {}),
+                        @Option(key = CONTENT_TYPE, values = {
+                                "text/css",
+                                "application/zip",
+                                TEXT_PLAIN_VALUE,
+                                TEXT_HTML_VALUE,
+                                APPLICATION_JSON_VALUE,
+                                APPLICATION_XML_VALUE
+                        }),
+                        @Option(key = CACHE_CONTROL, values = {"max-age=0", "max-age=86400", "no-cache"}),
+                        @Option(key = USER_AGENT, values = {"Mozilla/5.0"}),
+                        @Option(key = LOCATION, values = {}),
+                        @Option(key = HOST, values = {})
+                })
         private String httpHeaders;
 
         @UIField(order = 3, icon = "fa fa-cheese", fullWidth = true)

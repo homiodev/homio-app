@@ -1,12 +1,5 @@
 package org.homio.app;
 
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.homio.app.extloader.AddonClassLoader;
 import org.jetbrains.annotations.Nullable;
@@ -14,11 +7,16 @@ import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
+import java.net.URL;
+import java.util.*;
+
 public class HomioClassLoader extends ClassLoader {
 
     private static final Map<String, AddonClassLoader> addonJarClassLoaders = new HashMap<>();
 
-    public HomioClassLoader(ClassLoader parent) {
+    public static final HomioClassLoader INSTANCE = new HomioClassLoader(HomioClassLoader.class.getClassLoader());
+
+    private HomioClassLoader(ClassLoader parent) {
         super(parent);
     }
 
@@ -73,15 +71,15 @@ public class HomioClassLoader extends ClassLoader {
     }
 
     public static ClassPathScanningCandidateComponentProvider getResourceScanner(
-        boolean includeInterfaces, @Nullable ClassLoader classLoader) {
+            boolean includeInterfaces, @Nullable ClassLoader classLoader) {
         ClassPathScanningCandidateComponentProvider provider =
-            !includeInterfaces ? new ClassPathScanningCandidateComponentProvider(false) :
-                new ClassPathScanningCandidateComponentProvider(false) {
-                    @Override
-                    protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition) {
-                        return true;
-                    }
-                };
+                !includeInterfaces ? new ClassPathScanningCandidateComponentProvider(false) :
+                        new ClassPathScanningCandidateComponentProvider(false) {
+                            @Override
+                            protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition) {
+                                return true;
+                            }
+                        };
         if (classLoader != null) {
             provider.setResourceLoader(new PathMatchingResourcePatternResolver(classLoader));
         }

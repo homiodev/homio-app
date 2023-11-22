@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.UIEntityBuilder;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
@@ -17,7 +17,7 @@ import org.jetbrains.annotations.Nullable;
 @Getter
 @RequiredArgsConstructor
 public class UIFlexLayoutBuilderImpl extends UIBaseLayoutBuilderImpl
-    implements UIFlexLayoutBuilder, UIInputEntity {
+        implements UIFlexLayoutBuilder, UIInputEntity {
 
     private final String entityID;
     private final String itemType = UIItemType.Flex.name();
@@ -34,9 +34,9 @@ public class UIFlexLayoutBuilderImpl extends UIBaseLayoutBuilderImpl
     // for serialization!
     public List<UIInputEntity> getChildren() {
         return getUiEntityBuilders(false).stream()
-                                         .map(UIEntityBuilder::buildEntity)
-                                         .sorted(Comparator.comparingInt(UIInputEntity::getOrder))
-                                         .collect(Collectors.toList());
+                .map(UIEntityBuilder::buildEntity)
+                .sorted(Comparator.comparingInt(UIInputEntity::getOrder))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -50,7 +50,7 @@ public class UIFlexLayoutBuilderImpl extends UIBaseLayoutBuilderImpl
     public UIActionHandler findAction(String key) {
         for (UIEntityBuilder entityBuilder : getUiEntityBuilders(true)) {
             if (entityBuilder.getEntityID().equals(key)
-                && entityBuilder instanceof UIBaseEntityItemBuilderImpl) {
+                    && entityBuilder instanceof UIBaseEntityItemBuilderImpl) {
                 return ((UIBaseEntityItemBuilderImpl<?, ?>) entityBuilder).getActionHandler();
             }
         }

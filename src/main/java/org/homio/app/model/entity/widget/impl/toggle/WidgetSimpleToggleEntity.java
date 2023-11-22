@@ -2,8 +2,8 @@ package org.homio.app.model.entity.widget.impl.toggle;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import org.homio.api.EntityContextWidget.ToggleType;
-import org.homio.api.exception.ProhibitedExecution;
+import org.apache.commons.lang3.NotImplementedException;
+import org.homio.api.ContextWidget.ToggleType;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
@@ -15,9 +15,7 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetSimpleToggleEntity extends WidgetBaseEntity<WidgetSimpleToggleEntity>
-    implements HasSourceServerUpdates, HasSingleValueDataSource, HasToggle, HasAlign, HasPadding {
-
-    public static final String PREFIX = "wgtstgl_";
+        implements HasSourceServerUpdates, HasSingleValueDataSource, HasToggle, HasAlign, HasPadding {
 
     @Override
     public boolean isVisible() {
@@ -30,8 +28,8 @@ public class WidgetSimpleToggleEntity extends WidgetBaseEntity<WidgetSimpleToggl
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "sim-toggle";
     }
 
     @Override
@@ -52,16 +50,16 @@ public class WidgetSimpleToggleEntity extends WidgetBaseEntity<WidgetSimpleToggl
     @UIFieldIgnore
     @JsonIgnore
     public Boolean getShowLastUpdateTimer() {
-        throw new ProhibitedExecution();
+        throw new NotImplementedException();
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         if (!getJsonData().has("color")) {
             setColor(UI.Color.random());
         }
         if (getOnValues().isEmpty()) {
-            setOnValues("true~~~1");
+            setOnValues("true%s1".formatted(LIST_DELIMITER));
         }
     }
 }

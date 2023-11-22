@@ -1,13 +1,13 @@
 package org.homio.app.model.entity.widget.impl.display;
 
-import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.persistence.Entity;
 import java.util.List;
 import lombok.SneakyThrows;
-import org.homio.api.EntityContextWidget.ChartType;
+import org.homio.api.ContextWidget.ChartType;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;
@@ -35,19 +35,17 @@ import org.jetbrains.annotations.NotNull;
 @SuppressWarnings("unused")
 @Entity
 public class WidgetDisplayEntity
-    extends WidgetBaseEntityAndSeries<WidgetDisplayEntity, WidgetDisplaySeriesEntity>
-    implements HasLineChartBehaviour,
-    HasDynamicParameterFields,
-    HasChartDataSource,
-    HasHorizontalLine,
-    HasLayout,
-    HasName,
-    HasActionOnClick,
-    HasPadding,
-    HasSourceServerUpdates,
-    ConfigureFieldsService {
-
-    public static final String PREFIX = "wgtdp_";
+        extends WidgetBaseEntityAndSeries<WidgetDisplayEntity, WidgetDisplaySeriesEntity>
+        implements HasLineChartBehaviour,
+        HasDynamicParameterFields,
+        HasChartDataSource,
+        HasHorizontalLine,
+        HasLayout,
+        HasName,
+        HasActionOnClick,
+        HasPadding,
+        HasSourceServerUpdates,
+        ConfigureFieldsService {
 
     @UIField(order = 1)
     @UIFieldGroup(value = "NAME", order = 3)
@@ -62,11 +60,11 @@ public class WidgetDisplayEntity
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "display";
     }
 
-    @UIField(order = 50, isRevert = true)
+    @UIField(order = 50)
     @UIFieldLayout(options = {"name", "value", "icon"}, rows = "1:10")
     @UIFieldReadDefaultValue
     public String getLayout() {
@@ -92,7 +90,7 @@ public class WidgetDisplayEntity
 
     @UIField(order = 20)
     @UIFieldJSONLine(
-        template = "{\"top\": number}, \"right\": number, \"bottom\": number, \"left\": number")
+            template = "{\"top\": number}, \"right\": number, \"bottom\": number, \"left\": number")
     @UIFieldGroup("CHART_UI")
     @UIFieldShowOnCondition("return context.get('chartType') == 'bar'")
     public String getBarBorderWidth() {
@@ -140,20 +138,23 @@ public class WidgetDisplayEntity
 
     private String getDefaultLayout() {
         return UIFieldLayout.LayoutBuilder
-            .builder(15, 50, 35)
-            .addRow(rb -> rb
-                .addCol("icon", HorizontalAlign.left)
-                .addCol("name", UIFieldLayout.HorizontalAlign.left)
-                .addCol("value", HorizontalAlign.right))
-            .build();
+                .builder(15, 50, 35)
+                .addRow(rb -> rb
+                        .addCol("icon", HorizontalAlign.left)
+                        .addCol("name", UIFieldLayout.HorizontalAlign.left)
+                        .addCol("value", HorizontalAlign.right))
+                .build();
     }
 
+    /**
+     * Scan all ui fields if they has 'GROUP.CHART' group and put it into separate tab
+     */
     @SneakyThrows
     @Override
     public void configure(@NotNull List<EntityUIMetaData> result) {
         for (EntityUIMetaData entityUIMetaData : result) {
             ObjectNode meta = OBJECT_MAPPER.readValue(entityUIMetaData.getTypeMetaData(), ObjectNode.class);
-            if (meta.path("group").asText("").startsWith("GROUP.CHART")) {
+            if (meta.path("group").asText().startsWith("GROUP.CHART")) {
                 meta.put("tab", "CHART");
                 entityUIMetaData.setTypeMetaData(OBJECT_MAPPER.writeValueAsString(meta));
             }

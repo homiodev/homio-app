@@ -2,21 +2,20 @@ package org.homio.app.config.cacheControl;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.Calendar;
-import java.util.GregorianCalendar;
-import java.util.TimeZone;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+import java.util.TimeZone;
+
+import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
+import static org.springframework.http.HttpHeaders.EXPIRES;
+
 /**
  * Provides a cache control handler interceptor to assign cache-control headers to HTTP responses.
- *
- * @author Scott Rossillo
  */
 public class CacheControlHandlerInterceptor implements HandlerInterceptor {
-
-    private static final String HEADER_EXPIRES = "Expires";
-    private static final String HEADER_CACHE_CONTROL = "Cache-Control";
 
     private boolean useExpiresHeader = true;
 
@@ -29,9 +28,9 @@ public class CacheControlHandlerInterceptor implements HandlerInterceptor {
 
     @Override
     public final boolean preHandle(
-        final HttpServletRequest request,
-        final HttpServletResponse response,
-        final Object handler) throws Exception {
+            final HttpServletRequest request,
+            final HttpServletResponse response,
+            final Object handler) throws Exception {
 
         this.assignCacheControlHeader(request, response, handler);
 
@@ -56,17 +55,17 @@ public class CacheControlHandlerInterceptor implements HandlerInterceptor {
      * @param handler  the handler for the given <code>request</code>
      */
     protected final void assignCacheControlHeader(
-        final HttpServletRequest request,
-        final HttpServletResponse response,
-        final Object handler) {
+            final HttpServletRequest request,
+            final HttpServletResponse response,
+            final Object handler) {
 
         final CacheControl cacheControl = this.getCacheControl(request, response, handler);
         final String cacheControlHeader = this.createCacheControlHeader(cacheControl);
 
         if (cacheControlHeader != null) {
-            response.setHeader(HEADER_CACHE_CONTROL, cacheControlHeader);
+            response.setHeader(CACHE_CONTROL, cacheControlHeader);
             if (useExpiresHeader) {
-                response.setDateHeader(HEADER_EXPIRES, createExpiresHeader(cacheControl));
+                response.setDateHeader(EXPIRES, createExpiresHeader(cacheControl));
             }
         }
     }
@@ -136,9 +135,9 @@ public class CacheControlHandlerInterceptor implements HandlerInterceptor {
      * @return the <code>CacheControl</code> annotation specified by the given <code>handler</code> if present; <code>null</code> otherwise
      */
     protected final CacheControl getCacheControl(
-        final HttpServletRequest request,
-        final HttpServletResponse response,
-        final Object handler) {
+            final HttpServletRequest request,
+            final HttpServletResponse response,
+            final Object handler) {
 
         if (handler == null || !(handler instanceof HandlerMethod)) {
             return null;

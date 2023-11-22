@@ -19,12 +19,10 @@ import com.sshtools.common.publickey.SshPublicKeyFile;
 import com.sshtools.common.publickey.SshPublicKeyFileFactory;
 import com.sshtools.common.ssh.components.SshKeyPair;
 import jakarta.persistence.Entity;
-import java.util.Collections;
 import java.util.Objects;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import java.util.Set;
 import lombok.SneakyThrows;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.types.IdentityEntity;
@@ -51,9 +49,7 @@ import org.json.JSONObject;
 @SuppressWarnings("unused")
 @UISidebarChildren(icon = "fas fa-terminal", color = "#0088CC")
 public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWebSocketService>
-    implements BaseFileSystemEntity<SshGenericEntity, SshGenericFileSystem> {
-
-    public static final String PREFIX = "sshraw_";
+        implements BaseFileSystemEntity<SshGenericEntity, SshGenericFileSystem> {
 
     @Override
     public void configureOptionModel(OptionModel optionModel) {
@@ -61,8 +57,8 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         optionModel.setDescription((user.isEmpty() ? "" : user + "@") + getHost() + ":" + getPort());
     }
 
-    @UIField(order = 1, inlineEditWhenEmpty = true, required = true)
-    @UIFieldGroup(value = "GENERAL", order = 1)
+    @UIField(order = 20, inlineEditWhenEmpty = true, required = true)
+    @UIFieldGroup("GENERAL")
     public String getHost() {
         return getJsonData("host");
     }
@@ -71,7 +67,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         setJsonData("host", value);
     }
 
-    @UIField(order = 2)
+    @UIField(order = 25)
     @UIFieldGroup("GENERAL")
     public int getPort() {
         return getJsonData("port", 22);
@@ -81,7 +77,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         setJsonData("port", value);
     }
 
-    @UIField(order = 3)
+    @UIField(order = 30)
     @UIFieldSlider(min = 1, max = 60)
     @UIFieldGroup("GENERAL")
     public int getConnectionTimeout() {
@@ -93,7 +89,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @UIField(order = 1, inlineEditWhenEmpty = true)
-    @UIFieldGroup(order = 2, value = "SECURITY", borderColor = "#23ADAB")
+    @UIFieldGroup(order = 15, value = "SECURITY", borderColor = "#23ADAB")
     public String getUser() {
         return getJsonData("user", "");
     }
@@ -109,7 +105,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     public void setPassword(String value) {
-        setJsonData("pwd", value);
+        setJsonDataSecure("pwd", value);
     }
 
     @UIField(order = 3)
@@ -158,24 +154,24 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         return getJsonData("pub_cmn");
     }
 
-    @UIField(order = 10)
-    @UIFieldGroup("SECURITY")
-    public boolean isShowHiddenFiles() {
-        return getJsonData("shf", false);
-    }
-
-    public void setShowHiddenFiles(boolean value) {
-        setJsonData("shf", value);
-    }
-
     @UIField(order = 1)
-    @UIFieldGroup(value = "FS", order = 20, borderColor = "#914991")
+    @UIFieldGroup(order = 20, value = "FS", borderColor = "#914991")
     public @NotNull String getFileSystemRoot() {
         return Objects.requireNonNull(getJsonData("fs_root", "/home"));
     }
 
     public void setFileSystemRoot(String value) {
         setJsonData("fs_root", value);
+    }
+
+    @UIField(order = 2)
+    @UIFieldGroup("FS")
+    public boolean isShowHiddenFiles() {
+        return getJsonData("shf", false);
+    }
+
+    public void setShowHiddenFiles(boolean value) {
+        setJsonData("shf", value);
     }
 
     @JsonIgnore
@@ -196,12 +192,12 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
 
     @SneakyThrows
     @UIContextMenuAction(value = "GENERATE_PRIVATE_KEY", icon = "fab fa-creative-commons-sampling", inputs = {
-        @UIActionInput(name = "algorithm", type = select, value = "SSH2_RSA", values = {"SSH2_RSA", "ECDSA", "ED25519"}),
-        @UIActionInput(name = "passphrase", type = text),
-        @UIActionInput(name = "comment", type = text),
-        @UIActionInput(name = "bits", type = select, value = "3072", values = {"1024", "2048", "3072", "4096"})
+            @UIActionInput(name = "algorithm", type = select, value = "SSH2_RSA", values = {"SSH2_RSA", "ECDSA", "ED25519"}),
+            @UIActionInput(name = "passphrase", type = text),
+            @UIActionInput(name = "comment", type = text),
+            @UIActionInput(name = "bits", type = select, value = "3072", values = {"1024", "2048", "3072", "4096"})
     })
-    public ActionResponseModel generatePrivateKey(EntityContext entityContext, JSONObject params) {
+    public ActionResponseModel generatePrivateKey(Context context, JSONObject params) {
         if (isHasPrivateKey()) {
             return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_ALREADY_EXISTS");
         }
@@ -209,31 +205,31 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         String algorithm = params.optString("algorithm", "SSH2_RSA");
         int bits = params.optInt("bits", 3072);
         String alg = "SSH2_RSA".equals(algorithm) ? SSH2_RSA : "ECDSA".equals(algorithm) ? ECDSA : ED25519;
-        entityContext.bgp().runWithProgress("generate-ssh")
-                     .onFinally(exception -> {
-                         if (exception != null) {
-                             entityContext.ui().sendErrorMessage("ERROR.SSH_GENERATE");
-                         } else {
-                             entityContext.ui().sendSuccessMessage("ACTION.RESPONSE.SUCCESS_SSH_GENERATE");
-                         }
-                     })
-                     .execute(progressBar -> {
-                         progressBar.progress(10, "PROGRESS.GENERATE_SSH");
-                         SshKeyPair keyPair = SshKeyPairGenerator.generateKeyPair(alg, bits);
-                         SshPrivateKeyFile kf = SshPrivateKeyFileFactory.create(keyPair, passphrase, params.optString("comment"));
-                         updateSSHData(this, passphrase, kf);
+        context.bgp().runWithProgress("generate-ssh")
+                .onFinally(exception -> {
+                    if (exception != null) {
+                        context.ui().toastr().error("ERROR.SSH_GENERATE");
+                    } else {
+                        context.ui().toastr().success("ACTION.RESPONSE.SUCCESS_SSH_GENERATE");
+                    }
+                })
+                .execute(progressBar -> {
+                    progressBar.progress(10, "PROGRESS.GENERATE_SSH");
+                    SshKeyPair keyPair = SshKeyPairGenerator.generateKeyPair(alg, bits);
+                    SshPrivateKeyFile kf = SshPrivateKeyFileFactory.create(keyPair, passphrase, params.optString("comment"));
+                    updateSSHData(this, passphrase, kf);
 
-                         entityContext.save(this);
-                     });
+                    context.db().save(this);
+                });
         return null;
     }
 
     @UIContextMenuAction(value = "UPLOAD_PRIVATE_KEY", icon = "fas fa-upload", inputs = {
-        @UIActionInput(name = "privateKey", type = textarea),
-        @UIActionInput(name = "passphrase", type = text)
+            @UIActionInput(name = "privateKey", type = textarea),
+            @UIActionInput(name = "passphrase", type = text)
     })
-    public ActionResponseModel uploadPrivateKey(EntityContext entityContext, JSONObject params) {
-        return execUploadPrivateKey(this, entityContext, params);
+    public ActionResponseModel uploadPrivateKey(Context context, JSONObject params) {
+        return execUploadPrivateKey(this, context, params);
     }
 
     @SneakyThrows
@@ -243,14 +239,14 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
             return new SshClient(getHost(), getPort(), getUser(), connectionTimeout, buildSshKeyPair(this));
         } else if (!getPassword().asString().isEmpty()) {
             return new SshClient(getHost(), getPort(), getUser(), connectionTimeout,
-                getPassword().asString().toCharArray());
+                    getPassword().asString().toCharArray());
         } else {
             return new SshClient(getHost(), getPort(), getUser(), connectionTimeout);
         }
     }
 
     @SneakyThrows
-    public static ActionResponseModel execUploadPrivateKey(IdentityEntity entity, EntityContext entityContext, JSONObject params) {
+    public static ActionResponseModel execUploadPrivateKey(IdentityEntity entity, Context context, JSONObject params) {
         if (entity.getJsonData().has("prv_key")) {
             return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_ALREADY_EXISTS");
         }
@@ -259,7 +255,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         SshPrivateKeyFile kf = SshPrivateKeyFileFactory.parse(privateKey.getBytes());
         updateSSHData(entity, passphrase, kf);
 
-        entityContext.save((BaseEntity) entity);
+        context.db().save((BaseEntity) entity);
         return ActionResponseModel.showSuccess("ACTION.SUCCESS");
     }
 
@@ -274,7 +270,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         entity.setJsonData("prv_key", new String(kf.getFormattedKey()));
 
         SshPublicKeyFile publicKeyFile = SshPublicKeyFileFactory.create(keyPair.getPublicKey(),
-            kf.getComment(), SshPublicKeyFileFactory.OPENSSH_FORMAT);
+                kf.getComment(), SshPublicKeyFileFactory.OPENSSH_FORMAT);
 
         entity.setJsonData("pub_key", new String(publicKeyFile.getFormattedKey()));
         entity.setJsonData("pub_cmn", kf.getComment());
@@ -284,27 +280,34 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @SneakyThrows
+    @UIContextMenuAction(value = "TEST_CONNECTION", icon = "fas fa-flask-vial")
+    public ActionResponseModel testConnection(Context context, JSONObject params) {
+        getService().testService();
+        return ActionResponseModel.success();
+    }
+
+    @SneakyThrows
     @UIContextMenuAction(value = "DOWNLOAD_PUBLIC_KEY", icon = "fas fa-download")
-    public ActionResponseModel downloadPublicKey(EntityContext entityContext, JSONObject params) {
+    public ActionResponseModel downloadPublicKey(Context context, JSONObject params) {
         if (!isHasPrivateKey()) {
-            return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_NOT_FOUND");
+            return ActionResponseModel.showError("ERROR.PRIVATE_KEY_NOT_FOUND");
         }
         String publicKey = getJsonData("pub_key");
-        FileModel publicKeyModel = new FileModel("Public key", publicKey, FileContentType.plaintext, true);
-        return ActionResponseModel.showFiles(Collections.singleton(publicKeyModel));
+        FileModel publicKeyModel = new FileModel("Public key", publicKey, FileContentType.plaintext);
+        return ActionResponseModel.showFile(publicKeyModel);
     }
 
     @SneakyThrows
     @UIContextMenuAction(value = "DELETE_PRIVATE_KEY", icon = "fas fa-trash-can", inputs = {
-        @UIActionInput(name = "passphrase", type = text)
+            @UIActionInput(name = "passphrase", type = text)
     })
-    public ActionResponseModel deletePrivateKey(EntityContext entityContext, JSONObject params) {
-        return execDeletePrivateKey(this, entityContext, params);
+    public ActionResponseModel deletePrivateKey(Context context, JSONObject params) {
+        return execDeletePrivateKey(this, context, params);
     }
 
-    public static ActionResponseModel execDeletePrivateKey(IdentityEntity entity, EntityContext entityContext, JSONObject params) {
+    public static ActionResponseModel execDeletePrivateKey(IdentityEntity entity, Context context, JSONObject params) {
         if (!entity.getJsonData().has("prv_key")) {
-            return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_NOT_FOUND");
+            return ActionResponseModel.showError("ERROR.PRIVATE_KEY_NOT_FOUND");
         }
         String passphrase = trimToNull(params.optString("passphrase"));
         if (!Objects.equals(passphrase, trimToNull(entity.getJsonData("key_pwd")))) {
@@ -317,7 +320,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         entity.setJsonData("alg", null);
         entity.setJsonData("kt", null);
         entity.setJsonData("pub_cmn", null);
-        entityContext.save(entity);
+        context.db().save(entity);
         return ActionResponseModel.showSuccess("ACTION.SUCCESS");
     }
 
@@ -335,18 +338,13 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @Override
-    public boolean requireTestServiceInBackground() {
-        return true;
-    }
-
-    @Override
     public String getDefaultName() {
         return "Generic SSH";
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getDevicePrefix() {
+        return "ssh-generic";
     }
 
     @Override
@@ -370,13 +368,13 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @Override
-    public @NotNull SshGenericFileSystem buildFileSystem(@NotNull EntityContext entityContext) {
-        return new SshGenericFileSystem(this, entityContext);
+    public @NotNull SshGenericFileSystem buildFileSystem(@NotNull Context context) {
+        return new SshGenericFileSystem(this, context);
     }
 
     @Override
     public long getConnectionHashCode() {
-        return getDeepHashCode();
+        return getEntityServiceHashCode();
     }
 
     @Override
@@ -390,13 +388,20 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @Override
-    public @Nullable GenericWebSocketService createService(@NotNull EntityContext entityContext) {
-        GenericWebSocketService service = new GenericWebSocketService(entityContext.getBean(SSHServerEndpoint.class));
-        service.entityUpdated(this);
-        return service;
+    public @Nullable GenericWebSocketService createService(@NotNull Context context) {
+        return new GenericWebSocketService(context, this);
     }
 
-    private long getDeepHashCode() {
+    @Override
+    public @Nullable Set<String> getConfigurationErrors() {
+        if(getHost().isEmpty()) {
+            return Set.of("W.ERROR.NO_HOST");
+        }
+        return null;
+    }
+
+    @Override
+    public long getEntityServiceHashCode() {
         return getJsonDataHashCode("host", "port", "user", "pwd", "key_pwd", "prv_key", "ct");
     }
 
@@ -404,27 +409,22 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         SHA1, SHA256, SHA512
     }
 
-    @RequiredArgsConstructor
-    public static class GenericWebSocketService implements SshProviderService<SshGenericEntity> {
+    public static class GenericWebSocketService extends EntityService.ServiceInstance<SshGenericEntity> implements SshProviderService<SshGenericEntity> {
 
         private final SSHServerEndpoint sshServerEndpoint;
 
-        @Getter
-        private SshGenericEntity entity;
-        private long snapshotCode = 0;
-
-        @Override
-        public boolean entityUpdated(@NotNull EntityService entity) {
-            SshGenericEntity model = (SshGenericEntity) entity;
-            long code = model.getDeepHashCode();
-            boolean requireTestService = this.entity == null || code != snapshotCode;
-            this.entity = model;
-            this.snapshotCode = code;
-            return requireTestService;
+        public GenericWebSocketService(Context context, SshGenericEntity entity) {
+            super(context, entity, true);
+            this.sshServerEndpoint = context.getBean(SSHServerEndpoint.class);
         }
 
         @Override
-        public boolean testService() {
+        protected void initialize() {
+            testServiceWithSetStatus();
+        }
+
+        @Override
+        public void testService() {
             try (SshClient sshClient = entity.createSshClient()) {
                 if (!sshClient.isConnected()) {
                     throw new IllegalStateException("SSH not connected");
@@ -432,13 +432,15 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
                 sshClient.executeCommand("ls");
                 // success tested
             } catch (Exception e) {
+                if (e.getMessage().contains("Task did not succeed")) {
+                    e = new RuntimeException("Unknown error during execute 'ls' command");
+                }
                 throw new RuntimeException(e);
             }
-            return true;
         }
 
         @Override
-        public void destroy() {
+        public void destroy(boolean forRestart, Exception ex) {
 
         }
 

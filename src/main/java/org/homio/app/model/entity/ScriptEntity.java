@@ -2,8 +2,8 @@ package org.homio.app.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Transient;
 import java.io.StringReader;
 import java.util.HashSet;
@@ -17,8 +17,11 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
+import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.HasJsonData;
+import org.homio.api.model.JSON;
 import org.homio.api.model.Status;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.MonacoLanguage;
@@ -31,11 +34,18 @@ import org.springframework.core.env.Environment;
 
 @Entity
 @UISidebarMenu(icon = "fab fa-js-square", order = 1, bg = "#9e7d18", allowCreateNewItems = true,
-               overridePath = "scripts")
+        overridePath = "scripts")
 @Accessors(chain = true)
-public class ScriptEntity extends BaseEntity<ScriptEntity> {
+public class ScriptEntity extends BaseEntity implements HasJsonData {
 
     public static final String PREFIX = "script_";
+
+    @Getter
+    @Setter
+    @Column(length = 10_000)
+    @Convert(converter = JSONConverter.class)
+    @NotNull
+    private JSON jsonData = new JSON();
 
     @Getter
     @Setter
@@ -55,7 +65,9 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     private boolean autoStart = false;
 
     @Column(length = 1_000)
-    @Getter @Setter private String error;
+    @Getter
+    @Setter
+    private String error;
 
     @Getter
     @Setter
@@ -64,14 +76,18 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     @UIFieldCodeEditor(editorType = MonacoLanguage.JavaScript, autoFormat = true)
     private String javaScript = "function before() { };\nfunction run() { };\nfunction after() { };";
 
-    @Transient @JsonIgnore private long formattedJavaScriptHash;
+    @Transient
+    @JsonIgnore
+    private long formattedJavaScriptHash;
 
     @Getter
     @Setter
     @UIField(order = 40)
     private int repeatInterval = 0;
 
-    @Transient @JsonIgnore private String formattedJavaScript;
+    @Transient
+    @JsonIgnore
+    private String formattedJavaScript;
 
     public static Set<String> getFunctionsWithPrefix(String javaScript, String prefix) {
         Set<String> functions = new HashSet<>();
@@ -105,21 +121,21 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
         return functionsWithPrefix.isEmpty() ? null : functionsWithPrefix.iterator().next();
     }
 
-    public String getFormattedJavaScript(EntityContext entityContext, Compilable engine) {
+    public String getFormattedJavaScript(Context context, Compilable engine) {
         String jsonParams = StringUtils.defaultIfEmpty(javaScriptParameters, "{}");
         long hash = StringUtils.defaultIfEmpty(javaScript, "").hashCode() + jsonParams.hashCode();
         if (this.formattedJavaScriptHash != hash) {
             this.formattedJavaScriptHash = hash;
 
-            Environment env = entityContext.getBean(Environment.class);
+            Environment env = context.getBean(Environment.class);
             JSONObject params = new JSONObject(jsonParams);
             String envFormattedJavaScript = SpringUtils.replaceEnvValues(javaScript,
-                (key, defValue, prefix) -> {
-                    if (params.has(key)) {
-                        return params.get(key).toString();
-                    }
-                    return env.getProperty(key, defValue);
-                });
+                    (key, defValue, prefix) -> {
+                        if (params.has(key)) {
+                            return params.get(key).toString();
+                        }
+                        return env.getProperty(key, defValue);
+                    });
             this.formattedJavaScript = detectReplaceableValues(params, engine, envFormattedJavaScript);
         }
         return this.formattedJavaScript;
@@ -135,17 +151,22 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
         return "Script";
     }
 
+    @Override
+    protected long getChildEntityHashCode() {
+        return 0;
+    }
+
     @SneakyThrows
     private String detectReplaceableValues(
-        JSONObject params, Compilable engine, String formattedJavaScript) {
+            JSONObject params, Compilable engine, String formattedJavaScript) {
         List<String> patternValues = SpringUtils.getPatternValues(SpringUtils.HASH_PATTERN, formattedJavaScript);
         if (!patternValues.isEmpty()) {
             StringBuilder sb = new StringBuilder(formattedJavaScript);
             for (String patternValue : patternValues) {
                 String fnName = "rpl_" + Math.abs(patternValue.hashCode());
                 sb.append("\nfunction ").append(fnName).append("() {")
-                  .append(patternValue.contains("return ") ? patternValue : "return " + patternValue)
-                  .append(" }");
+                        .append(patternValue.contains("return ") ? patternValue : "return " + patternValue)
+                        .append(" }");
             }
 
             // fire rpl functions
@@ -153,10 +174,10 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
             CompiledScript compileScript = engine.compile(new StringReader(jsWithRplFunctions));
             compileScript.eval();
             return SpringUtils.replaceHashValues(jsWithRplFunctions,
-                (s, s2, prefix) -> {
-                    Object ret = ((Invocable) compileScript.getEngine()).invokeFunction("rpl_" + Math.abs(s.hashCode()), params);
-                    return ret == null ? "" : ret.toString();
-                });
+                    (s, s2, prefix) -> {
+                        Object ret = ((Invocable) compileScript.getEngine()).invokeFunction("rpl_" + Math.abs(s.hashCode()), params);
+                        return ret == null ? "" : ret.toString();
+                    });
         }
         return formattedJavaScript;
     }

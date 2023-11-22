@@ -20,7 +20,7 @@ import javazoom.jl.player.advanced.PlaybackEvent;
 import javazoom.jl.player.advanced.PlaybackListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.audio.AudioFormat;
 import org.homio.api.audio.AudioSink;
 import org.homio.api.audio.AudioStream;
@@ -34,11 +34,11 @@ import org.springframework.stereotype.Component;
 public class JavaSoundAudioSink implements AudioSink {
 
     private static final Set<AudioFormat> SUPPORTED_AUDIO_FORMATS =
-        new HashSet<>(Arrays.asList(AudioFormat.MP3, AudioFormat.WAV));
+            new HashSet<>(Arrays.asList(AudioFormat.MP3, AudioFormat.WAV));
     private static final Set<Class<? extends AudioStream>> SUPPORTED_AUDIO_STREAMS =
-        new HashSet<>(Collections.singletonList(AudioStream.class));
+            new HashSet<>(Collections.singletonList(AudioStream.class));
     private static AdvancedPlayer streamPlayer;
-    private final EntityContext entityContext;
+    private final Context context;
     // for resume
     private Integer pausedOnFrame;
     private AudioStream audioStream;
@@ -154,7 +154,7 @@ public class JavaSoundAudioSink implements AudioSink {
                     pausedOnFrame = event.getFrame();
                 }
             });
-            entityContext.bgp().builder("java_sink-audio").execute(() -> {
+            context.bgp().builder("java_sink-audio").execute(() -> {
                 try {
                     Integer start = from;
                     Integer end = to;

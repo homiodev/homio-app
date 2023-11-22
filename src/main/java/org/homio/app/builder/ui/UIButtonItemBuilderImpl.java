@@ -5,7 +5,7 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.model.Icon;
-import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.ui.field.action.v1.item.UIButtonItemBuilder;
 import org.homio.api.ui.field.action.v1.layout.dialog.UIDialogLayoutBuilder;
@@ -18,8 +18,8 @@ import org.json.JSONObject;
 @Setter
 @Accessors(chain = true)
 public class UIButtonItemBuilderImpl
-    extends UIBaseEntityItemBuilderImpl<UIButtonItemBuilder, String>
-    implements UIButtonItemBuilder {
+        extends UIBaseEntityItemBuilderImpl<UIButtonItemBuilder, String>
+        implements UIButtonItemBuilder {
 
     private String[] fireActionsBeforeChange;
     private String actionReference;
@@ -38,7 +38,7 @@ public class UIButtonItemBuilderImpl
         if (icon == null || StringUtils.isEmpty(icon.getIcon())) {
             setValue(entityID);
         }
-        setText(entityID.isEmpty() ? "" : "CONTEXT.ACTION." + entityID);
+        setText(entityID.isEmpty() ? "" : entityID);
         setIcon(icon);
     }
 
@@ -49,8 +49,8 @@ public class UIButtonItemBuilderImpl
 
     public UIInputEntity getDialogReference() {
         return dialogEntityBuilder == null
-            ? (stickyDialogBuilder == null ? null : stickyDialogBuilder.buildEntity())
-            : dialogEntityBuilder.buildEntity();
+                ? (stickyDialogBuilder == null ? null : stickyDialogBuilder.buildEntity())
+                : dialogEntityBuilder.buildEntity();
     }
 
     public boolean isSticky() {

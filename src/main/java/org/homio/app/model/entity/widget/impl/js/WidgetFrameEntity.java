@@ -21,11 +21,11 @@ import org.jetbrains.annotations.NotNull;
 @Accessors(chain = true)
 public class WidgetFrameEntity extends WidgetBaseEntity<WidgetFrameEntity> implements HasJsonData {
 
-    public static final String PREFIX = "wgtfrm_";
+    @Transient
+    private String javaScriptResponse;
 
-    @Transient private String javaScriptResponse;
-
-    @Transient private String javaScriptErrorResponse;
+    @Transient
+    private String javaScriptErrorResponse;
 
     @UIField(order = 12)
     @UIFieldCodeEditor(editorType = MonacoLanguage.HTML)
@@ -63,8 +63,8 @@ public class WidgetFrameEntity extends WidgetBaseEntity<WidgetFrameEntity> imple
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "frame";
     }
 
     @Override
@@ -101,14 +101,14 @@ public class WidgetFrameEntity extends WidgetBaseEntity<WidgetFrameEntity> imple
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         super.beforePersist();
         setHtml("<html>\n"
-            + "  <head></head>\n"
-            + "  <body>\n"
-            + "     <div style=\"display:flex;align-items:center;margin: 0 auto;\">\n\tHTML template\n</div>\n"
-            + "  </body>\n"
-            + "</html>");
+                + "  <head></head>\n"
+                + "  <body>\n"
+                + "     <div style=\"display:flex;align-items:center;margin: 0 auto;\">\n\tHTML template\n</div>\n"
+                + "  </body>\n"
+                + "</html>");
         setCss(":root\n{\n\tcolor: #999;\n}\n\nbody\n{\n\tpadding:0;\n\tmargin:0;\n\tdisplay:flex;\n}");
     }
 }

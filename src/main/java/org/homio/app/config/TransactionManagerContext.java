@@ -1,20 +1,7 @@
 package org.homio.app.config;
 
-import static org.apache.commons.lang3.StringUtils.repeat;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
-import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import javax.sql.DataSource;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -44,6 +31,20 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import javax.sql.DataSource;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+import static org.apache.commons.lang3.StringUtils.repeat;
+
 @Log4j2
 @Component
 public class TransactionManagerContext {
@@ -62,11 +63,11 @@ public class TransactionManagerContext {
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public TransactionManagerContext(
-        ApplicationContext context,
-        CacheService cacheService,
-        PlatformTransactionManager transactionManager,
-        EntityManagerFactory entityManagerFactory,
-        EntityManager entityManager) {
+            ApplicationContext context,
+            CacheService cacheService,
+            PlatformTransactionManager transactionManager,
+            EntityManagerFactory entityManagerFactory,
+            EntityManager entityManager) {
         this.context = context;
         this.cacheService = cacheService;
 
@@ -90,21 +91,21 @@ public class TransactionManagerContext {
 
     public <T> T executeInTransaction(Function<EntityManager, T> handler) {
         return executeQuery(() ->
-            dbRetryTemplate.execute(arg0 ->
-                transactionTemplate.execute(status -> handler.apply(entityManager))));
+                dbRetryTemplate.execute(arg0 ->
+                        transactionTemplate.execute(status -> handler.apply(entityManager))));
     }
 
     public void executeInTransaction(Consumer<EntityManager> handler) {
         executeQuery(() ->
-            dbRetryTemplate.execute(arg0 -> {
-                transactionTemplate.execute(new TransactionCallbackWithoutResult() {
-                    @Override
-                    protected void doInTransactionWithoutResult(@NotNull TransactionStatus status) {
-                        handler.accept(entityManager);
-                    }
-                });
-                return null;
-            }));
+                dbRetryTemplate.execute(arg0 -> {
+                    transactionTemplate.execute(new TransactionCallbackWithoutResult() {
+                        @Override
+                        protected void doInTransactionWithoutResult(@NotNull TransactionStatus status) {
+                            handler.accept(entityManager);
+                        }
+                    });
+                    return null;
+                }));
     }
 
     @SneakyThrows
@@ -151,18 +152,18 @@ public class TransactionManagerContext {
 
     private EntityManagerFactory createEntityManagerFactory() {
         Map<String, Object> properties = context
-            .getBean(HibernateProperties.class)
-            .determineHibernateProperties(
-                context.getBean(JpaProperties.class)
-                       .getProperties(),
-                new HibernateSettings().ddlAuto(() -> "none"));
+                .getBean(HibernateProperties.class)
+                .determineHibernateProperties(
+                        context.getBean(JpaProperties.class)
+                                .getProperties(),
+                        new HibernateSettings().ddlAuto(() -> "none"));
         Map<String, Object> vendorProperties = new LinkedHashMap<>(properties);
         LocalContainerEntityManagerFactoryBean entityManagerFactoryBean =
-            context.getBean(EntityManagerFactoryBuilder.class)
-                   .dataSource(context.getBean(DataSource.class))
-                   .managedTypes(context.getBean(CustomPersistenceManagedTypes.class))
-                   .properties(vendorProperties)
-                   .build();
+                context.getBean(EntityManagerFactoryBuilder.class)
+                        .dataSource(context.getBean(DataSource.class))
+                        .managedTypes(context.getBean(CustomPersistenceManagedTypes.class))
+                        .properties(vendorProperties)
+                        .build();
         entityManagerFactoryBean.afterPropertiesSet();
         return Objects.requireNonNull(entityManagerFactoryBean.getObject());
     }
@@ -184,11 +185,11 @@ public class TransactionManagerContext {
         RetryTemplate retryTemplate = new RetryTemplate();
 
         FixedBackOffPolicy fixedBackOffPolicy = new FixedBackOffPolicy();
-        fixedBackOffPolicy.setBackOffPeriod(200L);
+        fixedBackOffPolicy.setBackOffPeriod(500L);
         retryTemplate.setBackOffPolicy(fixedBackOffPolicy);
 
         Map<Class<? extends Throwable>, RetryPolicy> exceptionMap = new HashMap<>();
-        exceptionMap.put(SQLException.class, new SimpleRetryPolicy(3));
+        exceptionMap.put(SQLException.class, new SimpleRetryPolicy(10));
         exceptionMap.put(CannotAcquireLockException.class, new SimpleRetryPolicy(10));
 
         ExceptionClassifierRetryPolicy retryPolicy = new ExceptionClassifierRetryPolicy();

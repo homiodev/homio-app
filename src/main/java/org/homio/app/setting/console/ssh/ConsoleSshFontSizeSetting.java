@@ -4,7 +4,7 @@ import org.homio.api.setting.SettingPluginSlider;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
 
 public class ConsoleSshFontSizeSetting
-    implements ConsoleSettingPlugin<Integer>, SettingPluginSlider {
+        implements ConsoleSettingPlugin<Integer>, SettingPluginSlider {
 
     @Override
     public Integer getMin() {

@@ -69,10 +69,10 @@ public final class InMemoryDB {
         CodecRegistry pojoProvidersRegistry = fromProviders(PojoCodecProvider.builder().automatic(true).build());
         CodecRegistry pojoCodecRegistry = fromCodecs(new ObjectCodec());
         CodecRegistry codecRegistry =
-            fromRegistries(MongoClientSettings.getDefaultCodecRegistry(), pojoProvidersRegistry, pojoCodecRegistry);
+                fromRegistries(MongoClientSettings.getDefaultCodecRegistry(), pojoProvidersRegistry, pojoCodecRegistry);
 
         client = MongoClients.create(MongoClientSettings.builder().codecRegistry(codecRegistry).applyToClusterSettings(
-            builder -> builder.hosts(Collections.singletonList(new ServerAddress(serverAddress)))).build());
+                builder -> builder.hosts(Collections.singletonList(new ServerAddress(serverAddress)))).build());
         datastore = client.getDatabase(DATABASE);
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -84,11 +84,11 @@ public final class InMemoryDB {
     }
 
     public static <T extends DataStorageEntity> DataStorageService<T> getOrCreateService(
-        @NotNull Class<T> pojoClass,
-        @NotNull String uniqueId,
-        @Nullable Long quota) {
+            @NotNull Class<T> pojoClass,
+            @NotNull String uniqueId,
+            @Nullable Long quota) {
         return (DataStorageService<T>) map.computeIfAbsent(uniqueId, aClass -> {
-            String collectionName = pojoClass.getSimpleName() + uniqueId;
+            String collectionName = pojoClass.getSimpleName() + "_" + uniqueId;
             // create timestamp index
             MongoCollection<T> collection = datastore.getCollection(collectionName, pojoClass);
             //          collection.createIndex(Indexes.ascending(ID));
@@ -111,46 +111,22 @@ public final class InMemoryDB {
     }
 
     public static Number toNumber(Object value) {
-        if (value == null) {return 0;}
+        if (value == null) {
+            return 0;
+        }
         if (Number.class.isAssignableFrom(value.getClass())) {
             return ((Number) value);
         }
         String vStr = String.valueOf(value);
-        if ("false".equals(vStr)) {return 0;}
+        if ("false".equals(vStr)) {
+            return 0;
+        }
         try {
             return NumberFormat.getInstance().parse(vStr).floatValue();
         } catch (Exception ignored) {
         }
         return vStr.isEmpty() ? 0 : 1;
     }
-
-    /*public static void main(String[] args) throws InterruptedException {
-        long start0 = System.currentTimeMillis();
-        InMemoryDBService<Test> service = InMemoryDB.getOrCreateService(Test.class, 10000L);
-        for (int i = 0; i < 10000; i++) {
-            service.save(new Test("$SYS/data_" + i % 2, i));
-            Thread.sleep(1);
-        }
-
-        long start = System.currentTimeMillis();
-        service.getTimeSeries(1111110L, null, "topic", "$SYS/data_1");
-
-        System.out.println((System.currentTimeMillis() - start));
-        System.out.println((System.currentTimeMillis() - start0));
-    }
-
-    @Getter
-    @Setter
-    @ToString(callSuper = true)
-    @NoArgsConstructor
-    public static class Test extends InMemoryDBEntity {
-        private String topic;
-
-        public Test(String topic, Object value) {
-            super(value);
-            this.topic = topic;
-        }
-    }*/
 
     @RequiredArgsConstructor
     private static class InMemoryDBDataService<T extends DataStorageEntity> implements DataStorageService<T> {
@@ -163,56 +139,34 @@ public final class InMemoryDB {
         private @Nullable Long quota;
         // delta is 10% of quota but not more than 1000
         private int delta;
+        private T last;
 
         @Override
         public List<SourceHistoryItem> getSourceHistoryItems(@Nullable String field, @Nullable String value, int from, int count) {
             Bson filter = field == null || value == null ? new Document() : Filters.eq(field, value);
             try (MongoCursor<T> cursor = queryWithSort(filter, SortBy.sortDesc(CREATED), count, from)) {
                 return StreamSupport.stream(Spliterators.spliteratorUnknownSize(cursor, 0), false)
-                                    .map(t -> new SourceHistoryItem(t.getCreated(), t.getValue()))
-                                    .collect(Collectors.toList());
+                        .map(t -> new SourceHistoryItem(t.getCreated(), t.getValue()))
+                        .collect(Collectors.toList());
             }
         }
 
         @Override
         public void save(@NotNull List<T> entities) {
+            last = null;
             collection.insertMany(entities);
-            postInsertQuotaHandler();
+            postInsertQuotaHandler(entities.size());
         }
 
         @Override
         public T save(@NotNull T entity) {
             collection.insertOne(entity);
+            last = entity;
             for (Consumer<T> listener : saveListeners.values()) {
                 listener.accept(entity);
             }
-            postInsertQuotaHandler();
+            postInsertQuotaHandler(1);
             return entity;
-        }
-
-        private void postInsertQuotaHandler() {
-            if (quota != null) {
-                estimateUsed.incrementAndGet();
-
-                if (estimateUsed.get() > quota) {
-                    synchronized (this) {
-                        estimateUsed.set(count()); // calc precise amount of saved documents
-
-                        if (estimateUsed.get() > quota) {
-                            List<Long> itemsToRemove;
-                            try (MongoCursor<Document> cursor = collection.aggregate(Arrays.asList(
-                                Aggregates.sort(ascending(CREATED)),
-                                Aggregates.limit(delta),
-                                Aggregates.project(Projections.include("_id")),
-                                Aggregates.group("ids", Accumulators.addToSet("ids", "$_id"))
-                            ), Document.class).cursor()) {
-                                itemsToRemove = (List<Long>) cursor.next().get("ids", List.class);
-                            }
-                            updateUsed(-collection.deleteMany(Filters.in("_id", itemsToRemove)).getDeletedCount());
-                        }
-                    }
-                }
-            }
         }
 
         @Override
@@ -225,11 +179,13 @@ public final class InMemoryDB {
 
         @Override
         public long deleteBy(@NotNull String field, @NotNull Object value) {
+            last = null;
             return -updateUsed(-collection.deleteMany(Filters.eq(field, value)).getDeletedCount());
         }
 
         @Override
         public long deleteAll() {
+            last = null;
             return -updateUsed(-collection.deleteMany(new Document()).getDeletedCount());
         }
 
@@ -242,9 +198,12 @@ public final class InMemoryDB {
 
         @Override
         public T getLatest() {
-            try (MongoCursor<T> cursor = queryWithSort(new Document(), SortBy.sortDesc(CREATED), 1, null)) {
-                return cursor.tryNext();
+            if (last == null) {
+                try (MongoCursor<T> cursor = queryWithSort(new Document(), SortBy.sortDesc(CREATED), 1, null)) {
+                    last = cursor.tryNext();
+                }
             }
+            return last;
         }
 
         @Override
@@ -275,16 +234,20 @@ public final class InMemoryDB {
 
         @Override
         public @NotNull List<Object[]> getTimeSeries(@Nullable Long from, @Nullable Long to, @Nullable String field,
-            @Nullable String value, @NotNull String aggregateField) {
+            @Nullable String value, @NotNull String aggregateField, @Nullable Integer limit, boolean sortAsc) {
             List<Bson> filterList = buildBsonFilter(from, to, field, value);
+            List<Bson> aggregates = new ArrayList<>();
+            aggregates.add(Aggregates.match(joinFilters(filterList)));
+            aggregates.add(Aggregates.sort(sortAsc ? ascending(CREATED) : descending(CREATED)));
+            aggregates.add(Aggregates.project(Projections.include(CREATED, aggregateField)));
+            if (limit != null) {
+                aggregates.add(Aggregates.limit(limit));
+            }
 
-            try (MongoCursor<Document> cursor = collection.aggregate(Arrays.asList(
-                Aggregates.match(joinFilters(filterList)),
-                Aggregates.sort(ascending(CREATED)),
-                Aggregates.project(Projections.include(CREATED, aggregateField))), Document.class).cursor()) {
+            try (MongoCursor<Document> cursor = collection.aggregate(aggregates, Document.class).cursor()) {
                 return StreamSupport.stream(Spliterators.spliteratorUnknownSize(cursor, 0), false)
-                                    .map(doc -> new Object[]{doc.get(CREATED), toNumber(doc.get(aggregateField)).floatValue()})
-                                    .collect(Collectors.toList());
+                        .map(doc -> new Object[]{doc.get(CREATED), toNumber(doc.get(aggregateField)).floatValue()})
+                        .collect(Collectors.toList());
             }
         }
 
@@ -292,34 +255,34 @@ public final class InMemoryDB {
         public @NotNull List<T> queryListWithSort(Bson filter, SortBy sort, Integer limit) {
             try (MongoCursor<T> cursor = queryWithSort(filter, sort, limit, null)) {
                 return StreamSupport.stream(Spliterators.spliteratorUnknownSize(cursor, 0), false)
-                                    .collect(Collectors.toList());
+                        .collect(Collectors.toList());
             }
         }
 
         @Override
         public @NotNull Object aggregate(@Nullable Long from, @Nullable Long to, @Nullable String field, @Nullable String value,
-            @NotNull AggregationType aggregationType, boolean filterOnlyNumbers,
-            @NotNull String aggregateField) {
+                                         @NotNull AggregationType aggregationType, boolean filterOnlyNumbers,
+                                         @NotNull String aggregateField) {
             List<Bson> filterList = buildBsonFilter(from, to, field, value);
             Bson bsonFilter = joinFilters(filterList);
             switch (aggregationType) {
                 case First:
-                    return aggregateMinimal(aggregateField, bsonFilter, SortBy.sortAsc(CREATED));
+                    return aggregateLimit1(aggregateField, bsonFilter, SortBy.sortAsc(CREATED));
                 case Last:
-                    return aggregateMinimal(aggregateField, bsonFilter, SortBy.sortDesc(CREATED));
+                    return aggregateLimit1(aggregateField, bsonFilter, SortBy.sortDesc(CREATED));
                 case Min:
-                    return aggregateMinimal(aggregateField, bsonFilter, SortBy.sortAsc(aggregateField));
+                    return aggregateLimit1(aggregateField, bsonFilter, SortBy.sortAsc(aggregateField));
                 case Max:
-                    return aggregateMinimal(aggregateField, bsonFilter, SortBy.sortDesc(aggregateField));
+                    return aggregateLimit1(aggregateField, bsonFilter, SortBy.sortDesc(aggregateField));
                 case Count:
                     return collection.countDocuments(bsonFilter);
             }
 
             if (filterOnlyNumbers) {
                 filterList.add(Filters.or(
-                    Filters.type(aggregateField, BsonType.DOUBLE),
-                    Filters.type(aggregateField, BsonType.INT64),
-                    Filters.type(aggregateField, BsonType.INT32)
+                        Filters.type(aggregateField, BsonType.DOUBLE),
+                        Filters.type(aggregateField, BsonType.INT64),
+                        Filters.type(aggregateField, BsonType.INT32)
                 ));
             }
 
@@ -330,8 +293,10 @@ public final class InMemoryDB {
             }
 
             switch (aggregationType) {
-                case Average, AverageNoZero -> pipeline.add(Aggregates.group("_id", Accumulators.avg(aggregateField, "$" + aggregateField)));
-                case Sum -> pipeline.add(Aggregates.group("_id", Accumulators.sum(aggregateField, "$" + aggregateField)));
+                case Average, AverageNoZero ->
+                        pipeline.add(Aggregates.group("_id", Accumulators.avg(aggregateField, "$" + aggregateField)));
+                case Sum ->
+                        pipeline.add(Aggregates.group("_id", Accumulators.sum(aggregateField, "$" + aggregateField)));
                 case Median -> {
                     long count = collection.countDocuments(bsonFilter);
                     pipeline.add(Aggregates.sort(ascending(aggregateField)));
@@ -352,15 +317,40 @@ public final class InMemoryDB {
             }
         }
 
+        @Override
+        public @NotNull InMemoryDBDataService<T> addSaveListener(@NotNull String discriminator, @NotNull Consumer<T> listener) {
+            this.saveListeners.put(discriminator, listener);
+            return this;
+        }
+
         private Bson joinFilters(List<Bson> filterList) {
             return filterList.isEmpty() ? new Document() :
                 filterList.size() == 1 ? filterList.iterator().next() : Filters.and(filterList);
         }
 
-        @Override
-        public @NotNull InMemoryDBDataService<T> addSaveListener(@NotNull String discriminator, @NotNull Consumer<T> listener) {
-            this.saveListeners.put(discriminator, listener);
-            return this;
+        private void postInsertQuotaHandler(int count) {
+            if (quota != null) {
+                estimateUsed.addAndGet(count);
+
+                if (estimateUsed.get() > quota) {
+                    synchronized (this) {
+                        estimateUsed.set(count()); // calc precise amount of saved documents
+
+                        if (estimateUsed.get() > quota) {
+                            List<Long> itemsToRemove;
+                            try (MongoCursor<Document> cursor = collection.aggregate(Arrays.asList(
+                                Aggregates.sort(ascending(CREATED)),
+                                Aggregates.limit(delta),
+                                Aggregates.project(Projections.include("_id")),
+                                Aggregates.group("ids", Accumulators.addToSet("ids", "$_id"))
+                            ), Document.class).cursor()) {
+                                itemsToRemove = (List<Long>) cursor.next().get("ids", List.class);
+                            }
+                            updateUsed(-collection.deleteMany(Filters.in("_id", itemsToRemove)).getDeletedCount());
+                        }
+                    }
+                }
+            }
         }
 
         private Bson buildCreatedFilter(Long from, Long to) {
@@ -408,7 +398,7 @@ public final class InMemoryDB {
             return ts.cursor();
         }
 
-        private @NotNull Object aggregateMinimal(@NotNull String aggregateField, Bson filter, SortBy sort) {
+        private @NotNull Object aggregateLimit1(@NotNull String aggregateField, Bson filter, SortBy sort) {
             Document document = collection.find(filter, Document.class).sort(sort.toBson()).limit(1).first();
             return document == null ? 0 : document.get(aggregateField);
         }

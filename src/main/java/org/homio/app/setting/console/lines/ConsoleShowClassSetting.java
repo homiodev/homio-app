@@ -5,7 +5,7 @@ import org.homio.api.setting.SettingPluginBoolean;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
 
 public class ConsoleShowClassSetting
-    implements ConsoleSettingPlugin<Boolean>, SettingPluginBoolean {
+        implements ConsoleSettingPlugin<Boolean>, SettingPluginBoolean {
 
     @Override
     public int order() {

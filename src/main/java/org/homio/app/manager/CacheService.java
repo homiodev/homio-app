@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.reflect.MethodUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.HasEntityIdentifier;
@@ -21,7 +21,6 @@ import org.homio.app.utils.CollectionUtils;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.ApplicationContext;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Log4j2
@@ -31,9 +30,8 @@ public class CacheService {
 
     public static final String CACHE_CLASS_BY_TYPE = "CACHE_CLASS_BY_TYPE";
     public static final String ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI =
-        "ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI";
+            "ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI";
     public static final String ENTITY_IDS_BY_CLASS_NAME = "ENTITY_IDS_BY_CLASS_NAME";
-    public static final String REPOSITORY_BY_ENTITY_ID = "REPOSITORY_BY_ENTITY_ID";
     public static final String JS_COMPLETIONS = "JS_COMPLETIONS";
 
     private final Map<String, UpdateStatement> entityCache = new ConcurrentHashMap<>();
@@ -43,13 +41,12 @@ public class CacheService {
 
     public static CacheManager createCacheManager() {
         return new ConcurrentMapCacheManager(
-            CLASSES_WITH_PARENT_CLASS,
-            ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI,
-            ENTITY_IDS_BY_CLASS_NAME,
-            REPOSITORY_BY_CLAZZ,
-            CACHE_CLASS_BY_TYPE,
-            REPOSITORY_BY_ENTITY_ID,
-            JS_COMPLETIONS);
+                CLASSES_WITH_PARENT_CLASS,
+                ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI,
+                ENTITY_IDS_BY_CLASS_NAME,
+                REPOSITORY_BY_CLAZZ,
+                CACHE_CLASS_BY_TYPE,
+                JS_COMPLETIONS);
     }
 
     public void clearCache() {
@@ -66,7 +63,7 @@ public class CacheService {
         for (BaseEntity relatedEntity : relatedEntities) {
             if (relatedEntity != null) {
                 Objects.requireNonNull(cacheManager.getCache(ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI))
-                       .evict(relatedEntity.getEntityID());
+                        .evict(relatedEntity.getEntityID());
             }
         }
         // need remove all because entity may create also another entities
@@ -102,22 +99,21 @@ public class CacheService {
         entityCache.remove(entityId);
     }
 
-    @Scheduled(fixedDelay = 30000)
     public void flushDelayedUpdates() {
         if (!entityCache.isEmpty()) {
             synchronized (entityCache) {
-                EntityContext entityContext = applicationContext.getBean(EntityContext.class);
+                Context context = applicationContext.getBean(Context.class);
                 for (UpdateStatement updateStatement : entityCache.values()) {
                     try {
                         if (updateStatement.changeFields != null) {
-                            BaseEntity baseEntity = entityContext.getEntity(updateStatement.entityID, false);
+                            BaseEntity baseEntity = context.db().getEntity(updateStatement.entityID, false);
                             for (Map.Entry<String, Object[]> entry : updateStatement.changeFields.entrySet()) {
                                 MethodUtils.invokeMethod(baseEntity, entry.getKey(), entry.getValue());
                             }
                             updateStatement.repository.flushCashedEntity(baseEntity);
 
                             if (baseEntity instanceof BaseEntity) {
-                                entityUpdated((BaseEntity) baseEntity);
+                                entityUpdated(baseEntity);
                             }
                         }
                     } catch (Exception ex) {

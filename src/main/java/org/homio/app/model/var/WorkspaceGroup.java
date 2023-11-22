@@ -2,6 +2,7 @@ package org.homio.app.model.var;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.homio.app.utils.UIFieldUtils.nullIfFalse;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.AttributeOverride;
@@ -22,12 +23,14 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.val;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.Icon;
 import org.homio.api.model.JSON;
+import org.homio.api.state.DecimalType;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldColorPicker;
@@ -35,7 +38,6 @@ import org.homio.api.ui.field.UIFieldIconPicker;
 import org.homio.api.ui.field.UIFieldProgress;
 import org.homio.api.ui.field.UIFieldProgress.Progress;
 import org.homio.api.ui.field.UIFieldSlider;
-import org.homio.api.ui.field.UIFieldTitleRef;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIActionInput;
 import org.homio.api.ui.field.action.UIActionInput.Type;
@@ -43,16 +45,16 @@ import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.color.UIFieldColorBgRef;
 import org.homio.api.ui.field.color.UIFieldColorRef;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
-import org.homio.api.ui.field.inline.UIFieldInlineEditEntities;
 import org.homio.api.ui.field.inline.UIFieldInlineEntities;
 import org.homio.api.ui.field.inline.UIFieldInlineEntityWidth;
 import org.homio.api.ui.field.inline.UIFieldInlineGroup;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent.SelectionParent;
-import org.homio.api.util.CommonUtils;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.manager.common.impl.ContextVarImpl;
 import org.homio.app.model.UIFieldClickToEdit;
 import org.homio.app.model.UIHideEntityIfFieldNotNull;
-import org.homio.app.repository.VariableDataRepository;
+import org.homio.app.model.var.WorkspaceVariable.VarType;
+import org.homio.app.repository.VariableBackupRepository;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
@@ -61,17 +63,18 @@ import org.json.JSONObject;
 @Getter
 @Accessors(chain = true)
 @UISidebarMenu(
-    icon = "fas fa-boxes-stacked",
-    order = 200,
-    bg = "#54AD24",
-    allowCreateNewItems = true,
-    overridePath = "variable")
+        icon = "fas fa-boxes-stacked",
+        order = 200,
+        bg = "#54AD24",
+        allowCreateNewItems = true,
+        overridePath = "variable")
 @AttributeOverride(name = "name", column = @Column(nullable = false))
 @UIHideEntityIfFieldNotNull("parent")
-public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
-    implements HasJsonData, SelectionParent {
+@NoArgsConstructor
+public class WorkspaceGroup extends BaseEntity
+        implements HasJsonData, SelectionParent {
 
-    public static final String PREFIX = "wg_";
+    public static final String PREFIX = "group_";
 
     @UIField(order = 12, inlineEditWhenEmpty = true)
     private String description;
@@ -88,15 +91,26 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
 
     private boolean hidden;
 
+    @UIField(order = 15, hideInEdit = true)
+    public int getVarCount() {
+        if (workspaceVariables == null) {return 0;}
+        return workspaceVariables.size() +
+            (childrenGroups == null ? 0 : childrenGroups
+                .stream()
+                .map(WorkspaceGroup::getVarCount)
+                .reduce(0, Integer::sum));
+    }
+
     @Getter
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "workspaceGroup")
-    @UIField(order = 30)
-    @UIFieldInlineEditEntities(
-        bg = "#1E5E611F",
-        addRowLabel = "CREATE_VAR",
-        noContentTitle = "NO_VARIABLES",
-        removeRowCondition = "return !context.get('locked')",
-        addRowCondition = "return !context.get('locked')")
+    //@UIField(order = 30)
+    /*@UIFieldInlineEditEntities(
+            bg = "#1E5E611F",
+            addRowLabel = "TITLE.CREATE_VAR",
+            noContentTitle = "W.ERROR.NO_VARIABLES",
+            removeRowCondition = "return !context.get('locked')",
+            addRowCondition = "return !context.get('locked')")*/
+    @JsonIgnore
     private Set<WorkspaceVariable> workspaceVariables;
 
     @ManyToOne(fetch = FetchType.EAGER)
@@ -106,9 +120,6 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
     @Column(length = 1000)
     @Convert(converter = JSONConverter.class)
     private JSON jsonData = new JSON();
-
-    @Column(unique = true, nullable = false)
-    private String groupId;
 
     @Getter
     @JsonIgnore
@@ -137,7 +148,7 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
     }
 
     @UIField(order = 9999, hideInEdit = true)
-    @UIFieldInlineEntities(bg = "#1E5E611F", noContentTitle = "NO_VARIABLES")
+    @UIFieldInlineEntities(bg = "#1E5E611F", noContentTitle = "W.ERROR.NO_VARIABLES")
     public List<WorkspaceVariableEntity> getWorkspaceVariableEntities() {
         List<WorkspaceVariableEntity> list = new ArrayList<>();
         if (childrenGroups != null) {
@@ -149,11 +160,11 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
             }
         }
         if (workspaceVariables != null) {
-            EntityContext entityContext = getEntityContext();
+            Context context = context();
             List<WorkspaceVariable> sortedVariables = new ArrayList<>(workspaceVariables);
             sortedVariables.sort(Comparator.comparing(WorkspaceVariable::getName));
             for (WorkspaceVariable workspaceVariable : sortedVariables) {
-                list.add(new WorkspaceVariableEntity(workspaceVariable, (EntityContextImpl) entityContext));
+                list.add(new WorkspaceVariableEntity(workspaceVariable, (ContextImpl) context));
             }
         }
         return list;
@@ -188,7 +199,14 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
 
     @Override
     public boolean isDisableDelete() {
-        return locked || this.groupId.equals("broadcasts");
+        return locked || getEntityID().equals(PREFIX + "broadcasts") || getJsonData("dis_del", false);
+    }
+
+    public static String generateValue(Object val, WorkspaceVariable variable) {
+        if (val instanceof Number num) {
+            return new DecimalType(num).toString(2) + StringUtils.trimToEmpty(variable.getUnit());
+        }
+        return val == null ? "-" : val + StringUtils.trimToEmpty(variable.getUnit());
     }
 
     @Override
@@ -197,13 +215,13 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
     }
 
     @UIContextMenuAction(value = "CLEAR_BACKUP", icon = "fas fa-database", inputs = {
-        @UIActionInput(name = "keep_days", type = Type.number, value = "-1", min = -1, max = 365),
-        @UIActionInput(name = "keep_count", type = Type.number, value = "-1", min = -1, max = 100_000)
+            @UIActionInput(name = "keepDays", type = Type.number, value = "-1", min = -1, max = 365),
+            @UIActionInput(name = "keepCount", type = Type.number, value = "-1", min = -1, max = 100_000)
     })
-    public ActionResponseModel clearBackup(EntityContext entityContext, JSONObject params) {
-        val repository = entityContext.getBean(VariableDataRepository.class);
-        int days = params.optInt("keep_days", -1);
-        int count = params.optInt("keep_count", -1);
+    public ActionResponseModel clearBackup(Context context, JSONObject params) {
+        val repository = context.getBean(VariableBackupRepository.class);
+        int days = params.optInt("keepDays", -1);
+        int count = params.optInt("keepCount", -1);
         if (days == 0 || count == 0) {
             return clearBackupResponse(clearAll(repository));
         }
@@ -212,41 +230,48 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
         } else if (count > 0) {
             return clearBackupResponse(clearByCount(count, repository));
         }
-        return ActionResponseModel.showWarn("WRONG_ARGUMENTS");
+        return ActionResponseModel.showWarn("W.ERROR.WRONG_ARGUMENTS");
     }
 
     @Override
-    protected void beforePersist() {
-        setGroupId(defaultIfEmpty(groupId, CommonUtils.generateUUID()));
-        setEntityID(PREFIX + groupId);
+    public void beforePersist() {
         setIcon(defaultIfEmpty(icon, "fas fa-layer-group"));
         setIconColor(defaultIfEmpty(iconColor, "#28A60C"));
-        setName(defaultIfEmpty(getName(), CommonUtils.generateUUID()));
+    }
+
+    @Override
+    protected long getChildEntityHashCode() {
+        int result = description != null ? description.hashCode() : 0;
+        result = 31 * result + (icon != null ? icon.hashCode() : 0);
+        result = 31 * result + (iconColor != null ? iconColor.hashCode() : 0);
+        result = 31 * result + (locked ? 1 : 0);
+        result = 31 * result + jsonData.toString().hashCode();
+        return result;
+    }
+
+    private int clearAll(VariableBackupRepository repository) {
+        return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
+                                 .map(repository::delete)
+                .mapToInt(i -> i).sum();
+    }
+
+    private int clearByCount(int count, VariableBackupRepository repository) {
+        return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
+                .map(v -> repository.deleteButKeepCount(v, count))
+                .mapToInt(i -> i).sum();
+    }
+
+    private int clearByDays(int days, VariableBackupRepository repository) {
+        return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
+                .map(v -> repository.deleteButKeepDays(v, days))
+                .mapToInt(i -> i).sum();
     }
 
     private ActionResponseModel clearBackupResponse(int deletedCount) {
         if (deletedCount > 0) {
             return ActionResponseModel.showSuccess("Deleted: " + deletedCount + " variables");
         }
-        return ActionResponseModel.showWarn("W.ERROR.NO_VARIABLES_TO_DELETE");
-    }
-
-    private int clearAll(VariableDataRepository repository) {
-        return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
-                                 .map(v -> repository.delete(v.getVariableId()))
-                                 .mapToInt(i -> i).sum();
-    }
-
-    private int clearByCount(int count, VariableDataRepository repository) {
-        return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
-                                 .map(v -> repository.deleteButKeepCount(v.getVariableId(), count))
-                                 .mapToInt(i -> i).sum();
-    }
-
-    private int clearByDays(int days, VariableDataRepository repository) {
-        return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
-                                 .map(v -> repository.deleteButKeepDays(v.getVariableId(), days))
-                                 .mapToInt(i -> i).sum();
+        return ActionResponseModel.showInfo("W.ERROR.NO_VARIABLES_TO_DELETE");
     }
 
     @Getter
@@ -262,7 +287,6 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
 
         @UIField(order = 10, type = UIFieldType.HTML)
         @UIFieldColorRef("color")
-        @UIFieldTitleRef("nameTitle")
         @UIFieldVariable
         private JSONObject name;
 
@@ -289,40 +313,56 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
 
         private String color;
 
-        private String nameTitle;
+        private Boolean disableDelete;
+
+        private String rowClass;
+
+        private Boolean backup;
 
         public WorkspaceVariableEntity(WorkspaceGroup childrenGroup) {
             this.entityID = childrenGroup.getEntityID();
             this.groupName = format("<div class=\"it-group\"><i class=\"%s\"></i>%s</div>",
-                childrenGroup.getIcon(), childrenGroup.getName());
+                    childrenGroup.getIcon(), childrenGroup.getName());
             this.color = childrenGroup.getIconColor();
         }
 
-        public WorkspaceVariableEntity(WorkspaceVariable variable, EntityContextImpl entityContext) {
+        public WorkspaceVariableEntity(WorkspaceVariable variable, ContextImpl context) {
             this.entityID = variable.getEntityID();
 
             name = new JSONObject()
-                .put("color", variable.getColor())
-                .put("name", variable.getName())
-                .put("description", variable.getDescription())
-                .put("listeners", entityContext.event().getEntityUpdateListeners().getCount(variable.getEntityID()))
-                .put("linked", entityContext.var().isLinked(variable.getVariableId()))
-                .put("source", entityContext.var().buildDataSource(variable, false))
-                .put("readOnly", variable.isReadOnly());
+                .put("color", variable.getIconColor())
+                    .put("name", variable.getName())
+                    .put("description", variable.getDescription())
+                .put("listeners", context.event().getEventCount(variable.getEntityID()))
+                .put("linked", context.var().isLinked(variable.getEntityID()))
+                .put("source", ContextVarImpl.buildDataSource(variable))
+                    .put("readOnly", variable.isReadOnly());
             if (variable.isBackup()) {
-                name.put("backupCount", entityContext.var().backupCount(variable.getVariableId()));
+                name.put("backupCount", context.var().backupCount(variable));
+            }
+            if (variable.getIcon() != null) {
+                name.put("icon", new Icon(variable.getIcon(), variable.getIconColor()));
             }
             this.restriction = variable.getRestriction().name().toLowerCase();
-            Object val = entityContext.var().get(variable.getVariableId());
+            Object val = context.var().get(variable.getEntityID());
             this.value = generateValue(val, variable);
+            this.backup = nullIfFalse(variable.isBackup());
             this.quota = variable.getQuota();
             this.usedQuota = variable.getUsedQuota();
-            this.nameTitle = variable.getName();
+            this.disableDelete = Boolean.TRUE.equals(variable.isDisableDelete()) ? true : null;
+            if (variable.getVarType() != VarType.standard) {
+                this.rowClass = "var-type-%s".formatted(variable.getVarType());
+            }
         }
 
-    }
+        public static WorkspaceVariableEntity updatableEntity(WorkspaceVariable variable, ContextImpl context) {
+            WorkspaceVariableEntity entity = new WorkspaceVariableEntity();
+            Object val = context.var().get(variable.getEntityID());
+            entity.entityID = variable.getEntityID();
+            entity.value = generateValue(val, variable);
+            entity.usedQuota = variable.getUsedQuota();
+            return entity;
+        }
 
-    public static String generateValue(Object val, WorkspaceVariable variable) {
-        return val == null ? "-" : val + StringUtils.trimToEmpty(variable.getUnit());
     }
 }

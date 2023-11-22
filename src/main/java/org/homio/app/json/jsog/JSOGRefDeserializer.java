@@ -6,13 +6,9 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.NullNode;
+
 import java.io.IOException;
 
-/**
- * Knows how to take either form of a JSOGRef (string or {@ref:string} and convert it back into a JSOGRef.
- *
- * @author Jeff Schnitzer <jeff@infohazard.org>
- */
 public class JSOGRefDeserializer extends JsonDeserializer<JSOGRef> {
 
     @Override

@@ -2,17 +2,17 @@ package org.homio.app.builder.widget;
 
 import static java.lang.String.format;
 
-import org.homio.api.EntityContextWidget.LayoutWidgetBuilder;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.api.ContextWidget.LayoutWidgetBuilder;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class LayoutBuilderImpl extends WidgetBaseBuilderImpl<LayoutWidgetBuilder, WidgetLayoutEntity>
-    implements LayoutWidgetBuilder {
+        implements LayoutWidgetBuilder {
 
-    LayoutBuilderImpl(WidgetLayoutEntity widget, EntityContextImpl entityContext) {
-        super(widget, entityContext);
+    LayoutBuilderImpl(WidgetLayoutEntity widget, ContextImpl context) {
+        super(widget, context);
     }
 
     @Override

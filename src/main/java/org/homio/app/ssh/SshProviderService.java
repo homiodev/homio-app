@@ -4,10 +4,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.homio.api.service.EntityService;
+import lombok.ToString;
 import org.jetbrains.annotations.Nullable;
 
-public interface SshProviderService<T extends SshBaseEntity> extends EntityService.ServiceInstance {
+public interface SshProviderService<T extends SshBaseEntity> {
 
     /**
      * Open ssh session
@@ -19,9 +19,6 @@ public interface SshProviderService<T extends SshBaseEntity> extends EntityServi
 
     /**
      * Close ssh session
-     *
-     * @param token     - session token
-     * @param sshEntity - ssh entity that hold configuration
      */
     void closeSshSession(SshSession<T> sshSession);
 
@@ -31,6 +28,7 @@ public interface SshProviderService<T extends SshBaseEntity> extends EntityServi
 
     @Getter
     @Setter
+    @ToString(exclude = "entity")
     @RequiredArgsConstructor
     class SshSession<T extends SshBaseEntity> {
 
@@ -46,13 +44,5 @@ public interface SshProviderService<T extends SshBaseEntity> extends EntityServi
 
         @JsonIgnore
         private final T entity;
-
-        @Override
-        public String toString() {
-            return "SshSession{" +
-                "token='" + token + '\'' +
-                ", wsURL='" + wsURL + '\'' +
-                '}';
-        }
     }
 }

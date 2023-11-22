@@ -11,23 +11,23 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContextBGP;
+import org.homio.api.ContextBGP;
 import org.homio.api.console.ConsolePluginTable;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Status;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.action.UIContextMenuAction;
-import org.homio.app.manager.common.EntityContextImpl;
-import org.homio.app.manager.common.impl.EntityContextBGPImpl;
+import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.manager.common.impl.ContextBGPImpl;
 import org.jetbrains.annotations.NotNull;
 
 @RequiredArgsConstructor
 public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<BaseProcessesConsolePlugin.BackgroundProcessJSON> {
 
-    @Getter
-    private final EntityContextImpl entityContext;
+    private final @Getter @Accessors(fluent = true) ContextImpl context;
 
     @Override
     public String getParentTab() {
@@ -41,65 +41,65 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
 
     @Override
     public Collection<BackgroundProcessJSON> getValue() {
-        Collection<BackgroundProcessJSON> result = entityContext
-            .bgp().getSchedulers().values()
-            .stream()
-            .filter(EntityContextBGPImpl.ThreadContextImpl::isShowOnUI)
-            .filter(threadContext -> {
-                if (BaseProcessesConsolePlugin.this.handleThreads()) {
-                    return threadContext.getPeriod() == null;
-                }
-                return threadContext.getPeriod() != null &&
-                    threadContext.getScheduleType() != EntityContextBGPImpl.ScheduleType.SINGLE;
-            })
-            .map(e -> {
-                BackgroundProcessJSON bgp = new BackgroundProcessJSON();
-                if (e.getLogFile() != null && Files.exists(e.getLogFile())) {
-                    bgp = new BackgroundProcessJSONWithLogs();
-                }
-                bgp.entityID = e.getName();
-                bgp.processName = e.getName();
-                bgp.description = e.getDescription();
-                // skip state for single thread
-                if (!BaseProcessesConsolePlugin.this.handleThreads()) {
-                    bgp.state = e.getState();
-                    bgp.runCount = e.getRunCount();
-                    bgp.scheduleType = e.getScheduleType().name();
-                }
-                bgp.creationTime = e.getCreationTime();
-                bgp.period = e.getPeriod() == null ? null : e.getPeriod().toString().substring(2);
-                bgp.timeToNextSchedule = e.getTimeToNextSchedule();
-                if (StringUtils.isNotEmpty(e.getError())) {
-                    bgp.bigDescription = "Error: " + e.getError();
-                }
+        Collection<BackgroundProcessJSON> result = context
+                .bgp().getSchedulers().values()
+                .stream()
+                .filter(ContextBGPImpl.ThreadContextImpl::isShowOnUI)
+                .filter(threadContext -> {
+                    if (BaseProcessesConsolePlugin.this.handleThreads()) {
+                        return threadContext.getPeriod() == null;
+                    }
+                    return threadContext.getPeriod() != null &&
+                        threadContext.getScheduleType() != ContextBGPImpl.ScheduleType.SINGLE;
+                })
+                .map(e -> {
+                    BackgroundProcessJSON bgp = new BackgroundProcessJSON();
+                    if (e.getLogFile() != null && Files.exists(e.getLogFile())) {
+                        bgp = new BackgroundProcessJSONWithLogs();
+                    }
+                    bgp.entityID = e.getName();
+                    bgp.processName = e.getName();
+                    bgp.description = e.getDescription();
+                    // skip state for single thread
+                    if (!BaseProcessesConsolePlugin.this.handleThreads()) {
+                        bgp.state = e.getState();
+                        bgp.runCount = e.getRunCount();
+                        bgp.scheduleType = e.getScheduleType().name();
+                    }
+                    bgp.creationTime = e.getCreationTime();
+                    bgp.period = e.getPeriod() == null ? null : e.getPeriod().toString().substring(2);
+                    bgp.timeToNextSchedule = e.getTimeToNextSchedule();
+                    if (StringUtils.isNotEmpty(e.getError())) {
+                        bgp.bigDescription = "Error: " + e.getError();
+                    }
 
-                return bgp;
-            }).collect(Collectors.toList());
+                    return bgp;
+                }).collect(Collectors.toList());
 
-        EntityContextBGP.ThreadPuller threadPuller = new EntityContextBGP.ThreadPuller() {
+        ContextBGP.ThreadPuller threadPuller = new ContextBGP.ThreadPuller() {
             @Override
-            public EntityContextBGP.ThreadPuller addThread(@NotNull String name, String description, @NotNull Date creationTime,
-                String state, String errorMessage, String bigDescription) {
+            public ContextBGP.ThreadPuller addThread(@NotNull String name, String description, @NotNull Date creationTime,
+                                                           String state, String errorMessage, String bigDescription) {
                 if (BaseProcessesConsolePlugin.this.handleThreads()) {
                     result.add(new BackgroundProcessJSON(name, name, description, creationTime, null, null,
-                        null, null, errorMessage, null, null, bigDescription));
+                            null, null, errorMessage, null, null, bigDescription));
                 }
                 return this;
             }
 
             @Override
-            public EntityContextBGP.@NotNull ThreadPuller addScheduler(@NotNull String name, String description, @NotNull Date creationTime, String state,
-                String errorMessage, Duration period, int runCount,
-                String bigDescription) {
+            public ContextBGP.@NotNull ThreadPuller addScheduler(@NotNull String name, String description, @NotNull Date creationTime, String state,
+                                                                       String errorMessage, Duration period, int runCount,
+                                                                       String bigDescription) {
                 if (!BaseProcessesConsolePlugin.this.handleThreads()) {
                     result.add(new BackgroundProcessJSON(name, name, description, creationTime, state,
-                        EntityContextBGPImpl.ScheduleType.DELAY.name(), null, null, errorMessage,
-                        period.toString(), runCount, bigDescription));
+                        ContextBGPImpl.ScheduleType.DELAY.name(), null, null, errorMessage,
+                            period.toString(), runCount, bigDescription));
                 }
                 return this;
             }
         };
-        for (Consumer<EntityContextBGP.ThreadPuller> pullerConsumer : entityContext.bgp().getThreadsPullers().values()) {
+        for (Consumer<ContextBGP.ThreadPuller> pullerConsumer : context.bgp().getThreadsPullers().values()) {
             pullerConsumer.accept(threadPuller);
         }
 

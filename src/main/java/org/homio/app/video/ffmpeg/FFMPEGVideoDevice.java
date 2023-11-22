@@ -6,16 +6,16 @@ import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.homio.api.EntityContextMedia.VideoInputDevice;
+import org.homio.api.ContextMedia.VideoInputDevice;
+import org.jetbrains.annotations.NotNull;
 
 @Getter
 @Accessors(chain = true)
 public class FFMPEGVideoDevice implements VideoInputDevice {
 
     @Setter
-    private String name;
-    private final Dimension[] resolutions;
-    private Dimension resolution = null;
+    private @NotNull String name;
+    private final @NotNull Dimension[] resolutions;
 
     protected FFMPEGVideoDevice(String resolutions) {
         this.resolutions = readResolutions(resolutions);
@@ -31,22 +31,6 @@ public class FFMPEGVideoDevice implements VideoInputDevice {
         }
 
         return resolutions.toArray(new Dimension[0]);
-    }
-
-    public Dimension getResolution() {
-        if (resolution == null) {
-            resolution = getResolutions()[0];
-        }
-        return resolution;
-    }
-
-    public String getResolutionString() {
-        Dimension d = getResolution();
-        return String.format("%dx%d", d.width, d.height);
-    }
-
-    private int arraySize() {
-        return resolution.width * resolution.height * 3;
     }
 
     @Override

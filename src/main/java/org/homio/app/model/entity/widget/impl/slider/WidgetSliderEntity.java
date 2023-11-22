@@ -14,13 +14,11 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetSliderEntity
-    extends WidgetBaseEntityAndSeries<WidgetSliderEntity, WidgetSliderSeriesEntity>
-    implements HasLayout, HasSourceServerUpdates, HasName, HasPadding {
-
-    public static final String PREFIX = "wgtsl_";
+        extends WidgetBaseEntityAndSeries<WidgetSliderEntity, WidgetSliderSeriesEntity>
+        implements HasLayout, HasSourceServerUpdates, HasName, HasPadding {
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "NAME", order = 3)
+    @UIFieldGroup(order = 3, value = "NAME")
     @UIFieldOptionFontSize
     public String getName() {
         return super.getName();
@@ -54,8 +52,8 @@ public class WidgetSliderEntity
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "slider";
     }
 
     public void setVertical(Boolean value) {
@@ -80,12 +78,12 @@ public class WidgetSliderEntity
 
     private String getDefaultLayout() {
         return UIFieldLayout.LayoutBuilder
-            .builder(15, 20, 50, 15)
-            .addRow(rb ->
-                rb.addCol("icon", UIFieldLayout.HorizontalAlign.center)
-                  .addCol("name", UIFieldLayout.HorizontalAlign.left)
-                  .addCol("slider", UIFieldLayout.HorizontalAlign.center)
-                  .addCol("value", UIFieldLayout.HorizontalAlign.center))
-            .build();
+                .builder(15, 20, 50, 15)
+                .addRow(rb ->
+                        rb.addCol("icon", UIFieldLayout.HorizontalAlign.center)
+                                .addCol("name", UIFieldLayout.HorizontalAlign.left)
+                                .addCol("slider", UIFieldLayout.HorizontalAlign.center)
+                                .addCol("value", UIFieldLayout.HorizontalAlign.center))
+                .build();
     }
 }

@@ -9,14 +9,6 @@ import co.elastic.thumbnails4j.pdf.PDFThumbnailer;
 import co.elastic.thumbnails4j.pptx.PPTXThumbnailer;
 import co.elastic.thumbnails4j.xls.XLSThumbnailer;
 import co.elastic.thumbnails4j.xlsx.XLSXThumbnailer;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.List;
-import javax.imageio.ImageIO;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -24,6 +16,17 @@ import org.apache.commons.codec.binary.Base64OutputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.homio.api.fs.TreeNode;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
+
+import static org.springframework.http.MediaType.*;
 
 @Log4j2
 @Getter
@@ -37,7 +40,7 @@ public class WidgetFMNodeValue {
     public WidgetFMNodeValue(TreeNode treeNode, int width, int height) {
         this.treeNode = treeNode;
         List<Dimensions> outputDimensions =
-            Collections.singletonList(new Dimensions(width, height));
+                Collections.singletonList(new Dimensions(width, height));
 
         String contentType = treeNode.getAttributes().getContentType();
         if (contentType != null) {
@@ -47,7 +50,7 @@ public class WidgetFMNodeValue {
                 try {
                     try (InputStream stream = treeNode.getInputStream()) {
                         BufferedImage output =
-                            thumbnailer.getThumbnails(stream, outputDimensions).get(0);
+                                thumbnailer.getThumbnails(stream, outputDimensions).get(0);
                         ByteArrayOutputStream os = new ByteArrayOutputStream();
                         OutputStream b64 = new Base64OutputStream(os);
                         ImageIO.write(output, "png", b64);
@@ -61,8 +64,8 @@ public class WidgetFMNodeValue {
                 // String encodedValue = "data:image/jpeg;base64," +
                 // Base64.getEncoder().encodeToString(convertedValue);
             } else if (contentType.startsWith("text/")
-                || contentType.equals("application/javascript")
-                || contentType.equals("application/json")) {
+                    || contentType.equals("application/javascript")
+                    || contentType.equals(APPLICATION_JSON_VALUE)) {
                 if (treeNode.getAttributes().getSize() <= FileUtils.ONE_MB) {
                     try (InputStream stream = treeNode.getInputStream()) {
                         this.content = IOUtils.toString(stream, StandardCharsets.UTF_8);
@@ -87,25 +90,16 @@ public class WidgetFMNodeValue {
     }
 
     private Thumbnailer buildThumbnail(String contentType) {
-        switch (contentType) {
-            case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-                return new DOCXThumbnailer();
-            case "application/msword":
-                return new DOCThumbnailer();
-            case "image/jpeg":
-            case "image/gif":
-            case "image/png":
-                return new ImageThumbnailer("png");
-            case "application/pdf":
-                return new PDFThumbnailer();
-            case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
-                return new PPTXThumbnailer();
-            case "application/vnd.ms-excel":
-                return new XLSThumbnailer();
-            case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-                return new XLSXThumbnailer();
-        }
-        return null;
+        return switch (contentType) {
+            case "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> new DOCXThumbnailer();
+            case "application/msword" -> new DOCThumbnailer();
+            case "image/jpg", "image/gif", IMAGE_JPEG_VALUE, IMAGE_PNG_VALUE -> new ImageThumbnailer("png");
+            case APPLICATION_PDF_VALUE -> new PDFThumbnailer();
+            case "application/vnd.openxmlformats-officedocument.presentationml.presentation" -> new PPTXThumbnailer();
+            case "application/vnd.ms-excel" -> new XLSThumbnailer();
+            case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> new XLSXThumbnailer();
+            default -> null;
+        };
     }
 
     private enum ResolveContentType {

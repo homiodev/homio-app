@@ -1,8 +1,9 @@
 package org.homio.app.rest.widget;
 
-import java.util.Set;
 import lombok.Getter;
 import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
+
+import java.util.Set;
 
 @Getter
 public class TimeSeriesValues<T extends HasChartDataSource> {
@@ -23,10 +24,10 @@ public class TimeSeriesValues<T extends HasChartDataSource> {
         if (this.itemSeries.equals(updatedContext)) {
             for (TimeSeriesContext<T> item : this.itemSeries) {
                 TimeSeriesContext<T> otherItem =
-                    updatedContext.stream()
-                                  .filter(c -> c.getId().equals(item.getId()))
-                                  .findAny()
-                                  .get();
+                        updatedContext.stream()
+                                .filter(c -> c.getId().equals(item.getId()))
+                                .findAny()
+                                .get();
 
                 if (!item.getValue().equals(otherItem.getValue())) {
                     return false;

@@ -1,34 +1,49 @@
 package org.homio.app.model.entity;
 
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import java.awt.Font;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.types.MicroControllerBaseEntity;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
+import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
+import org.homio.api.service.EntityService;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.action.UIContextMenuUploadAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
+import org.homio.app.service.LocalBoardService;
 import org.homio.app.service.LocalFileSystemProvider;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.json.JSONObject;
+import org.springframework.web.multipart.MultipartFile;
 
 @Entity
 @Log4j2
 @UISidebarChildren(icon = "", color = "", allowCreateItem = false)
-public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity>
-    implements BaseFileSystemEntity<LocalBoardEntity, LocalFileSystemProvider> {
-
-    public static final String PREFIX = "cbe_";
-    public static final String DEFAULT_DEVICE_ENTITY_ID = PREFIX + "primary";
+public class LocalBoardEntity extends MicroControllerBaseEntity
+    implements EntityService<LocalBoardService>,
+    BaseFileSystemEntity<LocalBoardEntity, LocalFileSystemProvider> {
 
     @Override
     public String getDefaultName() {
@@ -37,16 +52,17 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
 
     @UIField(order = 200)
     public @NotNull String getFileSystemRoot() {
-        return getJsonData("fs_root", CommonUtils.getRootPath().toString());
+        return getJsonDataRequire("fs_root", CommonUtils.getRootPath().toString());
+    }
+
+    @UIField(order = 250, inlineEdit = true)
+    @UIFieldSlider(min = 1, max = 60)
+    public int getCpuFetchInterval() {
+        return getJsonData("cpu_interval", 10);
     }
 
     public void setFileSystemRoot(String value) {
         setJsonData("fs_root", value);
-    }
-
-    @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
     }
 
     @Override
@@ -70,7 +86,7 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
     }
 
     @Override
-    public @NotNull LocalFileSystemProvider buildFileSystem(@NotNull EntityContext entityContext) {
+    public @NotNull LocalFileSystemProvider buildFileSystem(@NotNull Context context) {
         return new LocalFileSystemProvider(this);
     }
 
@@ -84,16 +100,26 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
         return true;
     }
 
-    @Override
-    public void assembleActions(UIInputBuilder uiInputBuilder) {
-
+    @SneakyThrows
+    @UIContextMenuUploadAction(value = "UPLOAD_FONT", icon = "fas fa-font", supportedFormats = {".ttf"})
+    public ActionResponseModel uploadFont(JSONObject params) {
+        MultipartFile[] files = (MultipartFile[]) params.get("files");
+        for (MultipartFile file : files) {
+            String filename = file.getOriginalFilename();
+            if (filename != null && filename.endsWith(".ttf")) {
+                Path fonts = CommonUtils.createDirectoriesIfNotExists(CommonUtils.getConfigPath().resolve("fonts"));
+                file.transferTo(fonts.resolve(filename));
+            }
+        }
+        context().ui().dialog().reloadWindow("Apply new fonts", 5);
+        return ActionResponseModel.success();
     }
 
     @Override
     @JsonIgnore
     @UIFieldIgnore
-    public Status getStatus() {
-        return null;
+    public @NotNull Status getStatus() {
+        return Status.OFFLINE;
     }
 
     @Override
@@ -102,15 +128,53 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
     }
 
     @Override
+    public @Nullable Set<String> getConfigurationErrors() {
+        return null;
+    }
+
+    @Override
+    public long getEntityServiceHashCode() {
+        return getJsonDataHashCode("cpu_interval", "fs_root");
+    }
+
+    @Override
+    public @NotNull Class<LocalBoardService> getEntityServiceItemClass() {
+        return LocalBoardService.class;
+    }
+
+    @Override
+    public @Nullable LocalBoardService createService(@NotNull Context context) {
+        return new LocalBoardService(context, this);
+    }
+
+    @Override
+    public void assembleActions(UIInputBuilder uiInputBuilder) {
+
+    }
+
+    @Override
+    protected @NotNull String getDevicePrefix() {
+        return "board";
+    }
+
+    @Override
     public boolean isDisableEdit() {
         return true;
     }
 
-    public static void ensureDeviceExists(EntityContext entityContext) {
-        if (entityContext.getEntity(DEFAULT_DEVICE_ENTITY_ID) == null) {
+    public void setCpuFetchInterval(@Min(0) @Max(60) int value) {
+        setJsonData("cpu_interval", value);
+    }
+
+    public static LocalBoardEntity ensureDeviceExists(Context context) {
+        LocalBoardEntity entity = context.db().getEntity(LocalBoardEntity.class, PRIMARY_DEVICE);
+        if (entity == null) {
             log.info("Save default compute board device");
-            entityContext.save(new LocalBoardEntity().setEntityID(DEFAULT_DEVICE_ENTITY_ID));
+            entity = new LocalBoardEntity();
+            entity.setEntityID(PRIMARY_DEVICE);
+            entity = context.db().save(entity);
         }
+        return entity;
     }
 
     @Override

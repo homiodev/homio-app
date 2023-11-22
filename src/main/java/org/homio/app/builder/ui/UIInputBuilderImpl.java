@@ -7,9 +7,10 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.homio.api.EntityContext;
+import lombok.experimental.Accessors;
+import org.homio.api.Context;
 import org.homio.api.model.Icon;
-import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.UIEntityBuilder;
 import org.homio.api.ui.field.action.v1.UIEntityItemBuilder;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
@@ -26,20 +27,20 @@ import org.jetbrains.annotations.Nullable;
 @RequiredArgsConstructor
 public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInputBuilder {
 
-    private final EntityContext entityContext;
+    private final @Accessors(fluent = true) Context context;
     private final String entityID = null;
 
     public UIButtonItemBuilder addReferenceAction(String name, String reference, int order) {
         return addEntity(
-            new UIButtonItemBuilderImpl(UIItemType.Button, name, null, order, null)
-                .setActionReference(reference));
+                new UIButtonItemBuilderImpl(UIItemType.Button, name, null, order, null)
+                        .setActionReference(reference));
     }
 
     public UIButtonItemBuilderImpl addFireActionBeforeChange(
-        String name, String[] actions, String reference, int order) {
+            String name, String[] actions, String reference, int order) {
         return addEntity(new UIButtonItemBuilderImpl(UIItemType.Button, name, null, order, null)
-            .setActionReference(reference))
-            .setFireActionsBeforeChange(actions);
+                .setActionReference(reference))
+                .setFireActionsBeforeChange(actions);
     }
 
     @Override
@@ -48,23 +49,23 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
     }
 
     @Override
-    public void from(@NotNull UIInputBuilder source) {
+    public void from(@Nullable UIInputBuilder source) {
         super.from(source);
     }
 
     @Override
     public @NotNull Collection<UIInputEntity> buildAll() {
         return getUiEntityBuilders(false).stream()
-                                         .map(UIEntityBuilder::buildEntity)
-                                         .sorted(Comparator.comparingInt(UIInputEntity::getOrder))
-                                         .collect(Collectors.toList());
+                .map(UIEntityBuilder::buildEntity)
+                .sorted(Comparator.comparingInt(UIInputEntity::getOrder))
+                .collect(Collectors.toList());
     }
 
     @Override
     public void fireFetchValues() {
         for (UIEntityItemBuilder itemBuilder : getUiEntityItemBuilders(true)) {
             Map<String, Runnable> handlers =
-                ((UIBaseEntityItemBuilderImpl) itemBuilder).getFetchValueHandlers();
+                    ((UIBaseEntityItemBuilderImpl) itemBuilder).getFetchValueHandlers();
             if (handlers != null) {
                 for (Runnable handler : handlers.values()) {
                     handler.run();
@@ -76,9 +77,10 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
     @Override
     public UIActionHandler findActionHandler(@NotNull String key) {
         for (UIEntityItemBuilder entityBuilder : this.getUiEntityItemBuilders(true)) {
-            if (entityBuilder.getEntityID().equals(key)
-                && entityBuilder instanceof UIBaseEntityItemBuilderImpl) {
-                return ((UIBaseEntityItemBuilderImpl) entityBuilder).getActionHandler();
+            if (entityBuilder instanceof UIBaseEntityItemBuilderImpl) {
+                if (entityBuilder.getEntityID().equals(key)) {
+                    return ((UIBaseEntityItemBuilderImpl) entityBuilder).getActionHandler();
+                }
             }
         }
         return null;
@@ -91,18 +93,18 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
 
     @Override
     public UIInputBuilder.DialogEntity<UIButtonItemBuilder> addOpenDialogSelectableButton(@NotNull String name, Icon icon,
-        @Nullable Integer dialogWidth, @NotNull UIActionHandler action, int order) {
+                                                                                          @Nullable Integer dialogWidth, @NotNull UIActionHandler action, int order) {
         return addOpenDialogSelectableButtonInternal(name, icon, dialogWidth, action);
     }
 
     public UIInputBuilder.DialogEntity<UIButtonItemBuilder> addOpenDialogSelectableButtonInternal(
-        String name, Icon icon, Integer dialogWidth, UIActionHandler action) {
+            String name, Icon icon, Integer dialogWidth, UIActionHandler action) {
         UIDialogLayoutBuilderImpl uiDialogLayoutBuilder =
-            new UIDialogLayoutBuilderImpl(name, dialogWidth);
+                new UIDialogLayoutBuilderImpl(name, dialogWidth);
         UIDialogLayoutBuilderImpl dialogEntityBuilder = addEntity(uiDialogLayoutBuilder);
         UIButtonItemBuilder entityBuilder =
-            ((UIButtonItemBuilderImpl) addSelectableButton(name, icon, action))
-                .setActionReference(dialogEntityBuilder.getEntityID());
+                ((UIButtonItemBuilderImpl) addSelectableButton(name, icon, action))
+                        .setActionReference(dialogEntityBuilder.getEntityID());
         return new UIInputBuilder.DialogEntity<>() {
             @Override
             public @NotNull UIInputBuilder up() {
@@ -131,12 +133,12 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
     private UIActionHandler findActionHandler(UIEntityBuilder entityBuilder, String key) {
         if (entityBuilder != null) {
             if (entityBuilder.getEntityID().equals(key)
-                && entityBuilder instanceof UIBaseEntityItemBuilderImpl) {
+                    && entityBuilder instanceof UIBaseEntityItemBuilderImpl) {
                 return ((UIBaseEntityItemBuilderImpl) entityBuilder).getActionHandler();
             }
             if (entityBuilder instanceof UILayoutBuilder) {
                 for (UIEntityBuilder children :
-                    ((UILayoutBuilder) entityBuilder).getUiEntityBuilders(false)) {
+                        ((UILayoutBuilder) entityBuilder).getUiEntityBuilders(false)) {
                     UIActionHandler actionHandler = findActionHandler(children, key);
                     if (actionHandler != null) {
                         return actionHandler;

@@ -1,13 +1,13 @@
 package org.homio.app.console;
 
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.springframework.stereotype.Component;
 
 @Component
 public class SingleThreadConsolePlugin extends BaseProcessesConsolePlugin {
 
-    public SingleThreadConsolePlugin(EntityContextImpl entityContextImpl) {
-        super(entityContextImpl);
+    public SingleThreadConsolePlugin(ContextImpl contextImpl) {
+        super(contextImpl);
     }
 
     @Override

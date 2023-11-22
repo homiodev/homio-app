@@ -2,19 +2,25 @@ package org.homio.app.ssh;
 
 import static org.homio.api.ui.field.action.UIActionInput.Type.text;
 import static org.homio.api.ui.field.action.UIActionInput.Type.textarea;
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+import static org.homio.app.ssh.SshGenericEntity.PublicKeyAuthSign;
 import static org.homio.app.ssh.SshGenericEntity.execDeletePrivateKey;
 import static org.homio.app.ssh.SshGenericEntity.execUploadPrivateKey;
 import static org.homio.app.ssh.SshGenericEntity.updateSSHData;
 
+import com.sshtools.client.SshClient;
 import com.sshtools.common.publickey.SshPrivateKeyFile;
 import com.sshtools.common.publickey.SshPrivateKeyFileFactory;
 import jakarta.persistence.Entity;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.EntityContext;
+import org.apache.commons.lang3.StringUtils;
+import org.hibernate.resource.beans.container.internal.NoSuchBeanException;
+import org.homio.api.Context;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.IdentityEntity;
 import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.Icon;
 import org.homio.api.service.CloudProviderService;
 import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.UISidebarChildren;
@@ -22,48 +28,55 @@ import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldPort;
 import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.UIActionInput;
 import org.homio.api.ui.field.action.UIContextMenuAction;
+import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.selection.UIFieldBeanSelection;
 import org.homio.api.util.DataSourceUtil;
-import org.homio.api.util.DataSourceUtil.DataSourceContext;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.service.cloud.CloudService;
 import org.homio.app.service.cloud.SshTunnelCloudProviderService;
-import org.homio.app.ssh.SshGenericEntity.PublicKeyAuthSign;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 @Log4j2
 @Entity
 @UISidebarChildren(icon = "fas fa-cloud", color = "#644DAB")
-public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
-    CloudProviderService.SshCloud<SshCloudEntity>, HasEntityLog
-    /*, HasDynamicContextMenuActions*/ {
+public class SshCloudEntity extends IdentityEntity implements
+        CloudProviderService.SshCloud<SshCloudEntity>, HasEntityLog, HasDynamicContextMenuActions {
 
-    public static final String PREFIX = "sshcloud_";
-    private static final String DEFAULT_CLOUD_ENTITY_ID = PREFIX + "primary";
-
-    public static SshCloudEntity ensureEntityExists(EntityContextImpl entityContext) {
-        SshCloudEntity entity = entityContext.getEntity(DEFAULT_CLOUD_ENTITY_ID);
+    public static SshCloudEntity ensureEntityExists(ContextImpl context) {
+        SshCloudEntity entity = context.db().getEntity(SshCloudEntity.class, PRIMARY_DEVICE);
         if (entity == null) {
             entity = new SshCloudEntity()
-                .setEntityID(DEFAULT_CLOUD_ENTITY_ID)
-                .setName("Homio cloud")
-                .setHostname("homio.org")
-                .setProvider(DataSourceUtil.buildBeanSource(SshTunnelCloudProviderService.class))
-                .setSyncUrl("https://homio.org/server/sync")
-                .setPort(2222)
-                .setPrimary(true);
+                    .setHostname("homio.org")
+                    .setProvider(StringUtils.uncapitalize(SshTunnelCloudProviderService.class.getSimpleName()))
+                    .setSyncUrl("https://homio.org/server/sync")
+                    .setPort(2222)
+                    .setPrimary(true);
+            entity.setEntityID(PRIMARY_DEVICE);
+            entity.setName("Homio cloud");
             entity.setJsonData("dis_del", true);
             entity.setJsonData("dis_edit", true);
-            entityContext.save(entity);
+            context.db().save(entity);
         }
         return entity;
     }
 
+    @Override
+    public String getDescriptionImpl() {
+        if (getUser().isEmpty()) {
+            return "W.ERROR.USER_REQUIRED";
+        }
+        if (getHostname().isEmpty()) {
+            return "W.ERROR.HOST_REQUIRED";
+        }
+        return super.getDescriptionImpl();
+    }
+
     @UIField(order = 1, hideInEdit = true, disableEdit = true)
-    @UIFieldGroup(value = "SSH", order = 5)
+    @UIFieldGroup(order = 5, value = "SSH")
     public boolean isPrimary() {
         return getJsonData("primary", false);
     }
@@ -74,7 +87,7 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
     }
 
     @UIField(order = 2, required = true)
-    @UIFieldBeanSelection(value = CloudProviderService.class, lazyLoading = true)
+    @UIFieldBeanSelection(CloudProviderService.class)
     @UIFieldGroup("SSH")
     public String getProvider() {
         return getJsonData("prv");
@@ -169,11 +182,14 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
     }
 
     @Override
-    public CloudProviderService<SshCloudEntity> getCloudProviderService(@NotNull EntityContext entityContext) {
+    public CloudProviderService<SshCloudEntity> getCloudProviderService(@NotNull Context context) {
         try {
-            DataSourceContext sourceContext = DataSourceUtil.getSource(entityContext, getProvider());
-            CloudProviderService service = (CloudProviderService) sourceContext.getSource();
-            return service == null ? entityContext.getBean(SshTunnelCloudProviderService.class) : service;
+            try {
+                return context.getBean(DataSourceUtil.getSelection(getProvider()).getValue(), CloudProviderService.class);
+            } catch (NoSuchBeanException ne) {
+                log.warn("Unable to find ssh cloud provider: {}", getProvider());
+                return context.getBean(SshTunnelCloudProviderService.class);
+            }
         } catch (Exception ex) {
             log.error("Unable to fetch provider for entity: {}", this);
         }
@@ -186,36 +202,36 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getDevicePrefix() {
+        return "ssh-cloud";
     }
 
     @Override
-    public void beforeDelete(@NotNull EntityContext entityContext) {
+    public void beforeDelete() {
         if (isPrimary()) {
             throw new IllegalStateException("W.ERROR.DELETE_CLOUD_PRIMARY_SSH");
         }
     }
 
     @UIContextMenuAction(value = "SET_CLOUD_PRIMARY", icon = "fas fa-star", iconColor = Color.PRIMARY_COLOR)
-    public ActionResponseModel setPrimary(EntityContext entityContext) {
+    public ActionResponseModel setPrimary(Context context) {
         if (!this.isPrimary()) {
-            for (SshCloudEntity sshCloudEntity : entityContext.findAll(SshCloudEntity.class)) {
+            for (SshCloudEntity sshCloudEntity : context.db().findAll(SshCloudEntity.class)) {
                 if (sshCloudEntity.isPrimary()) {
                     sshCloudEntity.setPrimary(false);
-                    entityContext.save(sshCloudEntity);
+                    context.db().save(sshCloudEntity);
                 }
             }
-            entityContext.save(setPrimary(true));
+            context.db().save(setPrimary(true));
             return ActionResponseModel.success();
         }
         return ActionResponseModel.showInfoAlreadyDone();
     }
 
     @UIContextMenuAction(value = "UNSET_CLOUD_PRIMARY", icon = "fas fa-star-half-stroke")
-    public ActionResponseModel unsetPrimary(EntityContext entityContext) {
+    public ActionResponseModel unsetPrimary(Context context) {
         if (this.isPrimary()) {
-            entityContext.save(setPrimary(false));
+            context.db().save(setPrimary(false));
             return ActionResponseModel.success();
         }
         return ActionResponseModel.showInfoAlreadyDone();
@@ -223,40 +239,37 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
 
     @SneakyThrows
     @UIContextMenuAction(value = "UPLOAD_PRIVATE_KEY", icon = "fas fa-upload", inputs = {
-        @UIActionInput(name = "privateKey", type = textarea),
-        @UIActionInput(name = "passphrase", type = text)
+            @UIActionInput(name = "privateKey", type = textarea),
+            @UIActionInput(name = "passphrase", type = text)
     })
-    public ActionResponseModel uploadPrivateKey(EntityContext entityContext, JSONObject params) {
-        return execUploadPrivateKey(this, entityContext, params);
+    public ActionResponseModel uploadPrivateKey(Context context, JSONObject params) {
+        return execUploadPrivateKey(this, context, params);
     }
 
-    @SneakyThrows
     @UIContextMenuAction(value = "DELETE_PRIVATE_KEY", icon = "fas fa-trash-can", inputs = {
-        @UIActionInput(name = "passphrase", type = text)
+            @UIActionInput(name = "passphrase", type = text)
     })
-    public ActionResponseModel deletePrivateKey(EntityContext entityContext, JSONObject params) {
-        return execDeletePrivateKey(this, entityContext, params);
+    public ActionResponseModel deletePrivateKey(Context context, JSONObject params) {
+        return execDeletePrivateKey(this, context, params);
     }
 
-    @SneakyThrows
     @UIContextMenuAction(value = "CONNECT", icon = "fas fa-rss")
-    public ActionResponseModel connect(EntityContext entityContext) {
-        entityContext.getBean(CloudService.class).restart(this);
+    public ActionResponseModel connect(Context context) {
+        context.getBean(CloudService.class).restart(this);
         return ActionResponseModel.fired();
     }
 
-    @SneakyThrows
     @UIContextMenuAction(value = "STOP", icon = "fas fa-circle-stop")
-    public ActionResponseModel stop(EntityContext entityContext) {
-        entityContext.getBean(CloudService.class).stop(this);
+    public ActionResponseModel stop(Context context) {
+        context.getBean(CloudService.class).stop(this);
         return ActionResponseModel.success();
     }
 
     @SneakyThrows
-    public void uploadAndSavePrivateKey(EntityContext entityContext, String privateKey, String passphrase) {
+    public void uploadAndSavePrivateKey(Context context, String privateKey, String passphrase) {
         SshPrivateKeyFile kf = SshPrivateKeyFileFactory.parse(privateKey.getBytes());
         updateSSHData(this, passphrase, kf);
-        entityContext.save(this);
+        context.db().save(this);
     }
 
     @Override
@@ -266,17 +279,28 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
 
     @Override
     public void logBuilder(EntityLogBuilder builder) {
-        builder.addTopic("com.ssh.maverick");
+        builder.addTopic(SshClient.class);
+    }
+
+    @Override
+    public void assembleActions(UIInputBuilder uiInputBuilder) {
+        if (!isHasPrivateKey() || "Auth fail".equals(getStatusMessage())) {
+            CloudProviderService<SshCloudEntity> service = getCloudProviderService(uiInputBuilder.context());
+            if (service != null) {
+                uiInputBuilder.addSelectableButton("sync", new Icon("fas fa-right-to-bracket", Color.GREEN),
+                    (context, params) -> service.sync());
+            }
+        }
     }
 
     /*@UIContextMenuAction(value = "CLOUD_SYNC", icon = "fas fa-right-to-bracket", iconColor = Color.RED, inputs = {
-        @UIActionInput(name = "field.email", type = Type.text),
-        @UIActionInput(name = "field.password", type = Type.text),
-        @UIActionInput(name = "field.passphrase", type = Type.text)
+        @UIActionInput(name = "email", type = Type.text),
+        @UIActionInput(name = "password", type = Type.text),
+        @UIActionInput(name = "passphrase", type = Type.text)
     })
-    public ActionResponseModel sync(EntityContext entityContext, ObjectNode params) {
-        val service = entityContext.getBean(SshTunnelCloudProviderService.class);
-        service.handleSync(entityContext, params);
+    public ActionResponseModel sync(Context context, ObjectNode params) {
+        val service = context.getBean(SshTunnelCloudProviderService.class);
+        service.handleSync(context, params);
         return ActionResponseModel.success();
     }
 

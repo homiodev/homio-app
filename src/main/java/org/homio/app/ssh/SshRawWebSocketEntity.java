@@ -2,17 +2,17 @@ package org.homio.app.ssh;
 
 import jakarta.persistence.Entity;
 import java.net.URI;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.model.OptionModel;
-import org.homio.api.service.EntityService;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.util.CommonUtils;
@@ -25,8 +25,6 @@ import org.jetbrains.annotations.Nullable;
 @Entity
 @UISidebarChildren(icon = "fas fa-draw-polygon", color = "#CC0092")
 public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, RawWebSocketService> {
-
-    public static final String PREFIX = "sshraw_";
 
     @Override
     public void configureOptionModel(OptionModel optionModel) {
@@ -49,8 +47,21 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getDevicePrefix() {
+        return "ssh-raw";
+    }
+
+    @Override
+    public @Nullable Set<String> getConfigurationErrors() {
+        if (getRawWebSocketAddress().isEmpty()) {
+            return Set.of("W.ERROR.NO_SOCKET");
+        }
+        return null;
+    }
+
+    @Override
+    public long getEntityServiceHashCode() {
+        return getRawWebSocketAddress().hashCode();
     }
 
     @Override
@@ -59,36 +70,41 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
     }
 
     @Override
-    public @Nullable RawWebSocketService createService(@NotNull EntityContext entityContext) {
-        return new RawWebSocketService();
+    public @Nullable RawWebSocketService createService(@NotNull Context context) {
+        return new RawWebSocketService(context, this);
     }
 
-    public static class RawWebSocketService implements SshProviderService<SshRawWebSocketEntity> {
+    public static class RawWebSocketService extends ServiceInstance<SshRawWebSocketEntity> implements SshProviderService<SshRawWebSocketEntity> {
 
-        @Getter
-        private SshRawWebSocketEntity entity;
-        private String address;
-
-        @Override
-        public boolean entityUpdated(@NotNull EntityService entity) {
-            SshRawWebSocketEntity model = (SshRawWebSocketEntity) entity;
-            boolean reTest = address == null || !address.equals(model.getRawWebSocketAddress());
-            this.entity = model;
-            this.address = model.getRawWebSocketAddress();
-            return reTest;
+        public RawWebSocketService(Context context, SshRawWebSocketEntity entity) {
+            super(context, entity, true);
         }
 
         @Override
+        protected void initialize() {
+            testServiceWithSetStatus();
+        }
+
+        @Override
+        public void destroy(boolean forRestart, Exception ex) {
+
+        }
+
+        @Override
+        protected long getEntityHashCode(SshRawWebSocketEntity entity) {
+            return Objects.hash(entity.getRawWebSocketAddress());
+        }
+
         @SneakyThrows
         // https://github.com/TooTallNate/Java-WebSocket/blob/master/src/main/example/SSLClientExample.java
-        public boolean testService() {
-            if (StringUtils.isEmpty(address)) {
+        protected void testService() {
+            if (StringUtils.isEmpty(entity.getRawWebSocketAddress())) {
                 throw new IllegalArgumentException("W.ERROR.URL_EMPTY");
             }
             CountDownLatch latch = new CountDownLatch(1);
             AtomicReference<String> error = new AtomicReference<>("Unknown error");
             AtomicBoolean success = new AtomicBoolean(false);
-            WebSocketClient webSocketClient = new WebSocketClient(new URI(address)) {
+            WebSocketClient webSocketClient = new WebSocketClient(new URI(entity.getRawWebSocketAddress())) {
                 @Override
                 public void onOpen(ServerHandshake serverHandshake) {
                     success.set(true);
@@ -120,19 +136,14 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
             }
             webSocketClient.closeBlocking();
             if (success.get()) {
-                return true;
+                return;
             }
             throw new IllegalStateException(error.get());
         }
 
         @Override
-        public void destroy() {
-
-        }
-
-        @Override
         public SshSession openSshSession(SshRawWebSocketEntity sshEntity) {
-            return new SshSession(UUID.randomUUID().toString(), address, sshEntity);
+            return new SshSession(UUID.randomUUID().toString(), entity.getRawWebSocketAddress(), sshEntity);
         }
 
         @Override

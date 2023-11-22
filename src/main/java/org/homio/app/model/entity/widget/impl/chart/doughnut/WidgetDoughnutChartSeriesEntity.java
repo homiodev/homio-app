@@ -2,22 +2,16 @@ package org.homio.app.model.entity.widget.impl.chart.doughnut;
 
 import jakarta.persistence.Entity;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.*;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasValueConverter;
 
 @Entity
 public class WidgetDoughnutChartSeriesEntity extends WidgetSeriesEntity<WidgetDoughnutChartEntity>
-    implements HasSingleValueDataSource, HasValueConverter {
+        implements HasSingleValueDataSource, HasValueConverter {
 
-    public static final String PREFIX = "wgspcs_";
-
-    @UIField(order = 20, isRevert = true)
+    @UIField(order = 20)
     @UIFieldGroup("CHART_UI")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
@@ -42,8 +36,8 @@ public class WidgetDoughnutChartSeriesEntity extends WidgetSeriesEntity<WidgetDo
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected String getSeriesPrefix() {
+        return "doughnut";
     }
 
     @Override
@@ -52,7 +46,7 @@ public class WidgetDoughnutChartSeriesEntity extends WidgetSeriesEntity<WidgetDo
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         if (!getJsonData().has("chartC")) {
             setChartColor(UI.Color.random());
         }

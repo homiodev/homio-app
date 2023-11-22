@@ -1,7 +1,6 @@
 package org.homio.app.model.entity.widget.impl;
 
 import jakarta.persistence.Entity;
-import org.homio.api.EntityContext;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldColorPicker;
 import org.homio.api.ui.field.UIFieldGroup;
@@ -15,9 +14,7 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
-    implements HasLayout {
-
-    public static final String PREFIX = "wgtcmp_";
+        implements HasLayout {
 
     @Override
     public @NotNull String getImage() {
@@ -25,8 +22,8 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "layout";
     }
 
     @UIField(order = 35, showInContextMenu = true, icon = "fas fa-table")
@@ -41,12 +38,12 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
         return null;
     }
 
-    @UIField(order = 24, isRevert = true)
+    @UIField(order = 24)
     @UIFieldGroup("UI")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
     public String getBorderColor() {
-        return getJsonData("bc", getEntityContext().setting().getValue(WidgetBorderColorMenuSetting.class));
+        return getJsonData("bc", context().setting().getValue(WidgetBorderColorMenuSetting.class));
     }
 
     public void setBorderColor(String value) {
@@ -54,16 +51,16 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
     }
 
     @Override
-    public void afterDelete(@NotNull EntityContext entityContext) {
-        for (WidgetBaseEntity entity : getEntityContext().findAll(WidgetBaseEntity.class)) {
+    public void afterDelete() {
+        for (WidgetBaseEntity entity : context().db().findAll(WidgetBaseEntity.class)) {
             if (getEntityID().equals(entity.getParent())) {
-                entityContext.delete(entity);
+                context().db().delete(entity);
             }
         }
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         if (!getJsonData().has("bw")) {
             setBw(2);
         }

@@ -2,7 +2,7 @@ package org.homio.app.model.entity.widget.impl.chart.pie;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import org.homio.api.exception.ProhibitedExecution;
+import org.apache.commons.lang3.NotImplementedException;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldSlider;
@@ -12,10 +12,8 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetPieChartEntity
-    extends ChartBaseEntity<WidgetPieChartEntity, WidgetPieChartSeriesEntity>
-    implements HasChartTimePeriod {
-
-    public static final String PREFIX = "wgtpc_";
+        extends ChartBaseEntity<WidgetPieChartEntity, WidgetPieChartSeriesEntity>
+        implements HasChartTimePeriod {
 
     @UIField(order = 52)
     @UIFieldSlider(min = 1, max = 4)
@@ -34,8 +32,8 @@ public class WidgetPieChartEntity
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "pie";
     }
 
     @Override
@@ -47,6 +45,6 @@ public class WidgetPieChartEntity
     @JsonIgnore
     @UIFieldIgnore
     public boolean getShowChartFullScreenButton() {
-        throw new ProhibitedExecution();
+        throw new NotImplementedException();
     }
 }

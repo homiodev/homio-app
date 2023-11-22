@@ -1,7 +1,7 @@
 package org.homio.app.model.entity.widget.impl.chart;
 
-import org.homio.api.EntityContextWidget.LegendAlign;
-import org.homio.api.EntityContextWidget.LegendPosition;
+import org.homio.api.ContextWidget.LegendAlign;
+import org.homio.api.ContextWidget.LegendPosition;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
@@ -9,7 +9,7 @@ import org.homio.api.ui.field.UIFieldGroup;
 public interface HasLegend extends HasJsonData {
 
     @UIField(order = 70)
-    @UIFieldGroup(value = "LEGEND", order = 20, borderColor = "#77AD2F")
+    @UIFieldGroup(order = 20, value = "LEGEND", borderColor = "#77AD2F")
     default Boolean isShowLegend() {
         return getJsonData("ls", Boolean.FALSE);
     }

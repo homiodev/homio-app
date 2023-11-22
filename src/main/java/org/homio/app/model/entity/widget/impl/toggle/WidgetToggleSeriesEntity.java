@@ -9,13 +9,11 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 
 @Entity
 public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEntity>
-    implements HasSingleValueDataSource, HasIcon, HasName, HasToggle {
-
-    public static final String PREFIX = "wgttgs_";
+        implements HasSingleValueDataSource, HasIcon, HasName, HasToggle {
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected String getSeriesPrefix() {
+        return "toggle";
     }
 
     @Override
@@ -24,13 +22,13 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         HasIcon.randomColor(this);
         if (!getJsonData().has("color")) {
             setColor(UI.Color.random());
         }
         if (getOnValues().isEmpty()) {
-            setOnValues("true~~~1");
+            setOnValues("true%s1".formatted(LIST_DELIMITER));
         }
     }
 }

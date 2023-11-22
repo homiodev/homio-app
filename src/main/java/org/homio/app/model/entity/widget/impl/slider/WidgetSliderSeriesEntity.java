@@ -2,38 +2,25 @@ package org.homio.app.model.entity.widget.impl.slider;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import org.homio.api.exception.ProhibitedExecution;
+import org.apache.commons.lang3.NotImplementedException;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldIgnore;
-import org.homio.api.ui.field.UIFieldNumber;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.ui.field.*;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
-import org.homio.app.model.entity.widget.attributes.HasIcon;
-import org.homio.app.model.entity.widget.attributes.HasName;
-import org.homio.app.model.entity.widget.attributes.HasPadding;
-import org.homio.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
-import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
-import org.homio.app.model.entity.widget.attributes.HasTextConverter;
-import org.homio.app.model.entity.widget.attributes.HasValueTemplate;
+import org.homio.app.model.entity.widget.attributes.*;
 
 @Entity
 public class WidgetSliderSeriesEntity
-    extends WidgetSeriesEntity<WidgetSliderEntity>
-    implements HasSingleValueDataSource,
-    HasSetSingleValueDataSource,
-    HasIcon,
-    HasValueTemplate,
-    HasName,
-    HasPadding,
-    HasTextConverter {
+        extends WidgetSeriesEntity<WidgetSliderEntity>
+        implements HasSingleValueDataSource,
+        HasSetSingleValueDataSource,
+        HasIcon,
+        HasValueTemplate,
+        HasName,
+        HasPadding,
+        HasTextConverter {
 
-    public static final String PREFIX = "wgssls_";
-
-    @UIField(order = 1, isRevert = true)
-    @UIFieldGroup(value = "SLIDER", order = 2, borderColor = "#6AA427")
+    @UIField(order = 1)
+    @UIFieldGroup(order = 2, value = "SLIDER", borderColor = "#6AA427")
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldReadDefaultValue
     public String getSliderColor() {
@@ -79,8 +66,8 @@ public class WidgetSliderSeriesEntity
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected String getSeriesPrefix() {
+        return "slider";
     }
 
     @Override
@@ -92,11 +79,11 @@ public class WidgetSliderSeriesEntity
     @JsonIgnore
     @UIFieldIgnore
     public String getNoValueText() {
-        throw new ProhibitedExecution();
+        throw new NotImplementedException();
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         HasIcon.randomColor(this);
         if (!getJsonData().has("sc")) {
             setSliderColor(UI.Color.random());

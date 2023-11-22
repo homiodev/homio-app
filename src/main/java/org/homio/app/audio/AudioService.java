@@ -13,7 +13,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.audio.AudioFormat;
 import org.homio.api.audio.AudioSink;
 import org.homio.api.audio.AudioSource;
@@ -32,7 +32,7 @@ public class AudioService implements ContextRefreshed {
     private final Map<String, AudioStream> oneTimeStreams = new ConcurrentHashMap<>();
     private final Map<String, MultiTimeStreamContext> multiTimeStreams = new ConcurrentHashMap<>();
     // constructor parameters
-    private final EntityContext entityContext;
+    private final Context context;
     private final String defaultSink = JavaSoundAudioSink.class.getSimpleName();
     private Map<String, AudioSource> audioSources = Collections.emptyMap();
     private Map<String, SelfContainedAudioSourceContainer> selfContainedAudioContainers;
@@ -40,10 +40,10 @@ public class AudioService implements ContextRefreshed {
     private Map<String, AudioSink> audioSinks = Collections.emptyMap();
 
     @Override
-    public void onContextRefresh() {
-        this.audioSinks = entityContext.getBeansOfTypeWithBeanName(AudioSink.class);
-        this.audioSources = entityContext.getBeansOfTypeWithBeanName(AudioSource.class);
-        this.selfContainedAudioContainers = entityContext.getBeansOfTypeWithBeanName(SelfContainedAudioSourceContainer.class);
+    public void onContextRefresh(Context context) {
+        this.audioSinks = this.context.getBeansOfTypeWithBeanName(AudioSink.class);
+        this.audioSources = this.context.getBeansOfTypeWithBeanName(AudioSource.class);
+        this.selfContainedAudioContainers = this.context.getBeansOfTypeWithBeanName(SelfContainedAudioSourceContainer.class);
     }
 
     public Collection<SelfContainedAudioSourceContainer> getAudioSourceContainers() {
@@ -87,7 +87,7 @@ public class AudioService implements ContextRefreshed {
     }
 
     private InputStream prepareInputStream(final String streamId, final HttpServletResponse resp)
-        throws Exception {
+            throws Exception {
         final AudioStream stream;
         final boolean multiAccess;
         if (oneTimeStreams.containsKey(streamId)) {

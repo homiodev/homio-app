@@ -9,7 +9,9 @@ import org.homio.api.storage.DataStorageEntity;
 public class WorkspaceVariableMessage extends DataStorageEntity {
 
     // @Setter need for deserialize from mongo
-    @Getter @Setter private Object value;
+    @Getter
+    @Setter
+    private Object value;
 
     public WorkspaceVariableMessage(Object value) {
         this.value = value;

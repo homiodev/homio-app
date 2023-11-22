@@ -1,5 +1,7 @@
 package org.homio.app.builder.ui;
 
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import lombok.Getter;
@@ -8,7 +10,7 @@ import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
-import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.item.UIButtonItemBuilder;
 import org.homio.api.ui.field.action.v1.item.UISelectBoxItemBuilder;
 import org.jetbrains.annotations.NotNull;
@@ -17,8 +19,8 @@ import org.jetbrains.annotations.Nullable;
 @Getter
 @Accessors(chain = true)
 public class UISelectBoxItemBuilderImpl
-    extends UIBaseEntityItemBuilderImpl<UISelectBoxItemBuilder, String>
-    implements UISelectBoxItemBuilder, UIInputEntityActionHandler {
+        extends UIBaseEntityItemBuilderImpl<UISelectBoxItemBuilder, String>
+        implements UISelectBoxItemBuilder, UIInputEntityActionHandler {
 
     @Setter
     private Collection<OptionModel> options;
@@ -39,7 +41,7 @@ public class UISelectBoxItemBuilderImpl
     @Override
     public @NotNull UISelectBoxItemBuilderImpl setSelectReplacer(int min, int max, String selectReplacer) {
         if (StringUtils.isNotEmpty(selectReplacer)) {
-            this.selectReplacer = min + "~~~" + max + "~~~" + selectReplacer;
+            this.selectReplacer = min + LIST_DELIMITER + max + LIST_DELIMITER + selectReplacer;
         }
         return this;
     }

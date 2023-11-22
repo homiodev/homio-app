@@ -1,6 +1,6 @@
 package org.homio.app.manager;
 
-import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.annotations.ApiOperation;
@@ -26,15 +26,15 @@ import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextBGP;
-import org.homio.api.EntityContextBGP.ScheduleBuilder;
+import org.homio.api.Context;
+import org.homio.api.ContextBGP;
+import org.homio.api.ContextBGP.ScheduleBuilder;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.Status;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
 import org.homio.api.util.CommonUtils;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.CompileScriptContext;
 import org.homio.app.model.entity.ScriptEntity;
 import org.homio.app.spring.ContextCreated;
@@ -53,73 +53,73 @@ public class ScriptService implements ContextCreated {
     }
 
     private final LoggerService loggerService;
-    private final EntityContext entityContext;
+    private final Context context;
 
     private ExecutorService createCompiledScriptSingleCallExecutorService = Executors.newSingleThreadExecutor();
 
     @Override
-    public void onContextCreated(EntityContextImpl entityContext) throws Exception {
-        for (ScriptEntity scriptEntity : this.entityContext.findAll(ScriptEntity.class)) {
+    public void onContextCreated(ContextImpl context) throws Exception {
+        for (ScriptEntity scriptEntity : this.context.db().findAll(ScriptEntity.class)) {
             if (scriptEntity.isAutoStart()) {
-                this.entityContext.bgp().builder(scriptEntity.getEntityID())
-                                  .onError(ex ->
-                                      this.entityContext.updateDelayed(scriptEntity, s ->
-                                          s.setStatus(Status.ERROR).setError(CommonUtils.getErrorMessage(ex))))
-                                  .execute(() -> {
-                                      CompileScriptContext compiledScriptContext = createCompiledScript(scriptEntity, null, null);
-                                      runJavaScript(compiledScriptContext);
-                                  });
+                this.context.bgp().builder(scriptEntity.getEntityID())
+                        .onError(ex ->
+                            this.context.db().updateDelayed(scriptEntity, s ->
+                                        s.setStatus(Status.ERROR).setError(CommonUtils.getErrorMessage(ex))))
+                        .execute(() -> {
+                            CompileScriptContext compiledScriptContext = createCompiledScript(scriptEntity, null, null);
+                            runJavaScript(compiledScriptContext);
+                        });
             }
         }
     }
 
     @ApiOperation("Execute java script")
     public @NotNull State executeJavaScriptOnce(
-        @ApiParam(name = "scriptEntity") ScriptEntity scriptEntity,
-        @ApiParam(name = "logPrintStream") PrintStream logPrintStream,
-        @ApiParam(name = "forceBackground") boolean forceBackground,
-        @ApiParam(name = "context") State context)
-        throws Exception {
+            @ApiParam(name = "scriptEntity") ScriptEntity scriptEntity,
+            @ApiParam(name = "logPrintStream") PrintStream logPrintStream,
+            @ApiParam(name = "forceBackground") boolean forceBackground,
+            @ApiParam(name = "context") State context)
+            throws Exception {
         return startThread(scriptEntity, false, logPrintStream, forceBackground, context);
     }
 
     public void stopThread(ScriptEntity scriptEntity) {
-        this.entityContext.bgp().cancelThread(scriptEntity.getEntityID());
+        this.context.bgp().cancelThread(scriptEntity.getEntityID());
     }
 
     /**
      * @param forceBackground - if force - execute javascript in background without check if process has period or not
-     * @param context
+     * @param state
      */
     public @NotNull State startThread(ScriptEntity scriptEntity, boolean allowRepeat,
-        PrintStream logPrintStream, boolean forceBackground, State context) throws Exception {
+        PrintStream logPrintStream, boolean forceBackground, State state) throws Exception {
         scriptEntity.setStatus(Status.RUNNING);
         if (forceBackground) {
-            entityContext.save(scriptEntity);
+            context.db().save(scriptEntity);
         } else if (scriptEntity.getRepeatInterval() != 0 && allowRepeat) {
-            if (entityContext.bgp().isThreadExists(scriptEntity.getEntityID(), true)) {
+            if (context.bgp().isThreadExists(scriptEntity.getEntityID(), true)) {
                 throw new ServerException("Script already in progress. Stop script to restart");
             }
             // throw if sleep less than 0.1s
             if (scriptEntity.getRepeatInterval() < 100) {
                 throw new ServerException("Script has bad 'REPEAT_EVERY' value. Must be >= 100ms");
             }
-            entityContext.save(scriptEntity);
+            context.db().save(scriptEntity);
         } else {
-            CompileScriptContext compiledScriptContext = createCompiledScript(scriptEntity, logPrintStream, context);
+            CompileScriptContext compiledScriptContext = createCompiledScript(scriptEntity, logPrintStream, state);
             return callJavaScriptOnce(scriptEntity, compiledScriptContext);
         }
         return new StringType("");
     }
 
     public @NotNull State runJavaScript(CompileScriptContext compileScriptContext)
-        throws ScriptException, NoSuchMethodException {
+            throws ScriptException, NoSuchMethodException {
         List<Object> script = new ArrayList<>();
         // TODO: UI scripts should be separated type
         // appendFunc(script, "readyOnClient", "READY_BLOCK", compileScriptContext.getFormattedJavaScript());
 
         Object value = ((Invocable) compileScriptContext.getCompiledScript().getEngine())
-            .invokeFunction("run", compileScriptContext.getJsonParams());
+                .invokeFunction("run", compileScriptContext.getJsonParams());
         /* TODO: if (value instanceof ScriptObjectMirror) {
             ScriptObjectMirror obj = (ScriptObjectMirror) value;
             Map<String, Object> map = new HashMap<>();
@@ -136,12 +136,12 @@ public class ScriptService implements ContextCreated {
         return new StringType(String.join("", script.stream().map(Object::toString).collect(Collectors.toList())));
     }
 
-    public CompileScriptContext createCompiledScript(ScriptEntity scriptEntity, PrintStream logPrintStream, State context) {
+    public CompileScriptContext createCompiledScript(ScriptEntity scriptEntity, PrintStream logPrintStream, State state) {
         ScriptEngine engine = new ScriptEngineManager().getEngineByName("graal.js");
         if (logPrintStream != null) {
             engine.put(JavaScriptBinder.log.name(), loggerService.getLogger(logPrintStream));
         }
-        engine.put(JavaScriptBinder.entityContext.name(), entityContext);
+        engine.put(JavaScriptBinder.context.name(), context);
         engine.put(JavaScriptBinder.script.name(), scriptEntity);
         JsonNode jsonParams;
         try {
@@ -150,14 +150,14 @@ public class ScriptService implements ContextCreated {
             jsonParams = OBJECT_MAPPER.createObjectNode();
         }
         engine.put(JavaScriptBinder.params.name(), jsonParams);
-        if (context != null) {
-            engine.put(JavaScriptBinder.context.name(), context.rawValue());
+        if (state != null) {
+            engine.put(JavaScriptBinder.value.name(), state.rawValue());
         }
 
         CompiledScript compiled;
         String formattedJavaScript;
         try {
-            formattedJavaScript = scriptEntity.getFormattedJavaScript(entityContext, (Compilable) engine);
+            formattedJavaScript = scriptEntity.getFormattedJavaScript(context, (Compilable) engine);
 
             compiled = ((Compilable) engine).compile(new StringReader(formattedJavaScript));
             Future<Object> future = createCompiledScriptSingleCallExecutorService.submit((Callable<Object>) compiled::eval);
@@ -180,11 +180,11 @@ public class ScriptService implements ContextCreated {
      * Run java script once and interrupt it if too long works
      */
     public @NotNull State callJavaScriptOnce(ScriptEntity scriptEntity, CompileScriptContext compiledScriptContext) throws ExecutionException {
-        ScheduleBuilder<State> builder = this.entityContext.bgp().builder(scriptEntity.getEntityID());
-        EntityContextBGP.ThreadContext<State> threadContext =
-            builder
-                .throwOnError(true)
-                .execute(arg -> runJavaScript(compiledScriptContext));
+        ScheduleBuilder<State> builder = context.bgp().builder(scriptEntity.getEntityID());
+        ContextBGP.ThreadContext<State> threadContext =
+                builder
+                        .throwOnError(true)
+                        .execute(arg -> runJavaScript(compiledScriptContext));
         try {
             State value = threadContext.await(Duration.ofSeconds(60));
             return value == null ? State.of("") : value;

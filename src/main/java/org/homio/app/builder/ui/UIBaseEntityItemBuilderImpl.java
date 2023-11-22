@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import org.homio.api.model.Icon;
-import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.UIEntityItemBuilder;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.jetbrains.annotations.NotNull;
@@ -14,7 +14,7 @@ import org.jetbrains.annotations.Nullable;
 
 @Getter
 public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
-    implements UIEntityItemBuilder<Owner, Value>, UIInputEntity, UIInputEntityActionHandler {
+        implements UIEntityItemBuilder<Owner, Value>, UIInputEntity, UIInputEntityActionHandler {
 
     private final String itemType;
     private final UIActionHandler actionHandler;
@@ -22,19 +22,21 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
     private String title;
     private int order;
     private Boolean disabled;
-    @JsonIgnore private Map<String, Runnable> fetchValueHandlers;
+    @JsonIgnore
+    private Map<String, Runnable> fetchValueHandlers;
 
     private Value value;
     private String color;
     private String outerClass;
 
-    @JsonIgnore private Map<String, String> styleMap;
+    @JsonIgnore
+    private Map<String, String> styleMap;
     private String icon;
     private String iconColor;
     private String separatedText;
 
     public UIBaseEntityItemBuilderImpl(
-        UIItemType uiItemType, String entityID, int order, UIActionHandler actionHandler) {
+            UIItemType uiItemType, String entityID, int order, UIActionHandler actionHandler) {
         this.itemType = uiItemType.name();
         this.entityID = entityID;
         this.actionHandler = actionHandler;
@@ -43,7 +45,7 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "{" + getEntityID() + ":" + getOrder() + "}";
+        return "%s{%s:%d}".formatted(getClass().getSimpleName(), getEntityID(), getOrder());
     }
 
     @Override
@@ -60,10 +62,10 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
     @Override
     public String getStyle() {
         return styleMap == null
-            ? null
-            : styleMap.entrySet().stream()
-                      .map(e -> e.getKey() + ":" + e.getValue() + ";")
-                      .collect(Collectors.joining());
+                ? null
+                : styleMap.entrySet().stream()
+                .map(e -> e.getKey() + ":" + e.getValue() + ";")
+                .collect(Collectors.joining());
     }
 
     @Override
@@ -113,7 +115,7 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
 
     @Override
     public Owner setIcon(@Nullable Icon icon) {
-        if(icon != null) {
+        if (icon != null) {
             this.icon = icon.getIcon();
             this.iconColor = icon.getColor();
         }

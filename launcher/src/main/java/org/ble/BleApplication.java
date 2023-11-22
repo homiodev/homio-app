@@ -3,6 +3,7 @@ package org.ble;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.bluez.GattApplication1;
 import org.bluez.GattManager1;
 import org.bluez.GattService1;

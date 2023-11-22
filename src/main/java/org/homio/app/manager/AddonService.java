@@ -17,11 +17,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.AddonEntrypoint;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.setting.SettingPluginPackageInstall;
 import org.homio.api.setting.SettingPluginPackageInstall.PackageRequest;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.utils.color.ColorThief;
@@ -37,7 +37,7 @@ import org.springframework.stereotype.Component;
 public class AddonService implements ContextCreated, ContextRefreshed {
 
     // constructor parameters
-    private final EntityContext entityContext;
+    private final Context context;
     private Map<String, String> addonColorMap;
     private Map<String, AddonEntrypoint> addonMap;
     private Collection<AddonEntrypoint> allAddonEntrypoint;
@@ -47,13 +47,13 @@ public class AddonService implements ContextCreated, ContextRefreshed {
     private final Map<String, Boolean> packagesInProgress = new ConcurrentHashMap<>();
 
     @Override
-    public void onContextCreated(EntityContextImpl entityContext) throws Exception {
-        onContextRefresh();
+    public void onContextCreated(ContextImpl context) throws Exception {
+        onContextRefresh(context);
     }
 
     @Override
-    public void onContextRefresh() throws Exception {
-        this.allAddonEntrypoint = entityContext.getBeansOfType(AddonEntrypoint.class);
+    public void onContextRefresh(Context context) throws Exception {
+        this.allAddonEntrypoint = this.context.getBeansOfType(AddonEntrypoint.class);
         this.addonMap = allAddonEntrypoint.stream().collect(Collectors.toMap(AddonEntrypoint::getAddonID, s -> s));
         this.addonColorMap = new HashMap<>();
 
@@ -99,27 +99,27 @@ public class AddonService implements ContextCreated, ContextRefreshed {
         if (!packagesInProgress.containsKey(packageRequest.getName())) {
             packagesInProgress.put(packageRequest.getName(), true);
             String key = "Install " + packageRequest.getName() + "/" + packageRequest.getVersion();
-            entityContext.ui().runWithProgress(key, false, progressBar ->
-                    settingPlugin.installPackage(entityContext, packageRequest, progressBar),
-                ex -> packagesInProgress.remove(packageRequest.getName()));
+            context.ui().progress().run(key, false, progressBar ->
+                    settingPlugin.installPackage(context, packageRequest, progressBar),
+                    ex -> packagesInProgress.remove(packageRequest.getName()));
         } else {
-            entityContext.ui().sendErrorMessage("ERROR.UPDATE_IN_PROGRESS");
+            context.ui().toastr().error("W.ERROR.UPDATE_IN_PROGRESS");
         }
     }
 
     public void unInstallPackage(SettingPluginPackageInstall settingPlugin, PackageRequest packageRequest) {
         if (!packagesInProgress.containsKey(packageRequest.getName())) {
             packagesInProgress.put(packageRequest.getName(), false);
-            entityContext.ui().runWithProgress("Uninstall " + packageRequest.getName() + "/" + packageRequest.getVersion(), false,
-                progressBar -> settingPlugin.unInstallPackage(entityContext, packageRequest, progressBar),
-                ex -> packagesInProgress.remove(packageRequest.getName()));
+            context.ui().progress().run("Uninstall " + packageRequest.getName() + "/" + packageRequest.getVersion(), false,
+                progressBar -> settingPlugin.unInstallPackage(context, packageRequest, progressBar),
+                    ex -> packagesInProgress.remove(packageRequest.getName()));
         }
     }
 
     @SneakyThrows
     public @Nullable InputStream getImageStream(String addonID) {
         AddonEntrypoint addonEntrypoint = getAddon(addonID.contains("-") ? addonID.substring(0, addonID.indexOf("-")) : addonID);
-        URL imageUrl = addonEntrypoint.getResource(addonID + ".png");
+        URL imageUrl = addonEntrypoint.getResource("images/%s.png".formatted(addonID));
         if (imageUrl == null) {
             imageUrl = addonEntrypoint.getAddonImageURL();
         }
@@ -133,7 +133,7 @@ public class AddonService implements ContextCreated, ContextRefreshed {
         List<AddonJson> addons = new ArrayList<>();
         for (AddonEntrypoint addonEntrypoint : getAddons()) {
             addons.add(new AddonJson(addonEntrypoint.getAddonID(),
-                getAddonColor(addonEntrypoint.getAddonID()), 0));
+                    getAddonColor(addonEntrypoint.getAddonID()), 0));
         }
         Collections.sort(addons);
         return addons;

@@ -19,9 +19,12 @@ import org.jetbrains.annotations.NotNull;
 @SuppressWarnings("unused")
 @Entity
 public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, WidgetFMSeriesEntity>
-    implements HasDynamicContextMenuActions, HasLayout, HasSourceServerUpdates {
+        implements HasDynamicContextMenuActions, HasLayout, HasSourceServerUpdates {
 
-    public static final String PREFIX = "wgtfm_";
+    @Override
+    protected @NotNull String getWidgetPrefix() {
+        return "fm";
+    }
 
     @Override
     public WidgetGroup getGroup() {
@@ -34,16 +37,11 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
-    }
-
-    @Override
     public String getDefaultName() {
         return null;
     }
 
-    @UIField(order = 24, isRevert = true)
+    @UIField(order = 24)
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
     public String getBorderColor() {
@@ -107,7 +105,7 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
         return this;
     }
 
-    @UIField(order = 54, isRevert = true)
+    @UIField(order = 54)
     @UIFieldColorPicker
     @UIFieldGroup("FILE_NAME")
     @UIFieldReadDefaultValue
@@ -134,16 +132,16 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
     @Override
     public void assembleActions(UIInputBuilder uiInputBuilder) {
         uiInputBuilder.addTableLayoutButton("LAYOUT", 8, 8, getLayout(), null,
-            (entityContext, params) -> {
-                this.setLayout(params.getString("value"));
-                entityContext.save(this);
-                return ActionResponseModel.showSuccess("SUCCESS");
-            },
-            0);
+            (context, params) -> {
+                    this.setLayout(params.getString("value"));
+                context.db().save(this);
+                    return ActionResponseModel.showSuccess("SUCCESS");
+                },
+                0);
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         setBh(3);
         setBw(3);
         super.beforePersist();

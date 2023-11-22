@@ -3,10 +3,12 @@ package org.homio.app.model.rest;
 import java.util.Objects;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
 
 @Getter
 @Setter
+@Accessors(chain = true)
 public class EntityUIMetaData implements Comparable<EntityUIMetaData> {
 
     private String label;
@@ -24,6 +26,7 @@ public class EntityUIMetaData implements Comparable<EntityUIMetaData> {
     private int order;
     private String navLink;
     private Boolean required;
+    private Boolean semiRequired;
     private Boolean inlineEdit;
     private Boolean copyButton;
     private Boolean inlineEditWhenEmpty;
@@ -55,6 +58,6 @@ public class EntityUIMetaData implements Comparable<EntityUIMetaData> {
 
     @Override
     public String toString() {
-        return "EntityUIMetaData{" + "entityName='" + entityName + '\'' + '}';
+        return "EntityUIMetaData{entityName='%s'}".formatted(entityName);
     }
 }

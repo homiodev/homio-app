@@ -1,10 +1,10 @@
 package org.homio.app.builder.widget.hasBuilder;
 
-import org.homio.api.EntityContextWidget.HasValueConverter;
+import org.homio.api.ContextWidget.HasValueConverter;
 import org.jetbrains.annotations.Nullable;
 
 public interface HasValueConverterBuilder<T extends org.homio.app.model.entity.widget.attributes.HasValueConverter, R>
-    extends HasValueConverter<R> {
+        extends HasValueConverter<R> {
 
     T getWidget();
 

@@ -1,9 +1,10 @@
 package org.homio.app.builder.ui;
 
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
+
+import java.util.List;
 
 @Getter
 @AllArgsConstructor

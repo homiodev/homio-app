@@ -6,7 +6,7 @@ import org.homio.api.setting.SettingPluginButton;
 import org.homio.api.ui.UI.Color;
 import org.homio.app.LogService;
 import org.homio.app.config.AppConfig;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.setting.CoreSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
@@ -15,7 +15,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 @Log4j2
 public class SystemSoftRestartButtonSetting
-    implements CoreSettingPlugin<JSONObject>, SettingPluginButton {
+        implements CoreSettingPlugin<JSONObject>, SettingPluginButton {
 
     @Override
     public @NotNull GroupKey getGroupKey() {
@@ -43,10 +43,10 @@ public class SystemSoftRestartButtonSetting
         return 200;
     }
 
-    public static void restart(EntityContextImpl entityContext) {
+    public static void restart(ContextImpl context) {
         log.info("Fire homio app soft restarting...");
-        ConfigurableApplicationContext context = entityContext.getBean(ConfigurableApplicationContext.class);
-        Thread thread = new Thread(() -> safeRestart(context));
+        ConfigurableApplicationContext appContext = context.getBean(ConfigurableApplicationContext.class);
+        Thread thread = new Thread(() -> safeRestart(appContext));
         thread.setDaemon(false);
         thread.start();
     }

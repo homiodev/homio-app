@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 
@@ -13,24 +13,25 @@ import org.homio.app.model.entity.widget.WidgetBaseEntity;
 @Setter
 public class WidgetDataRequest {
 
-    @NotNull private String entityID;
+    @NotNull
+    private String entityID;
     private String liveEntity;
 
     @SneakyThrows
     public <T extends BaseEntity> T getEntity(
-        EntityContext entityContext, ObjectMapper objectMapper, Class<T> tClass) {
+        Context context, ObjectMapper objectMapper, Class<T> tClass) {
         if (liveEntity != null) {
             return objectMapper.readValue(liveEntity, tClass);
         }
-        return entityContext.getEntity(entityID);
+        return context.db().getEntity(entityID);
     }
 
     @SneakyThrows
-    public WidgetBaseEntity getEntity(EntityContext entityContext, ObjectMapper objectMapper) {
-        WidgetBaseEntity entity = entityContext.getEntity(entityID);
+    public WidgetBaseEntity getEntity(Context context, ObjectMapper objectMapper) {
+        WidgetBaseEntity entity = context.db().getEntity(entityID);
         if (liveEntity != null) {
             return objectMapper.readValue(liveEntity, entity.getClass());
         }
-        return entityContext.getEntity(entityID);
+        return context.db().getEntity(entityID);
     }
 }

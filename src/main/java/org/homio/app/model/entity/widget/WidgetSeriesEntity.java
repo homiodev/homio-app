@@ -17,6 +17,7 @@ import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.model.JSON;
 import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
+import org.homio.app.manager.common.ContextImpl;
 import org.jetbrains.annotations.NotNull;
 
 @Setter
@@ -25,10 +26,18 @@ import org.jetbrains.annotations.NotNull;
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 public abstract class WidgetSeriesEntity<T extends WidgetBaseEntityAndSeries>
-    extends BaseEntity<WidgetSeriesEntity>
-    implements HasDynamicParameterFields, HasJsonData {
+        extends BaseEntity implements HasDynamicParameterFields, HasJsonData {
 
     private int priority;
+
+    private static final String PREFIX = "series_";
+
+    @Override
+    public final @NotNull String getEntityPrefix() {
+        return PREFIX + getSeriesPrefix() + "_";
+    }
+
+    protected abstract String getSeriesPrefix();
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY, targetEntity = WidgetBaseEntityAndSeries.class)
@@ -49,5 +58,16 @@ public abstract class WidgetSeriesEntity<T extends WidgetBaseEntityAndSeries>
             return Integer.compare(this.priority, ((WidgetSeriesEntity<?>) o).priority);
         }
         return super.compareTo(o);
+    }
+
+    @Override
+    protected long getChildEntityHashCode() {
+        return 0;
+    }
+
+    @Override
+    public void afterUpdate() {
+        super.afterUpdate();
+        ((ContextImpl) context()).event().removeEvents(widgetEntity.getEntityID() + getEntityID());
     }
 }

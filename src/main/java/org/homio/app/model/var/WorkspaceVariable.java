@@ -1,11 +1,13 @@
 package org.homio.app.model.var;
 
 import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.type.TypeReference;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -13,6 +15,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -21,36 +24,35 @@ import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextVar;
-import org.homio.api.EntityContextVar.VariableType;
+import org.apache.commons.lang3.StringUtils;
+import org.homio.api.Context;
+import org.homio.api.ContextVar;
+import org.homio.api.ContextVar.TransformVariableSource;
+import org.homio.api.ContextVar.VariableType;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
-import org.homio.api.entity.widget.AggregationType;
 import org.homio.api.entity.widget.PeriodRequest;
-import org.homio.api.entity.widget.ability.HasAggregateValueFromSeries;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.entity.widget.ability.HasTimeValueSeries;
 import org.homio.api.model.Icon;
 import org.homio.api.model.JSON;
+import org.homio.api.state.State;
 import org.homio.api.storage.SourceHistory;
 import org.homio.api.storage.SourceHistoryItem;
 import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldProgress;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.color.UIFieldColorRef;
-import org.homio.api.ui.field.condition.UIFieldDisableEditOnCondition;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
-import org.homio.api.ui.field.inline.UIFieldInlineEntityEditWidth;
-import org.homio.api.ui.field.inline.UIFieldInlineEntityWidth;
+import org.homio.api.ui.field.selection.SelectionConfiguration;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent.SelectionParent;
-import org.homio.app.manager.common.impl.EntityContextVarImpl;
-import org.homio.app.repository.VariableDataRepository;
+import org.homio.app.manager.common.impl.ContextVarImpl;
+import org.homio.app.repository.VariableBackupRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -60,62 +62,50 @@ import org.json.JSONObject;
 @Getter
 @Accessors(chain = true)
 @UIFieldSelectionParent(
-    value = "OVERRIDES_BY_INTERFACE",
-    icon = "fas fa-layer-group",
-    iconColor = "#28A60C",
-    description = "Group variables")
+        value = "OVERRIDES_BY_INTERFACE",
+        icon = "fas fa-layer-group",
+        iconColor = "#28A60C",
+        description = "Group variables")
 @NoArgsConstructor
-public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
-    implements HasJsonData,
-    HasAggregateValueFromSeries,
-    UIFieldSelectionParent.SelectionParent,
-    HasTimeValueSeries,
-    HasGetStatusValue,
-    HasSetStatusValue {
+public class WorkspaceVariable extends BaseEntity
+        implements HasJsonData,
+        UIFieldSelectionParent.SelectionParent,
+        HasTimeValueSeries,
+        HasGetStatusValue,
+        HasSetStatusValue,
+        SelectionConfiguration {
 
-    public static final String PREFIX = "wgv_";
+    public static final String PREFIX = "var_";
 
     @UIField(order = 12, color = "#7A7A7A")
-    @UIFieldDisableEditOnCondition("return context.getParent('locked')")
+    //@UIFieldDisableEditOnCondition("return context.getParent('locked')")
     private String description;
 
     @UIField(order = 20, label = "format")
     @Enumerated(EnumType.STRING)
-    @UIFieldInlineEntityWidth(15)
-    @UIFieldInlineEntityEditWidth(10)
     @UIFieldShowOnCondition("return context.getParent('groupId') !== 'broadcasts'")
-    @UIFieldDisableEditOnCondition("return context.getParent('locked')")
-    private EntityContextVar.VariableType restriction = EntityContextVar.VariableType.Any;
+    private ContextVar.VariableType restriction = ContextVar.VariableType.Any;
 
     @UIField(order = 25)
     @UIFieldSlider(min = 500, max = 100000, step = 500)
-    @UIFieldGroup(order = 10, value = "QUOTA")
-    @UIFieldInlineEntityWidth(15)
     private int quota = 1000;
     /**
      * Is it possible to write to variable from UI
      */
     @UIField(order = 25, hideInEdit = true)
-    @UIFieldGroup(order = 10, value = "QUOTA")
-    @UIFieldInlineEntityWidth(15)
-    private boolean readOnly = false;
+    private boolean readOnly = true;
 
     @UIField(order = 30)
-    @UIFieldInlineEntityWidth(15)
     private boolean backup = false;
 
-    @Column(unique = true, nullable = false)
-    private String variableId;
-
-    @UIFieldInlineEntityWidth(15)
-    private String color;
-
     private String icon;
+
     private String iconColor;
+
     private String unit;
 
     @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, targetEntity = WorkspaceGroup.class)
     private WorkspaceGroup workspaceGroup;
 
     @Getter
@@ -123,40 +113,40 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     @Convert(converter = JSONConverter.class)
     private JSON jsonData = new JSON();
 
-    public WorkspaceVariable(@NotNull String variableId, @NotNull String variableName, @NotNull WorkspaceGroup workspaceGroup,
-        @NotNull VariableType variableType, @Nullable String description, @Nullable String color, boolean readOnly, @Nullable String unit) {
-        this.variableId = variableId;
-        this.readOnly = readOnly;
+    @JsonIgnore
+    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, mappedBy = "workspaceVariable")
+    private Set<VariableBackup> backups;
+
+    private boolean locked;
+
+    public WorkspaceVariable(@NotNull WorkspaceGroup workspaceGroup) {
         this.workspaceGroup = workspaceGroup;
+    }
+
+    public WorkspaceVariable(String variableId, String variableName, WorkspaceGroup workspaceGroup, VariableType variableType) {
+        this(workspaceGroup);
         this.restriction = variableType;
-        this.color = color;
-        this.description = description;
-        this.unit = unit;
         this.setName(variableName);
         this.setEntityID(variableId);
     }
 
     public int getBackupStorageCount() {
-        return backup ? getEntityContext().getBean(VariableDataRepository.class).count(variableId) : 0;
+        return backup ? context().getBean(VariableBackupRepository.class).count(this) : 0;
     }
 
     @Override
     @UIField(order = 10, required = true)
-    @UIFieldColorRef("color")
-    @UIFieldInlineEntityEditWidth(35)
-    @UIFieldDisableEditOnCondition("return context.getParent('locked')")
+    @UIFieldColorRef("iconColor")
     public String getName() {
         return super.getName();
     }
 
     @UIField(order = 30, hideInEdit = true, disableEdit = true)
     @UIFieldProgress
-    @UIFieldGroup("QUOTA")
-    @UIFieldInlineEntityWidth(15)
     public UIFieldProgress.Progress getUsedQuota() {
         int count = 0;
-        if (getEntityID() != null && getEntityContext().var().exists(getEntityID())) {
-            count = (int) getEntityContext().var().count(getEntityID());
+        if (getEntityID() != null && context() != null && context().var().exists(getEntityID())) {
+            count = (int) context().var().count(getEntityID());
         }
         return UIFieldProgress.Progress.of(count, this.quota);
     }
@@ -176,6 +166,16 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     }*/
 
     @Override
+    public boolean isDisableDelete() {
+        return locked || getJsonData("dis_del", false) || context().event().getEventCount(getEntityID()) > 0;
+    }
+
+    @Override
+    public boolean isDisableEdit() {
+        return locked || getJsonData("dis_edit", false);
+    }
+
+    @Override
     public String getDefaultName() {
         return null;
     }
@@ -187,19 +187,8 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     }
 
     @Override
-    public @Nullable Object getAggregateValueFromSeries(@NotNull PeriodRequest request, @NotNull AggregationType aggregationType, boolean exactNumber) {
-        return ((EntityContextVarImpl) request.getEntityContext().var())
-            .aggregate(variableId, request.getFromTime(), request.getToTime(), aggregationType, exactNumber);
-    }
-
-    @Override
-    public String getAggregateValueDescription() {
-        return description;
-    }
-
-    @Override
-    public void addUpdateValueListener(EntityContext entityContext, String key, JSONObject dynamicParameters, Consumer<Object> listener) {
-        entityContext.event().addEventListener(variableId, key, listener);
+    public void addUpdateValueListener(Context context, String discriminator, JSONObject dynamicParameters, Consumer<State> listener) {
+        context.event().addEventListener(getEntityID(), discriminator, listener);
     }
 
     public String getParentId() {
@@ -234,46 +223,58 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
         return null;
     }
 
-    @Override
-    public String getTimeValueSeriesDescription() {
-        return getDescription();
+    public @Nullable Float getMin() {
+        return getJsonData().has("min") ? getJsonData().getFloat("min") : null;
     }
 
-    @Override
-    public String getGetStatusDescription() {
-        return getDescription();
+    public void setMin(@Nullable Float min) {
+        setJsonData("min", min);
     }
 
-    @Override
-    public String getSetStatusDescription() {
-        return getDescription();
+    public @Nullable Float getMax() {
+        return getJsonData().has("max") ? getJsonData().getFloat("max") : null;
+    }
+
+    public void setMax(@Nullable Float max) {
+        setJsonData("max", max);
     }
 
     @Override
     public @NotNull List<Object[]> getTimeValueSeries(PeriodRequest request) {
-        return ((EntityContextVarImpl) request.getEntityContext().var()).getTimeSeries(variableId, request.getFromTime(), request.getToTime());
+        return ((ContextVarImpl) request.context().var())
+            .getTimeSeries(getEntityID(), request);
     }
 
     @Override
     public Object getStatusValue(GetStatusValueRequest request) {
-        return request.getEntityContext().var().get(variableId);
+        return request.context().var().get(getEntityID());
     }
 
     @Override
     public SourceHistory getSourceHistory(GetStatusValueRequest request) {
-        SourceHistory sourceHistory = ((EntityContextVarImpl) request.getEntityContext().var())
-            .getSourceHistory(variableId)
-            .setIcon(new Icon(icon, iconColor))
-            .setName(getName())
-            .setDescription(getDescription());
+        SourceHistory sourceHistory = ((ContextVarImpl) request.context().var())
+            .getSourceHistory(getEntityID())
+                .setIcon(new Icon(icon, iconColor))
+                .setName(getName())
+                .setDescription(getDescription());
         sourceHistory.setAttributes(new ArrayList<>(Arrays.asList(
-            "Owner:" + workspaceGroup.getName(),
-            "Backup:" + backup,
-            "Quota:" + quota,
-            "Type:" + restriction.name().toLowerCase(),
-            "Writable:" + !readOnly)));
+                "Owner:" + workspaceGroup.getName(),
+                "Backup:" + backup,
+                "Quota:" + quota,
+                "Type:" + restriction.name().toLowerCase(),
+                "Locked:" + locked,
+            "Listeners:" + context().event().getEventCount(getEntityID()),
+                "Writable:" + !readOnly)));
         if (unit != null) {
             sourceHistory.getAttributes().add("Unit: " + unit);
+        }
+        Float min = getMin();
+        Float max = getMax();
+        if (min != null) {
+            sourceHistory.getAttributes().add("Min: " + min);
+        }
+        if (max != null) {
+            sourceHistory.getAttributes().add("Max: " + max);
         }
         sourceHistory.getAttributes().addAll(getAttributes());
 
@@ -282,26 +283,38 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
 
     @Override
     public List<SourceHistoryItem> getSourceHistoryItems(GetStatusValueRequest request, int from, int count) {
-        return ((EntityContextVarImpl) request.getEntityContext().var()).getSourceHistoryItems(variableId, from, count);
+        return ((ContextVarImpl) request.context().var()).getSourceHistoryItems(getEntityID(), from, count);
     }
 
     @Override
     public void setStatusValue(SetStatusValueRequest request) {
-        ((EntityContextVarImpl) request.getEntityContext().var())
-            .set(variableId, request.getValue(), ignore -> {}, true);
+        ((ContextVarImpl) request.context().var())
+            .set(getEntityID(), request.getValue(), true);
     }
 
     @Override
-    public String getStatusValueRepresentation(EntityContext entityContext) {
-        Object value = entityContext.var().get(variableId);
-        String str =
-            value == null ? null :
-                value instanceof Double ? format("%.2f", (Double) value) :
-                    value instanceof Float ? format("%.2f", (Float) value) : value.toString();
+    public String getStatusValueRepresentation(Context context) {
+        Object value = context.var().get(getEntityID());
+        String str = value == null ? null : formatVariableValue(value);
         if (isEmpty(unit)) {
             return str;
         }
         return format("%s <small>%s</small>", defaultString(str, "-"), unit);
+    }
+
+    @Override
+    public @NotNull Icon getSelectionIcon() {
+        return new Icon(icon, iconColor);
+    }
+
+    @Override
+    public @Nullable String getSelectionDescription() {
+        return getDescription();
+    }
+
+    private static String formatVariableValue(Object value) {
+        return value instanceof Double ? format("%.2f", (Double) value) :
+            value instanceof Float ? format("%.2f", (Float) value) : value.toString();
     }
 
     @Override
@@ -320,14 +333,87 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
 
     public WorkspaceVariable setAttributes(List<String> attributes) {
         if (attributes != null && !attributes.isEmpty()) {
-            setJsonData("attr", String.join("~~~", attributes));
+            setJsonData("attr", String.join(LIST_DELIMITER, attributes));
         }
         return this;
     }
 
+    public boolean tryUpdateVariable(
+        @Nullable String variableId,
+        @NotNull String variableName,
+        @NotNull Consumer<WorkspaceVariable> builder,
+        @NotNull VariableType variableType) {
+        long entityHashCode = getEntityHashCode();
+        this.setName(variableName);
+        this.restriction = variableType;
+        if(variableId != null) {
+            this.setEntityID(variableId);
+        }
+        builder.accept(this);
+        return entityHashCode != getEntityHashCode();
+    }
+
     @Override
-    protected void beforePersist() {
-        setVariableId(defaultIfEmpty(variableId, "" + System.currentTimeMillis()));
-        setEntityID(this.getVariableId());
+    public long getChildEntityHashCode() {
+        int result = description != null ? description.hashCode() : 0;
+        result = 31 * result + (restriction != null ? restriction.hashCode() : 0);
+        result = 31 * result + quota;
+        result = 31 * result + (readOnly ? 1 : 0);
+        result = 31 * result + (backup ? 1 : 0);
+        result = 31 * result + (locked ? 1 : 0);
+        result = 31 * result + (icon != null ? icon.hashCode() : 0);
+        result = 31 * result + (iconColor != null ? iconColor.hashCode() : 0);
+        result = 31 * result + (unit != null ? unit.hashCode() : 0);
+        result = 31 * result + jsonData.toString().hashCode();
+        return result;
+    }
+
+    @SneakyThrows
+    public @NotNull List<TransformVariableSource> getSources() {
+        if (getJsonData().has("sources")) {
+            return OBJECT_MAPPER.readValue(getJsonData("sources"), new TypeReference<>() {
+            });
+        }
+        return List.of();
+    }
+
+    @SneakyThrows
+    public void setSources(List<TransformVariableSource> sources) {
+        sources = sources.stream().filter(s -> StringUtils.isNotBlank(s.getType()) && StringUtils.isNotBlank(s.getValue())).toList();
+        String value = OBJECT_MAPPER.writeValueAsString(sources);
+        setJsonData("sources", value);
+    }
+
+    public String getCode() {
+        return getJsonData("code");
+    }
+
+    public void setCode(String code) {
+        setJsonData("code", code);
+    }
+
+    public @NotNull VarType getVarType() {
+        return getJsonDataEnum("vt", VarType.standard);
+    }
+
+    public void setVarType(VarType type) {
+        setJsonDataEnum("vt", type == VarType.standard ? null : type);
+    }
+
+    @JsonIgnore
+    public WorkspaceGroup getTopGroup() {
+        if (workspaceGroup.getParent() != null) {
+            return workspaceGroup.getParent();
+        }
+        return workspaceGroup;
+    }
+
+    public enum VarType {
+        standard, transform
+    }
+
+    @Override
+    public void afterUpdate() {
+        super.afterUpdate();
     }
 }

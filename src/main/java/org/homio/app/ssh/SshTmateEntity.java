@@ -1,29 +1,28 @@
 package org.homio.app.ssh;
 
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+
 import jakarta.persistence.Entity;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.SystemUtils;
-import org.homio.api.EntityContext;
-import org.homio.api.EntityContextBGP.ThreadContext;
-import org.homio.api.EntityContextHardware;
+import org.homio.api.Context;
+import org.homio.api.ContextBGP.ThreadContext;
+import org.homio.api.ContextHardware;
 import org.homio.api.model.Icon;
-import org.homio.api.model.OptionModel;
-import org.homio.api.service.EntityService;
+import org.homio.api.model.Status;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.Lang;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.ssh.SshTmateEntity.SshTmateService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -33,17 +32,30 @@ import org.jetbrains.annotations.Nullable;
 public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateService> implements HasDynamicContextMenuActions {
 
     private static final String URL = "wss://lon1.tmate.io/ws/session/%s";
-    public static final String PREFIX = "sshtmate_";
-    private static final String DEFAULT_TMATE_ENTITY_ID = PREFIX + "primary";
     private static boolean TMATE_INSTALLED = false;
 
-    public static void ensureEntityExists(EntityContextImpl entityContext) {
-        if (entityContext.getEntity(DEFAULT_TMATE_ENTITY_ID) == null) {
-            SshTmateEntity tmateSshEntity = new SshTmateEntity()
-                .setEntityID(DEFAULT_TMATE_ENTITY_ID)
-                .setName("Tmate");
-            entityContext.save(tmateSshEntity);
+    public static void ensureEntityExists(ContextImpl context) {
+        if (context.db().getEntity(SshTmateEntity.class, PRIMARY_DEVICE) == null) {
+            SshTmateEntity entity = new SshTmateEntity();
+            entity.setEntityID(PRIMARY_DEVICE);
+            entity.setName("Tmate");
+            context.db().save(entity);
         }
+    }
+
+    @Override
+    public String getDescriptionImpl() {
+        return Lang.getServerMessage("TMATE_DESCRIPTION");
+    }
+
+    @Override
+    public @Nullable Set<String> getConfigurationErrors() {
+        return null;
+    }
+
+    @Override
+    public long getEntityServiceHashCode() {
+        return 0;
     }
 
     @Override
@@ -52,31 +64,19 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
     }
 
     @Override
-    public boolean requireTestServiceInBackground() {
-        return true;
-    }
-
-    @Override
     public String getDefaultName() {
         return "Tmate SSH";
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
-    }
-
-    @Override
-    public @Nullable SshTmateService createService(@NotNull EntityContext entityContext) {
-        SshTmateService service = new SshTmateService(entityContext);
-        service.entityUpdated(this);
-        return service;
+    public @Nullable SshTmateService createService(@NotNull Context context) {
+        return new SshTmateService(context, this);
     }
 
     @Override
     public void assembleActions(UIInputBuilder uiInputBuilder) {
         if (SystemUtils.IS_OS_LINUX) {
-            EntityContextHardware hardware = uiInputBuilder.getEntityContext().hardware();
+            ContextHardware hardware = uiInputBuilder.context().hardware();
             TMATE_INSTALLED = TMATE_INSTALLED || hardware.isSoftwareInstalled("tmate");
             if (!TMATE_INSTALLED) {
                 addTmateInstallButton(uiInputBuilder, hardware);
@@ -90,13 +90,17 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
     }
 
     @Override
-    protected void beforePersist() {
-        super.beforePersist();
-        setJsonData("description", Lang.getServerMessage("TMATE_DESCRIPTION"));
+    protected @NotNull String getDevicePrefix() {
+        return "ssh-tmate";
     }
 
-    private void addTmateInstallButton(UIInputBuilder uiInputBuilder, EntityContextHardware hardware) {
-        uiInputBuilder.addSelectableButton("install_tmate", new Icon("fab fa-instalod"), (entityContext, params) -> {
+    @Override
+    public void beforePersist() {
+        super.beforePersist();
+    }
+
+    private void addTmateInstallButton(UIInputBuilder uiInputBuilder, ContextHardware hardware) {
+        uiInputBuilder.addSelectableButton("install_tmate", new Icon("fab fa-instalod"), (context, params) -> {
             hardware.installSoftware("tmate", 60);
             TMATE_INSTALLED = hardware.isSoftwareInstalled("tmate");
             if (!TMATE_INSTALLED) {
@@ -106,37 +110,14 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
         });
     }
 
-    @Log4j2
-    @RequiredArgsConstructor
-    public static class SshTmateService implements SshProviderService<SshTmateEntity> {
+    public static class SshTmateService extends ServiceInstance<SshTmateEntity> implements SshProviderService<SshTmateEntity> {
 
-        private final EntityContext entityContext;
         private SshSession sshSession;
-        @Getter
-        private SshTmateEntity entity;
         private ThreadContext<Void> tmateThread;
         private Process process;
 
-        @Override
-        public boolean entityUpdated(@NotNull EntityService entity) {
-            this.entity = (SshTmateEntity) entity;
-            return false;
-        }
-
-        @Override
-        public boolean testService() {
-            if (SystemUtils.IS_OS_WINDOWS) {
-                return false;
-            }
-            if (entityContext.hardware().isSoftwareInstalled("tmate")) {
-                throw new IllegalStateException("Tmate not installed");
-            }
-            return true;
-        }
-
-        @Override
-        public void destroy() {
-            closeSshSession(null);
+        public SshTmateService(Context context, SshTmateEntity entity) {
+            super(context, entity, true);
         }
 
         @Override
@@ -144,7 +125,7 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
         public SshSession openSshSession(SshTmateEntity entity) {
             if (tmateThread == null) {
                 CountDownLatch countDownLatch = new CountDownLatch(1);
-                tmateThread = entityContext.bgp().builder("tmate-process").execute(() -> {
+                tmateThread = context.bgp().builder("tmate-process").execute(() -> {
                     try {
                         log.info("Open ssh session using tmate provider");
                         process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "/opt/homio/ssh/tmate -F"});
@@ -173,6 +154,28 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
         }
 
         @Override
+        protected long getEntityHashCode(SshTmateEntity entity) {
+            return 1;
+        }
+
+        @Override
+        public void destroy(boolean forRestart, Exception ex) {
+            closeSshSession(null);
+        }
+
+        @Override
+        protected void initialize() {
+            if (!SystemUtils.IS_OS_LINUX) {
+                entity.setStatus(Status.OFFLINE, "Only linux compatible");
+                return;
+            }
+            if (context.hardware().isSoftwareInstalled("tmate")) {
+                throw new IllegalStateException("Tmate not installed");
+            }
+            entity.setStatusOnline();
+        }
+
+        @Override
         public void closeSshSession(SshSession<SshTmateEntity> sshSession) {
             if (tmateThread != null) {
                 tmateThread.cancel();
@@ -191,10 +194,10 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
 
             public String find(String[] lines) {
                 return Stream.of(lines)
-                             .filter(l -> l.startsWith(prefix))
-                             .map(l -> l.substring(prefix.length()))
-                             .findAny()
-                             .orElse(null);
+                        .filter(l -> l.startsWith(prefix))
+                        .map(l -> l.substring(prefix.length()))
+                        .findAny()
+                        .orElse(null);
             }
         }
     }

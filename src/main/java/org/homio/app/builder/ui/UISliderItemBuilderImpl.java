@@ -3,24 +3,23 @@ package org.homio.app.builder.ui;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.item.UISliderItemBuilder;
 
 @Getter
 @Accessors(chain = true)
 public class UISliderItemBuilderImpl extends UIBaseEntityItemBuilderImpl<UISliderItemBuilder, Float>
-    implements UISliderItemBuilder {
+        implements UISliderItemBuilder {
 
     private final Float min;
     private final Float max;
-    @Setter
-    private Float step;
-    @Setter
-    private boolean required;
-    @Setter
-    private SliderType sliderType;
-    @Setter
-    private boolean hideThumbLabel;
+
+    private @Setter Float step;
+    private @Setter boolean required;
+    private @Setter SliderType sliderType;
+    private @Setter boolean hideThumbLabel;
+    private @Setter String thumbLabel;
+    private @Setter Float defaultValue;
 
     public UISliderItemBuilderImpl(String entityID, int order, UIActionHandler actionHandler, float value, Float min, Float max) {
         super(UIItemType.Slider, entityID, order, actionHandler);

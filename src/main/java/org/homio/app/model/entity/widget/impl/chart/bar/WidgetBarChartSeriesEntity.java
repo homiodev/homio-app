@@ -2,21 +2,15 @@ package org.homio.app.model.entity.widget.impl.chart.bar;
 
 import jakarta.persistence.Entity;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.*;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 
 @Entity
 public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChartEntity>
-    implements HasSingleValueDataSource {
+        implements HasSingleValueDataSource {
 
-    public static final String PREFIX = "wgsbcs_";
-
-    @UIField(order = 50, isRevert = true)
+    @UIField(order = 50)
     @UIFieldGroup(value = "CHART_UI", order = 54, borderColor = "#673AB7")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
@@ -40,8 +34,8 @@ public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChar
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected String getSeriesPrefix() {
+        return "bar";
     }
 
     @Override
@@ -50,7 +44,7 @@ public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChar
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         if (!getJsonData().has("chartC")) {
             setChartColor(UI.Color.random());
         }

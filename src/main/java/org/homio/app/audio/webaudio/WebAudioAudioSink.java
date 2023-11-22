@@ -9,14 +9,14 @@ import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.audio.AudioFormat;
 import org.homio.api.audio.AudioSink;
 import org.homio.api.audio.AudioStream;
 import org.homio.api.audio.stream.FixedLengthAudioStream;
 import org.homio.api.audio.stream.URLAudioStream;
 import org.homio.app.audio.AudioService;
-import org.homio.app.manager.common.impl.EntityContextUIImpl;
+import org.homio.app.manager.common.impl.ContextUIImpl;
 import org.springframework.stereotype.Component;
 
 @Log4j2
@@ -25,12 +25,12 @@ import org.springframework.stereotype.Component;
 public class WebAudioAudioSink implements AudioSink {
 
     private static final Set<AudioFormat> SUPPORTED_AUDIO_FORMATS =
-        new HashSet<>(Arrays.asList(AudioFormat.MP3, AudioFormat.WAV));
+            new HashSet<>(Arrays.asList(AudioFormat.MP3, AudioFormat.WAV));
     private static final Set<Class<? extends AudioStream>> SUPPORTED_AUDIO_STREAMS =
-        new HashSet<>(Arrays.asList(FixedLengthAudioStream.class, URLAudioStream.class));
+            new HashSet<>(Arrays.asList(FixedLengthAudioStream.class, URLAudioStream.class));
 
     private final AudioService audioService;
-    private final EntityContext entityContext;
+    private final Context context;
 
     @Override
     public void play(AudioStream audioStream, String sinkSource, Integer startFrame, Integer endFrame) {
@@ -45,16 +45,16 @@ public class WebAudioAudioSink implements AudioSink {
             if (audioStream instanceof URLAudioStream) {
                 // it is an external URL, so we can directly pass this on.
                 URLAudioStream urlAudioStream = (URLAudioStream) audioStream;
-                ((EntityContextUIImpl) entityContext.ui()).sendAudio(urlAudioStream.getUrl());
+                ((ContextUIImpl) context.ui()).sendAudio(urlAudioStream.getUrl());
             } else if (audioStream instanceof FixedLengthAudioStream) {
                 // we need to serve it for a while and make it available to multiple clients, hence only
                 // FixedLengthAudioStreams are supported.
                 String url = audioService.createAudioUrl((FixedLengthAudioStream) audioStream, 60);
-                ((EntityContextUIImpl) entityContext.ui()).sendAudio(url);
+                ((ContextUIImpl) context.ui()).sendAudio(url);
             } else {
                 throw new IllegalArgumentException(
-                    "Web audio sink can only handle FixedLengthAudioStreams and URLAudioStreams: " +
-                        audioStream.getClass().getSimpleName());
+                        "Web audio sink can only handle FixedLengthAudioStreams and URLAudioStreams: " +
+                                audioStream.getClass().getSimpleName());
             }
         } catch (IOException e) {
             log.debug("Error while closing the audio stream: {}", e.getMessage(), e);

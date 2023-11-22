@@ -2,17 +2,9 @@ package org.homio.app.model.entity.widget.impl.color;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import org.homio.api.exception.ProhibitedExecution;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldIgnore;
-import org.homio.api.ui.field.UIFieldKeyValue;
+import org.apache.commons.lang3.NotImplementedException;
+import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.UIFieldKeyValue.KeyValueType;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.api.ui.field.UIFieldSlider;
-import org.homio.api.ui.field.UIFieldType;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.attributes.HasAlign;
 import org.homio.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
@@ -20,11 +12,12 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 @Entity
 public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorEntity>
-    implements HasSourceServerUpdates, HasAlign, HasSingleValueDataSource, HasSetSingleValueDataSource {
-
-    public static final String PREFIX = "wgtsclr_";
+        implements HasSourceServerUpdates, HasAlign, HasSingleValueDataSource, HasSetSingleValueDataSource {
 
     @Override
     public boolean isVisible() {
@@ -37,8 +30,8 @@ public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorE
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "scolor";
     }
 
     @Override
@@ -48,8 +41,8 @@ public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorE
 
     @UIField(order = 1)
     @UIFieldKeyValue(maxSize = 20, keyType = UIFieldType.String, valueType = UIFieldType.ColorPicker,
-                     defaultKey = "0", showKey = false, defaultValue = "#FFFFFF", keyValueType = KeyValueType.array)
-    @UIFieldGroup(value = "COLORS", order = 10)
+            defaultKey = "0", showKey = false, defaultValue = "#FFFFFF", keyValueType = KeyValueType.array)
+    @UIFieldGroup(order = 10, value = "COLORS")
     public String getColors() {
         return getJsonData("colors");
     }
@@ -58,7 +51,7 @@ public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorE
         setJsonData("colors", value);
     }
 
-    @UIField(order = 4, isRevert = true)
+    @UIField(order = 4)
     @UIFieldSlider(min = 0, max = 40)
     @UIFieldGroup("COLORS")
     @UIFieldReadDefaultValue
@@ -70,7 +63,7 @@ public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorE
         setJsonData("space", value);
     }
 
-    @UIField(order = 5, isRevert = true)
+    @UIField(order = 5)
     @UIFieldSlider(min = 10, max = 40)
     @UIFieldGroup("COLORS")
     @UIFieldReadDefaultValue
@@ -86,16 +79,16 @@ public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorE
     @UIFieldIgnore
     @JsonIgnore
     public Boolean getShowLastUpdateTimer() {
-        throw new ProhibitedExecution();
+        throw new NotImplementedException();
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         super.beforePersist();
         if (!getJsonData().has("colors")) {
             setColors(Stream.of("#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FFFFFF")
-                            .map(color -> String.format("{\"key\":\"0\",\"value\":\"%s\"}", color))
-                            .collect(Collectors.joining(",", "[", "]")));
+                    .map(color -> String.format("{\"key\":\"0\",\"value\":\"%s\"}", color))
+                    .collect(Collectors.joining(",", "[", "]")));
         }
         if (!getJsonData().has("size")) {
             setCircleSize(20);

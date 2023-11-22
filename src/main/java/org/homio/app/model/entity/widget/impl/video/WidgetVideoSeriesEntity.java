@@ -3,25 +3,25 @@ package org.homio.app.model.entity.widget.impl.video;
 import jakarta.persistence.Entity;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import org.homio.addon.camera.entity.BaseVideoEntity;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.device.DeviceBaseEntity;
+import org.homio.api.entity.video.HasVideoSources;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.StylePosition;
-import org.homio.api.ui.action.DynamicOptionLoader;
 import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnoreParent;
-import org.homio.api.ui.field.selection.UIFieldSelection;
 import org.homio.api.ui.field.selection.UIFieldTreeNodeSelection;
+import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
+import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
+import org.homio.api.util.DataSourceUtil;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
-import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
 @Entity
 public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntity>
-    implements HasSingleValueDataSource {
-
-    public static final String PREFIX = "wgsvids_";
+        implements HasSingleValueDataSource {
 
     @UIField(order = 11)
     public boolean isAutoPlay() {
@@ -32,84 +32,10 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
         setJsonData("ap", value);
     }
 
-    @UIField(order = 12)
-    public boolean isShowRestartButton() {
-        return getJsonData("rb", false);
-    }
-
-    public void setShowRestartButton(boolean value) {
-        setJsonData("rb", value);
-    }
-
-    @UIField(order = 13)
-    public boolean isShowPictureInPicture() {
-        return getJsonData("pip", false);
-    }
-
-    public void setShowPictureInPicture(boolean value) {
-        setJsonData("pip", value);
-    }
-
-    @UIField(order = 14)
-    public boolean isShowCurrentTime() {
-        return getJsonData("ct", true);
-    }
-
-    public void setShowCurrentTime(boolean value) {
-        setJsonData("ct", value);
-    }
-
-    @UIField(order = 15)
-    public boolean isInvertTime() {
-        return getJsonData("it", false);
-    }
-
-    public void setInvertTime(boolean value) {
-        setJsonData("it", value);
-    }
-
-    @UIField(order = 16)
-    public boolean isShowDownloads() {
-        return getJsonData("dd", false);
-    }
-
-    public void setShowDownloads(boolean value) {
-        setJsonData("dd", value);
-    }
-
-    @UIField(order = 17)
-    public boolean isShowFullScreen() {
-        return getJsonData("fs", true);
-    }
-
-    public void setShowFullScreen(boolean value) {
-        setJsonData("fs", value);
-    }
-
-    @UIField(order = 18)
-    public boolean isShowFastForward() {
-        return getJsonData("ff", false);
-    }
-
-    public void setShowFastForward(boolean value) {
-        setJsonData("ff", value);
-    }
-
-    @UIField(order = 19)
-    public boolean isShowRewind() {
-        return getJsonData("rw", false);
-    }
-
-    public void setShowRewind(boolean value) {
-        setJsonData("rw", value);
-    }
-
     @Override
     @UIField(order = 14, required = true, label = "widget.video_dataSource")
-    @UIFieldSelection(
-        value = VideoSeriesDataSourceDynamicOptionLoader.class,
-        allowInputRawText = true)
-    @UIFieldTreeNodeSelection(pattern = ".*(\\.mp4|\\.m3u8)", iconColor = "#14A669")
+    @UIFieldDynamicSelection(value = VideoSeriesDataSourceDynamicOptionLoader.class, icon = "fas fa-film", iconColor = "#7899D0")
+    @UIFieldTreeNodeSelection(pattern = ".*(\\.png|\\.jpg|\\.webm|\\.ogv|\\.flv|\\.avi|\\.mpd|\\.mp4|\\.m3u8)", iconColor = "#14A669")
     @UIFieldIgnoreParent
     public String getValueDataSource() {
         return HasSingleValueDataSource.super.getValueDataSource();
@@ -119,14 +45,26 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
         return getJsonDataEnum("actionPosition", StylePosition.TopRight);
     }
 
+    @UIField(order = 40)
+    @UIFieldGroup("VALUE")
+    @UIFieldDynamicSelection(value = VideoPosterDataSourceDynamicOptionLoader.class, icon = "fas fa-image", iconColor = "#5E8FAD")
+    @UIFieldTreeNodeSelection(pattern = ".*(\\.jpg|\\.png)", iconColor = "#14A669")
+    public String getPosterDataSource() {
+        return getJsonData("poster");
+    }
+
+    public void setPosterDataSource(String value) {
+        setJsonData("poster", value);
+    }
+
     public WidgetVideoSeriesEntity setActionPosition(StylePosition value) {
         setJsonData("actionPosition", value);
         return this;
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected String getSeriesPrefix() {
+        return "video";
     }
 
     @Override
@@ -139,15 +77,37 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
         @Override
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
             List<OptionModel> list = new ArrayList<>();
-            for (BaseVideoEntity entity : parameters.getEntityContext().findAll(BaseVideoEntity.class)) {
-
-                Set<String> sources = entity.getVideoSources();
-                if (!sources.isEmpty()) {
-                    OptionModel model = OptionModel.of(entity.getEntityID(), entity.getTitle());
-                    model.setChildren(OptionModel.list(sources));
-                    list.add(model);
+            BaseEntity baseEntity = parameters.getBaseEntity();
+            if (baseEntity instanceof HasVideoSources) {
+                addOptions(baseEntity, list);
+            } else {
+                for (DeviceBaseEntity entity : parameters.context().db().findAll(DeviceBaseEntity.class)) {
+                    addOptions(entity, list);
                 }
             }
+            return list;
+        }
+
+        private static void addOptions(BaseEntity entity, List<OptionModel> list) {
+            if (entity instanceof HasVideoSources vs) {
+                OptionModel model = OptionModel
+                    .of(entity.getEntityID(), entity.getTitle())
+                    .setIcon(entity.getEntityIcon());
+                model.setChildren(vs.getVideoSources());
+                list.add(model);
+            }
+        }
+    }
+
+    public static class VideoPosterDataSourceDynamicOptionLoader implements DynamicOptionLoader {
+
+        @Override
+        public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
+            List<OptionModel> list = new ArrayList<>();
+            String entityID = parameters.getBaseEntity().getEntityID();
+            WidgetVideoSeriesEntity entity = (WidgetVideoSeriesEntity) parameters.getBaseEntity();
+            String videoEntityID = DataSourceUtil.getSelection(entity.getValueDataSource()).getEntityID();
+            list.add(OptionModel.of("$DEVICE_URL/rest/media/video/%s/snapshot.jpg".formatted(videoEntityID), "snapshot.jpg"));
             return list;
         }
     }

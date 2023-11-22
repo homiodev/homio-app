@@ -1,25 +1,13 @@
 package org.homio.app.model.entity.widget.impl.color;
 
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldIgnore;
-import org.homio.api.ui.field.UIFieldKeyValue;
+import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.UIFieldKeyValue.KeyValueType;
-import org.homio.api.ui.field.UIFieldLayout;
 import org.homio.api.ui.field.UIFieldLayout.HorizontalAlign;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.api.ui.field.UIFieldSlider;
-import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.selection.UIFieldBeanSelection;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
@@ -32,26 +20,29 @@ import org.homio.app.model.entity.widget.attributes.HasName;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+
 @Entity
 public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
-    implements
-    HasLayout,
-    HasIconWithoutThreshold,
-    HasName,
-    HasSourceServerUpdates,
-    HasDynamicParameterFields {
-
-    public static final String PREFIX = "wgtclr_";
+        implements
+        HasLayout,
+        HasIconWithoutThreshold,
+        HasName,
+        HasSourceServerUpdates,
+        HasDynamicParameterFields {
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "NAME", order = 3)
+    @UIFieldGroup(order = 3, value = "NAME")
     @UIFieldOptionFontSize
     public String getName() {
         return super.getName();
     }
 
     @Override
-    @UIField(order = 3, isRevert = true)
+    @UIField(order = 3)
     @UIFieldColorPicker // disable thresholding
     @UIFieldGroup("NAME")
     @UIFieldReadDefaultValue
@@ -65,8 +56,8 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "color";
     }
 
     @Override
@@ -81,7 +72,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
         return super.getBackground();
     }
 
-    @UIField(order = 10, isRevert = true)
+    @UIField(order = 10)
     @UIFieldLayout(options = {"colors", "icon", "name", "brightness", "colorTemp", "onOff"})
     @UIFieldReadDefaultValue
     public String getLayout() {
@@ -90,8 +81,8 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
 
     @UIField(order = 1)
     @UIFieldKeyValue(maxSize = 20, keyType = UIFieldType.String, valueType = UIFieldType.ColorPicker,
-                     defaultKey = "0", showKey = false, defaultValue = "#FFFFFF", keyValueType = KeyValueType.array)
-    @UIFieldGroup(value = "COLORS", order = 10)
+            defaultKey = "0", showKey = false, defaultValue = "#FFFFFF", keyValueType = KeyValueType.array)
+    @UIFieldGroup(order = 10, value = "COLORS")
     public String getColors() {
         return getJsonData("colors");
     }
@@ -101,7 +92,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 2)
-    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIFieldGroup("COLORS")
     @UIEditReloadWidget
@@ -117,7 +107,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 3)
-    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIFieldGroup("COLORS")
     public String getColorSetValueDataSource() {
@@ -128,7 +117,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
         setJsonData("clrds", value);
     }
 
-    @UIField(order = 4, isRevert = true)
+    @UIField(order = 4)
     @UIFieldSlider(min = 0, max = 40)
     @UIFieldGroup("COLORS")
     @UIFieldReadDefaultValue
@@ -140,7 +129,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
         setJsonData("space", value);
     }
 
-    @UIField(order = 5, isRevert = true)
+    @UIField(order = 5)
     @UIFieldSlider(min = 10, max = 40)
     @UIFieldGroup("COLORS")
     @UIFieldReadDefaultValue
@@ -153,7 +142,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 1)
-    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIFieldGroup(value = "BRIGHTNESS", order = 20, borderColor = "#307FCF")
     @UIEditReloadWidget
@@ -169,7 +157,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 2)
-    @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
     @UIFieldGroup("BRIGHTNESS")
     public String getBrightnessSetValueDataSource() {
@@ -212,7 +199,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 1)
-    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIFieldGroup(value = "COLOR_TEMPERATURE", order = 25, borderColor = "#29B3B1")
     @UIEditReloadWidget
@@ -228,7 +214,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 2)
-    @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
     @UIFieldGroup("COLOR_TEMPERATURE")
     public String getColorTemperatureSetValueDataSource() {
@@ -261,7 +246,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
 
     @UIField(order = 1)
     @UIFieldGroup(value = "ON_OFF", order = 30, borderColor = "#009688")
-    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIEditReloadWidget
     public String getOnOffValueDataSource() {
@@ -277,7 +261,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
 
     @UIField(order = 1)
     @UIFieldGroup("ON_OFF")
-    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     public String getOnOffSetValueDataSource() {
         return getJsonData("onOffSet");
@@ -288,12 +271,12 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         super.beforePersist();
         if (!getJsonData().has("colors")) {
             setColors(Stream.of("#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FFFFFF")
-                            .map(color -> String.format("{\"key\":\"0\",\"value\":\"%s\"}", color))
-                            .collect(Collectors.joining(",", "[", "]")));
+                    .map(color -> String.format("{\"key\":\"0\",\"value\":\"%s\"}", color))
+                    .collect(Collectors.joining(",", "[", "]")));
         }
         if (!getJsonData().has("size")) {
             setCircleSize(20);
@@ -308,14 +291,14 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
 
     private String getDefaultLayout() {
         return UIFieldLayout.LayoutBuilder
-            .builder(15, 20, 50, 15)
-            .addRow(rb -> rb
-                .addCol("icon", HorizontalAlign.center)
-                .addCol("name", HorizontalAlign.left)
-                .addCol("brightness", HorizontalAlign.center)
-                .addCol("onOff", HorizontalAlign.center))
-            .addRow(rb -> rb
-                .addCol("colors", HorizontalAlign.center, 4))
-            .build();
+                .builder(15, 20, 50, 15)
+                .addRow(rb -> rb
+                        .addCol("icon", HorizontalAlign.center)
+                        .addCol("name", HorizontalAlign.left)
+                        .addCol("brightness", HorizontalAlign.center)
+                        .addCol("onOff", HorizontalAlign.center))
+                .addRow(rb -> rb
+                        .addCol("colors", HorizontalAlign.center, 4))
+                .build();
     }
 }

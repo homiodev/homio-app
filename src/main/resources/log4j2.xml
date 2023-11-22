@@ -2,7 +2,7 @@
 
 <Configuration monitorInterval="30" status="warn">
     <Properties>
-        <Property name="logBaseDir">/opt/homio/logs</Property>
+        <Property name="logBaseDir">$${sys:rootPath}/logs</Property>
         <Property name="pattern">%d{yyyy-MM-dd HH:mm:ss} %-5p [%-25.25t] [%-25.25c{1}] - %m%n</Property>
     </Properties>
 
@@ -82,9 +82,9 @@
     </Appenders>
     <Loggers>
         <Logger additivity="false" level="info" name="org.homio.addon.z2m">
-          <AppenderRef ref="zigBeeLog"/>
-          <AppenderRef ref="appLog"/>
-          <AppenderRef ref="Console"/>
+            <AppenderRef ref="zigBeeLog"/>
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="Console"/>
         </Logger>
 
         <Logger name="com.zsmartsystems.zigbee" additivity="false" level="info">
@@ -93,39 +93,39 @@
             <AppenderRef ref="Console"/>
         </Logger>
 
-      <Logger additivity="false" level="info" name="org.homio.app.workspace">
-        <AppenderRef ref="workspaceLog"/>
-        <AppenderRef ref="appLog"/>
-        <AppenderRef ref="Console"/>
-      </Logger>
+        <Logger additivity="false" level="info" name="org.homio.app.workspace">
+            <AppenderRef ref="workspaceLog"/>
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
 
-      <Logger additivity="false" level="info" name="org.homio.api.workspace">
-        <AppenderRef ref="workspaceLog"/>
-        <AppenderRef ref="appLog"/>
-        <AppenderRef ref="Console"/>
-      </Logger>
+        <Logger additivity="false" level="info" name="org.homio.api.workspace">
+            <AppenderRef ref="workspaceLog"/>
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
 
-      <logger name="org.springframework.web.socket.messaging.StompSubProtocolHandler" level="fatal">
-        <AppenderRef ref="appLog"/>
-        <AppenderRef ref="Console"/>
-      </logger>
+        <logger name="org.springframework.web.socket.messaging.StompSubProtocolHandler" level="fatal">
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="Console"/>
+        </logger>
 
-      <logger name="org.freedesktop" level="warn">
-        <AppenderRef ref="appLog"/>
-      </logger>
+        <logger name="org.freedesktop" level="warn">
+            <AppenderRef ref="appLog"/>
+        </logger>
 
-      <logger level="info" name="org.homio.addon.camera">
-        <AppenderRef ref="cameraLog"/>
-        <AppenderRef ref="appLog"/>
-      </logger>
+        <logger level="info" name="org.homio.addon.camera">
+            <AppenderRef ref="cameraLog"/>
+            <AppenderRef ref="appLog"/>
+        </logger>
 
-      <logger level="info" name="com.ssh">
-        <AppenderRef ref="Console"/>
-      </logger>
+        <logger level="info" name="com.ssh">
+            <AppenderRef ref="Console"/>
+        </logger>
 
-      <Root level="info">
-        <AppenderRef ref="appLog"/>
-        <AppenderRef ref="Console"/>
-      </Root>
+        <Root level="info">
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="Console"/>
+        </Root>
     </Loggers>
 </Configuration>

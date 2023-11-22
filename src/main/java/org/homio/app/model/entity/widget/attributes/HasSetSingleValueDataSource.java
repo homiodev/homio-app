@@ -11,7 +11,6 @@ import org.homio.app.model.entity.widget.UIEditReloadWidget;
 public interface HasSetSingleValueDataSource extends HasDynamicParameterFields {
 
     @UIField(order = 12)
-    @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
     @UIFieldGroup(value = "VALUE")
     @UIEditReloadWidget

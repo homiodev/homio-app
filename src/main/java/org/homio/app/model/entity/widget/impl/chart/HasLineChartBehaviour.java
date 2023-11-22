@@ -1,9 +1,9 @@
 package org.homio.app.model.entity.widget.impl.chart;
 
-import org.homio.api.EntityContextWidget.ChartType;
-import org.homio.api.EntityContextWidget.Fill;
-import org.homio.api.EntityContextWidget.PointStyle;
-import org.homio.api.EntityContextWidget.Stepped;
+import org.homio.api.ContextWidget.ChartType;
+import org.homio.api.ContextWidget.Fill;
+import org.homio.api.ContextWidget.PointStyle;
+import org.homio.api.ContextWidget.Stepped;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.UIField;
@@ -15,14 +15,15 @@ import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
 
 public interface HasLineChartBehaviour extends
-    HasJsonData,
-    HasMinMaxChartValue,
-    HasChartTimePeriod {
+        HasJsonData,
+        HasMinMaxChartValue,
+        HasChartTimePeriod {
 
     ChartType getChartType();
 
-    @UIField(order = 20, isRevert = true)
-    @UIFieldGroup(value = "CHART_UI", order = 54, borderColor = "#673AB7")
+    @UIField(order = 20)
+    @UIFieldReadDefaultValue
+    @UIFieldGroup(order = 54, value = "CHART_UI", borderColor = "#673AB7")
     @UIFieldSlider(min = 0, max = 10)
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default int getLineBorderWidth() {
@@ -33,7 +34,8 @@ public interface HasLineChartBehaviour extends
         setJsonData("lbw", value);
     }
 
-    @UIField(order = 40, isRevert = true)
+    @UIField(order = 40)
+    @UIFieldReadDefaultValue
     @UIFieldGroup("CHART_UI")
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default Fill getLineFill() {
@@ -44,7 +46,8 @@ public interface HasLineChartBehaviour extends
         setJsonDataEnum("fill", value);
     }
 
-    @UIField(order = 6, isRevert = true)
+    @UIField(order = 6)
+    @UIFieldReadDefaultValue
     @UIFieldGroup("CHART_UI")
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default Stepped getStepped() {
@@ -55,7 +58,8 @@ public interface HasLineChartBehaviour extends
         setJsonDataEnum("stpd", value);
     }
 
-    @UIField(order = 3, isRevert = true)
+    @UIField(order = 3)
+    @UIFieldReadDefaultValue
     @UIFieldSlider(min = 0, max = 10)
     @UIFieldGroup("CHART_UI")
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
@@ -67,7 +71,8 @@ public interface HasLineChartBehaviour extends
         setJsonData("tns", value);
     }
 
-    @UIField(order = 5, isRevert = true)
+    @UIField(order = 5)
+    @UIFieldReadDefaultValue
     @UIFieldSlider(min = 10, max = 600)
     @UIFieldGroup("CHART_UI")
     default int getFetchDataFromServerInterval() {
@@ -78,19 +83,21 @@ public interface HasLineChartBehaviour extends
         setJsonData("fsfsi", value);
     }
 
-    @UIField(order = 1, isRevert = true)
-    @UIFieldGroup(value = "CHART_POINT", order = 58)
+    @UIField(order = 1)
+    @UIFieldReadDefaultValue
+    @UIFieldGroup(order = 58, value = "CHART_POINT")
     @UIFieldSlider(min = 0, max = 4, step = 0.2)
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default double getPointRadius() {
-        return getJsonData("prad", 0D);
+        return getJsonData("prad", 0.0);
     }
 
     default void setPointRadius(double value) {
         setJsonData("prad", value);
     }
 
-    @UIField(order = 2, isRevert = true)
+    @UIField(order = 2)
+    @UIFieldReadDefaultValue
     @UIFieldGroup("CHART_POINT")
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default PointStyle getPointStyle() {
@@ -101,7 +108,7 @@ public interface HasLineChartBehaviour extends
         setJsonDataEnum("pstyle", value);
     }
 
-    @UIField(order = 3, isRevert = true)
+    @UIField(order = 3)
     @UIFieldGroup("CHART_POINT")
     @UIFieldColorPicker
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
@@ -114,7 +121,7 @@ public interface HasLineChartBehaviour extends
         setJsonData("pbg", value);
     }
 
-    @UIField(order = 4, isRevert = true)
+    @UIField(order = 4)
     @UIFieldGroup("CHART_POINT")
     @UIFieldColorPicker
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")

@@ -16,19 +16,12 @@ import org.homio.app.rest.widget.TimeSeriesContext;
 
 @Entity
 public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBarTimeChartEntity>
-    implements HasChartDataSource {
-
-    public static final String PREFIX = "wgsbtcs_";
-
-    @Override
-    public String getEntityPrefix() {
-        return PREFIX;
-    }
+        implements HasChartDataSource {
 
     @Override
     public ChartDataset buildTargetDataset(TimeSeriesContext item) {
         WidgetBarTimeChartSeriesEntity seriesEntity =
-            (WidgetBarTimeChartSeriesEntity) item.getSeriesEntity();
+                (WidgetBarTimeChartSeriesEntity) item.getSeriesEntity();
         ChartDataset dataset = new ChartDataset(item.getId(), ((HasEntityIdentifier) item.getSeriesEntity()).getEntityID());
 
         if (item.getValues() != null && !item.getValues().isEmpty()) {
@@ -44,15 +37,19 @@ public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBar
 
     @UIField(order = 1, required = true)
     @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
-    @UIFieldBeanSelection(value = HasTimeValueSeries.class, lazyLoading = true)
-    @UIFieldGroup(value = "CHART", order = 50, borderColor = "#9C27B0")
+    @UIFieldGroup(order = 50, value = "CHART", borderColor = "#9C27B0")
     @UIEditReloadWidget
     public String getChartDataSource() {
         return getJsonData("chartDS");
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         HasChartDataSource.randomColor(this);
+    }
+
+    @Override
+    protected String getSeriesPrefix() {
+        return "bar-time";
     }
 }

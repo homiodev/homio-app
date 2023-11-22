@@ -6,6 +6,8 @@ import com.pivovarit.function.ThrowingConsumer;
 import com.sshtools.common.logger.DefaultLoggerContext;
 import com.sshtools.common.logger.Log;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
@@ -21,13 +23,19 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.logging.FileHandler;
+import java.util.logging.LogRecord;
+import java.util.logging.SimpleFormatter;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
@@ -47,11 +55,13 @@ import org.apache.logging.log4j.core.impl.DefaultLogEventFactory;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.message.MessageFactory;
 import org.apache.logging.log4j.spi.AbstractLogger;
+import org.homio.api.Context;
+import org.homio.api.Context.FileLogger;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.log.HasEntityLog.EntityLogBuilder;
 import org.homio.api.util.CommonUtils;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.spring.ContextCreated;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -59,21 +69,24 @@ import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEven
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
+@Log4j2
 @Component
-public class LogService
-    implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, ContextCreated {
+public class LogService implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, ContextCreated {
 
     private static final org.apache.logging.log4j.Logger maverickLogger = LogManager.getLogger("com.ssh.maverick");
 
     private static final GlobalAppender globalAppender = new GlobalAppender();
     private static final Set<String> excludeDebugPackages =
-        Set.of(
-            "org.springframework",
-            "com.mongodb",
-            "de.bwaldvogel",
-            "org.mongodb",
-            "com.zaxxer",
-            "org.hibernate");
+            Set.of(
+                    "org.springframework",
+                    "com.mongodb",
+                    "de.bwaldvogel",
+                    "org.mongodb",
+                    "com.zaxxer",
+                    "org.hibernate");
+
+    private final Map<String, Map<String, FileLoggerImpl>> fileLoggers = new ConcurrentHashMap<>();
+    private static final BlockingQueue<LogEvent> eventQueue = new LinkedBlockingQueue<>();
 
     static {
         Log.setDefaultContext(new DefaultLoggerContext() {
@@ -97,6 +110,16 @@ public class LogService
                 };
             }
         });
+
+        new Thread(() -> {
+            while (true) {
+                try {
+                    globalAppender.append(eventQueue.take());
+                } catch (Exception ex) {
+                    log.error("Error while execute log event handler", ex);
+                }
+            }
+        }, "EntityLogHandler").start();
     }
 
     public Set<String> getTabs() {
@@ -108,7 +131,7 @@ public class LogService
         DefinedAppenderConsumer definedAppender = globalAppender.definedAppender.get(tab);
         if (definedAppender != null) {
             return FileUtils.readLines(
-                new File(definedAppender.fileName), Charset.defaultCharset());
+                    new File(definedAppender.fileName), Charset.defaultCharset());
         }
         return null;
     }
@@ -119,15 +142,40 @@ public class LogService
     }
 
     @Override
-    public void onContextCreated(EntityContextImpl entityContext) throws Exception {
-        LogService.scanEntityLogs(entityContext);
-        globalAppender.setEntityContext(entityContext);
+    public void onContextCreated(ContextImpl context) throws Exception {
+        LogService.scanEntityLogs(context);
+        globalAppender.setContext(context);
     }
 
     public @Nullable Path getEntityLogsFile(BaseEntity baseEntity) {
-        return Optional.ofNullable(globalAppender.logConsumers.get(baseEntity.getEntityID()))
-                       .map(c -> c.path)
-                       .orElse(null);
+        LogConsumer logConsumer = globalAppender.logConsumers.get(baseEntity.getEntityID());
+        return logConsumer == null ? null : logConsumer.logFile;
+    }
+
+    public void deleteEntityLogsFile(BaseEntity baseEntity) {
+        LogConsumer logConsumer = globalAppender.logConsumers.get(baseEntity.getEntityID());
+        if (logConsumer != null) {
+            try {
+                Files.deleteIfExists(logConsumer.logFile);
+            } catch (IOException ex) {
+                log.error("Unable to delete entity log file: {}", CommonUtils.getErrorMessage(ex));
+            }
+        }
+        Map<String, FileLoggerImpl> entityLoggers = fileLoggers.remove(baseEntity.getEntityID());
+        if (entityLoggers != null) {
+            for (FileLoggerImpl fileLogger : entityLoggers.values()) {
+                try {
+                    Files.deleteIfExists(fileLogger.logPath);
+                } catch (IOException ex) {
+                    log.error("Unable to delete entity file log handler: {}", CommonUtils.getErrorMessage(ex));
+                }
+            }
+        }
+    }
+
+    public FileLogger getFileLogger(BaseEntity baseEntity, String suffix) {
+        return fileLoggers.computeIfAbsent(baseEntity.getEntityID(), s -> new ConcurrentHashMap<>())
+                          .computeIfAbsent(suffix, file -> new FileLoggerImpl(suffix, baseEntity));
     }
 
     @SneakyThrows
@@ -140,7 +188,7 @@ public class LogService
                 Appender appender = configuration.getAppenders().get(appenderName);
                 if (appender instanceof RollingFileAppender) {
                     var defineAppender = new DefinedAppenderConsumer(fetchAppenderPrefixSet(configuration, appenderName),
-                        ((RollingFileAppender) appender).getFileName());
+                            ((RollingFileAppender) appender).getFileName());
                     globalAppender.definedAppender.put(appenderName, defineAppender);
                 }
             }
@@ -156,7 +204,8 @@ public class LogService
                     }
                     if (level.intLevel() <= Level.DEBUG.intLevel()) {
                         Message msg = messageFactory.newMessage(message, params);
-                        globalAppender.append(log4jLogEventFactory.createEvent(logger.getName(), marker, null, level, msg, null, msg.getThrowable()));
+                        LogEvent event = log4jLogEventFactory.createEvent(logger.getName(), marker, null, level, msg, null, msg.getThrowable());
+                        eventQueue.add(event);
                     }
                 }
 
@@ -191,23 +240,23 @@ public class LogService
         return false;
     }
 
-    private static void scanEntityLogs(EntityContextImpl entityContext) {
-        for (BaseEntity entity : entityContext.findAllBaseEntities()) {
+    private static void scanEntityLogs(ContextImpl context) {
+        for (BaseEntity entity : context.db().findAllBaseEntities()) {
             if (entity instanceof HasEntityLog) {
                 addLogEntity(entity);
             }
         }
-        entityContext.event().addEntityUpdateListener(BaseEntity.class, "log-entity", baseEntity -> {
+        context.event().addEntityUpdateListener(BaseEntity.class, "log-entity", baseEntity -> {
             if (baseEntity instanceof HasEntityLog && globalAppender.logConsumers.containsKey(baseEntity.getEntityID())) {
                 globalAppender.logConsumers.get(baseEntity.getEntityID()).debug = ((HasEntityLog) baseEntity).isDebug();
             }
         });
-        entityContext.event().addEntityRemovedListener(BaseEntity.class, "log-entity", baseEntity -> {
+        context.event().addEntityRemovedListener(BaseEntity.class, "log-entity", baseEntity -> {
             if (baseEntity instanceof HasEntityLog) {
                 globalAppender.logConsumers.remove(baseEntity.getEntityID());
             }
         });
-        entityContext.event().addEntityCreateListener(BaseEntity.class, "log-entity", baseEntity -> {
+        context.event().addEntityCreateListener(BaseEntity.class, "log-entity", baseEntity -> {
             if (baseEntity instanceof HasEntityLog) {
                 addLogEntity(baseEntity);
             }
@@ -216,7 +265,11 @@ public class LogService
 
     private static void addLogEntity(BaseEntity entity) {
         if (!globalAppender.logConsumers.containsKey(entity.getEntityID())) {
-            LogConsumer logConsumer = new LogConsumer(entity.getEntityID(), entity.getClass(), ((HasEntityLog) entity).isDebug());
+            LogConsumer logConsumer = new LogConsumer(
+                entity.getEntityID(),
+                entity.getClass(),
+                createLogFile(entity, ""),
+                ((HasEntityLog) entity).isDebug());
             EntityLogBuilderImpl entityLogBuilder = new EntityLogBuilderImpl(entity, logConsumer);
             ((HasEntityLog) entity).logBuilder(entityLogBuilder);
 
@@ -224,6 +277,18 @@ public class LogService
                 globalAppender.logConsumers.put(entity.getEntityID(), logConsumer);
             }
         }
+    }
+
+    private static Path createLogFile(@NotNull BaseEntity entity, @NotNull String suffix) {
+        Path path = CommonUtils.getLogsEntitiesPath().resolve(entity.getType());
+        CommonUtils.createDirectoriesIfNotExists(path);
+        Path file = path.resolve(entity.getEntityID() + suffix + ".log");
+        try {
+            CommonUtils.writeToFile(file, new byte[0], false);
+        } catch (Exception ex) {
+            System.out.printf("Error during truncate file: %s. Error: %s%n", path, CommonUtils.getErrorMessage(ex));
+        }
+        return file;
     }
 
     @SneakyThrows
@@ -245,12 +310,12 @@ public class LogService
 
     private static String formatLogMessage(LogEvent event, String message) {
         return String.format(
-            "%s %-5s [%-25s] [%-25s] - %s",
-            CommonUtils.DATE_TIME_FORMAT.format(new Date(event.getTimeMillis())),
-            event.getLevel(),
-            maxLength(event.getThreadName()),
-            maxLength(event.getLoggerName()),
-            message);
+                "%s %-5s [%-25s] [%-25s] - %s",
+                CommonUtils.DATE_TIME_FORMAT.format(new Date(event.getTimeMillis())),
+                event.getLevel(),
+                maxLength(event.getThreadName()),
+                maxLength(event.getLoggerName()),
+                message);
     }
 
     private static String maxLength(String text) {
@@ -271,10 +336,8 @@ public class LogService
 
         private final Map<String, LogConsumer> logConsumers = new ConcurrentHashMap<>();
         private final Map<String, DefinedAppenderConsumer> definedAppender = new HashMap<>();
-        // allow debug level for appender
-        private final boolean allowDebugLevel = false;
 
-        // keep all logs in memory until we switch strategy via setEntityContext(...) method
+        // keep all logs in memory until we switch strategy via setContext(...) method
         private List<LogEvent> bufferedLogEvents = new CopyOnWriteArrayList<>();
         protected Consumer<LogEvent> logStrategy = event -> bufferedLogEvents.add(event);
 
@@ -283,8 +346,8 @@ public class LogService
             start();
         }
 
-        public synchronized void setEntityContext(EntityContextImpl entityContext) {
-            this.logStrategy = event -> sendLogs(entityContext, event);
+        public synchronized void setContext(ContextImpl context) {
+            this.logStrategy = event -> sendLogs(context, event);
             flushBufferedLogs();
         }
 
@@ -303,13 +366,12 @@ public class LogService
         }
 
         // Scan LogConsumers and send to ui if match
-        private void sendLogs(EntityContextImpl entityContext, LogEvent event) {
-            if (allowDebugLevel && event.getLevel().intLevel() <= Level.DEBUG.intLevel()
-                || !allowDebugLevel && event.getLevel().intLevel() <= Level.INFO.intLevel()) {
+        private void sendLogs(Context context, LogEvent event) {
+            if (event.getLevel().intLevel() <= Level.DEBUG.intLevel()) {
                 for (Entry<String, DefinedAppenderConsumer> entry : definedAppender.entrySet()) {
                     if (entry.getValue().accept(event.getLoggerName())) {
                         sendLogEvent(event, message ->
-                            entityContext.ui().sendDynamicUpdate("appender-log-" + entry.getKey(), message));
+                            context.ui().sendDynamicUpdate("appender-log-" + entry.getKey(), message));
                     }
                 }
             }
@@ -319,20 +381,15 @@ public class LogService
                 }
                 if (logConsumer.logTopics.stream().anyMatch(l -> l.test(event))) {
                     sendLogEvent(event, message -> {
-                        Files.writeString(logConsumer.path, message + System.lineSeparator(), StandardOpenOption.APPEND);
-                        entityContext.ui().sendDynamicUpdate("entity-log-" + logConsumer.entityID, message);
+                        Files.writeString(logConsumer.logFile, message + System.lineSeparator(), StandardOpenOption.APPEND);
+                        context.ui().sendDynamicUpdate("entity-log-" + logConsumer.entityID, message);
                     });
                 }
             }
         }
     }
 
-    @Getter
-    @RequiredArgsConstructor
-    private static class DefinedAppenderConsumer {
-
-        private final Set<String> prefixSet;
-        private final String fileName;
+    private record DefinedAppenderConsumer(Set<String> prefixSet, String fileName) {
 
         public boolean accept(String loggerName) {
             for (String prefix : prefixSet) {
@@ -345,51 +402,81 @@ public class LogService
     }
 
     @Getter
+    @AllArgsConstructor
     private static class LogConsumer {
 
-        public final Path path;
         private final List<Predicate<LogEvent>> logTopics = new ArrayList<>();
-        private final String entityID;
-        private final Class<?> targetClass;
-        private final String className;
+        private final @NotNull String entityID;
+        private final @NotNull Class<?> targetClass;
+        private final @NotNull Path logFile;
         private boolean debug;
 
-        @SneakyThrows
-        public LogConsumer(String entityID, Class<?> targetClass, boolean debug) {
-            this.entityID = entityID;
-            this.targetClass = targetClass;
-            this.className = targetClass.getSimpleName();
-            this.path = CommonUtils.getOrCreatePath("logs/entities/" + className).resolve(entityID + ".log");
-            this.debug = debug;
-            Files.write(path, new byte[0], StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        @Override
+        public String toString() {
+            return entityID;
         }
     }
 
-    @RequiredArgsConstructor
-    private static class EntityLogBuilderImpl implements EntityLogBuilder {
-
-        private final BaseEntity entity;
-        private final LogConsumer logConsumer;
-
-        @SneakyThrows
-        @Override
-        public void addTopic(Class<?> topicClass, String filterByField) {
-            String filterValue = isEmpty(filterByField) ? null : String.valueOf(MethodUtils.invokeMethod(entity,
-                "get" + StringUtils.capitalize(filterByField)));
-            String topic = topicClass.getName();
-            logConsumer.logTopics.add(filterValue == null
-                ? logEvent -> logEvent.getLoggerName().startsWith(topic)
-                : logEvent -> logEvent.getLoggerName().startsWith(topic) && logEvent.getMessage().getFormattedMessage().contains(filterValue));
-        }
+    private record EntityLogBuilderImpl(BaseEntity entity, LogConsumer logConsumer) implements EntityLogBuilder {
 
         @Override
         @SneakyThrows
         public void addTopic(@NotNull String topic, String filterByField) {
             String filterValue =
-                isEmpty(filterByField) ? null : String.valueOf(MethodUtils.invokeMethod(entity, "get" + StringUtils.capitalize(filterByField)));
+                    isEmpty(filterByField) ? null : String.valueOf(MethodUtils.invokeMethod(entity, "get" + StringUtils.capitalize(filterByField)));
             logConsumer.logTopics.add(filterValue == null
-                ? logEvent -> logEvent.getLoggerName().startsWith(topic)
-                : logEvent -> logEvent.getLoggerName().startsWith(topic) && logEvent.getMessage().getFormattedMessage().contains(filterValue));
+                    ? logEvent -> logEvent.getLoggerName().startsWith(topic)
+                    : logEvent -> logEvent.getLoggerName().startsWith(topic) && logEvent.getMessage().getFormattedMessage().contains(filterValue));
+        }
+    }
+
+    private static class FileLoggerImpl implements FileLogger {
+
+        private final Path logPath;
+        private final FileHandler fileHandler;
+
+        @SneakyThrows
+        public FileLoggerImpl(@NotNull String suffix, @NotNull BaseEntity entity) {
+            logPath = createLogFile(entity, suffix);
+            fileHandler = new FileHandler(logPath.toString(), 1024 * 1024, 1, true);
+            fileHandler.setFormatter(new SimpleFormatter());
+        }
+
+        @Override
+        public void logDebug(@Nullable String message) {
+            log(message, java.util.logging.Level.FINE);
+        }
+
+        @Override
+        public void logInfo(String message) {
+            log(message, java.util.logging.Level.INFO);
+        }
+
+        @Override
+        public void logWarn(String message) {
+            log(message, java.util.logging.Level.WARNING);
+        }
+
+        @Override
+        public void logError(String message) {
+            log(message, java.util.logging.Level.SEVERE);
+        }
+
+        @Override
+        @SneakyThrows
+        public @NotNull InputStream getFileInputStream() {
+            return Files.newInputStream(logPath);
+        }
+
+        @Override
+        public @NotNull String getName() {
+            return logPath.getFileName().toString();
+        }
+
+        private void log(String message, java.util.logging.Level level) {
+            if (message != null) {
+                fileHandler.publish(new LogRecord(level, message));
+            }
         }
     }
 }

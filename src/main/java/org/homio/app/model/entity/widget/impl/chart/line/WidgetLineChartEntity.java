@@ -3,7 +3,7 @@ package org.homio.app.model.entity.widget.impl.chart.line;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.Setter;
-import org.homio.api.EntityContextWidget.ChartType;
+import org.homio.api.ContextWidget.ChartType;
 import org.homio.api.ui.field.UIField;
 import org.homio.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.homio.app.model.entity.widget.impl.chart.HasAxis;
@@ -15,10 +15,8 @@ import org.jetbrains.annotations.NotNull;
 @Setter
 @Entity
 public class WidgetLineChartEntity
-    extends ChartBaseEntity<WidgetLineChartEntity, WidgetLineChartSeriesEntity>
-    implements HasLineChartBehaviour, HasHorizontalLine, HasAxis {
-
-    public static final String LINE_CHART_WIDGET_PREFIX = "wgtlc_";
+        extends ChartBaseEntity<WidgetLineChartEntity, WidgetLineChartSeriesEntity>
+        implements HasLineChartBehaviour, HasHorizontalLine, HasAxis {
 
     @Override
     public @NotNull String getImage() {
@@ -26,8 +24,8 @@ public class WidgetLineChartEntity
     }
 
     @Override
-    public String getEntityPrefix() {
-        return WidgetLineChartEntity.LINE_CHART_WIDGET_PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "line";
     }
 
     @UIField(order = 0, hideInView = true, hideInEdit = true)

@@ -5,28 +5,28 @@ import java.util.List;
 import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.homio.api.EntityContextWidget.SliderWidgetBuilder;
-import org.homio.api.EntityContextWidget.SliderWidgetSeriesBuilder;
+import org.homio.api.ContextWidget.SliderWidgetBuilder;
+import org.homio.api.ContextWidget.SliderWidgetSeriesBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasIconColorThresholdBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasNameBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasPaddingBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasValueTemplateBuilder;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class SliderBuilderImpl extends WidgetBaseBuilderImpl<SliderWidgetBuilder, WidgetSliderEntity>
-    implements SliderWidgetBuilder,
-    HasPaddingBuilder<WidgetSliderEntity, SliderWidgetBuilder>,
-    HasNameBuilder<WidgetSliderEntity, SliderWidgetBuilder> {
+        implements SliderWidgetBuilder,
+        HasPaddingBuilder<WidgetSliderEntity, SliderWidgetBuilder>,
+        HasNameBuilder<WidgetSliderEntity, SliderWidgetBuilder> {
 
     @Getter
     private final List<WidgetSliderSeriesEntity> series = new ArrayList<>();
 
-    SliderBuilderImpl(WidgetSliderEntity widget, EntityContextImpl entityContext) {
-        super(widget, entityContext);
+    SliderBuilderImpl(WidgetSliderEntity widget, ContextImpl context) {
+        super(widget, context);
     }
 
     @Override
@@ -60,10 +60,10 @@ public class SliderBuilderImpl extends WidgetBaseBuilderImpl<SliderWidgetBuilder
 
 @RequiredArgsConstructor
 class SliderSeriesBuilderImpl implements SliderWidgetSeriesBuilder,
-    HasPaddingBuilder<WidgetSliderSeriesEntity, SliderWidgetSeriesBuilder>,
-    HasValueTemplateBuilder<WidgetSliderSeriesEntity, SliderWidgetSeriesBuilder>,
-    HasIconColorThresholdBuilder<WidgetSliderSeriesEntity, SliderWidgetSeriesBuilder>,
-    HasNameBuilder<WidgetSliderSeriesEntity, SliderWidgetSeriesBuilder> {
+        HasPaddingBuilder<WidgetSliderSeriesEntity, SliderWidgetSeriesBuilder>,
+        HasValueTemplateBuilder<WidgetSliderSeriesEntity, SliderWidgetSeriesBuilder>,
+        HasIconColorThresholdBuilder<WidgetSliderSeriesEntity, SliderWidgetSeriesBuilder>,
+        HasNameBuilder<WidgetSliderSeriesEntity, SliderWidgetSeriesBuilder> {
 
     private final WidgetSliderSeriesEntity series;
 

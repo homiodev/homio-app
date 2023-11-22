@@ -2,8 +2,9 @@ package org.homio.addon.fs;
 
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
+import static org.homio.api.util.CommonUtils.TIKA;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
-import static org.homio.app.utils.InternalUtil.TIKA;
 import static org.springframework.http.MediaType.TEXT_PLAIN_VALUE;
 
 import java.io.InputStream;
@@ -18,7 +19,7 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.commons.io.IOUtils;
 import org.homio.addon.fs.Scratch3FSBlocks.ModifyFileSettings.ModifyOption;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.fs.FileSystemProvider;
@@ -33,6 +34,7 @@ import org.homio.api.workspace.scratch.ArgumentType;
 import org.homio.api.workspace.scratch.MenuBlock;
 import org.homio.api.workspace.scratch.MenuBlock.ServerMenuBlock;
 import org.homio.api.workspace.scratch.MenuBlock.StaticMenuBlock;
+import org.homio.api.workspace.scratch.Scratch3Block.ScratchSettingBaseEntity;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.jetbrains.annotations.NotNull;
@@ -49,9 +51,9 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
     private final MenuBlock.StaticMenuBlock<CountNodeEnum> countMenu;
     private final ServerMenuBlock fsEntityMenu;
 
-    public Scratch3FSBlocks(EntityContext entityContext) {
-        super("#93922C", entityContext, null, "fs");
-        setParent("storage");
+    public Scratch3FSBlocks(Context context) {
+        super("#93922C", context, null, "fs");
+        setParent(ScratchParent.storage);
 
         // menu
         this.fsEntityMenu = menuServerItems(ENTITY, LocalBoardEntity.class, "FileSystem");
@@ -63,46 +65,46 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
 
         // blocks
         blockCommand(15, "update_file",
-            "Update [VALUE] of [FILE] | [SETTING]", this::updateFileHandle,
-            block -> {
-                block.addArgument(VALUE, ArgumentType.string, "body");
-                block.addArgument("FILE", fileMenu);
-                block.addArgument("VALUE", "Content");
-                block.addSetting(ModifyFileSettings.class);
-            });
+                "Update [VALUE] of [FILE] | [SETTING]", this::updateFileHandle,
+                block -> {
+                    block.addArgument(VALUE, ArgumentType.string, "body");
+                    block.addArgument("FILE", fileMenu);
+                    block.addArgument("VALUE", "Content");
+                    block.addSetting(ModifyFileSettings.class);
+                });
 
         blockCommand(16, "create_file",
-            "Create file [NAME] of [FOLDER] | [SETTING]", this::createHandle,
-            block -> {
-                block.addArgument(VALUE, ArgumentType.string, "body");
-                block.addArgument("TYPE", nodeTypeMenu);
-                block.addArgument("NAME", "Test.txt");
-                block.addArgument("FOLDER", folderMenu);
-            });
+                "Create file [NAME] of [FOLDER] | [SETTING]", this::createHandle,
+                block -> {
+                    block.addArgument(VALUE, ArgumentType.string, "body");
+                    block.addArgument("TYPE", nodeTypeMenu);
+                    block.addArgument("NAME", "Test.txt");
+                    block.addArgument("FOLDER", folderMenu);
+                });
 
         blockReporter(20, "get_file_content", "Get [FILE]", this::getFieldContent,
-            block -> block.addArgument("FILE", fileMenu));
+                block -> block.addArgument("FILE", fileMenu));
 
         blockReporter(30, "get_count", "Count of [VALUE] in [FOLDER]", this::getCountOfNodesReporter,
-            block -> {
-                block.addArgument("FOLDER", folderMenu);
-                block.addArgument(VALUE, this.countMenu);
-            });
+                block -> {
+                    block.addArgument("FOLDER", folderMenu);
+                    block.addArgument(VALUE, this.countMenu);
+                });
 
         blockReporter(35, "get_used_quota", "Used quota of [ENTITY] | in [UNIT]", this::getUsedQuotaReporter,
-            block -> {
-                block.addArgument(ENTITY, fsEntityMenu);
-                block.addArgument("UNIT", unitMenu);
-            });
+                block -> {
+                    block.addArgument(ENTITY, fsEntityMenu);
+                    block.addArgument("UNIT", unitMenu);
+                });
 
         blockReporter(40, "get_total_quota", "Total quota of [ENTITY] | in [UNIT]", this::getTotalQuotaReporter,
-            block -> {
-                block.addArgument(ENTITY, fsEntityMenu);
-                block.addArgument("UNIT", unitMenu);
-            });
+                block -> {
+                    block.addArgument(ENTITY, fsEntityMenu);
+                    block.addArgument("UNIT", unitMenu);
+                });
 
         blockCommand(50, "delete", "Delete [FILE]", this::deleteFileHandle,
-            block -> block.addArgument("FILE", fileMenu));
+                block -> block.addArgument("FILE", fileMenu));
     }
 
     public static byte[] addAll(final byte[] array1, byte[] array2) {
@@ -145,7 +147,7 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
     }
 
     /*public void init() {
-        this.fsEntityMenu.setDefault(entityContext.findAny(entityClass));
+        this.fsEntityMenu.setDefault(context.findAny(entityClass));
         super.init();
     }*/
 
@@ -166,13 +168,13 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
             fsItem.fileSystem.delete(Collections.singleton(fsItem.node));
         } catch (Exception ex) {
             workspaceBlock.logErrorAndThrow("Unable to delete file: <{}>. Msg: ",
-                fsItem.node, getErrorMessage(ex));
+                    fsItem.node, getErrorMessage(ex));
         }
     }
 
     private FileSystemProvider getFileSystem(WorkspaceBlock workspaceBlock) {
         BaseFileSystemEntity entity = workspaceBlock.getMenuValueEntityRequired(ENTITY, this.fsEntityMenu);
-        return entity.getFileSystem(entityContext);
+        return entity.getFileSystem(context);
     }
 
     private RawType getFieldContent(WorkspaceBlock workspaceBlock) throws Exception {
@@ -213,7 +215,7 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
             ModifyFileSettings setting = workspaceBlock.getSetting(ModifyFileSettings.class);
 
             FileSystemProvider.UploadOption uploadOption =
-                setting.getModifyOption() == ModifyOption.Append ? UploadOption.Append : FileSystemProvider.UploadOption.Replace;
+                    setting.getModifyOption() == ModifyOption.Append ? UploadOption.Append : FileSystemProvider.UploadOption.Replace;
             if (setting.prependNewLine) {
                 value = addAll("\n".getBytes(), value);
             }
@@ -236,14 +238,14 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
     }
 
     private FileSystemItem getItemId(String key, WorkspaceBlock workspaceBlock) {
-        String[] ids = workspaceBlock.getMenuValue(key, this.fileMenu).split("~~~");
-        BaseFileSystemEntity entity = getEntityContext().getEntityRequire(ids[0]);
+        String[] ids = workspaceBlock.getMenuValue(key, this.fileMenu).split(LIST_DELIMITER);
+        BaseFileSystemEntity entity = context.db().getEntityRequire(ids[0]);
         String node = ids[1];
         int splitNameAndId = node.indexOf("://");
         if (splitNameAndId >= 0) {
             node = node.substring(splitNameAndId + "://".length());
         }
-        return new FileSystemItem(entity.getFileSystem(entityContext), entity, node);
+        return new FileSystemItem(entity.getFileSystem(context), entity, node);
     }
 
     @RequiredArgsConstructor
@@ -260,8 +262,9 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
         File, Folder
     }
 
+    @Getter
     @RequiredArgsConstructor
-    private static class FileSystemItem {
+    public static class FileSystemItem {
 
         private final FileSystemProvider fileSystem;
         private final BaseFileSystemEntity entity;
@@ -270,7 +273,7 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
 
     @Getter
     @Setter
-    public static class ModifyFileSettings implements EntityFieldMetadata {
+    public static class ModifyFileSettings implements ScratchSettingBaseEntity {
 
         @UIField(order = 1, icon = "fa fa-pen", type = UIFieldType.EnumButtons)
         private ModifyOption modifyOption = ModifyOption.Overwrite;

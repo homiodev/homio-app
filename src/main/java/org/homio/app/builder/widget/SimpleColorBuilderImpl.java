@@ -1,23 +1,25 @@
 package org.homio.app.builder.widget;
 
-import org.homio.api.EntityContextWidget.SimpleColorWidgetBuilder;
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
+
+import org.homio.api.ContextWidget.SimpleColorWidgetBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasAlignBuilder;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.impl.color.WidgetSimpleColorEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class SimpleColorBuilderImpl extends WidgetBaseBuilderImpl<SimpleColorWidgetBuilder, WidgetSimpleColorEntity>
-    implements SimpleColorWidgetBuilder,
-    HasAlignBuilder<WidgetSimpleColorEntity, SimpleColorWidgetBuilder> {
+        implements SimpleColorWidgetBuilder,
+        HasAlignBuilder<WidgetSimpleColorEntity, SimpleColorWidgetBuilder> {
 
-    SimpleColorBuilderImpl(WidgetSimpleColorEntity widget, EntityContextImpl entityContext) {
-        super(widget, entityContext);
+    SimpleColorBuilderImpl(WidgetSimpleColorEntity widget, ContextImpl context) {
+        super(widget, context);
     }
 
     @Override
     public @NotNull SimpleColorWidgetBuilder setColors(String... colors) {
-        widget.setColors(String.join("~~~", colors));
+        widget.setColors(String.join(LIST_DELIMITER, colors));
         return this;
     }
 

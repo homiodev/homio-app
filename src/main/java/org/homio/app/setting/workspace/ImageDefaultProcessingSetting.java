@@ -7,8 +7,8 @@ import org.homio.app.setting.CoreSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 
 public class ImageDefaultProcessingSetting implements
-    CoreSettingPlugin<ImageProviderService>,
-    SettingPluginOptionsBean<ImageProviderService> {
+        CoreSettingPlugin<ImageProviderService>,
+        SettingPluginOptionsBean<ImageProviderService> {
 
     @Override
     public @NotNull GroupKey getGroupKey() {

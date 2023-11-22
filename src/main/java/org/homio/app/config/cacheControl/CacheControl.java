@@ -7,10 +7,6 @@ import java.lang.annotation.Target;
 
 /**
  * Provides an HTTP 1.1 cache control header annotation for Spring MVC controller methods.
- * <p>
- * See also http://www.mnot.net/cache_docs/
- *
- * @author Scott Rossillo
  */
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)

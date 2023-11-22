@@ -9,7 +9,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/rest")
 public class WireController {
 
-    @Autowired private AllDeviceRepository allDeviceRepository;
+    @Autowired
+    private AllDeviceRepository allDeviceRepository;
 
     /*  @RequestMapping(value = "/getW1LinkStatus", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public LinkStatus getW1LinkStatus(@RequestParam(value = "entityID") String entityID) {

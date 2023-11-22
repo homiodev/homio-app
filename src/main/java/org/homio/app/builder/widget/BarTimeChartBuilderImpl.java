@@ -5,34 +5,34 @@ import java.util.List;
 import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.homio.api.EntityContextWidget.BarChartType;
-import org.homio.api.EntityContextWidget.BarTimeChartBuilder;
-import org.homio.api.EntityContextWidget.BarTimeChartSeriesBuilder;
+import org.homio.api.ContextWidget.BarChartType;
+import org.homio.api.ContextWidget.BarTimeChartBuilder;
+import org.homio.api.ContextWidget.BarTimeChartSeriesBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasAxisBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasChartDataSourceBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasChartTimePeriodBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasHorizontalLineBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasLegendBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasMinMaxChartValueBuilder;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.impl.chart.bar.WidgetBarTimeChartEntity;
 import org.homio.app.model.entity.widget.impl.chart.bar.WidgetBarTimeChartSeriesEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class BarTimeChartBuilderImpl extends WidgetBaseBuilderImpl<BarTimeChartBuilder, WidgetBarTimeChartEntity>
-    implements BarTimeChartBuilder,
-    HasLegendBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
-    HasChartTimePeriodBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
-    HasHorizontalLineBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
-    HasMinMaxChartValueBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
-    HasAxisBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder> {
+        implements BarTimeChartBuilder,
+        HasLegendBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
+        HasChartTimePeriodBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
+        HasHorizontalLineBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
+        HasMinMaxChartValueBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
+        HasAxisBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder> {
 
     @Getter
     private final List<WidgetBarTimeChartSeriesEntity> series = new ArrayList<>();
 
-    BarTimeChartBuilderImpl(WidgetBarTimeChartEntity widget, EntityContextImpl entityContext) {
-        super(widget, entityContext);
+    BarTimeChartBuilderImpl(WidgetBarTimeChartEntity widget, ContextImpl context) {
+        super(widget, context);
     }
 
     @Override
@@ -78,7 +78,7 @@ public class BarTimeChartBuilderImpl extends WidgetBaseBuilderImpl<BarTimeChartB
 
 @RequiredArgsConstructor
 class BarTimeSeriesBuilderImpl implements BarTimeChartSeriesBuilder,
-    HasChartDataSourceBuilder<WidgetBarTimeChartSeriesEntity, BarTimeChartSeriesBuilder> {
+        HasChartDataSourceBuilder<WidgetBarTimeChartSeriesEntity, BarTimeChartSeriesBuilder> {
 
     private final WidgetBarTimeChartSeriesEntity series;
 

@@ -6,22 +6,14 @@ import org.homio.api.ui.field.UIFieldColorPicker;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
-import org.homio.app.model.entity.widget.attributes.HasIcon;
-import org.homio.app.model.entity.widget.attributes.HasName;
-import org.homio.app.model.entity.widget.attributes.HasSingleValueAggregatedDataSource;
-import org.homio.app.model.entity.widget.attributes.HasStyle;
-import org.homio.app.model.entity.widget.attributes.HasValueConverter;
-import org.homio.app.model.entity.widget.attributes.HasValueTemplate;
-import org.jetbrains.annotations.NotNull;
+import org.homio.app.model.entity.widget.attributes.*;
 
 @Entity
 public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayEntity>
-    implements HasSingleValueAggregatedDataSource, HasIcon, HasValueTemplate,
-    HasName, HasStyle, HasValueConverter {
+        implements HasSingleValueDataSource, HasIcon, HasValueTemplate,
+        HasName, HasStyle, HasValueConverter {
 
-    public static final String PREFIX = "wgsdps_";
-
-    @UIField(order = 1, isRevert = true)
+    @UIField(order = 1)
     @UIFieldGroup("UI")
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldReadDefaultValue
@@ -39,12 +31,12 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected String getSeriesPrefix() {
+        return "display";
     }
 
     @Override
-    protected void beforePersist() {
+    public void beforePersist() {
         HasIcon.randomColor(this);
     }
 }

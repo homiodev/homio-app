@@ -1,5 +1,7 @@
 package org.homio.app.console;
 
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
+
 import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -11,7 +13,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import org.homio.api.EntityContext;
+import lombok.experimental.Accessors;
+import org.homio.api.Context;
 import org.homio.api.console.ConsolePluginTable;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.ui.field.UIField;
@@ -23,7 +26,7 @@ import org.springframework.stereotype.Component;
 public class NetworkInterfaceConsolePlugin implements ConsolePluginTable<NetworkInterfaceConsolePlugin.NetworkInterfaceEntity> {
 
     @Getter
-    private final EntityContext entityContext;
+    private final @Accessors(fluent = true) Context context;
 
     @Override
     public String getParentTab() {
@@ -36,12 +39,12 @@ public class NetworkInterfaceConsolePlugin implements ConsolePluginTable<Network
         List<NetworkInterfaceEntity> list = new ArrayList<>();
         for (NetworkInterface networkInterface : Collections.list(NetworkInterface.getNetworkInterfaces())) {
             list.add(new NetworkInterfaceEntity(
-                networkInterface.getName(),
-                networkInterface.getDisplayName(),
-                networkInterface.getMTU(),
-                networkInterface.getInterfaceAddresses().stream()
-                                .map(ia -> ia.getAddress().toString())
-                                .collect(Collectors.joining(" ~~~|~~~ "))));
+                    networkInterface.getName(),
+                    networkInterface.getDisplayName(),
+                    networkInterface.getMTU(),
+                    networkInterface.getInterfaceAddresses().stream()
+                            .map(ia -> ia.getAddress().toString())
+                                    .collect(Collectors.joining(" %s|%s ".formatted(LIST_DELIMITER, LIST_DELIMITER)))));
         }
         Collections.sort(list);
         return list;
@@ -53,7 +56,7 @@ public class NetworkInterfaceConsolePlugin implements ConsolePluginTable<Network
     }
 
     @Override
-    public String getName() {
+    public @NotNull String getName() {
         return "networkInterface";
     }
 

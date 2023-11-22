@@ -1,11 +1,7 @@
 package org.homio.app.model.entity.widget.impl.chart;
 
 import jakarta.persistence.Entity;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.*;
 import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
@@ -13,7 +9,7 @@ import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 
 @Entity
 public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S extends WidgetSeriesEntity<T>>
-    extends WidgetBaseEntityAndSeries<T, S> implements HasLegend, HasSourceServerUpdates {
+        extends WidgetBaseEntityAndSeries<T, S> implements HasLegend, HasSourceServerUpdates {
 
     @Override
     public WidgetGroup getGroup() {
@@ -40,7 +36,7 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
         setJsonData("sdl", value);
     }
 
-    @UIField(order = 2, isRevert = true)
+    @UIField(order = 2)
     @UIFieldGroup("DATA_LABELS")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
@@ -72,7 +68,8 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
         setJsonData("sfsb", value);
     }
 
-    @UIField(order = 10, isRevert = true)
+    @UIField(order = 10)
+    @UIFieldReadDefaultValue
     @UIFieldSlider(min = 10, max = 600)
     @UIFieldGroup("CHART_UI")
     public int getFetchDataFromServerInterval() {

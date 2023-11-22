@@ -2,8 +2,6 @@ package org.homio.app.ssh;
 
 import org.homio.api.entity.types.IdentityEntity;
 import org.homio.api.service.EntityService;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldType;
 
 /**
  * Base class for all ssh entities to allow to connect to it
@@ -12,15 +10,6 @@ import org.homio.api.ui.field.UIFieldType;
  * @param <S> - service
  */
 @SuppressWarnings({"rawtypes"})
-public abstract class SshBaseEntity<T extends SshBaseEntity, S extends SshProviderService<T>> extends IdentityEntity<T>
-    implements EntityService<S, T> {
-
-    @UIField(order = 1, hideOnEmpty = true, fullWidth = true, bg = "#334842C2", type = UIFieldType.HTML)
-    public String getDescription() {
-        return getJsonData("description");
-    }
-
-    public void setDescription(String value) {
-        setJsonData("description", value);
-    }
+public abstract class SshBaseEntity<T extends SshBaseEntity, S extends EntityService.ServiceInstance & SshProviderService<T>> extends IdentityEntity
+    implements EntityService<S> {
 }

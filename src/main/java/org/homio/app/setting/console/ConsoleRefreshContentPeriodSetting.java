@@ -3,7 +3,7 @@ package org.homio.app.setting.console;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import org.homio.api.EntityContext;
+import org.homio.api.Context;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 public class ConsoleRefreshContentPeriodSetting
-    implements ConsoleSettingPlugin<Integer>, SettingPluginOptions<Integer> {
+        implements ConsoleSettingPlugin<Integer>, SettingPluginOptions<Integer> {
 
     @Override
     public @NotNull String getDefaultValue() {
@@ -31,14 +31,14 @@ public class ConsoleRefreshContentPeriodSetting
     }
 
     @Override
-    public @NotNull Collection<OptionModel> getOptions(EntityContext entityContext, JSONObject params) {
+    public @NotNull Collection<OptionModel> getOptions(Context context, JSONObject params) {
         return new ArrayList<>(
-            Arrays.asList(
-                OptionModel.of("0", "time.NEVER"),
-                OptionModel.of("5", "time.SEC_5"),
-                OptionModel.of("10", "time.SEC_10"),
-                OptionModel.of("30", "time.SEC_30"),
-                OptionModel.of("60", "time.SEC_60")));
+                Arrays.asList(
+                        OptionModel.of("0", "TIME.NEVER"),
+                        OptionModel.of("5", "TIME.SEC_5"),
+                        OptionModel.of("10", "TIME.SEC_10"),
+                        OptionModel.of("30", "TIME.SEC_30"),
+                        OptionModel.of("60", "TIME.SEC_60")));
     }
 
     @Override

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import lombok.Getter;
-import org.homio.app.manager.common.impl.EntityContextBGPImpl;
+import org.homio.app.manager.common.impl.ContextBGPImpl;
 import org.json.JSONObject;
 
 @Getter
@@ -12,7 +12,7 @@ public class BgpProcessResponse {
 
     private final List<BgpProcess> processes = new ArrayList<>();
 
-    public void add(EntityContextBGPImpl.ThreadContextImpl<?> context) {
+    public void add(ContextBGPImpl.ThreadContextImpl<?> context) {
         this.processes.add(new BgpProcess(context));
     }
 
@@ -30,7 +30,7 @@ public class BgpProcessResponse {
         private final JSONObject metadata;
         private final String nextCall;
 
-        public BgpProcess(EntityContextBGPImpl.ThreadContextImpl<?> context) {
+        public BgpProcess(ContextBGPImpl.ThreadContextImpl<?> context) {
             this.name = context.getName();
             this.period = context.getPeriod() == null ? null : context.getPeriod().toMillis();
             this.error = context.getError();

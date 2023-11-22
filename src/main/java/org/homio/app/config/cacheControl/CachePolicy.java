@@ -2,8 +2,6 @@ package org.homio.app.config.cacheControl;
 
 /**
  * Provides an enumeration of cache control policies.
- *
- * @author Scott Rossillo
  */
 public enum CachePolicy {
 

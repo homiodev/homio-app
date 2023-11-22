@@ -6,9 +6,7 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 @UISidebarChildren(icon = "fas fa-person-walking-luggage", color = "#B5B812")
-public final class UserGuestEntity extends UserBaseEntity<UserGuestEntity> {
-
-    public static final String PREFIX = "ug_";
+public final class UserGuestEntity extends UserBaseEntity {
 
     @Override
     public @NotNull UserType getUserType() {
@@ -16,8 +14,8 @@ public final class UserGuestEntity extends UserBaseEntity<UserGuestEntity> {
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getDevicePrefix() {
+        return "user-guest";
     }
 
     @Override
