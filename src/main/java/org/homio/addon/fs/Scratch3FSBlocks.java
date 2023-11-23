@@ -2,7 +2,7 @@ package org.homio.addon.fs;
 
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
+import static org.homio.api.entity.HasJsonData.LEVEL_DELIMITER;
 import static org.homio.api.util.CommonUtils.TIKA;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 import static org.springframework.http.MediaType.TEXT_PLAIN_VALUE;
@@ -20,7 +20,6 @@ import lombok.SneakyThrows;
 import org.apache.commons.io.IOUtils;
 import org.homio.addon.fs.Scratch3FSBlocks.ModifyFileSettings.ModifyOption;
 import org.homio.api.Context;
-import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.fs.FileSystemProvider;
 import org.homio.api.fs.FileSystemProvider.UploadOption;
@@ -146,11 +145,6 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
         throw new RuntimeException("Unable to handle unknown count enum type: " + countNodeEnum);
     }
 
-    /*public void init() {
-        this.fsEntityMenu.setDefault(context.findAny(entityClass));
-        super.init();
-    }*/
-
     @SneakyThrows
     private DecimalType getTotalQuotaReporter(WorkspaceBlock workspaceBlock) {
         double unit = workspaceBlock.getMenuValue("UNIT", this.unitMenu).divider;
@@ -173,7 +167,7 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
     }
 
     private FileSystemProvider getFileSystem(WorkspaceBlock workspaceBlock) {
-        BaseFileSystemEntity entity = workspaceBlock.getMenuValueEntityRequired(ENTITY, this.fsEntityMenu);
+        BaseFileSystemEntity<?, ?> entity = workspaceBlock.getMenuValueEntityRequired(ENTITY, this.fsEntityMenu);
         return entity.getFileSystem(context);
     }
 
@@ -238,8 +232,8 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
     }
 
     private FileSystemItem getItemId(String key, WorkspaceBlock workspaceBlock) {
-        String[] ids = workspaceBlock.getMenuValue(key, this.fileMenu).split(LIST_DELIMITER);
-        BaseFileSystemEntity entity = context.db().getEntityRequire(ids[0]);
+        String[] ids = workspaceBlock.getMenuValue(key, this.fileMenu).split(LEVEL_DELIMITER);
+        BaseFileSystemEntity<?, ?> entity = context.db().getEntityRequire(ids[0]);
         String node = ids[1];
         int splitNameAndId = node.indexOf("://");
         if (splitNameAndId >= 0) {
@@ -262,13 +256,8 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
         File, Folder
     }
 
-    @Getter
-    @RequiredArgsConstructor
-    public static class FileSystemItem {
+    public record FileSystemItem(FileSystemProvider fileSystem, BaseFileSystemEntity<?, ?> entity, String node) {
 
-        private final FileSystemProvider fileSystem;
-        private final BaseFileSystemEntity entity;
-        private final String node;
     }
 
     @Getter

@@ -22,13 +22,16 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
 import org.homio.api.Context;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
+import org.homio.api.exception.NotFoundException;
 import org.homio.api.fs.FileSystemProvider;
 import org.homio.api.fs.TreeConfiguration;
 import org.homio.api.fs.TreeNode;
@@ -100,13 +103,16 @@ public class FileSystemController {
         return fileSystemService.getFileSystem(request.sourceFs).delete(request.sourceFileIds);
     }
 
-    @GetMapping("/{sourceFs}/download/{resource}")
+    @PostMapping("/{sourceFs}/download")
     @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
     public ResponseEntity<InputStreamResource> download(
         @PathVariable("sourceFs") String sourceFs,
-        @PathVariable("resource") String resource) throws Exception {
+        @RequestBody ListRequest request) throws Exception {
         FileSystemProvider fileSystem = fileSystemService.getFileSystem(sourceFs);
-        TreeNode treeNode = fileSystem.toTreeNode(resource);
+        TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileId);
+        if (treeNode == null || treeNode.getId() == null) {
+            throw NotFoundException.fileNotFound(request.sourceFileId);
+        }
         InputStream inputStream = fileSystem.getEntryInputStream(treeNode.getId());
 
         MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
@@ -288,7 +294,7 @@ public class FileSystemController {
 
     @Getter
     @Setter
-    private static class RenameNodeRequest extends BaseNodeRequest {
+    public static class RenameNodeRequest extends BaseNodeRequest {
 
         private String sourceFileId;
         private String newName;
@@ -296,7 +302,7 @@ public class FileSystemController {
 
     @Getter
     @Setter
-    private static class CreateNodeRequest extends BaseNodeRequest {
+    public static class CreateNodeRequest extends BaseNodeRequest {
 
         public String sourceFileId;
         public String name;
@@ -305,7 +311,7 @@ public class FileSystemController {
 
     @Getter
     @Setter
-    private static class UnArchiveNodeRequest extends BaseNodeRequest {
+    public static class UnArchiveNodeRequest extends BaseNodeRequest {
 
         public String targetDir;
         public String fileHandler;
@@ -315,7 +321,7 @@ public class FileSystemController {
 
     @Getter
     @Setter
-    private static class ArchiveNodeRequest extends BaseNodeRequest {
+    public static class ArchiveNodeRequest extends BaseNodeRequest {
 
         public Set<String> sourceFileIds;
         public String format;
@@ -327,7 +333,7 @@ public class FileSystemController {
 
     @Getter
     @Setter
-    private static class CopyNodeRequest extends BaseNodeRequest {
+    public static class CopyNodeRequest extends BaseNodeRequest {
 
         private Set<String> sourceFileIds;
         private String targetPath;
@@ -336,28 +342,30 @@ public class FileSystemController {
 
     @Getter
     @Setter
-    private static class DownloadRequest extends BaseNodeRequest {
+    public static class DownloadRequest extends BaseNodeRequest {
 
         public Set<String> sourceFileIds;
     }
 
     @Getter
     @Setter
-    private static class RemoveFilesRequest extends BaseNodeRequest {
+    public static class RemoveFilesRequest extends BaseNodeRequest {
 
         public Set<String> sourceFileIds;
     }
 
     @Getter
     @Setter
-    private static class ListRequest extends BaseNodeRequest {
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ListRequest extends BaseNodeRequest {
 
         private String sourceFileId;
     }
 
     @Getter
     @Setter
-    private static class GetFSRequest {
+    public static class GetFSRequest {
 
         private SelectedNode[] selectedNodes;
         private List<String> fileSystemIds;
@@ -374,7 +382,7 @@ public class FileSystemController {
 
     @Getter
     @Setter
-    private static class BaseNodeRequest {
+    public static class BaseNodeRequest {
 
         public String sourceFs;
         public String targetFs;

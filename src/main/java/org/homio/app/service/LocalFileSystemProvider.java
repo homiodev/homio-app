@@ -175,7 +175,6 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     @Override
     public void setEntity(Object entity) {
         this.entity = (LocalBoardEntity) entity;
-
     }
 
     @Override
