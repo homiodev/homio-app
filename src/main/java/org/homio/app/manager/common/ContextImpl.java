@@ -467,6 +467,20 @@ public class ContextImpl implements Context {
         }
     }
 
+    /**
+     * Fully restart application
+     */
+    @SneakyThrows
+    public static void exitApplication(ApplicationContext applicationContext, int code) {
+        SpringApplication.exit(applicationContext, () -> code);
+        System.exit(code);
+        // sleep to allow program exist
+        Thread.sleep(30000);
+        log.info("Unable to stop app in 30sec. Force stop it");
+        // force exit
+        Runtime.getRuntime().halt(code);
+    }
+
     private void updateAppNotificationBlock() {
         ui().notification().addBlock("app", "App", new Icon("fas fa-house", "#E65100"), builder -> {
             builder.setBorderColor("#FF4400");
@@ -478,12 +492,18 @@ public class ContextImpl implements Context {
                 builder.setUpdatable(
                         (progressBar, version) -> appGitHub.updateProject("homio", progressBar, false, projectUpdate -> {
                             Path jarLocation = Paths.get(setting().getEnvRequire("appPath", String.class, CommonUtils.getRootPath().toString(), true));
-                            Path archiveAppPath = jarLocation.resolve("homio-app.zip");
+                            Path archiveAppPath = jarLocation.resolve("homio-app.jar.gz");
                             Files.deleteIfExists(archiveAppPath);
-                            projectUpdate.downloadReleaseFile(version, archiveAppPath.getFileName().toString(), archiveAppPath);
-                            ui().dialog().reloadWindow("Finish update", 60);
-                            log.info("Exit app to restart it after update");
-                            restartApplication();
+                            try {
+                                projectUpdate.downloadReleaseFile(version, archiveAppPath.getFileName().toString(), archiveAppPath);
+                                ui().dialog().reloadWindow("Finish update", 60);
+                                log.info("Exit app to restart it after update");
+                            } catch (Exception ex) {
+                                log.error("Unable to download homio app", ex);
+                                Files.deleteIfExists(archiveAppPath);
+                                return null;
+                            }
+                            exitApplication(applicationContext, 221);
                             return null;
                         }, null),
                     appGitHub.getReleasesSince(installedVersion, false));
@@ -501,20 +521,6 @@ public class ContextImpl implements Context {
                 builder.addInfo("time", new Icon("fas fa-clock"), serverStartMsg);
             });
         });
-    }
-
-    /**
-     * Fully restart application
-     */
-    @SneakyThrows
-    private void restartApplication() {
-        SpringApplication.exit(applicationContext, () -> 4);
-        System.exit(4);
-        // sleep to allow program exist
-        Thread.sleep(30000);
-        log.info("Unable to stop app in 30sec. Force stop it");
-        // force exit
-        Runtime.getRuntime().halt(4);
     }
 
     @AllArgsConstructor

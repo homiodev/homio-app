@@ -555,8 +555,8 @@ public class ContextBGPImpl implements ContextBGP {
     }
 
     @Override
-    public @NotNull ProgressBuilder runWithProgress(@NotNull String key) {
-        return new ProgressBuilderImpl(key);
+    public @NotNull ProgressBuilder runWithProgress(@NotNull String key, boolean cancellable) {
+        return new ProgressBuilderImpl(key).setCancellable(cancellable);
     }
 
     private <T> ContextBGPImpl.BatchRunContext<T> prepareBatchProcessContext(@NotNull String batchName, int threadsCount) {

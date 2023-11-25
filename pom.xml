@@ -2,75 +2,6 @@
   <artifactId>homio-app</artifactId>
   <modelVersion>4.0.0</modelVersion>
   <packaging>jar</packaging>
-  <version>0.1.2-SNAPSHOT</version>
-
-  <parent>
-    <artifactId>homio-dependency</artifactId>
-    <groupId>org.homio</groupId>
-    <version>2.5.0</version>
-  </parent>
-
-  <properties>
-    <graalvm.version>23.0.1</graalvm.version>
-    <homio-api.version>1.3.2</homio-api.version>
-    <homio-primary-addons.version>1.3.2</homio-primary-addons.version>
-    <start-class>org.homio.app.HomioApplication</start-class>
-  </properties>
-
-  <build>
-    <finalName>${project.artifactId}</finalName>
-    <plugins>
-      <plugin>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
-        <configuration>
-          <layers>
-            <includeLayerTools>false</includeLayerTools>
-          </layers>
-          <arguments>
-            <argument>--add-opens java.base/java.net=ALL-UNNAMED</argument>
-            <argument>--add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED</argument>
-          </arguments>
-          <mainClass>${start-class}</mainClass>
-        </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>repackage</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <archive>
-            <manifestEntries>
-              <Implementation-Version>${project.version}</Implementation-Version>
-            </manifestEntries>
-          </archive>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <systemPropertyVariables>
-            <development>true</development>
-          </systemPropertyVariables>
-        </configuration>
-      </plugin>
-    </plugins>
-
-    <resources>
-      <resource>
-        <directory>src/main/resources</directory>
-        <filtering>false</filtering>
-      </resource>
-    </resources>
-  </build>
-
   <dependencies>
     <dependency>
       <groupId>com.jcraft</groupId>
@@ -167,6 +98,12 @@
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcpkix-jdk15on</artifactId>
       <version>1.70</version>
+    </dependency>
+
+    <dependency>
+      <artifactId>addon-weather</artifactId>
+      <groupId>org.homio.addon</groupId>
+      <version>1.0.3-SNAPSHOT</version>
     </dependency>
 
     <dependency>
@@ -520,6 +457,75 @@
       <version>1.30</version>
     </dependency>
   </dependencies>
+
+  <parent>
+    <artifactId>homio-dependency</artifactId>
+    <groupId>org.homio</groupId>
+    <version>2.5.0</version>
+  </parent>
+
+  <properties>
+    <graalvm.version>23.0.1</graalvm.version>
+    <homio-api.version>1.3.2</homio-api.version>
+    <homio-primary-addons.version>1.3.2</homio-primary-addons.version>
+    <start-class>org.homio.app.HomioApplication</start-class>
+  </properties>
+
+  <build>
+    <finalName>${project.artifactId}</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <layers>
+            <includeLayerTools>false</includeLayerTools>
+          </layers>
+          <arguments>
+            <argument>--add-opens java.base/java.net=ALL-UNNAMED</argument>
+            <argument>--add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED</argument>
+          </arguments>
+          <mainClass>${start-class}</mainClass>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>repackage</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Implementation-Version>${project.version}</Implementation-Version>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <development>true</development>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+    </plugins>
+
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>false</filtering>
+      </resource>
+    </resources>
+  </build>
+
+  <version>0.1.1</version>
 
   <repositories>
     <repository>

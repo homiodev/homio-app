@@ -56,7 +56,7 @@ if [[ -z "$java_path" || "$($java_path -version 2>&1 | grep -oP 'version "\K\d+'
         tar xzf "$root_path/jre.tar.gz" -C "$root_path"
 
         # Remove the Java archive
-        rm "$root_path/jre.tar.gz"
+        rm -f "$root_path/jre.tar.gz"
         echo "Java 17 has been installed  to $java_path"
   	fi
 else
@@ -78,6 +78,33 @@ if [[ ! -f "$launcher" ]]; then
     echo "File 'homio-launcher.jar' downloaded successfully."
 fi
 
+update_application() {
+    if [[ -f "$root_path/homio-app.zip" ]]; then
+        if [[ -f "$root_path/homio-app.jar" ]]; then
+            echo "Backup $root_path/homio-app.jar to $root_path/homio-app.jar_backup"
+            cp "$root_path/homio-app.jar" "$root_path/homio-app.jar_backup"
+        fi
+
+        echo "Extracting $root_path/homio-app.zip"
+        if unzip -o "$root_path/homio-app.zip" -d "$root_path"; then
+            echo "Homio ZIP file extracted successfully."
+            echo "Remove archive $root_path/homio-app.zip"
+            rm -f "$root_path/homio-app.zip"
+        else
+            echo "Failed extract Homio ZIP file"
+            if [[ -f "$root_path/homio-app.jar_backup" ]]; then
+                echo "Recovery backup from $root_path/homio-app.jar_backup"
+                mv "$root_path/homio-app.jar_backup" "$root_path/homio-app.jar"
+            else
+              echo "Remove archive $root_path/homio-app.zip"
+              rm -f "$root_path/homio-app.zip"
+            fi
+        fi
+    fi
+}
+
+update_application
+
 if [[ -f "$root_path/homio-app.jar" ]]; then
     app="homio-app.jar"
 else
@@ -89,14 +116,18 @@ sudo "$java_path" -jar "$root_path/$app"
 exit_code=$?
 
 # Unzip install/update if result code is 4 and update file exists
-if [[ $exit_code -eq 4 ]]; then
-    echo "Exit code is 4. Update application..."
-    if [[ -f "$root_path/homio-app.zip" ]]; then
-        echo "homio-app.zip file found. Extracting..."
-        tar -xf "$root_path/homio-app.zip" -C "$root_path"
-        rm "$root_path/homio-app.zip"
-        exec "$0"
-    fi
+if [[ $exit_code -eq 221 ]]; then
+    echo "Update application..."
+    update_application
 else
     echo "Homio app exit code with abnormal: $exit_code"
+    if [[ -f "$root_path/homio-app.jar_backup" ]]; then
+      echo "Recovery homio-app.jar backup"
+      cp "$root_path/homio-app.jar_backup" "$root_path/homio-app.jar"
+    else
+      rm -f "$root_path/homio-app.jar"
+    fi
 fi
+
+echo "Restarting Homio"
+exec "$0"
