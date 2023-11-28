@@ -37,8 +37,7 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block cityGeoLocationReporter;
     private final Scratch3Block countryInfoReporter;
 
-    public Scratch3HardwareBlocks(
-        Context context, NetworkHardwareRepository networkHardwareRepository) {
+    public Scratch3HardwareBlocks(Context context, NetworkHardwareRepository networkHardwareRepository) {
         super("#51633C", context, null, "hardware");
         this.networkHardwareRepository = networkHardwareRepository;
 

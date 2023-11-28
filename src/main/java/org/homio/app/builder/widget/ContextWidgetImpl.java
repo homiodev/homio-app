@@ -20,6 +20,7 @@ import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
+import org.homio.api.widget.JavaScriptBuilder;
 import org.homio.api.widget.template.TemplateWidgetBuilder;
 import org.homio.api.widget.template.WidgetDefinition;
 import org.homio.app.manager.common.ContextImpl;
@@ -204,6 +205,12 @@ public class ContextWidgetImpl implements ContextWidget {
             entity.setWidgetEntity(savedWidget);
             context.db().save(entity);
         }
+    }
+
+    @Override
+    public void createWidgetTemplate(@NotNull String entityID, @NotNull String name, @NotNull ParentWidget parent, @NotNull Icon icon,
+        @NotNull Consumer<JavaScriptBuilder> jsBuilder) {
+        throw new IllegalArgumentException("Not implemented yet");
     }
 
     @Override

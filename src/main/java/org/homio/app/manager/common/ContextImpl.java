@@ -32,6 +32,7 @@ import org.homio.api.ContextMedia;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
+import org.homio.api.exception.ServerException;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
@@ -111,6 +112,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ContextImpl implements Context {
 
+    public static final Map<String, Object> FIELD_FETCH_TYPE = new HashMap<>();
     private static final Set<Class<? extends ContextCreated>> BEAN_CONTEXT_CREATED = new LinkedHashSet<>();
     private static final Set<Class<? extends ContextRefreshed>> BEAN_CONTEXT_REFRESH = new LinkedHashSet<>();
     private static final long START_TIME = System.currentTimeMillis();
@@ -228,6 +230,7 @@ public class ContextImpl implements Context {
         this.workspaceService = applicationContext.getBean(WorkspaceService.class);
 
         rebuildRepositoryByPrefixMap();
+        registerAllFieldSubTypes();
 
         contextEvent.onContextCreated();
 
@@ -275,6 +278,13 @@ public class ContextImpl implements Context {
         setting().listenValue(ScanMediaSetting.class, "scan-video-sources", () ->
                 ui().handleResponse(new BeansItemsDiscovery(VideoStreamScanner.class).handleAction(this, null)));
         INSTANCE = this;
+    }
+
+    public void registerAllFieldSubTypes() {
+        /*ContextImpl.FIELD_FETCH_TYPE.clear();
+        for (WidgetBaseTemplate template : getBeansOfType(WidgetBaseTemplate.class)) {
+            ContextImpl.FIELD_FETCH_TYPE.put(template.getName(), template);
+        }*/
     }
 
     @Override
@@ -397,17 +407,6 @@ public class ContextImpl implements Context {
         return values;
     }
 
-    public <T> @NotNull Map<String, Collection<T>> getBeansOfTypeByAddons(@NotNull Class<T> clazz) {
-        Map<String, Collection<T>> res = new HashMap<>();
-        for (ApplicationContext context : allApplicationContexts) {
-            Collection<T> beans = context.getBeansOfType(clazz).values();
-            if (!beans.isEmpty()) {
-                res.put(context.getId(), beans);
-            }
-        }
-        return res;
-    }
-
     @Override
     public <T> @NotNull List<Class<? extends T>> getClassesWithAnnotation(
             @NotNull Class<? extends Annotation> annotation) {
@@ -456,6 +455,14 @@ public class ContextImpl implements Context {
         for (Class<? extends ContextRefreshed> beanUpdateClass : BEAN_CONTEXT_REFRESH) {
             applicationContext.getBean(beanUpdateClass).onContextRefresh(this);
         }
+    }
+
+    public static Object getFetchType(String subType) {
+        Object pojoInstance = ContextImpl.FIELD_FETCH_TYPE.get(subType);
+        if (pojoInstance == null) {
+            throw new ServerException("Unable to find fetch type: " + subType);
+        }
+        return pojoInstance;
     }
 
     private void restartEntityServices() {

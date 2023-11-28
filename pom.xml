@@ -101,7 +101,7 @@
     </dependency>
 
     <dependency>
-      <artifactId>addon-weather</artifactId>
+      <artifactId>addon-openweathermap</artifactId>
       <groupId>org.homio.addon</groupId>
       <version>1.0.3-SNAPSHOT</version>
     </dependency>
