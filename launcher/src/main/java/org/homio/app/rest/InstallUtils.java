@@ -19,34 +19,6 @@ import org.homio.hquery.hardware.other.MachineHardwareRepository;
 public final class InstallUtils {
 
     @SneakyThrows
-    public static void downloadTmate(ProgressBar progressBar, MachineHardwareRepository repository, Path rootPath) {
-        if (SystemUtils.IS_OS_LINUX) {
-            try {
-                repository.installSoftware("tmate", 60, progressBar);
-            } catch (Exception ex) {
-                System.out.printf("Unable to install tmate. Error: %s%n", ex.getMessage());
-                String arm = getTmateArm(repository);
-                if (arm != null) {
-                    String url = "https://github.com/tmate-io/tmate/releases/download/2.4.0/tmate-2.4.0-static-linux-%s.tar.xz".formatted(arm);
-                    Path target = rootPath.resolve("tmate.tar.xz");
-                    System.out.printf("Download tmate %s to %s%n", url, target);
-                    Curl.downloadWithProgress(url, target, progressBar);
-                    repository.execute("sudo tar -C %s -xvf %s/tmate.tar.xz".formatted(rootPath, rootPath));
-                    Files.deleteIfExists(target);
-                    Path unpackedTmate = rootPath.resolve("tmate-2.4.0-static-linux-%s".formatted(arm));
-                    Files.createDirectories(Paths.get("ssh"));
-                    Path tmate = Paths.get("ssh/tmate");
-                    Files.move(unpackedTmate.resolve("tmate"), tmate, StandardCopyOption.REPLACE_EXISTING);
-                    FileUtils.deleteDirectory(unpackedTmate.toFile());
-                    repository.setPermissions(tmate, 555); // r+w for all
-                } else {
-                    System.err.println("Unable to find device arm");
-                }
-            }
-        }
-    }
-
-    @SneakyThrows
     public static void downloadApp(ProgressBar progressBar, Path rootPath, MachineHardwareRepository repository) {
         Path archiveAppPath = rootPath.resolve("homio-app.zip");
         Files.deleteIfExists(archiveAppPath);

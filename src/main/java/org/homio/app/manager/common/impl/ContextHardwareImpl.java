@@ -40,13 +40,13 @@ public class ContextHardwareImpl implements ContextHardware {
 
     public ContextHardwareImpl(
         ContextImpl context,
-        MachineHardwareRepository hardwareRepository,
+        MachineHardwareRepository machineHardwareRepository,
         NetworkHardwareRepository networkHardwareRepository) {
 
         this.context = context;
         this.networkHardwareRepository = networkHardwareRepository;
-        this.network = new ContextNetworkImpl(context, hardwareRepository);
-        this.hardwareRepository = hardwareRepository;
+        this.network = new ContextNetworkImpl(context, machineHardwareRepository, networkHardwareRepository);
+        this.hardwareRepository = machineHardwareRepository;
     }
 
     public void onContextCreated() throws Exception {

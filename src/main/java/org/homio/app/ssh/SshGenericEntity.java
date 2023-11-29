@@ -395,7 +395,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     @Override
     public @Nullable Set<String> getConfigurationErrors() {
         if(getHost().isEmpty()) {
-            return Set.of("W.ERROR.NO_HOST");
+            return Set.of("ERROR.NO_HOST");
         }
         return null;
     }
@@ -428,6 +428,9 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
             try (SshClient sshClient = entity.createSshClient()) {
                 if (!sshClient.isConnected()) {
                     throw new IllegalStateException("SSH not connected");
+                }
+                if (!sshClient.isAuthenticated()) {
+                    throw new IllegalStateException("SSH not authenticated");
                 }
                 sshClient.executeCommand("ls");
                 // success tested

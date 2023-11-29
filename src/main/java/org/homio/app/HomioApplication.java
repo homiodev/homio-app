@@ -60,6 +60,7 @@ public class HomioApplication implements WebMvcConfigurer {
             } else {
                 log.info("Homio app started successfully");
                 Files.deleteIfExists(Paths.get(System.getProperty("rootPath")).resolve("homio-app.jar_backup"));
+                Files.deleteIfExists(Paths.get(System.getProperty("rootPath")).resolve("homio-app.zip"));
             }
         } catch (Exception ex) {
             Throwable cause = NestedExceptionUtils.getRootCause(ex);
