@@ -22,6 +22,7 @@ import jakarta.persistence.Entity;
 import java.util.Objects;
 import java.util.Set;
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
@@ -49,7 +50,7 @@ import org.json.JSONObject;
 @SuppressWarnings("unused")
 @UISidebarChildren(icon = "fas fa-terminal", color = "#0088CC")
 public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWebSocketService>
-        implements BaseFileSystemEntity<SshGenericEntity, SshGenericFileSystem> {
+    implements BaseFileSystemEntity<SshGenericFileSystem> {
 
     @Override
     public void configureOptionModel(OptionModel optionModel) {
@@ -368,7 +369,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @Override
-    public @NotNull SshGenericFileSystem buildFileSystem(@NotNull Context context) {
+    public @NotNull SshGenericFileSystem buildFileSystem(@NotNull Context context, int alias) {
         return new SshGenericFileSystem(this, context);
     }
 
@@ -435,7 +436,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
                 sshClient.executeCommand("ls");
                 // success tested
             } catch (Exception e) {
-                if (e.getMessage().contains("Task did not succeed")) {
+                if (StringUtils.defaultString(e.getMessage(), "").contains("Task did not succeed")) {
                     e = new RuntimeException("Unknown error during execute 'ls' command");
                 }
                 throw new RuntimeException(e);

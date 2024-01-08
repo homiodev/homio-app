@@ -469,7 +469,7 @@ public class ContextImpl implements Context {
         log.info("Loading entities and initialize all related services");
         for (BaseEntity baseEntity : db().findAllBaseEntities()) {
             if (baseEntity instanceof BaseFileSystemEntity) {
-                ((BaseFileSystemEntity<?, ?>) baseEntity).getFileSystem(this).restart(false);
+                ((BaseFileSystemEntity<?>) baseEntity).getFileSystem(this, 0).restart(false);
             }
         }
     }

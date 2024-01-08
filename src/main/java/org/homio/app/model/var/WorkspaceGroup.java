@@ -103,13 +103,6 @@ public class WorkspaceGroup extends BaseEntity
 
     @Getter
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "workspaceGroup")
-    //@UIField(order = 30)
-    /*@UIFieldInlineEditEntities(
-            bg = "#1E5E611F",
-            addRowLabel = "TITLE.CREATE_VAR",
-            noContentTitle = "W.ERROR.NO_VARIABLES",
-            removeRowCondition = "return !context.get('locked')",
-            addRowCondition = "return !context.get('locked')")*/
     @JsonIgnore
     private Set<WorkspaceVariable> workspaceVariables;
 

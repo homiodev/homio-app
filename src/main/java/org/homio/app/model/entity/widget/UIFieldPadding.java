@@ -9,4 +9,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface UIFieldPadding {
 
+    int min() default 0;
+
+    int max() default 9;
 }

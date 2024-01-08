@@ -320,6 +320,8 @@ public class UIFieldUtils {
         UIFieldPadding fieldPadding = fieldContext.getDeclaredAnnotation(UIFieldPadding.class);
         if (fieldPadding != null) {
             entityUIMetaData.setType("Padding");
+            putIfNotEqual(jsonTypeMetadata, "min", fieldPadding.min(), 0);
+            putIfNotEqual(jsonTypeMetadata, "max", fieldPadding.max(), 9);
         }
 
         UIFieldIconPicker fieldIconPicker = fieldContext.getDeclaredAnnotation(UIFieldIconPicker.class);
@@ -691,6 +693,12 @@ public class UIFieldUtils {
 
         entityUIMetaDataList.remove(entityUIMetaData);
         entityUIMetaDataList.add(entityUIMetaData);
+    }
+
+    private static void putIfNotEqual(ObjectNode metadata, String key, int value, int eqValue) {
+        if (value != eqValue) {
+            metadata.put(key, value);
+        }
     }
 
     private static ObjectNode getSelectConfig(ObjectNode jsonTypeMetadata) {

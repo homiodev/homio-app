@@ -10,7 +10,7 @@ import org.apache.catalina.filters.RequestFilter;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 import org.homio.app.auth.CacheAuthenticationProvider;
-import org.homio.app.auth.JwtTokenFilterConfigurer;
+import org.homio.app.auth.JwtTokenFilter;
 import org.homio.app.auth.JwtTokenProvider;
 import org.homio.app.auth.UserEntityDetailsService;
 import org.homio.app.manager.common.impl.ContextSettingImpl;
@@ -26,6 +26,7 @@ import org.springframework.security.config.annotation.web.configurers.HeadersCon
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.validation.beanvalidation.MethodValidationPostProcessor;
 
 @Configuration
@@ -90,7 +91,8 @@ public class SecurityConfiguration {
         http.exceptionHandling(exception -> exception.accessDeniedPage("/login"));
 
         // Apply JWT
-        http.apply(new JwtTokenFilterConfigurer(jwtTokenProvider));
+        JwtTokenFilter customFilter = new JwtTokenFilter(jwtTokenProvider);
+        http.addFilterBefore(customFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

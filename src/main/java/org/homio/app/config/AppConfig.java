@@ -62,7 +62,6 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.core.Ordered;
 import org.springframework.core.env.AbstractEnvironment;
 import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.env.Environment;
@@ -146,7 +145,7 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
 
     // not too safe for now
     @Bean
-    public FilterRegistrationBean<?> corsFilter() {
+    public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(false);
@@ -154,9 +153,7 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
         source.registerCorsConfiguration("/**", config);
-        FilterRegistrationBean<CorsFilter> bean = new FilterRegistrationBean<>(new CorsFilter(source));
-        bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
-        return bean;
+        return new CorsFilter(source);
     }
 
     @Bean

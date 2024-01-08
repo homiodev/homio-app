@@ -38,7 +38,6 @@ import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.api.util.DataSourceUtil.SelectionSource;
 import org.homio.api.util.Lang;
-import org.homio.app.builder.widget.ContextWidgetImpl;
 import org.homio.app.config.cacheControl.CacheControl;
 import org.homio.app.config.cacheControl.CachePolicy;
 import org.homio.app.manager.ScriptService;
@@ -55,7 +54,6 @@ import org.homio.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.homio.app.model.entity.widget.impl.fm.WidgetFMEntity;
 import org.homio.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
 import org.homio.app.model.entity.widget.impl.fm.WidgetFMSeriesEntity;
-import org.homio.app.model.entity.widget.impl.js.WidgetJsEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
@@ -66,9 +64,7 @@ import org.homio.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSo
 import org.homio.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver.VideoEntityResponse;
 import org.homio.app.model.rest.WidgetDataRequest;
 import org.homio.app.repository.widget.WidgetTabRepository;
-import org.homio.app.rest.ItemController;
 import org.homio.app.rest.widget.WidgetChartsController.SingleValueData;
-import org.homio.app.utils.JavaScriptBuilderImpl;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -153,7 +149,7 @@ public class WidgetController {
             BaseFileSystemEntity fileSystemEntity = fileSystems.stream().filter(fileSystem -> fileSystem.getEntityID().equals(fs)).findAny().orElse(null);
             if (fileSystemEntity != null) {
                 Long snapshot = seriesToSnapValue.get(seriesEntity.getEntityID());
-                FileSystemProvider fileSystem = fileSystemEntity.getFileSystem(context);
+                FileSystemProvider fileSystem = fileSystemEntity.getFileSystem(context, 0);
                 Long lastUpdated = fileSystem.toTreeNode(parentId).getAttributes().getLastUpdated();
                 Set<WidgetFMNodeValue> items = null;
                 if (!Objects.equals(snapshot, lastUpdated)) {
