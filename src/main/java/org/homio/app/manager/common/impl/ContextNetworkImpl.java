@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import javax.jmdns.ServiceInfo;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.ContextImpl;
+import org.homio.hquery.Curl;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository.CidrAddress;
 import org.homio.hquery.hardware.other.MachineHardwareRepository;
@@ -61,6 +63,13 @@ public class ContextNetworkImpl implements ContextNetwork {
     @Override
     public void removeNetworkAddressChanged(@NotNull String key) {
         networkAddressChangeListeners.remove(key);
+    }
+
+    private static final Map<String, Object> dataCache = new ConcurrentHashMap<>();
+
+    @Override
+    public <T> T fetchCached(String address, Class<T> typeClass) {
+        return (T) dataCache.computeIfAbsent(address, s -> Curl.get(address, typeClass));
     }
 
     public void onContextCreated() {

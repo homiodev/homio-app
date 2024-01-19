@@ -73,6 +73,10 @@
 
   <dependencies>
     <dependency>
+      <artifactId>jsoup</artifactId>
+      <groupId>org.jsoup</groupId>
+    </dependency>
+    <dependency>
       <artifactId>maven-artifact</artifactId>
       <groupId>org.apache.maven</groupId>
     </dependency>

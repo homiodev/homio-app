@@ -309,7 +309,8 @@ public class ContextAddonImpl {
             deleteFileWithRetry(addonContext.getContextFile());
             if (Files.exists(addonContext.getContextFile())) {
                 log.error("Addon <{}> has been stopped but unable to delete file. File will be removed on restart", addonID);
-                context.bgp().executeOnExit(() -> Files.deleteIfExists(addonContext.getContextFile()));
+                context.bgp().executeOnExit("Delete addon " + addonContext.getAddonID(),
+                    () -> Files.deleteIfExists(addonContext.getContextFile()));
             }
             log.info("Addon <{}> has been removed successfully", addonID);
         } else {

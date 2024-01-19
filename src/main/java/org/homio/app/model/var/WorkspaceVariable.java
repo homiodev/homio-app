@@ -30,6 +30,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
 import org.homio.api.ContextVar;
 import org.homio.api.ContextVar.TransformVariableSource;
+import org.homio.api.ContextVar.Variable;
 import org.homio.api.ContextVar.VariableType;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
@@ -73,7 +74,8 @@ public class WorkspaceVariable extends BaseEntity
         HasTimeValueSeries,
         HasGetStatusValue,
         HasSetStatusValue,
-        SelectionConfiguration {
+    SelectionConfiguration,
+    Variable {
 
     public static final String PREFIX = "var_";
 
@@ -247,7 +249,7 @@ public class WorkspaceVariable extends BaseEntity
 
     @Override
     public Object getStatusValue(GetStatusValueRequest request) {
-        return request.context().var().get(getEntityID());
+        return request.context().var().getRawValue(getEntityID());
     }
 
     @Override
@@ -294,7 +296,7 @@ public class WorkspaceVariable extends BaseEntity
 
     @Override
     public String getStatusValueRepresentation(Context context) {
-        Object value = context.var().get(getEntityID());
+        Object value = context.var().getRawValue(getEntityID());
         String str = value == null ? null : formatVariableValue(value);
         if (isEmpty(unit)) {
             return str;
@@ -310,6 +312,21 @@ public class WorkspaceVariable extends BaseEntity
     @Override
     public @Nullable String getSelectionDescription() {
         return getDescription();
+    }
+
+    @Override
+    public String getId() {
+        return getEntityID();
+    }
+
+    @Override
+    public Object getRawValue() {
+        return context().var().getRawValue(getEntityID());
+    }
+
+    @Override
+    public void set(Object value) {
+        context().var().set(getEntityID(), value);
     }
 
     private static String formatVariableValue(Object value) {

@@ -1,7 +1,9 @@
 package org.homio.app.builder.ui;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.Getter;
@@ -25,7 +27,7 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
     @JsonIgnore
     private Map<String, Runnable> fetchValueHandlers;
 
-    private Value value;
+    private final List<String> validators = new ArrayList<>();
     private String color;
     private String outerClass;
 
@@ -34,13 +36,26 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
     private String icon;
     private String iconColor;
     private String separatedText;
+    private @Nullable Value value;
 
     public UIBaseEntityItemBuilderImpl(
-            UIItemType uiItemType, String entityID, int order, UIActionHandler actionHandler) {
+        @NotNull UIItemType uiItemType,
+        @NotNull String entityID,
+        int order,
+        UIActionHandler actionHandler) {
         this.itemType = uiItemType.name();
         this.entityID = entityID;
         this.actionHandler = actionHandler;
         this.order = order;
+    }
+
+    public Owner setRequired(boolean value) {
+        if (value) {
+            validators.add("required");
+        } else {
+            validators.remove("required");
+        }
+        return (Owner) this;
     }
 
     @Override

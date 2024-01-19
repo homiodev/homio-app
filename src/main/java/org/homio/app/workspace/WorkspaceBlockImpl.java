@@ -615,7 +615,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
                 }),
         VAR_PRIMITIVE(array -> array.get(2), (array, context) -> {
             String varEntityID = DataSourceUtil.getSelection(array.get(2).toString()).getEntityValue();
-            return State.of(context.var().get(varEntityID));
+            return State.of(context.var().getRawValue(varEntityID));
         }),
         LIST_PRIMITIVE,
         FONT_AWESOME_PRIMITIVE;

@@ -283,8 +283,8 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     @SneakyThrows
     @UIContextMenuAction(value = "TEST_CONNECTION", icon = "fas fa-flask-vial")
     public ActionResponseModel testConnection(Context context, JSONObject params) {
-        getService().testService();
-        return ActionResponseModel.success();
+        getService().testServiceWithSetStatus();
+        return getStatus().isOnline() ? ActionResponseModel.success() : ActionResponseModel.showError(getStatusMessage());
     }
 
     @SneakyThrows

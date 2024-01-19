@@ -62,7 +62,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
 
     private State variableReporter(WorkspaceBlock workspaceBlock) {
         String variable = getVariable(workspaceBlock);
-        return variable == null ? null : State.of(context.var().get(variable));
+        return variable == null ? null : context.var().getValue(variable);
     }
 
     private void changeVariableHandler(WorkspaceBlock workspaceBlock) {
@@ -96,9 +96,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         Eq("=",
                 (workspaceBlock, value) -> value.toString().equals(workspaceBlock.getInputString("ITEM", ""))),
         Regexp("regex",
-                (workspaceBlock, value) -> {
-                    return value.toString().matches(workspaceBlock.getInputString("ITEM", ""));
-                }),
+            (workspaceBlock, value) -> value.toString().matches(workspaceBlock.getInputString("ITEM", ""))),
         Any("any", (workspaceBlock, o) -> true),
         NotEq("!=",
                 (workspaceBlock, value) -> !value.toString().equals(workspaceBlock.getInputString("ITEM", "")));

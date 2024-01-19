@@ -16,6 +16,7 @@ import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.item.UIButtonItemBuilder;
 import org.homio.api.ui.field.action.v1.item.UICheckboxItemBuilder;
 import org.homio.api.ui.field.action.v1.item.UIColorPickerItemBuilder;
+import org.homio.api.ui.field.action.v1.item.UIIconPickerItemBuilder;
 import org.homio.api.ui.field.action.v1.item.UIInfoItemBuilder;
 import org.homio.api.ui.field.action.v1.item.UIMultiButtonItemBuilder;
 import org.homio.api.ui.field.action.v1.item.UISelectBoxItemBuilder;
@@ -202,8 +203,13 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
     }
 
     @Override
-    public UIColorPickerItemBuilder addColorPicker(@NotNull String name, String color, UIActionHandler action) {
+    public UIColorPickerItemBuilder addColorPicker(@NotNull String name, @NotNull String color, @Nullable UIActionHandler action) {
         return addEntity(new UIColorPickerBuilderImpl(name, getNextOrder(), color, action));
+    }
+
+    @Override
+    public UIIconPickerItemBuilder addIconPicker(@NotNull String name, String icon) {
+        return addEntity(new UIIconPickerBuilderImpl(name, getNextOrder(), icon));
     }
 
     @Override

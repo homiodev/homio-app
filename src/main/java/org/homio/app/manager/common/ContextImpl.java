@@ -29,6 +29,7 @@ import org.homio.addon.telegram.TelegramEntity;
 import org.homio.api.Context;
 import org.homio.api.ContextHardware;
 import org.homio.api.ContextMedia;
+import org.homio.api.ContextNetwork;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
@@ -60,6 +61,7 @@ import org.homio.app.manager.common.impl.ContextEventImpl;
 import org.homio.app.manager.common.impl.ContextHardwareImpl;
 import org.homio.app.manager.common.impl.ContextInstallImpl;
 import org.homio.app.manager.common.impl.ContextMediaImpl;
+import org.homio.app.manager.common.impl.ContextNetworkImpl;
 import org.homio.app.manager.common.impl.ContextServiceImpl;
 import org.homio.app.manager.common.impl.ContextSettingImpl;
 import org.homio.app.manager.common.impl.ContextStorageImpl;
@@ -159,6 +161,7 @@ public class ContextImpl implements Context {
     private final ContextServiceImpl contextService;
     private final ContextWorkspaceImpl contextWorkspace;
     private final ContextStorageImpl contextStorage;
+    private final ContextNetworkImpl contextNetwork;
     private final ClassFinder classFinder;
     @Getter
     private final CacheService cacheService;
@@ -215,6 +218,7 @@ public class ContextImpl implements Context {
             cacheService,
             widgetRepository,
             widgetSeriesRepository);
+        this.contextNetwork = new ContextNetworkImpl(this, mhr, nhr);
         this.addon = new ContextAddonImpl(this, cacheService);
 
         this.contextBGP.builder("flush-delayed-updates").intervalWithDelay(Duration.ofSeconds(30))
@@ -248,6 +252,7 @@ public class ContextImpl implements Context {
         contextUI.onContextCreated();
         contextBGP.onContextCreated();
         contextHardware.onContextCreated();
+        contextNetwork.onContextCreated();
         // initialize all addons
         addon.onContextCreated();
         contextWorkspace.onContextCreated(workspaceService);
@@ -345,6 +350,11 @@ public class ContextImpl implements Context {
     @Override
     public @NotNull ContextStorageImpl db() {
         return contextStorage;
+    }
+
+    @Override
+    public @NotNull ContextNetwork network() {
+        return contextNetwork;
     }
 
     public @NotNull ContextWidgetImpl widget() {

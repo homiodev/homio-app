@@ -73,6 +73,7 @@ import org.homio.api.model.ActionResponseModel.ResponseAction;
 import org.homio.api.model.FileModel;
 import org.homio.api.model.OptionModel;
 import org.homio.api.service.EntityService;
+import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
@@ -95,6 +96,7 @@ import org.homio.app.config.cacheControl.CachePolicy;
 import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.EntityManager;
+import org.homio.app.manager.common.impl.ContextUIImpl.ItemsContextMenuAction;
 import org.homio.app.model.UIHideEntityIfFieldNotNull;
 import org.homio.app.model.entity.DeviceFallbackEntity;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
@@ -544,6 +546,16 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 ((HasDynamicContextMenuActions) entity).assembleActions(uiInputBuilder);
             }
             EntityDynamicData data = new EntityDynamicData(uiInputBuilder.buildAll());
+
+            // TODO: this may be moved to single call action???
+            Map<String, ItemsContextMenuAction> actions = context.ui().getItemsContextMenuActions()
+                                                                 .get(entityID);
+            if (actions != null) {
+                for (ItemsContextMenuAction action : actions.values()) {
+                    data.getActions().addAll(action.getActions());
+                }
+            }
+
             if (entity instanceof HasDynamicUIFields df) {
                 UIFieldBuilderImpl builder = new UIFieldBuilderImpl();
                 df.assembleUIFields(builder);
@@ -768,6 +780,19 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         if (actionHolder instanceof HasDynamicContextMenuActions) {
             return ((HasDynamicContextMenuActions) actionHolder).handleAction(context, request.getEntityID(), request.params);
         }
+
+        Object entityID = request.getParams().optString("entityID", "");
+        Map<String, ItemsContextMenuAction> actions = context.ui().getItemsContextMenuActions().get(entityID);
+        for (ItemsContextMenuAction action : actions.values()) {
+            UIActionHandler actionHandler = action.getUiInputBuilder().findActionHandler(request.getEntityID());
+            if (actionHandler != null) {
+                if (!actionHandler.isEnabled(context)) {
+                    throw new IllegalArgumentException("Unable to invoke disabled action");
+                }
+                return actionHandler.handleAction(context, request.params);
+            }
+        }
+
         throw new IllegalArgumentException("Unable to find action: <" + request.getEntityID() + "> for model: " + actionHolder);
     }
 
@@ -864,9 +889,12 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             if (!uiSidebarChildren.allowCreateItem()) {
                 return null;
             }
-            optionModel.json(json ->
+            optionModel.json(json -> {
                 json.put("icon", uiSidebarChildren.icon())
-                    .put("color", uiSidebarChildren.color()));
+                    .put("color", uiSidebarChildren.color())
+                    .put("maxExceeded", uiSidebarChildren.maxAllowCreateItem() > 0 &&
+                        uiSidebarChildren.maxAllowCreateItem() >= getItems(aClass.getSimpleName()).size());
+            });
         }
         return optionModel;
     }

@@ -233,7 +233,7 @@ public class ContextWidgetImpl implements ContextWidget {
                     .editDialog(dialogBuilder -> {
                         dialogBuilder.setTitle(title, icon);
                         dialogBuilder.addFlex("main", flex -> {
-                            flex.addSelectBox("SELECTION.DASHBOARD_TAB", null)
+                            flex.addSelectBox("SELECTION.DASHBOARD_TAB")
                                 .setSelected(context().widget().getDashboardDefaultID())
                                 .addOptions(context().widget().getDashboardTabs());
                             addPropertyDefinitions(widgetDefinition, flex, entity);

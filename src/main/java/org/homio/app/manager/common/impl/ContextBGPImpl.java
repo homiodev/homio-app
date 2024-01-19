@@ -221,8 +221,8 @@ public class ContextBGPImpl implements ContextBGP {
     }
 
     @Override
-    public void executeOnExit(ThrowingRunnable runnable) {
-        executeOnExitImpl(runnable);
+    public void executeOnExit(@NotNull String name, @NotNull ThrowingRunnable runnable) {
+        executeOnExitImpl(name, runnable);
     }
 
     @Override
@@ -235,11 +235,12 @@ public class ContextBGPImpl implements ContextBGP {
         lowPriorityRequests.remove(key);
     }
 
-    private static void executeOnExitImpl(ThrowingRunnable runnable) {
+    private static void executeOnExitImpl(@NotNull String name, @NotNull ThrowingRunnable runnable) {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 runnable.run();
-            } catch (Exception ignore) {
+            } catch (Exception ex) {
+                System.err.println("Unable to execute shutdown hook: " + name);
             }
         }));
     }
@@ -930,7 +931,7 @@ public class ContextBGPImpl implements ContextBGP {
         public void run(@NotNull String command) throws Exception {
             getLogger().info("[{}]: Starting process command: '{}'", name, command);
             process = Runtime.getRuntime().exec(command);
-            executeOnExitImpl(() -> cancelProcess(true, true));
+            executeOnExitImpl("Process: " + name, () -> cancelProcess(true, true));
             if (entity != null) {
                 entity.setStatusOnline();
             }

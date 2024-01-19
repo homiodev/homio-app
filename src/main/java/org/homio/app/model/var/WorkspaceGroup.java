@@ -337,7 +337,7 @@ public class WorkspaceGroup extends BaseEntity
                 name.put("icon", new Icon(variable.getIcon(), variable.getIconColor()));
             }
             this.restriction = variable.getRestriction().name().toLowerCase();
-            Object val = context.var().get(variable.getEntityID());
+            Object val = context.var().getRawValue(variable.getEntityID());
             this.value = generateValue(val, variable);
             this.backup = nullIfFalse(variable.isBackup());
             this.quota = variable.getQuota();
@@ -350,7 +350,7 @@ public class WorkspaceGroup extends BaseEntity
 
         public static WorkspaceVariableEntity updatableEntity(WorkspaceVariable variable, ContextImpl context) {
             WorkspaceVariableEntity entity = new WorkspaceVariableEntity();
-            Object val = context.var().get(variable.getEntityID());
+            Object val = context.var().getRawValue(variable.getEntityID());
             entity.entityID = variable.getEntityID();
             entity.value = generateValue(val, variable);
             entity.usedQuota = variable.getUsedQuota();

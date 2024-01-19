@@ -16,5 +16,6 @@ public enum UIItemType {
     Slider,
     SelectBox,
     SelectableButton,
-    ColorPicker
+    ColorPicker,
+    IconPicker
 }

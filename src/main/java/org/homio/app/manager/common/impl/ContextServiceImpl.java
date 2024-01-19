@@ -43,13 +43,6 @@ public class ContextServiceImpl implements ContextService {
 
     public ContextServiceImpl(ContextImpl context) {
         this.context = context;
-        context.bgp().executeOnExit(() ->
-            entityToService.values().forEach(serviceInstance -> {
-                try {
-                    serviceInstance.destroy(false, null);
-                } catch (Exception ignore) {
-                }
-            }));
     }
 
     @Override

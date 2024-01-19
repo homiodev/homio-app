@@ -36,7 +36,6 @@ public class ContextHardwareImpl implements ContextHardware {
     private final @Getter @Accessors(fluent = true) ContextImpl context;
     private final NetworkHardwareRepository networkHardwareRepository;
     private final MachineHardwareRepository hardwareRepository;
-    private final @Getter @Accessors(fluent = true) ContextNetworkImpl network;
 
     public ContextHardwareImpl(
         ContextImpl context,
@@ -45,7 +44,6 @@ public class ContextHardwareImpl implements ContextHardware {
 
         this.context = context;
         this.networkHardwareRepository = networkHardwareRepository;
-        this.network = new ContextNetworkImpl(context, machineHardwareRepository, networkHardwareRepository);
         this.hardwareRepository = machineHardwareRepository;
     }
 
@@ -54,8 +52,6 @@ public class ContextHardwareImpl implements ContextHardware {
         HardwareUtils.MACHINE_IP_ADDRESS = networkHardwareRepository.getIPAddress();
         HardwareUtils.RUN_COUNT = context.setting().getEnv("runCount", 1, true);
         context.setting().setEnv("runCount", HardwareUtils.RUN_COUNT + 1);
-
-        network.onContextCreated();
     }
 
     @Override
