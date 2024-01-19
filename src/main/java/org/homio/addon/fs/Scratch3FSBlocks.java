@@ -167,8 +167,8 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
     }
 
     private FileSystemProvider getFileSystem(WorkspaceBlock workspaceBlock) {
-        BaseFileSystemEntity<?, ?> entity = workspaceBlock.getMenuValueEntityRequired(ENTITY, this.fsEntityMenu);
-        return entity.getFileSystem(context);
+        BaseFileSystemEntity<?> entity = workspaceBlock.getMenuValueEntityRequired(ENTITY, this.fsEntityMenu);
+        return entity.getFileSystem(context, 0);
     }
 
     private RawType getFieldContent(WorkspaceBlock workspaceBlock) throws Exception {
@@ -233,13 +233,13 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
 
     private FileSystemItem getItemId(String key, WorkspaceBlock workspaceBlock) {
         String[] ids = workspaceBlock.getMenuValue(key, this.fileMenu).split(LEVEL_DELIMITER);
-        BaseFileSystemEntity<?, ?> entity = context.db().getEntityRequire(ids[0]);
+        BaseFileSystemEntity<?> entity = context.db().getEntityRequire(ids[0]);
         String node = ids[1];
         int splitNameAndId = node.indexOf("://");
         if (splitNameAndId >= 0) {
             node = node.substring(splitNameAndId + "://".length());
         }
-        return new FileSystemItem(entity.getFileSystem(context), entity, node);
+        return new FileSystemItem(entity.getFileSystem(context, 0), entity, node);
     }
 
     @RequiredArgsConstructor
@@ -256,7 +256,7 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
         File, Folder
     }
 
-    public record FileSystemItem(FileSystemProvider fileSystem, BaseFileSystemEntity<?, ?> entity, String node) {
+    public record FileSystemItem(FileSystemProvider fileSystem, BaseFileSystemEntity<?> entity, String node) {
 
     }
 

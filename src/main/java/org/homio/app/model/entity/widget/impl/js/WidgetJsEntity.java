@@ -1,23 +1,28 @@
 package org.homio.app.model.entity.widget.impl.js;
 
+import jakarta.persistence.Entity;
 import jakarta.persistence.Transient;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.homio.api.entity.HasJsonData;
-import org.homio.api.model.JSON;
 import org.homio.api.ui.field.MonacoLanguage;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldCodeEditor;
+import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-// @Entity
+@Entity
 @Getter
 @Setter
 @Accessors(chain = true)
-public class WidgetJavaJsEntity /*TODO: fix:   extends WidgetBaseEntity<WidgetJsEntity>*/ implements HasJsonData {
+public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> implements HasJsonData {
 
-    public static final String PREFIX = "widget_js_";
+    @Override
+    protected @NotNull String getWidgetPrefix() {
+        return "js";
+    }
 
     @Transient
     private String javaScriptResponse;
@@ -31,7 +36,7 @@ public class WidgetJavaJsEntity /*TODO: fix:   extends WidgetBaseEntity<WidgetJs
         return getJsonData("js");
     }
 
-    public WidgetJavaJsEntity setJavaScript(String value) {
+    public WidgetJsEntity setJavaScript(String value) {
         setJsonData("js", value);
         return this;
     }
@@ -42,7 +47,7 @@ public class WidgetJavaJsEntity /*TODO: fix:   extends WidgetBaseEntity<WidgetJs
         return getJsonData("jsp", "{}");
     }
 
-    public WidgetJavaJsEntity setJavaScriptParameters(String value) {
+    public WidgetJsEntity setJavaScriptParameters(String value) {
         setJsonData("jsp", value);
         return this;
     }
@@ -51,15 +56,16 @@ public class WidgetJavaJsEntity /*TODO: fix:   extends WidgetBaseEntity<WidgetJs
         return getJsonData("jspro", Boolean.FALSE);
     }
 
-    public WidgetJavaJsEntity setJavaScriptParametersReadOnly(Boolean value) {
+    public WidgetJsEntity setJavaScriptParametersReadOnly(Boolean value) {
         setJsonData("jspro", value);
         return this;
     }
 
-   /* @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fab fa-js-square";
     }
+   /* @Override
+
 
     @Override
     public String getEntityPrefix() {
@@ -79,7 +85,7 @@ public class WidgetJavaJsEntity /*TODO: fix:   extends WidgetBaseEntity<WidgetJs
     }*/
 
     @Override
-    public @NotNull JSON getJsonData() {
-        return null;
+    public @Nullable String getDefaultName() {
+        return "JS";
     }
 }

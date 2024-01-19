@@ -29,9 +29,11 @@ import org.homio.addon.telegram.TelegramEntity;
 import org.homio.api.Context;
 import org.homio.api.ContextHardware;
 import org.homio.api.ContextMedia;
+import org.homio.api.ContextNetwork;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
+import org.homio.api.exception.ServerException;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
@@ -59,6 +61,7 @@ import org.homio.app.manager.common.impl.ContextEventImpl;
 import org.homio.app.manager.common.impl.ContextHardwareImpl;
 import org.homio.app.manager.common.impl.ContextInstallImpl;
 import org.homio.app.manager.common.impl.ContextMediaImpl;
+import org.homio.app.manager.common.impl.ContextNetworkImpl;
 import org.homio.app.manager.common.impl.ContextServiceImpl;
 import org.homio.app.manager.common.impl.ContextSettingImpl;
 import org.homio.app.manager.common.impl.ContextStorageImpl;
@@ -111,6 +114,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ContextImpl implements Context {
 
+    public static final Map<String, Object> FIELD_FETCH_TYPE = new HashMap<>();
     private static final Set<Class<? extends ContextCreated>> BEAN_CONTEXT_CREATED = new LinkedHashSet<>();
     private static final Set<Class<? extends ContextRefreshed>> BEAN_CONTEXT_REFRESH = new LinkedHashSet<>();
     private static final long START_TIME = System.currentTimeMillis();
@@ -157,6 +161,7 @@ public class ContextImpl implements Context {
     private final ContextServiceImpl contextService;
     private final ContextWorkspaceImpl contextWorkspace;
     private final ContextStorageImpl contextStorage;
+    private final ContextNetworkImpl contextNetwork;
     private final ClassFinder classFinder;
     @Getter
     private final CacheService cacheService;
@@ -213,6 +218,7 @@ public class ContextImpl implements Context {
             cacheService,
             widgetRepository,
             widgetSeriesRepository);
+        this.contextNetwork = new ContextNetworkImpl(this, mhr, nhr);
         this.addon = new ContextAddonImpl(this, cacheService);
 
         this.contextBGP.builder("flush-delayed-updates").intervalWithDelay(Duration.ofSeconds(30))
@@ -228,6 +234,7 @@ public class ContextImpl implements Context {
         this.workspaceService = applicationContext.getBean(WorkspaceService.class);
 
         rebuildRepositoryByPrefixMap();
+        registerAllFieldSubTypes();
 
         contextEvent.onContextCreated();
 
@@ -245,6 +252,7 @@ public class ContextImpl implements Context {
         contextUI.onContextCreated();
         contextBGP.onContextCreated();
         contextHardware.onContextCreated();
+        contextNetwork.onContextCreated();
         // initialize all addons
         addon.onContextCreated();
         contextWorkspace.onContextCreated(workspaceService);
@@ -275,6 +283,13 @@ public class ContextImpl implements Context {
         setting().listenValue(ScanMediaSetting.class, "scan-video-sources", () ->
                 ui().handleResponse(new BeansItemsDiscovery(VideoStreamScanner.class).handleAction(this, null)));
         INSTANCE = this;
+    }
+
+    public void registerAllFieldSubTypes() {
+        /*ContextImpl.FIELD_FETCH_TYPE.clear();
+        for (WidgetBaseTemplate template : getBeansOfType(WidgetBaseTemplate.class)) {
+            ContextImpl.FIELD_FETCH_TYPE.put(template.getName(), template);
+        }*/
     }
 
     @Override
@@ -337,6 +352,11 @@ public class ContextImpl implements Context {
         return contextStorage;
     }
 
+    @Override
+    public @NotNull ContextNetwork network() {
+        return contextNetwork;
+    }
+
     public @NotNull ContextWidgetImpl widget() {
         return this.contextWidget;
     }
@@ -397,17 +417,6 @@ public class ContextImpl implements Context {
         return values;
     }
 
-    public <T> @NotNull Map<String, Collection<T>> getBeansOfTypeByAddons(@NotNull Class<T> clazz) {
-        Map<String, Collection<T>> res = new HashMap<>();
-        for (ApplicationContext context : allApplicationContexts) {
-            Collection<T> beans = context.getBeansOfType(clazz).values();
-            if (!beans.isEmpty()) {
-                res.put(context.getId(), beans);
-            }
-        }
-        return res;
-    }
-
     @Override
     public <T> @NotNull List<Class<? extends T>> getClassesWithAnnotation(
             @NotNull Class<? extends Annotation> annotation) {
@@ -458,13 +467,35 @@ public class ContextImpl implements Context {
         }
     }
 
+    public static Object getFetchType(String subType) {
+        Object pojoInstance = ContextImpl.FIELD_FETCH_TYPE.get(subType);
+        if (pojoInstance == null) {
+            throw new ServerException("Unable to find fetch type: " + subType);
+        }
+        return pojoInstance;
+    }
+
     private void restartEntityServices() {
         log.info("Loading entities and initialize all related services");
         for (BaseEntity baseEntity : db().findAllBaseEntities()) {
             if (baseEntity instanceof BaseFileSystemEntity) {
-                ((BaseFileSystemEntity<?, ?>) baseEntity).getFileSystem(this).restart(false);
+                ((BaseFileSystemEntity<?>) baseEntity).getFileSystem(this, 0).restart(false);
             }
         }
+    }
+
+    /**
+     * Fully restart application
+     */
+    @SneakyThrows
+    public static void exitApplication(ApplicationContext applicationContext, int code) {
+        SpringApplication.exit(applicationContext, () -> code);
+        System.exit(code);
+        // sleep to allow program exist
+        Thread.sleep(30000);
+        log.info("Unable to stop app in 30sec. Force stop it");
+        // force exit
+        Runtime.getRuntime().halt(code);
     }
 
     private void updateAppNotificationBlock() {
@@ -478,12 +509,18 @@ public class ContextImpl implements Context {
                 builder.setUpdatable(
                         (progressBar, version) -> appGitHub.updateProject("homio", progressBar, false, projectUpdate -> {
                             Path jarLocation = Paths.get(setting().getEnvRequire("appPath", String.class, CommonUtils.getRootPath().toString(), true));
-                            Path archiveAppPath = jarLocation.resolve("homio-app.zip");
+                            Path archiveAppPath = jarLocation.resolve("homio-app.jar.gz");
                             Files.deleteIfExists(archiveAppPath);
-                            projectUpdate.downloadReleaseFile(version, archiveAppPath.getFileName().toString(), archiveAppPath);
-                            ui().dialog().reloadWindow("Finish update", 60);
-                            log.info("Exit app to restart it after update");
-                            restartApplication();
+                            try {
+                                projectUpdate.downloadReleaseFile(version, archiveAppPath.getFileName().toString(), archiveAppPath);
+                                ui().dialog().reloadWindow("Finish update", 60);
+                                log.info("Exit app to restart it after update");
+                            } catch (Exception ex) {
+                                log.error("Unable to download homio app", ex);
+                                Files.deleteIfExists(archiveAppPath);
+                                return null;
+                            }
+                            exitApplication(applicationContext, 221);
                             return null;
                         }, null),
                     appGitHub.getReleasesSince(installedVersion, false));
@@ -501,20 +538,6 @@ public class ContextImpl implements Context {
                 builder.addInfo("time", new Icon("fas fa-clock"), serverStartMsg);
             });
         });
-    }
-
-    /**
-     * Fully restart application
-     */
-    @SneakyThrows
-    private void restartApplication() {
-        SpringApplication.exit(applicationContext, () -> 4);
-        System.exit(4);
-        // sleep to allow program exist
-        Thread.sleep(30000);
-        log.info("Unable to stop app in 30sec. Force stop it");
-        // force exit
-        Runtime.getRuntime().halt(4);
     }
 
     @AllArgsConstructor

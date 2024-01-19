@@ -129,6 +129,7 @@ public class ContextAddonImpl {
         context.fireRefreshBeans();
         // we need rebuild Hibernate entityManagerFactory to fetch new models
         cacheService.clearCache();
+        context.registerAllFieldSubTypes();
         Lang.clear();
 
         for (AddonContext addonContext : loadedAddons) {
@@ -308,7 +309,8 @@ public class ContextAddonImpl {
             deleteFileWithRetry(addonContext.getContextFile());
             if (Files.exists(addonContext.getContextFile())) {
                 log.error("Addon <{}> has been stopped but unable to delete file. File will be removed on restart", addonID);
-                context.bgp().executeOnExit(() -> Files.deleteIfExists(addonContext.getContextFile()));
+                context.bgp().executeOnExit("Delete addon " + addonContext.getAddonID(),
+                    () -> Files.deleteIfExists(addonContext.getContextFile()));
             }
             log.info("Addon <{}> has been removed successfully", addonID);
         } else {
@@ -330,19 +332,6 @@ public class ContextAddonImpl {
             }
             Thread.sleep(500);
         }
-    }
-
-    public Object getBeanOfAddonsBySimpleName(String addonID, String className) {
-        /*InternalAddonContext internalAddonContext = this.addons.get("addon-" + addonID);
-        if (internalAddonContext == null) {
-            throw new NotFoundException("Unable to find addon <" + addonID + ">");
-        }
-        Object o = internalAddonContext.fieldTypes.get(className);
-        if (o == null) {
-            throw new NotFoundException("Unable to find class <" + className + "> in addon <" + addonID + ">");
-        }
-        return o;*/
-        throw new IllegalStateException("Removed because need docs what is for");
     }
 
     private void addAddonNotificationRow(@NotNull AddonContext addonContext, @NotNull NotificationBlockBuilder builder, boolean disabledAddon) {

@@ -16,6 +16,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.config.AppConfig;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.impl.ContextSettingImpl;
 import org.homio.hquery.EnableHQuery;
 import org.jetbrains.annotations.NotNull;
@@ -24,6 +25,7 @@ import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.servlet.error.ErrorMvcAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.system.ApplicationHome;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.NestedExceptionUtils;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -51,7 +53,15 @@ public class HomioApplication implements WebMvcConfigurer {
         redirectConsoleOutput(log);
 
         try {
-            new SpringApplicationBuilder(AppConfig.class).listeners(new LogService()).run(args);
+            ConfigurableApplicationContext context = new SpringApplicationBuilder(AppConfig.class).listeners(new LogService()).run(args);
+            if (!context.isRunning()) {
+                log.error("Exist Homio due unable to start context");
+                ContextImpl.exitApplication(context, 7);
+            } else {
+                log.info("Homio app started successfully");
+                Files.deleteIfExists(Paths.get(System.getProperty("rootPath")).resolve("homio-app.jar_backup"));
+                Files.deleteIfExists(Paths.get(System.getProperty("rootPath")).resolve("homio-app.zip"));
+            }
         } catch (Exception ex) {
             Throwable cause = NestedExceptionUtils.getRootCause(ex);
             cause = cause == null ? ex : cause;

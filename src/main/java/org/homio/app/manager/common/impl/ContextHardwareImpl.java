@@ -1,10 +1,17 @@
 package org.homio.app.manager.common.impl;
 
+import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
+import static org.apache.commons.lang3.SystemUtils.IS_OS_MAC;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.service.LocalBoardService.TOTAL_MEMORY;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +19,7 @@ import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
+import org.homio.api.Context;
 import org.homio.api.ContextHardware;
 import org.homio.api.util.HardwareUtils;
 import org.homio.app.manager.common.ContextImpl;
@@ -28,17 +36,15 @@ public class ContextHardwareImpl implements ContextHardware {
     private final @Getter @Accessors(fluent = true) ContextImpl context;
     private final NetworkHardwareRepository networkHardwareRepository;
     private final MachineHardwareRepository hardwareRepository;
-    private final @Getter @Accessors(fluent = true) ContextNetworkImpl network;
 
     public ContextHardwareImpl(
         ContextImpl context,
-        MachineHardwareRepository hardwareRepository,
+        MachineHardwareRepository machineHardwareRepository,
         NetworkHardwareRepository networkHardwareRepository) {
 
         this.context = context;
         this.networkHardwareRepository = networkHardwareRepository;
-        this.network = new ContextNetworkImpl(context, hardwareRepository);
-        this.hardwareRepository = hardwareRepository;
+        this.hardwareRepository = machineHardwareRepository;
     }
 
     public void onContextCreated() throws Exception {
@@ -46,8 +52,6 @@ public class ContextHardwareImpl implements ContextHardware {
         HardwareUtils.MACHINE_IP_ADDRESS = networkHardwareRepository.getIPAddress();
         HardwareUtils.RUN_COUNT = context.setting().getEnv("runCount", 1, true);
         context.setting().setEnv("runCount", HardwareUtils.RUN_COUNT + 1);
-
-        network.onContextCreated();
     }
 
     @Override
@@ -148,6 +152,39 @@ public class ContextHardwareImpl implements ContextHardware {
         }
     }
 
+    @Override
+    public @NotNull JsonNode findAssetByArchitecture(JsonNode release) {
+        Architecture architecture = getArchitecture(context);
+        Map<String, JsonNode> assetNames = new HashMap<>();
+        for (JsonNode asset : release.withArray("assets")) {
+            String assetName = asset.get("name").asText();
+            if (architecture.matchName.test(assetName)) {
+                return asset;
+            }
+            assetNames.put(assetName, asset);
+        }
+        if (architecture.name().startsWith("arm")) {
+            JsonNode foundAsset = getFoundAsset(assetNames, s -> s.endsWith("_arm"));
+            if (foundAsset == null) {
+                foundAsset = getFoundAsset(assetNames, s -> s.contains("_arm"));
+            }
+            if (foundAsset != null) {
+                return foundAsset;
+            }
+        }
+        throw new IllegalStateException("Unable to find release asset for current architecture: " + architecture.name()
+            + ". Available assets:\n\t" + String.join("\n\t", assetNames.keySet()));
+    }
+
+    private static JsonNode getFoundAsset(Map<String, JsonNode> assetNames, Function<String, Boolean> filter) {
+        return assetNames.entrySet()
+                         .stream()
+                         .filter(s -> filter.apply(s.getKey()))
+                         .findAny()
+                         .map(Entry::getValue)
+                         .orElse(null);
+    }
+
     @Getter
     @AllArgsConstructor
     public static class ProcessStatImpl implements ProcessStat {
@@ -155,5 +192,42 @@ public class ContextHardwareImpl implements ContextHardware {
         private final double cpuUsage;
         private final double memUsage;
         private final long mem;
+    }
+
+    private static @NotNull Architecture getArchitecture(@NotNull Context context) {
+        if (SystemUtils.IS_OS_WINDOWS) {
+            return Architecture.win64;
+        }
+        String architecture = context.getBean(MachineHardwareRepository.class).getMachineInfo().getArchitecture();
+        if (architecture.startsWith("armv6")) {
+            return Architecture.arm32v6;
+        } else if (architecture.startsWith("armv7")) {
+            return Architecture.arm32v7;
+        } else if (architecture.startsWith("armv8")) {
+            return Architecture.arm32v8;
+        } else if (architecture.startsWith("aarch64")) {
+            return Architecture.aarch64;
+        } else if (architecture.startsWith("x86_64")) {
+            return Architecture.amd64;
+        }
+        throw new IllegalStateException("Unable to find architecture: " + architecture);
+    }
+
+    @RequiredArgsConstructor
+    public enum Architecture {
+        armv6l(s -> s.contains("linux_armv6")),
+        armv7l(s -> s.contains("linux_armv7")),
+        arm32v6(s -> s.contains("arm32v6") || s.contains("arm6")),
+        arm32v7(s -> s.contains("arm32v7") || s.contains("arm7")),
+        arm32v8(s -> s.contains("arm32v8") || s.contains("arm8")),
+        arm64v8(s -> s.contains("arm64v8")),
+        aarch64(s -> IS_OS_LINUX && s.contains("linux_arm64v8") || IS_OS_MAC && s.contains("darwin_arm64")),
+        amd64(s -> s.contains("amd64")),
+        i386(s -> s.contains("i386")),
+        win32(s -> s.contains("win32")),
+        win64(s -> s.contains("win64") || s.contains("windows")),
+        winArm64(s -> s.contains("win_arm64"));
+
+        public final Predicate<String> matchName;
     }
 }

@@ -1,5 +1,7 @@
 package org.homio.app.manager.common.impl;
 
+import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
+
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
@@ -10,17 +12,21 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import javax.jmdns.ServiceInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.ContextBGP;
 import org.homio.api.ContextNetwork;
 import org.homio.api.model.Icon;
+import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.ContextImpl;
+import org.homio.hquery.Curl;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository.CidrAddress;
 import org.homio.hquery.hardware.other.MachineHardwareRepository;
@@ -31,7 +37,8 @@ import org.jetbrains.annotations.NotNull;
 public class ContextNetworkImpl implements ContextNetwork {
 
     private final ContextImpl context;
-    private final MachineHardwareRepository hardwareRepository;
+    private final MachineHardwareRepository machineHardwareRepository;
+    private final NetworkHardwareRepository networkHardwareRepository;
 
     private final MDNSClient mdnsClient = new MDNSClient();
     private final Map<String, BiConsumer<List<CidrAddress>, List<CidrAddress>>> networkAddressChangeListeners = new HashMap<>();
@@ -40,7 +47,7 @@ public class ContextNetworkImpl implements ContextNetwork {
 
     @Override
     public @NotNull String getHostname() {
-        return hardwareRepository.getMachineInfo().getNetworkNodeHostname();
+        return machineHardwareRepository.getMachineInfo().getNetworkNodeHostname();
     }
 
     @Override
@@ -58,6 +65,13 @@ public class ContextNetworkImpl implements ContextNetwork {
         networkAddressChangeListeners.remove(key);
     }
 
+    private static final Map<String, Object> dataCache = new ConcurrentHashMap<>();
+
+    @Override
+    public <T> T fetchCached(String address, Class<T> typeClass) {
+        return (T) dataCache.computeIfAbsent(address, s -> Curl.get(address, typeClass));
+    }
+
     public void onContextCreated() {
         addNetworkAddressChanged("mdnsClient", (inetAddress, inetAddress2) -> {
             mdnsClient.close();
@@ -70,6 +84,8 @@ public class ContextNetworkImpl implements ContextNetwork {
     }
 
     private void pollAndNotifyNetworkInterfaceAddress() {
+        fetchIpAddress();
+
         Collection<CidrAddress> newInterfaceAddresses = NetworkHardwareRepository.getAllInterfaceAddresses();
         if (lastKnownInterfaceAddresses == null) {
             lastKnownInterfaceAddresses = newInterfaceAddresses;
@@ -91,11 +107,26 @@ public class ContextNetworkImpl implements ContextNetwork {
                 log.debug("removed {} network interfaces: {}", removed.size(), Arrays.deepToString(removed.toArray()));
             }
 
-            notifyListeners(added, removed);
+            notifyUpAddressChangeListeners(added, removed);
         }
     }
 
-    private void notifyListeners(List<CidrAddress> added, List<CidrAddress> removed) {
+    private void fetchIpAddress() {
+        MACHINE_IP_ADDRESS = networkHardwareRepository.getIPAddress();
+        if (SystemUtils.IS_OS_LINUX) {
+            if (MACHINE_IP_ADDRESS.startsWith("169.254")) {
+                try {
+                    log.warn("Device ip address is: {}. Trying to call autohotspot",
+                        machineHardwareRepository.execute("/usr/bin/autohotspot", 60));
+                } catch (Exception ex) {
+                    log.warn("Device ip address is: {}. Unable to run autohotspot to fix: {}",
+                        MACHINE_IP_ADDRESS, CommonUtils.getErrorMessage(ex));
+                }
+            }
+        }
+    }
+
+    private void notifyUpAddressChangeListeners(List<CidrAddress> added, List<CidrAddress> removed) {
         List<CidrAddress> unmodifiableAddedList = Collections.unmodifiableList(added);
         List<CidrAddress> unmodifiableRemovedList = Collections.unmodifiableList(removed);
         context.bgp().execute(() -> {

@@ -1,6 +1,7 @@
 package org.homio.app.rest;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE_AUTHORIZE;
@@ -54,7 +55,6 @@ import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ClassUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.api.Context;
@@ -73,6 +73,7 @@ import org.homio.api.model.ActionResponseModel.ResponseAction;
 import org.homio.api.model.FileModel;
 import org.homio.api.model.OptionModel;
 import org.homio.api.service.EntityService;
+import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
@@ -95,6 +96,7 @@ import org.homio.app.config.cacheControl.CachePolicy;
 import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.EntityManager;
+import org.homio.app.manager.common.impl.ContextUIImpl.ItemsContextMenuAction;
 import org.homio.app.model.UIHideEntityIfFieldNotNull;
 import org.homio.app.model.entity.DeviceFallbackEntity;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
@@ -215,13 +217,10 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             }
             classEntity = CommonUtils.newInstance(aClass);
         }
-        Class<?> entityClass = classEntity.getClass();
         if (isNotEmpty(optionsRequest.getFieldFetchType())) {
-            String[] addonAndClassName = optionsRequest.getFieldFetchType().split(":");
-            entityClass = context.getAddon()
-                                       .getBeanOfAddonsBySimpleName(addonAndClassName[0], addonAndClassName[1]).getClass();
+            classEntity = ContextImpl.getFetchType(optionsRequest.getFieldFetchType());
         }
-
+        Class<?> entityClass = classEntity.getClass();
         List<OptionModel> options = getEntityOptions(fieldName, classEntity, entityClass);
         if (options != null) {
             return options;
@@ -547,6 +546,16 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 ((HasDynamicContextMenuActions) entity).assembleActions(uiInputBuilder);
             }
             EntityDynamicData data = new EntityDynamicData(uiInputBuilder.buildAll());
+
+            // TODO: this may be moved to single call action???
+            Map<String, ItemsContextMenuAction> actions = context.ui().getItemsContextMenuActions()
+                                                                 .get(entityID);
+            if (actions != null) {
+                for (ItemsContextMenuAction action : actions.values()) {
+                    data.getActions().addAll(action.getActions());
+                }
+            }
+
             if (entity instanceof HasDynamicUIFields df) {
                 UIFieldBuilderImpl builder = new UIFieldBuilderImpl();
                 df.assembleUIFields(builder);
@@ -771,6 +780,19 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         if (actionHolder instanceof HasDynamicContextMenuActions) {
             return ((HasDynamicContextMenuActions) actionHolder).handleAction(context, request.getEntityID(), request.params);
         }
+
+        Object entityID = request.getParams().optString("entityID", "");
+        Map<String, ItemsContextMenuAction> actions = context.ui().getItemsContextMenuActions().get(entityID);
+        for (ItemsContextMenuAction action : actions.values()) {
+            UIActionHandler actionHandler = action.getUiInputBuilder().findActionHandler(request.getEntityID());
+            if (actionHandler != null) {
+                if (!actionHandler.isEnabled(context)) {
+                    throw new IllegalArgumentException("Unable to invoke disabled action");
+                }
+                return actionHandler.handleAction(context, request.params);
+            }
+        }
+
         throw new IllegalArgumentException("Unable to find action: <" + request.getEntityID() + "> for model: " + actionHolder);
     }
 
@@ -780,15 +802,15 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
         for (Class<?> classType : findAllClassImplementationsByType(type)) {
             List<EntityUIMetaData> entityUIMetaData = UIFieldUtils.fillEntityUIMetadataList(classType, new HashSet<>(), context);
-            if (subType != null && subType.contains(":")) {
-                String[] addonAndClassName = subType.split(":");
-                Object subClassObject = context.getAddon()
-                                                     .getBeanOfAddonsBySimpleName(addonAndClassName[0], addonAndClassName[1]);
+            if (isNotEmpty(subType)) {
+                Object subClassObject = ContextImpl.getFetchType(subType);
                 List<EntityUIMetaData> subTypeFieldMetadata = UIFieldUtils.fillEntityUIMetadataList(subClassObject, new HashSet<>(), context, false,
                     null);
                 // add 'cutFromJson' because custom fields must be fetched from json parameter (uses first available json                    // parameter)
                 for (EntityUIMetaData data : subTypeFieldMetadata) {
-                    data.setTypeMetaData(new JSONObject(StringUtils.defaultString(data.getTypeMetaData(), "{}")).put("cutFromJson", true).toString());
+                    String json = new JSONObject(defaultString(data.getTypeMetaData(), "{}"))
+                        .put("cutFromJson", true).toString();
+                    data.setTypeMetaData(json);
                 }
                 entityUIMetaData.addAll(subTypeFieldMetadata);
             }
@@ -867,9 +889,12 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             if (!uiSidebarChildren.allowCreateItem()) {
                 return null;
             }
-            optionModel.json(json ->
+            optionModel.json(json -> {
                 json.put("icon", uiSidebarChildren.icon())
-                    .put("color", uiSidebarChildren.color()));
+                    .put("color", uiSidebarChildren.color())
+                    .put("maxExceeded", uiSidebarChildren.maxAllowCreateItem() > 0 &&
+                        uiSidebarChildren.maxAllowCreateItem() >= getItems(aClass.getSimpleName()).size());
+            });
         }
         return optionModel;
     }

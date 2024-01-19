@@ -62,7 +62,7 @@ public class FFMPEGImpl implements FFMPEG {
     protected final String entityID;
     private final Context context;
     private final @Getter int commandHashCode;
-    private final @Getter FileLogger fileLogger;
+    private final @Getter @NotNull FileLogger fileLogger;
     protected @Nullable Collection<ThrowingRunnable<Exception>> threadDestroyListeners;
     protected Process process = null;
     // this is indicator that tells if this ffmpeg command is still need by 3th part request
@@ -160,7 +160,7 @@ public class FFMPEGImpl implements FFMPEG {
     }
 
     @Override
-    public Path getOutputFile() {
+    public @NotNull Path getOutputFile() {
         if(workingDirectory == null) {
             return Paths.get(output);
         }

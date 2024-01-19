@@ -1,6 +1,7 @@
 package org.homio.app;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.logging.slf4j.Log4jLogger.FQCN;
 
 import com.pivovarit.function.ThrowingConsumer;
 import com.sshtools.common.logger.DefaultLoggerContext;
@@ -203,8 +204,8 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
                         return;
                     }
                     if (level.intLevel() <= Level.DEBUG.intLevel()) {
-                        Message msg = messageFactory.newMessage(message, params);
-                        LogEvent event = log4jLogEventFactory.createEvent(logger.getName(), marker, null, level, msg, null, msg.getThrowable());
+                        Message data = params.length == 0 ? messageFactory.newMessage(message) : messageFactory.newMessage(message, params);
+                        LogEvent event = log4jLogEventFactory.createEvent(logger.getName(), marker, FQCN, level, data, null, data.getThrowable());
                         eventQueue.add(event);
                     }
                 }
@@ -293,18 +294,22 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
 
     @SneakyThrows
     private static void sendLogEvent(LogEvent event, ThrowingConsumer<String, Exception> consumer) {
+        try {
         boolean entityPrefix = Optional.ofNullable(event.getMessage().getFormat()).map(s -> s.startsWith("[{}]: ")).orElse(false);
-        String message = event.getMessage().getFormattedMessage();
-        if (entityPrefix) {
-            message = message.substring(message.indexOf("]: ") + 3);
-        }
-        consumer.accept(formatLogMessage(event, message));
+            String message = event.getMessage().getFormattedMessage();
+            if (entityPrefix) {
+                message = message.substring(message.indexOf("]: ") + 3);
+            }
+            consumer.accept(formatLogMessage(event, message));
 
-        if (event.getThrown() != null) {
-            StringWriter outError = new StringWriter();
-            event.getThrown().printStackTrace(new PrintWriter(outError));
-            String errorString = outError.toString();
-            consumer.accept(formatLogMessage(event, errorString));
+            if (event.getThrown() != null) {
+                StringWriter outError = new StringWriter();
+                event.getThrown().printStackTrace(new PrintWriter(outError));
+                String errorString = outError.toString();
+                consumer.accept(formatLogMessage(event, errorString));
+            }
+        } catch (Exception ex) {
+            System.err.println("Error while logging event: " + CommonUtils.getErrorMessage(ex));
         }
     }
 

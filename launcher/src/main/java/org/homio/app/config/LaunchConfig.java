@@ -42,9 +42,7 @@ public class LaunchConfig implements WebMvcConfigurer, SchedulingConfigurer {
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
         source.registerCorsConfiguration("/**", config);
-        FilterRegistrationBean<CorsFilter> bean = new FilterRegistrationBean<>(new CorsFilter(source));
-        bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
-        return bean;
+        return new CorsFilter(source);
     }
 
     /*@Bean

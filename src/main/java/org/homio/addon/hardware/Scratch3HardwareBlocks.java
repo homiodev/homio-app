@@ -2,12 +2,12 @@ package org.homio.addon.hardware;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
+import org.homio.api.ContextNetwork.IpGeolocation;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.JsonType;
 import org.homio.api.state.State;
@@ -18,7 +18,6 @@ import org.homio.api.workspace.scratch.MenuBlock;
 import org.homio.api.workspace.scratch.Scratch3Block;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
 @Log4j2
@@ -35,10 +34,8 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
 
     private final Scratch3Block ipGeoLocationReporter;
     private final Scratch3Block cityGeoLocationReporter;
-    private final Scratch3Block countryInfoReporter;
 
-    public Scratch3HardwareBlocks(
-        Context context, NetworkHardwareRepository networkHardwareRepository) {
+    public Scratch3HardwareBlocks(Context context, NetworkHardwareRepository networkHardwareRepository) {
         super("#51633C", context, null, "hardware");
         this.networkHardwareRepository = networkHardwareRepository;
 
@@ -60,10 +57,6 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
                 blockReporter(200, "ip_geo_location", "IP geo [VALUE]", this::fireGetIPGeoLocation,
                         block -> block.addArgument(VALUE, "127.0.0.1"));
 
-        this.countryInfoReporter =
-                blockReporter(300, "country_info", "Country info [VALUE]", this::fireGetCountryInformation,
-                        block -> block.addArgument(VALUE, "127.0.0.1"));
-
         blockHat(300, "setting_hat", "Setting [SETTING] changed to [VALUE]", this::fireSettingChangeHatEvent,
                 block -> {
                     block.addArgument(SETTING, this.settingsMenu);
@@ -76,10 +69,8 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
         context.event().runOnceOnInternetUp("scratch3-hardware", () -> {
             String ipAddress = networkHardwareRepository.getOuterIpAddress();
             this.ipGeoLocationReporter.addArgument(VALUE, ipAddress);
-            JsonNode ipGeo = networkHardwareRepository.getIpGeoLocation(ipAddress);
-            this.cityGeoLocationReporter.addArgument(
-                    VALUE, ipGeo.path("city").asText());
-            this.countryInfoReporter.addArgument(VALUE, ipAddress);
+            IpGeolocation location = context.network().getIpGeoLocation(ipAddress);
+            this.cityGeoLocationReporter.addArgument(VALUE, location.getCity());
         });
     }
 
@@ -113,20 +104,10 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
     }
 
     private State fireGetIPGeoLocation(WorkspaceBlock workspaceBlock) {
-        return new JsonType(
-                this.networkHardwareRepository.getIpGeoLocation(
-                        workspaceBlock.getInputString(VALUE)));
+        return new JsonType(context.network().getIpGeoLocation(workspaceBlock.getInputString(VALUE)));
     }
 
     private State fireGetCityGeoLocationReporter(WorkspaceBlock workspaceBlock) {
-        return new JsonType(
-                this.networkHardwareRepository.getCityGeolocation(
-                        workspaceBlock.getInputString(VALUE)));
-    }
-
-    private State fireGetCountryInformation(@NotNull WorkspaceBlock workspaceBlock) {
-        return new JsonType(
-                this.networkHardwareRepository.getCountryInformation(
-                        workspaceBlock.getInputString(VALUE)));
+        return new JsonType(context.network().getCityGeolocation(workspaceBlock.getInputString(VALUE)));
     }
 }

@@ -5,9 +5,6 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.homio.api.ui.field.action.v1.item.UITextInputItemBuilder;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @Getter
 @Accessors(chain = true)
 public class UITextInputItemBuilderImpl
@@ -15,9 +12,6 @@ public class UITextInputItemBuilderImpl
         implements UITextInputItemBuilder {
 
     private final InputType inputType;
-    private final List<String> validators = new ArrayList<>();
-    @Setter
-    private boolean required;
     @Setter
     private boolean applyButton;
 

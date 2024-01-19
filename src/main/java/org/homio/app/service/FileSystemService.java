@@ -37,13 +37,13 @@ public class FileSystemService implements ContextCreated, ContextRefreshed {
             e -> findAllFileSystems(this.context));
         context.setting().listenValue(ConsoleFMClearCacheButtonSetting.class, "fs-cache",
             jsonObject -> {
-                for (BaseFileSystemEntity<?, ?> fileSystem : fileSystems) {
-                    fileSystem.getFileSystem(context).clearCache();
+                for (BaseFileSystemEntity<?> fileSystem : fileSystems) {
+                    fileSystem.getFileSystem(context, 0).clearCache();
                 }
             });
 
         LocalBoardEntity LocalBoardEntity = this.context.db().getEntityRequire(LocalBoardEntity.class, PRIMARY_DEVICE);
-        localFileSystem = LocalBoardEntity.getFileSystem(this.context);
+        localFileSystem = LocalBoardEntity.getFileSystem(this.context, 0);
     }
 
     @Override
@@ -51,15 +51,16 @@ public class FileSystemService implements ContextCreated, ContextRefreshed {
         findAllFileSystems(this.context);
     }
 
-    public FileSystemProvider getFileSystem(String fs) {
-        return getFileSystemEntity(fs).getFileSystem(context);
+    public FileSystemProvider getFileSystem(String fs, int alias) {
+        BaseFileSystemEntity<?> entity = getFileSystemEntity(fs);
+        return entity.getFileSystem(context, alias);
     }
 
-    public BaseFileSystemEntity<?, ?> getFileSystemEntity(@Nullable String fs) {
+    public BaseFileSystemEntity<?> getFileSystemEntity(@Nullable String fs) {
         if (StringUtils.isEmpty(fs) || fs.equals(LOCAL_FS) || fs.equals("dvc_board_primary")) {
             fs = localFileSystem.getEntity().getEntityID();
         }
-        for (BaseFileSystemEntity<?, ?> fileSystem : fileSystems) {
+        for (BaseFileSystemEntity<?> fileSystem : fileSystems) {
             if (fileSystem.getEntityID().equals(fs) || fileSystem.getFileSystemAlias().equals(fs)) {
                 return fileSystem;
             }

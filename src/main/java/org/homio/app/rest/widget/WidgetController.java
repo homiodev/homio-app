@@ -38,8 +38,6 @@ import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.api.util.DataSourceUtil.SelectionSource;
 import org.homio.api.util.Lang;
-import org.homio.api.widget.WidgetBaseTemplate;
-import org.homio.api.widget.WidgetJSBaseTemplate;
 import org.homio.app.config.cacheControl.CacheControl;
 import org.homio.app.config.cacheControl.CachePolicy;
 import org.homio.app.manager.ScriptService;
@@ -56,7 +54,6 @@ import org.homio.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.homio.app.model.entity.widget.impl.fm.WidgetFMEntity;
 import org.homio.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
 import org.homio.app.model.entity.widget.impl.fm.WidgetFMSeriesEntity;
-import org.homio.app.model.entity.widget.impl.js.WidgetJavaJsEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
@@ -68,7 +65,6 @@ import org.homio.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSo
 import org.homio.app.model.rest.WidgetDataRequest;
 import org.homio.app.repository.widget.WidgetTabRepository;
 import org.homio.app.rest.widget.WidgetChartsController.SingleValueData;
-import org.homio.app.utils.JavaScriptBuilderImpl;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -153,7 +149,7 @@ public class WidgetController {
             BaseFileSystemEntity fileSystemEntity = fileSystems.stream().filter(fileSystem -> fileSystem.getEntityID().equals(fs)).findAny().orElse(null);
             if (fileSystemEntity != null) {
                 Long snapshot = seriesToSnapValue.get(seriesEntity.getEntityID());
-                FileSystemProvider fileSystem = fileSystemEntity.getFileSystem(context);
+                FileSystemProvider fileSystem = fileSystemEntity.getFileSystem(context, 0);
                 Long lastUpdated = fileSystem.toTreeNode(parentId).getAttributes().getLastUpdated();
                 Set<WidgetFMNodeValue> items = null;
                 if (!Objects.equals(snapshot, lastUpdated)) {
@@ -379,23 +375,25 @@ public class WidgetController {
     @PostMapping("/create/{tabId}/{type}/{addon}")
     public BaseEntity createExtraWidget(
             @PathVariable("tabId") String tabId,
-            @PathVariable("type") String type,
-            @PathVariable("addon") String addon) {
-        log.debug("Request creating extra widget entity by type: <{}> in tabId <{}>, addon: <{}>", type, tabId, addon);
+            @PathVariable("type") String type) {
+        throw new ServerException("Not implemented yet");
+        /*log.debug("Request creating extra widget entity by type: <{}> in tabId <{}>", type, tabId);
         WidgetTabEntity widgetTabEntity = context.db().getEntity(tabId);
         if (widgetTabEntity == null) {
             throw new NotFoundException("ERROR.TAB_NOT_FOUND", tabId);
         }
 
-        Collection<WidgetBaseTemplate> widgets = context.getBeansOfTypeByAddons(WidgetBaseTemplate.class).get(addon);
-        if (widgets == null) {
-            throw new NotFoundException("Unable to find addon: " + tabId + " or widgets in addon");
-        }
-        WidgetBaseTemplate template = widgets.stream()
-                .filter(w -> w.getClass().getSimpleName().equals(type))
-                .findAny()
-                .orElseThrow(() -> new NotFoundException("Unable to find widget: " + type + " in addon: " + addon));
+        Collection<WidgetBaseTemplate> widgets = context.getBeansOfType(WidgetBaseTemplate.class);
 
+        List<WidgetBaseTemplate> templates = widgets.stream().filter(w -> w.getName().equals(type)).toList();
+        if (templates.isEmpty()) {
+            throw new ServerException("Unable to find widget template by name: " + type);
+        }
+        if (templates.size() > 1) {
+            throw new ServerException("Found multiple widget templates by name: " + type);
+        }
+
+        WidgetBaseTemplate template = templates.get(0);
         String js = template.toJavaScript();
         String params = "";
         boolean paramReadOnly = false;
@@ -409,14 +407,13 @@ public class WidgetController {
             }
         }
 
-        WidgetJavaJsEntity widgetJavaJsEntity = new WidgetJavaJsEntity()
+        WidgetJsEntity widgetJsEntity = new WidgetJsEntity()
                 .setJavaScriptParameters(params)
                 .setJavaScriptParametersReadOnly(paramReadOnly)
                 .setJavaScript(js);
 
-        //TODO: fix:::  widgetJsEntity.setWidgetTabEntity(widgetTabEntity).setFieldFetchType(addon + ":" + template.getClass().getSimpleName());
-
-        return null; // TODO: fix::::context.db().save(widgetJsEntity);
+        widgetJsEntity.setWidgetTabEntity(widgetTabEntity).setFieldFetchType(template.getName());
+        return context.db().save(widgetJsEntity);*/
     }
 
     @GetMapping("/tab")

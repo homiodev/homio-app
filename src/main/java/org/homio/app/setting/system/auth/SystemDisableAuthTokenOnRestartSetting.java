@@ -19,7 +19,7 @@ public class SystemDisableAuthTokenOnRestartSetting
 
     @Override
     public boolean defaultValue() {
-        return true;
+        return false;
     }
 
     @Override

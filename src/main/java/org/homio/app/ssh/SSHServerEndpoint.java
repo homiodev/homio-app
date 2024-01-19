@@ -24,6 +24,7 @@ import org.apache.commons.collections4.map.PassiveExpiringMap;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.ContextBGP;
 import org.homio.api.ContextBGP.ThreadContext;
+import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.impl.ContextServiceImpl.DynamicWebSocketHandler;
 import org.homio.app.rest.ConsoleController;
@@ -31,6 +32,7 @@ import org.homio.app.ssh.SSHServerEndpoint.XtermMessage.XtermHandler;
 import org.homio.app.ssh.SSHServerEndpoint.XtermMessage.XtermMessageType;
 import org.homio.app.ssh.SshProviderService.SshSession;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.msgpack.core.MessageBufferPacker;
 import org.msgpack.core.MessagePack;
 import org.msgpack.core.MessageUnpacker;
@@ -90,7 +92,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
         log.info("SSH close connection: {}/{}", session.getId(), status);
         SessionContext sessionContext = sessionBySessionId.remove(session.getId());
         if (sessionContext != null) {
-            sessionContext.closeSessionContext();
+            sessionContext.closeSessionContext(null);
         }
     }
 
@@ -110,7 +112,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
     public void closeSession(SshSession<SshGenericEntity> session) {
         SessionContext sessionContext = sessionByToken.remove(session.getToken());
         if (sessionContext != null) {
-            sessionContext.closeSessionContext();
+            sessionContext.closeSessionContext(null);
             if (sessionContext.wsSession != null) {
                 sessionBySessionId.remove(sessionContext.wsSession.getId());
             }
@@ -227,7 +229,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
                 transToSSH(content.getBytes());
             } catch (IOException ex) {
                 log.error("SSH send to sse", ex);
-                this.closeSessionContext();
+                this.closeSessionContext(ex);
             }
         }
 
@@ -239,14 +241,14 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
                 try {
                     connect(cols);
                 } catch (Exception e) {
-                    log.error("SSH error connect to ssh");
-                    closeSessionContext();
+                    log.error("SSH error connect to ssh: {}", CommonUtils.getErrorMessage(e));
+                    closeSessionContext(e);
                 }
             });
         }
 
         @SneakyThrows
-        private void closeSessionContext() {
+        private void closeSessionContext(@Nullable Exception err) {
             if (this.closed) {
                 return;
             }
@@ -254,8 +256,10 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
             ConsoleController.getSessions().remove(session.getToken());
             log.info("SSH close connection: {}", session);
             try {
-                sessionByToken.remove(session.getToken());
-                // wsSession.close(CloseStatus.NORMAL);
+                SessionContext sessionContext = sessionByToken.remove(session.getToken());
+                if (sessionContext != null && err != null) {
+                    sessionContext.wsSession.close(CloseStatus.SERVER_ERROR);
+                }
                 if (sshClient != null) {
                     sshClient.close();
                 }

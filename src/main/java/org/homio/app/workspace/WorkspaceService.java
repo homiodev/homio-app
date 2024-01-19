@@ -27,6 +27,7 @@ import org.homio.addon.http.Scratch3NetworkBlocks;
 import org.homio.addon.media.Scratch3AudioBlocks;
 import org.homio.addon.media.Scratch3ImageEditBlocks;
 import org.homio.addon.ui.Scratch3UIBlocks;
+import org.homio.addon.weather.Scratch3WeatherBlocks;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.Context;
 import org.homio.api.exception.ServerException;
@@ -70,6 +71,7 @@ public class WorkspaceService implements ContextRefreshed {
                     Scratch3AudioBlocks.class,
                     Scratch3NetworkBlocks.class,
                     Scratch3HardwareBlocks.class,
+                    Scratch3WeatherBlocks.class,
                     Scratch3UIBlocks.class,
                     Scratch3FSBlocks.class,
                     Scratch3ImageEditBlocks.class);

@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -27,9 +28,12 @@ import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.impl.ContextServiceImpl;
 import org.homio.app.manager.common.impl.ContextServiceImpl.RouteProxyImpl;
 import org.homio.app.manager.common.impl.ContextUIImpl;
-import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.app.model.entity.SettingEntity;
+import org.homio.app.rest.ConsoleController.ConsoleTab;
 import org.jetbrains.annotations.NotNull;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.DataNode;
+import org.jsoup.nodes.Document;
 import org.springframework.cloud.gateway.mvc.ProxyExchange;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -49,16 +53,19 @@ public class RouteController {
     private final List<Class<?>> uiSidebarMenuClasses;
     private final AddonService addonService;
     private final SettingController settingController;
+    private final ConsoleController consoleController;
 
     public RouteController(
             ClassFinder classFinder,
             AddonService addonService,
             SettingController settingController,
+        ConsoleController consoleController,
         Context context) {
         this.uiSidebarMenuClasses = classFinder.getClassesWithAnnotation(UISidebarMenu.class);
         this.addonService = addonService;
         this.settingController = settingController;
         this.context = context;
+        this.consoleController = consoleController;
     }
 
     @GetMapping("/bootstrap")
@@ -69,6 +76,7 @@ public class RouteController {
         bootstrapContext.addons = addonService.getAllAddonJson();
         bootstrapContext.settings = settingController.getSettings();
         bootstrapContext.notifications = ((ContextUIImpl) context.ui()).getNotifications();
+        bootstrapContext.consoleTabs = consoleController.getTabs();
 
         String eTag = String.valueOf(bootstrapContext.hashCode());
         if (webRequest.checkNotModified(eTag)) {
@@ -137,6 +145,26 @@ public class RouteController {
             }
         }
 
+        if (request.getRequestURI().endsWith(".html")) {
+            Document doc = Jsoup.parse(new String(body));
+            doc.head().appendElement("script")
+               .attr("type", "text/javascript")
+               .appendChild(new DataNode("""
+                   window.addEventListener('message', function(event) {
+                     if (event.data === 'back') {
+                       window.history.back();
+                     }
+                     if (event.data === 'forward') {
+                       window.history.forward();
+                     }
+                     if (event.data === 'reload') {
+                       window.location.reload();
+                     }
+                   });
+                   """));
+            body = doc.toString().getBytes();
+        }
+
         responseHeaders.add(ACCESS_CONTROL_EXPOSE_HEADERS, "*");
         return ResponseEntity.status(response.getStatusCode())
                              .headers(responseHeaders)
@@ -197,6 +225,7 @@ public class RouteController {
         public List<AddonJson> addons;
         public List<SettingEntity> settings;
         public ContextUIImpl.NotificationResponse notifications;
+        public Set<ConsoleTab> consoleTabs;
     }
 
     public record SidebarMenuItem(String href, String icon, String bg, String label, int order) {

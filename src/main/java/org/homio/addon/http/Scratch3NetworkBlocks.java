@@ -74,8 +74,7 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
 
     private final DatagramSocket udpSocket = new DatagramSocket();
 
-    public Scratch3NetworkBlocks(Context context)
-            throws SocketException {
+    public Scratch3NetworkBlocks(Context context) throws SocketException {
         super("#595F4B", context, null, "net");
         this.udpSocket.setBroadcast(true);
 

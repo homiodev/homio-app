@@ -28,7 +28,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
@@ -44,11 +43,18 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 
-@AllArgsConstructor
 public class LocalFileSystemProvider implements FileSystemProvider {
 
     @Getter
     private LocalBoardEntity entity;
+    private final int alias;
+    private String basePath;
+
+    public LocalFileSystemProvider(LocalBoardEntity entity, int alias) {
+        this.entity = entity;
+        this.alias = alias;
+        this.updateBasePath();
+    }
 
     @Override
     public Path getArchiveAsLocalPath(@NotNull String id) {
@@ -158,12 +164,12 @@ public class LocalFileSystemProvider implements FileSystemProvider {
 
     @Override
     public long getTotalSpace() {
-        return new File(entity.getFileSystemRoot()).getTotalSpace();
+        return new File(basePath).getTotalSpace();
     }
 
     @Override
     public long getUsedSpace() {
-        File file = new File(entity.getFileSystemRoot());
+        File file = new File(basePath);
         return file.getTotalSpace() - file.getUsableSpace();
     }
 
@@ -175,6 +181,15 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     @Override
     public void setEntity(Object entity) {
         this.entity = (LocalBoardEntity) entity;
+        this.updateBasePath();
+    }
+
+    private void updateBasePath() {
+        Path basePath = Paths.get(entity.getFileSystemRoot());
+        if (alias > -1) {
+            basePath = basePath.resolve(entity.getAliasPath(alias));
+        }
+        this.basePath = basePath.toString();
     }
 
     @Override
@@ -391,8 +406,8 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     }
 
     private @NotNull Path buildPath(String id) {
-        if (!id.startsWith(entity.getFileSystemRoot())) {
-            return Paths.get(entity.getFileSystemRoot()).resolve(id);
+        if (!id.startsWith(basePath)) {
+            return Paths.get(basePath).resolve(id);
         }
         return Paths.get(id);
     }
@@ -409,7 +424,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
 
     @SneakyThrows
     private @NotNull TreeNode buildTreeNode(Path path, File file) {
-        String fullPath = fixPath(path.toAbsolutePath()).substring(entity.getFileSystemRoot().length());
+        String fullPath = fixPath(path.toAbsolutePath()).substring(basePath.length());
         if (fullPath.startsWith("/")) {
             fullPath = fullPath.substring(1);
         }
@@ -439,7 +454,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     }
 
     private TreeNode buildArchiveEntries(Path archivePath, List<File> files, boolean includeRoot) {
-        Path root = Paths.get(entity.getFileSystemRoot());
+        Path root = Paths.get(basePath);
         if (!includeRoot) {
             root = root.resolve(archivePath);
         }
@@ -455,7 +470,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
         }
 
         for (File file : files) {
-            Path pathCursor = Paths.get(entity.getFileSystemRoot()).resolve(archivePath);
+            Path pathCursor = Paths.get(basePath).resolve(archivePath);
             TreeNode cursor = cursorRoot;
             for (Path pathItem : file.toPath()) {
                 pathCursor = pathCursor.resolve(pathItem);
@@ -477,7 +492,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     }
 
     private TreeNode buildRoot(Collection<Path> paths) {
-        Path root = Paths.get(entity.getFileSystemRoot());
+        Path root = Paths.get(basePath);
         TreeNode rootPath = this.buildTreeNode(root, root.toFile());
         for (Path path : paths) {
             Path pathCursor = root;

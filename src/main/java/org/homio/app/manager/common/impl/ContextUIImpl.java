@@ -22,6 +22,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
@@ -77,31 +78,30 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 @RequiredArgsConstructor
 public class ContextUIImpl implements ContextUI {
 
-    public static final Map<String, ConsolePlugin<?>> consolePluginsMap = new HashMap<>();
-    public static final Map<String, ConsolePlugin<?>> consoleRemovablePluginsMap = new HashMap<>();
+    public static final @NotNull Map<String, ConsolePlugin<?>> consolePluginsMap = new HashMap<>();
+    public static final @NotNull Map<String, ConsolePlugin<?>> consoleRemovablePluginsMap = new HashMap<>();
 
-    public static final Map<String, String> customConsolePluginNames = new HashMap<>();
-
-    private final Map<DynamicUpdateRequest, DynamicUpdateContext> dynamicUpdateRegisters = new ConcurrentHashMap<>();
-    private final Map<String, DialogModel> dialogRequest = new ConcurrentHashMap<>();
-    private final Map<String, NotificationBlock> blockNotifications = new ConcurrentHashMap<>();
-    private final Map<String, HeaderButtonNotification> headerButtonNotifications = new ConcurrentHashMap<>();
-    private final Map<String, ProgressNotification> progressMap = new ConcurrentHashMap<>();
+    public static final @NotNull Map<String, String> customConsolePluginNames = new HashMap<>();
+    private static final @NotNull Object EMPTY = new Object();
+    private final @NotNull Map<DynamicUpdateRequest, DynamicUpdateContext> dynamicUpdateRegisters = new ConcurrentHashMap<>();
+    private final @NotNull Map<String, DialogModel> dialogRequest = new ConcurrentHashMap<>();
+    private final @NotNull Map<String, NotificationBlock> blockNotifications = new ConcurrentHashMap<>();
+    private final @NotNull Map<String, HeaderButtonNotification> headerButtonNotifications = new ConcurrentHashMap<>();
     // constructor parameters
     private final @Getter @Accessors(fluent = true) ContextImpl context;
-    private final SimpMessagingTemplate messagingTemplate;
-    private final Map<String, SendUpdateContext> sendToUIMap = new ConcurrentHashMap<>();
-
-    private final ReentrantLock treeNodeLock = new ReentrantLock();
-    private final Map<String, TreeNode> treeNodesSendToUIMap = new ConcurrentHashMap<>();
+    private final @NotNull Map<String, ProgressNotification> progressMap = new ConcurrentHashMap<>();
+    private final @NotNull SimpMessagingTemplate messagingTemplate;
+    private final @NotNull Map<String, SendUpdateContext> sendToUIMap = new ConcurrentHashMap<>();
+    private final @NotNull ReentrantLock treeNodeLock = new ReentrantLock();
+    private final @NotNull Map<String, TreeNode> treeNodesSendToUIMap = new ConcurrentHashMap<>();
 
     private final @Getter @Accessors(fluent = true) ContextUIToastrImpl toastr = new ContextUIToastrImpl();
     private final @Getter @Accessors(fluent = true) ContextUINotificationImpl notification = new ContextUINotificationImpl();
     private final @Getter @Accessors(fluent = true) ContextUIConsoleImpl console = new ContextUIConsoleImpl();
     private final @Getter @Accessors(fluent = true) ContextUIDialogImpl dialog = new ContextUIDialogImpl();
     private final @Getter @Accessors(fluent = true) ContextUIProgressImpl progress = new ContextUIProgressImpl();
-    private final Map<String, Object> refreshConsolePlugin = new ConcurrentHashMap<>();
-    private static final Object EMPTY = new Object();
+    private final @Getter @NotNull Map<String, Map<String, ItemsContextMenuAction>> itemsContextMenuActions = new ConcurrentHashMap<>();
+    private final @NotNull Map<String, Object> refreshConsolePlugin = new ConcurrentHashMap<>();
 
     public void onContextCreated() {
         // run hourly script to drop not used dynamicUpdateRegisters
@@ -280,6 +280,15 @@ public class ContextUIImpl implements ContextUI {
             consolePlugin = consoleRemovablePluginsMap.get(tab);
         }
         return consolePlugin;
+    }
+
+    @Override
+    public void addItemContextMenu(@NotNull String entityID, @NotNull String key, @NotNull Consumer<UIInputBuilder> builder) {
+        context.db().getEntityRequire(entityID);
+        UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
+        builder.accept(uiInputBuilder);
+        itemsContextMenuActions.computeIfAbsent(entityID, s -> new HashMap<>())
+                               .put(key, new ItemsContextMenuAction(uiInputBuilder, uiInputBuilder.buildAll()));
     }
 
     private boolean isUpdateNotRegistered(@NotNull BaseEntityIdentifier parentEntity) {
@@ -939,5 +948,13 @@ public class ContextUIImpl implements ContextUI {
                 removed.getValue().run();
             }
         }
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class ItemsContextMenuAction {
+
+        private UIInputBuilder uiInputBuilder;
+        private Collection<UIInputEntity> actions;
     }
 }

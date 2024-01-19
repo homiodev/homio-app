@@ -5,42 +5,111 @@ import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 import jakarta.persistence.Entity;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.SystemUtils;
+import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.homio.api.Context;
 import org.homio.api.ContextBGP.ThreadContext;
 import org.homio.api.ContextHardware;
-import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.ui.UISidebarChildren;
-import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
-import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.util.CommonUtils;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.ssh.SshTmateEntity.SshTmateService;
+import org.homio.hquery.Curl;
+import org.homio.hquery.ProgressBar;
+import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+@Log4j2
 @Entity
 @UISidebarChildren(icon = "fas fa-satellite-dish", color = "#0088CC", allowCreateItem = false)
-public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateService> implements HasDynamicContextMenuActions {
+public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateService> {
 
     private static final String URL = "wss://lon1.tmate.io/ws/session/%s";
-    private static boolean TMATE_INSTALLED = false;
 
     public static void ensureEntityExists(ContextImpl context) {
-        if (context.db().getEntity(SshTmateEntity.class, PRIMARY_DEVICE) == null) {
+        SshTmateEntity tmate = getOrCreateTmateEntity(context);
+        if (SystemUtils.IS_OS_LINUX) {
+            ContextHardware hardware = context.hardware();
+            if (!hardware.isSoftwareInstalled("tmate")) {
+                context.event().runOnceOnInternetUp("install-tmate", () ->
+                    context.bgp().runWithProgress("install-tmate", false).executeSync(progressBar ->
+                        installTmate(tmate, hardware, progressBar)));
+            }
+        }
+    }
+
+    private static @NotNull SshTmateEntity getOrCreateTmateEntity(ContextImpl context) {
+        SshTmateEntity tmate = context.db().getEntity(SshTmateEntity.class, PRIMARY_DEVICE);
+        if (tmate == null) {
             SshTmateEntity entity = new SshTmateEntity();
             entity.setEntityID(PRIMARY_DEVICE);
             entity.setName("Tmate");
-            context.db().save(entity);
+            tmate = context.db().save(entity);
         }
+        return tmate;
+    }
+
+    @SneakyThrows
+    private static void installTmate(SshTmateEntity tmateEntity, ContextHardware repository, ProgressBar progressBar) {
+        tmateEntity.setStatus(Status.UPDATING);
+        try {
+            repository.installSoftware("tmate", 60, progressBar);
+        } catch (Exception ex) {
+            log.info("Unable to install tmate. Error: {}", ex.getMessage());
+            MachineHardwareRepository hardware = repository.context().getBean(MachineHardwareRepository.class);
+            String arm = getTmateArm(hardware);
+            if (arm != null) {
+                Path rootPath = CommonUtils.getInstallPath();
+                String url = "https://github.com/tmate-io/tmate/releases/download/2.4.0/tmate-2.4.0-static-linux-%s.tar.xz".formatted(arm);
+                Path target = rootPath.resolve("tmate.tar.xz");
+                log.info("Download tmate {} to {}", url, target);
+                Curl.downloadWithProgress(url, target, progressBar);
+                repository.execute("sudo tar -C %s -xvf %s/tmate.tar.xz".formatted(rootPath, rootPath));
+                Files.deleteIfExists(target);
+                Path unpackedTmate = rootPath.resolve("tmate-2.4.0-static-linux-%s".formatted(arm));
+                Files.createDirectories(Paths.get("ssh"));
+                Path tmate = Paths.get("ssh/tmate");
+                Files.move(unpackedTmate.resolve("tmate"), tmate, StandardCopyOption.REPLACE_EXISTING);
+                FileUtils.deleteDirectory(unpackedTmate.toFile());
+                hardware.setPermissions(tmate, 555); // r+w for all
+            } else {
+                log.error("Unable to find device arm");
+            }
+        } finally {
+            tmateEntity.getOrCreateService(repository.context()).ifPresent(ServiceInstance::testServiceWithSetStatus);
+        }
+    }
+
+    private static String getTmateArm(MachineHardwareRepository repository) {
+        String architecture = repository.getMachineInfo().getArchitecture();
+        if (architecture.startsWith("armv6")) {
+            return "arm32v6";
+        } else if (architecture.startsWith("armv7")) {
+            return "arm32v7";
+        } else if (architecture.startsWith("i386")) {
+            return "i386";
+        } else if (architecture.startsWith("armv8") || architecture.startsWith("aarch64")) {
+            return "arm64v8";
+        } else if (architecture.startsWith("x86_64")) {
+            return "amd64";
+        }
+        return null;
     }
 
     @Override
@@ -74,17 +143,6 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
     }
 
     @Override
-    public void assembleActions(UIInputBuilder uiInputBuilder) {
-        if (SystemUtils.IS_OS_LINUX) {
-            ContextHardware hardware = uiInputBuilder.context().hardware();
-            TMATE_INSTALLED = TMATE_INSTALLED || hardware.isSoftwareInstalled("tmate");
-            if (!TMATE_INSTALLED) {
-                addTmateInstallButton(uiInputBuilder, hardware);
-            }
-        }
-    }
-
-    @Override
     public boolean isDisableDelete() {
         return true;
     }
@@ -95,19 +153,9 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
     }
 
     @Override
-    public void beforePersist() {
-        super.beforePersist();
-    }
-
-    private void addTmateInstallButton(UIInputBuilder uiInputBuilder, ContextHardware hardware) {
-        uiInputBuilder.addSelectableButton("install_tmate", new Icon("fab fa-instalod"), (context, params) -> {
-            hardware.installSoftware("tmate", 60);
-            TMATE_INSTALLED = hardware.isSoftwareInstalled("tmate");
-            if (!TMATE_INSTALLED) {
-                throw new IllegalStateException("Something went wrong with installing tmate");
-            }
-            return null;
-        });
+    @UIFieldIgnore
+    public @Nullable String getImageIdentifier() {
+        return super.getImageIdentifier();
     }
 
     public static class SshTmateService extends ServiceInstance<SshTmateEntity> implements SshProviderService<SshTmateEntity> {
@@ -169,7 +217,7 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
                 entity.setStatus(Status.OFFLINE, "Only linux compatible");
                 return;
             }
-            if (context.hardware().isSoftwareInstalled("tmate")) {
+            if (!context.hardware().isSoftwareInstalled("tmate")) {
                 throw new IllegalStateException("Tmate not installed");
             }
             entity.setStatusOnline();

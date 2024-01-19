@@ -103,13 +103,6 @@ public class WorkspaceGroup extends BaseEntity
 
     @Getter
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "workspaceGroup")
-    //@UIField(order = 30)
-    /*@UIFieldInlineEditEntities(
-            bg = "#1E5E611F",
-            addRowLabel = "TITLE.CREATE_VAR",
-            noContentTitle = "W.ERROR.NO_VARIABLES",
-            removeRowCondition = "return !context.get('locked')",
-            addRowCondition = "return !context.get('locked')")*/
     @JsonIgnore
     private Set<WorkspaceVariable> workspaceVariables;
 
@@ -344,7 +337,7 @@ public class WorkspaceGroup extends BaseEntity
                 name.put("icon", new Icon(variable.getIcon(), variable.getIconColor()));
             }
             this.restriction = variable.getRestriction().name().toLowerCase();
-            Object val = context.var().get(variable.getEntityID());
+            Object val = context.var().getRawValue(variable.getEntityID());
             this.value = generateValue(val, variable);
             this.backup = nullIfFalse(variable.isBackup());
             this.quota = variable.getQuota();
@@ -357,7 +350,7 @@ public class WorkspaceGroup extends BaseEntity
 
         public static WorkspaceVariableEntity updatableEntity(WorkspaceVariable variable, ContextImpl context) {
             WorkspaceVariableEntity entity = new WorkspaceVariableEntity();
-            Object val = context.var().get(variable.getEntityID());
+            Object val = context.var().getRawValue(variable.getEntityID());
             entity.entityID = variable.getEntityID();
             entity.value = generateValue(val, variable);
             entity.usedQuota = variable.getUsedQuota();

@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.api.entity.BaseEntity;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.ui.UIActionHandler;
@@ -24,6 +25,7 @@ public class UISelectBoxItemBuilderImpl
 
     @Setter
     private Collection<OptionModel> options;
+    private String optionFetcher;
     private String selectReplacer;
     private boolean asButton;
     private boolean primary;
@@ -64,6 +66,12 @@ public class UISelectBoxItemBuilderImpl
                 return this;
             }
         };
+    }
+
+    @Override
+    public @NotNull UISelectBoxItemBuilder setLazyItemOptions(@NotNull Class<? extends BaseEntity> itemClass) {
+        optionFetcher = "rest/item/type/%s/options".formatted(itemClass.getSimpleName());
+        return this;
     }
 
     @Override

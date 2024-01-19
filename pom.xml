@@ -2,7 +2,7 @@
   <artifactId>homio-app</artifactId>
   <modelVersion>4.0.0</modelVersion>
   <packaging>jar</packaging>
-  <version>0.1.2-SNAPSHOT</version>
+  <version>0.1.2</version>
 
   <parent>
     <artifactId>homio-dependency</artifactId>
@@ -73,6 +73,14 @@
 
   <dependencies>
     <dependency>
+      <artifactId>jsoup</artifactId>
+      <groupId>org.jsoup</groupId>
+    </dependency>
+    <dependency>
+      <artifactId>maven-artifact</artifactId>
+      <groupId>org.apache.maven</groupId>
+    </dependency>
+    <dependency>
       <groupId>com.jcraft</groupId>
       <artifactId>jsch</artifactId>
       <version>0.1.55</version>
@@ -108,7 +116,7 @@
       <groupId>net.lingala.zip4j</groupId>
       <version>2.11.5</version>
     </dependency>
-    <!--https://github.com/rubenlagus/TelegramBots 6.5 Caused by: java.lang.ClassNotFoundException: javax.xml.bind.annotation.XmlElement-->
+    <!--https://github.com/rubenlagus/TelegramBots 6.8 Caused by: java.lang.ClassNotFoundException: javax.xml.bind.annotation.XmlElement-->
     <dependency>
       <groupId>javax.xml.bind</groupId>
       <artifactId>jaxb-api</artifactId>

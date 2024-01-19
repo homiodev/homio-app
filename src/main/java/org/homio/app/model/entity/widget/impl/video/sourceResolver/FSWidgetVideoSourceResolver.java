@@ -8,7 +8,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.homio.api.fs.FileSystemProvider;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.api.util.DataSourceUtil.SelectionSource;
-import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 import org.homio.app.rest.MediaController;
 import org.homio.app.service.FileSystemService;
 import org.springframework.stereotype.Component;
@@ -26,7 +25,7 @@ public class FSWidgetVideoSourceResolver implements WidgetVideoSourceResolver {
             String resource = selection.getValue();
             String fs = selection.getMetadata().path("fs").asText();
 
-            FileSystemProvider fileSystem = fileSystemService.getFileSystem(fs);
+            FileSystemProvider fileSystem = fileSystemService.getFileSystem(fs, 0);
             if (fileSystem != null && fileSystem.exists(resource)) {
                 String extension = StringUtils.defaultString(FilenameUtils.getExtension(resource));
                 String videoType = getVideoType(resource);

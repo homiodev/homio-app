@@ -163,3 +163,4 @@ create table if not exists workspace_variable
     constraint fkasa2xfl3o3dalxw029mm5702v
     foreign key (workspace_group_entityid) references workspace_group
     );
+

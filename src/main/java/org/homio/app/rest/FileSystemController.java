@@ -6,6 +6,7 @@ import static org.homio.api.ui.field.selection.UIFieldTreeNodeSelection.LOCAL_FS
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 import static org.homio.app.model.entity.user.UserBaseEntity.FILE_MANAGER_RESOURCE_AUTHORIZE;
 
+import jakarta.ws.rs.BadRequestException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -73,20 +74,9 @@ public class FileSystemController {
         }
         Collection<BaseFileSystemEntity> fsItems = getRequestedFileSystems(request);
         for (BaseFileSystemEntity fileSystem : fsItems) {
-            TreeConfiguration configuration = fileSystem.buildFileSystemConfiguration(context);
-
-            for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
-                if (selectedNode.fs.equals(fileSystem.getEntityID())) {
-                    FileSystemProvider fileSystemProvider = fileSystem.getFileSystem(context);
-                    try {
-                        Set<TreeNode> treeNodes = fileSystemProvider.loadTreeUpToChild(request.getRootPath(), selectedNode.id);
-                        if (treeNodes != null) {
-                            configuration.setChildren(treeNodes);
-                        }
-                    } catch (Exception ignore) {} // case when input selectedNode.id is invalid
-                }
-            }
-            configurations.add(configuration);
+            List<TreeConfiguration> fsConfigurations = fileSystem.buildFileSystemConfiguration(context);
+            loadSelectedChildren(request, fileSystem, fsConfigurations.get(0));
+            configurations.addAll(fsConfigurations);
         }
         return configurations;
     }
@@ -94,13 +84,14 @@ public class FileSystemController {
     @PostMapping("/list")
     @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
     public Collection<TreeNode> list(@RequestBody ListRequest request) {
-        return fileSystemService.getFileSystem(request.sourceFs).getChildren(request.sourceFileId);
+        return fileSystemService.getFileSystem(request.sourceFs, request.alias)
+                                .getChildren(request.sourceFileId);
     }
 
     @DeleteMapping
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public TreeNode remove(@RequestBody RemoveFilesRequest request) {
-        return fileSystemService.getFileSystem(request.sourceFs).delete(request.sourceFileIds);
+        return fileSystemService.getFileSystem(request.sourceFs, request.alias).delete(request.sourceFileIds);
     }
 
     @PostMapping("/{sourceFs}/download")
@@ -108,7 +99,7 @@ public class FileSystemController {
     public ResponseEntity<InputStreamResource> download(
         @PathVariable("sourceFs") String sourceFs,
         @RequestBody ListRequest request) throws Exception {
-        FileSystemProvider fileSystem = fileSystemService.getFileSystem(sourceFs);
+        FileSystemProvider fileSystem = fileSystemService.getFileSystem(sourceFs, request.alias);
         TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileId);
         if (treeNode == null || treeNode.getId() == null) {
             throw NotFoundException.fileNotFound(request.sourceFileId);
@@ -130,7 +121,7 @@ public class FileSystemController {
     @PostMapping("/download")
     @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
     public ResponseEntity<InputStreamResource> downloadArchive(@RequestBody DownloadRequest request) {
-        Path zipFile = archiveSource(request.sourceFs, "zip", request.sourceFileIds, "downloadContent", null, null);
+        Path zipFile = archiveSource(request.sourceFs, request.alias, "zip", request.sourceFileIds, "downloadContent", null, null);
         return CommonUtils.inputStreamToResource(
             Files.newInputStream(zipFile), new MediaType("application", "zip"), null);
     }
@@ -138,15 +129,15 @@ public class FileSystemController {
     @PostMapping("/create")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public TreeNode createNode(@RequestBody CreateNodeRequest request) {
-        FileSystemProvider fileSystem = fileSystemService.getFileSystem(request.sourceFs);
+        FileSystemProvider fileSystem = fileSystemService.getFileSystem(request.sourceFs, request.alias);
         return fileSystem.create(request.sourceFileId, request.name, request.dir, getUploadOption(request));
     }
 
     @PostMapping("/unarchive")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public TreeNode unarchive(@RequestBody UnArchiveNodeRequest request) {
-        FileSystemProvider sourceFs = fileSystemService.getFileSystem(request.sourceFs);
-        FileSystemProvider targetFs = fileSystemService.getFileSystem(request.targetFs);
+        FileSystemProvider sourceFs = fileSystemService.getFileSystem(request.sourceFs, request.alias);
+        FileSystemProvider targetFs = fileSystemService.getFileSystem(request.targetFs, request.targetAlias);
 
         Path archive = sourceFs.getArchiveAsLocalPath(request.sourceFileId);
         // InputStream stream = sourceFs.getEntryInputStream(request.sourceFileId);
@@ -173,12 +164,14 @@ public class FileSystemController {
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public TreeNode archive(@RequestBody ArchiveNodeRequest request) throws Exception {
         // make archive from requested files/folders
-        Path zipFile = archiveSource(request.sourceFs, request.format, request.sourceFileIds, request.targetName, request.level, request.password);
+        Path zipFile = archiveSource(request.sourceFs, request.alias, request.format,
+            request.sourceFileIds, request.targetName, request.level, request.password);
 
         try {
             TreeNode zipTreeNode = TreeNode.of(zipFile.toString(), zipFile, fileSystemService.getLocalFileSystem());
 
-            return fileSystemService.getFileSystem(request.targetFs).copy(zipTreeNode, request.targetDir, FileSystemProvider.UploadOption.Replace);
+            return fileSystemService.getFileSystem(request.targetFs, request.targetAlias)
+                                    .copy(zipTreeNode, request.targetDir, FileSystemProvider.UploadOption.Replace);
         } finally {
             Files.deleteIfExists(zipFile);
         }
@@ -187,10 +180,13 @@ public class FileSystemController {
     @PostMapping("/copy")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public TreeNode copyNode(@RequestBody CopyNodeRequest request) {
-        FileSystemProvider sourceFs = fileSystemService.getFileSystem(request.sourceFs);
-        FileSystemProvider targetFs = fileSystemService.getFileSystem(request.targetFs);
+        FileSystemProvider sourceFs = fileSystemService.getFileSystem(request.sourceFs, request.alias);
+        FileSystemProvider targetFs = fileSystemService.getFileSystem(request.targetFs, request.targetAlias);
 
         Set<TreeNode> entries = sourceFs.toTreeNodes(request.getSourceFileIds());
+        if (entries.isEmpty()) {
+            throw new BadRequestException("Unable to find entries from: " + String.join("; ", request.getSourceFileIds()));
+        }
         TreeNode fileSystemItem = targetFs.copy(entries, request.targetPath, FileSystemProvider.UploadOption.Replace);
 
         if (request.removeSource) {
@@ -204,9 +200,10 @@ public class FileSystemController {
     public TreeNode upload(
             @RequestParam("sourceFs") String sourceFs,
             @RequestParam("sourceFileId") String sourceFileId,
+        @RequestParam("alias") int alias,
             @RequestParam("replace") boolean replace,
             @RequestParam("data") MultipartFile[] files) {
-        FileSystemProvider fileSystem = fileSystemService.getFileSystem(sourceFs);
+        FileSystemProvider fileSystem = fileSystemService.getFileSystem(sourceFs, alias);
         Set<TreeNode> treeNodes = Stream.of(files).map(TreeNode::of).collect(Collectors.toSet());
         return fileSystem.copy(treeNodes, sourceFileId, FileSystemProvider.UploadOption.Replace);
     }
@@ -214,7 +211,22 @@ public class FileSystemController {
     @PostMapping("/rename")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public TreeNode rename(@RequestBody RenameNodeRequest request) {
-        return fileSystemService.getFileSystem(request.sourceFs).rename(request.sourceFileId, request.newName, getUploadOption(request));
+        return fileSystemService.getFileSystem(request.sourceFs, request.alias)
+                                .rename(request.sourceFileId, request.newName, getUploadOption(request));
+    }
+
+    private void loadSelectedChildren(GetFSRequest request, BaseFileSystemEntity fileSystem, TreeConfiguration configuration) {
+        for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
+            if (selectedNode.fs.equals(fileSystem.getEntityID())) {
+                FileSystemProvider fileSystemProvider = fileSystem.getFileSystem(context, 0);
+                try {
+                    Set<TreeNode> treeNodes = fileSystemProvider.loadTreeUpToChild(request.getRootPath(), selectedNode.id);
+                    if (treeNodes != null) {
+                        configuration.setChildren(treeNodes);
+                    }
+                } catch (Exception ignore) {} // case when input selectedNode.id is invalid
+            }
+        }
     }
 
     @GetMapping("/search")
@@ -244,9 +256,9 @@ public class FileSystemController {
         // return result;
     }
 
-
-    private Path archiveSource(String fs, String format, Set<String> sourceFileIds, String targetName, String level, String password) throws IOException {
-        FileSystemProvider sourceFs = fileSystemService.getFileSystem(fs);
+    private Path archiveSource(String fs, int alias, String format, Set<String> sourceFileIds, String targetName, String level, String password)
+        throws IOException {
+        FileSystemProvider sourceFs = fileSystemService.getFileSystem(fs, alias);
 
         Collection<TreeNode> entries = sourceFs.toTreeNodes(sourceFileIds);
         Path tmpArchiveAssemblerPath = CommonUtils.getTmpPath().resolve("tmp_archive_assembler_" + System.currentTimeMillis());
@@ -385,7 +397,11 @@ public class FileSystemController {
     public static class BaseNodeRequest {
 
         public String sourceFs;
+        public int alias;
+
         public String targetFs;
+        public int targetAlias;
+
         public String password;
         public boolean replace;
     }

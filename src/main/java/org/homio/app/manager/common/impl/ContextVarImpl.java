@@ -24,6 +24,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +33,6 @@ import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.Context;
 import org.homio.api.ContextService.MQTTEntityService;
 import org.homio.api.ContextVar;
 import org.homio.api.entity.widget.AggregationType;
@@ -70,13 +70,12 @@ public class ContextVarImpl implements ContextVar {
     private final VariableBackupRepository variableBackupRepository;
     private final ReentrantLock createContextLock = new ReentrantLock();
 
-    public static void createBroadcastGroup(Context context) {
+    public void onContextCreated() {
         context.var().createGroup("broadcasts", "Broadcasts", group ->
             group.setIcon(new Icon("fas fa-tower-broadcast", "#A32677")).setLocked(true));
-    }
 
-    public void onContextCreated() {
-        createBroadcastGroup(context);
+        context.var().createGroup(getMiscGroup(), "Misc", group ->
+            group.setIcon(new Icon("fas fa-star-half-stroke", "#A32677")).setLocked(true));
 
         for (WorkspaceVariable workspaceVariable : context.db().findAll(WorkspaceVariable.class)) {
             getOrCreateContext(workspaceVariable.getEntityID());
@@ -122,6 +121,20 @@ public class ContextVarImpl implements ContextVar {
     }
 
     @Override
+    public void onVariableCreated(@NotNull String discriminator, @Nullable Pattern variableIdPattern, Consumer<Variable> variableListener) {
+        context.event().addEntityCreateListener(WorkspaceVariable.class, "global-var", workspaceVariable -> {
+            if (variableIdPattern == null || variableIdPattern.matcher(workspaceVariable.getEntityID()).matches()) {
+                variableListener.accept(workspaceVariable);
+            }
+        });
+    }
+
+    @Override
+    public void onVariableRemoved(@NotNull String discriminator, @Nullable Pattern variableIdPattern, Consumer<Variable> variable) {
+
+    }
+
+    @Override
     public void setLinkListener(@NotNull String variableId, @NotNull ThrowingConsumer<Object, Exception> listener) {
         getOrCreateContext(variableId).linkListener = listener;
     }
@@ -141,7 +154,7 @@ public class ContextVarImpl implements ContextVar {
     }
 
     @Override
-    public Object get(@NotNull String variableId) {
+    public Object getRawValue(@NotNull String variableId) {
         VariableContext context = getOrCreateContext(variableId);
         WorkspaceVariableMessage latest = context.storageService.getLatest();
         if (latest == null) {
@@ -168,7 +181,7 @@ public class ContextVarImpl implements ContextVar {
     }
 
     @Override
-    public boolean createGroup(@NotNull String groupId, @NotNull String groupName, @NotNull Consumer<GroupMetaBuilder> groupBuilder) {
+    public String createGroup(@NotNull String groupId, @NotNull String groupName, @NotNull Consumer<GroupMetaBuilder> groupBuilder) {
         return saveOrUpdateGroup(groupId, groupName, groupBuilder, wg -> {
         });
     }
@@ -185,6 +198,11 @@ public class ContextVarImpl implements ContextVar {
     }
 
     @Override
+    public Set<Variable> getVariables() {
+        return context.db().findAll(WorkspaceVariable.class).stream().map(w -> (Variable) w).collect(Collectors.toSet());
+    }
+
+    @Override
     public boolean exists(@NotNull String variableId) {
         return globalVarStorageMap.containsKey(variableId);
     }
@@ -196,10 +214,9 @@ public class ContextVarImpl implements ContextVar {
 
     @Override
     public boolean renameGroup(@NotNull String groupId, @NotNull String name, @Nullable String description) {
-        WorkspaceGroup workspaceGroup = context.db().getEntity(WorkspaceGroup.class, groupId);
-        if (workspaceGroup != null
-                && (!Objects.equals(workspaceGroup.getName(), name)
-                || !Objects.equals(workspaceGroup.getDescription(), description))) {
+        WorkspaceGroup workspaceGroup = assertGroupExists(groupId);
+        if (!Objects.equals(workspaceGroup.getName(), name)
+            || !Objects.equals(workspaceGroup.getDescription(), description)) {
             workspaceGroup.setName(name);
             workspaceGroup.setDescription(description);
             context.db().save(workspaceGroup);
@@ -238,15 +255,12 @@ public class ContextVarImpl implements ContextVar {
     }
 
     @Override
-    public boolean createSubGroup(
+    public String createSubGroup(
             @NotNull String parentGroupId,
             @NotNull String groupId,
             @NotNull String groupName,
         @NotNull Consumer<GroupMetaBuilder> groupBuilder) {
-        WorkspaceGroup parentGroup = context.db().getEntity(WorkspaceGroup.class, parentGroupId);
-        if (parentGroup == null) {
-            throw new IllegalArgumentException("Parent group '" + parentGroupId + "' not exists");
-        }
+        WorkspaceGroup parentGroup = assertGroupExists(groupId);
         return saveOrUpdateGroup(parentGroupId + "-" + groupId, groupName, groupBuilder, wg -> wg.setHidden(true).setParent(parentGroup));
     }
 
@@ -358,7 +372,7 @@ public class ContextVarImpl implements ContextVar {
     }
 
     @Override
-    public @NotNull String createVariable(
+    public @NotNull Variable createVariable(
             @NotNull String groupId,
             @Nullable String variableId,
             @NotNull String variableName,
@@ -373,11 +387,11 @@ public class ContextVarImpl implements ContextVar {
             entity.getWorkspaceGroup().getWorkspaceVariables().add(entity);
             entity = context.db().save(entity);
         }
-        return entity.getEntityID();
+        return entity;
     }
 
     @Override
-    public @NotNull String createTransformVariable(
+    public @NotNull Variable createTransformVariable(
         @NotNull String groupId,
         @Nullable String variableId,
         @NotNull String variableName,
@@ -393,18 +407,14 @@ public class ContextVarImpl implements ContextVar {
         }, variableType)) {
             entity = context.db().save(entity);
         }
-        return entity.getEntityID();
+        return entity;
     }
 
     private WorkspaceVariable getOrCreateVariable(@NotNull String groupId, @Nullable String variableId) {
         WorkspaceVariable entity = variableId == null ? null : context.db().getEntity(WorkspaceVariable.class, variableId);
 
         if (entity == null) {
-            WorkspaceGroup groupEntity = context.db().getEntity(WorkspaceGroup.class, groupId);
-            if (groupEntity == null) {
-                throw new IllegalArgumentException("Variable group with id: " + groupId + " not exists");
-            }
-            entity = new WorkspaceVariable(groupEntity);
+            entity = new WorkspaceVariable(assertGroupExists(groupId));
         }
         return entity;
     }
@@ -530,7 +540,7 @@ public class ContextVarImpl implements ContextVar {
         return context;
     }
 
-    private boolean saveOrUpdateGroup(@NotNull String groupId, @NotNull String groupName,
+    private String saveOrUpdateGroup(@NotNull String groupId, @NotNull String groupName,
         @NotNull Consumer<GroupMetaBuilder> groupBuilder,
                                       @NotNull Consumer<WorkspaceGroup> additionalHandler) {
         WorkspaceGroup entity = context.db().getEntity(WorkspaceGroup.class, groupId);
@@ -540,8 +550,7 @@ public class ContextVarImpl implements ContextVar {
             entity.setName(groupName);
             configureGroup(groupBuilder, entity);
             additionalHandler.accept(entity);
-            context.db().save(entity);
-            return true;
+            entity = context.db().save(entity);
         } else {
             long entityHashCode = entity.getEntityHashCode();
             configureGroup(groupBuilder, entity);
@@ -550,7 +559,7 @@ public class ContextVarImpl implements ContextVar {
                 context.db().save(entity);
             }
         }
-        return false;
+        return entity.getEntityID();
     }
 
     private boolean validateValueBeforeSave(@NotNull Object value, VariableContext context) {
@@ -582,6 +591,14 @@ public class ContextVarImpl implements ContextVar {
                 return this;
             }
         });
+    }
+
+    private WorkspaceGroup assertGroupExists(@NotNull String groupId) {
+        WorkspaceGroup entity = context.db().getEntity(WorkspaceGroup.class, groupId);
+        if (entity == null) {
+            throw new IllegalArgumentException("Variable group with id: " + groupId + " not exists");
+        }
+        return entity;
     }
 
     @RequiredArgsConstructor
@@ -684,6 +701,13 @@ public class ContextVarImpl implements ContextVar {
             return this;
         }
 
+        @NotNull
+        @Override
+        public GeneralVariableMetaBuilder set(@NotNull String key, @NotNull String value) {
+            entity.setJsonData(key, value);
+            return this;
+        }
+
         @Override
         public @NotNull VariableMetaBuilderImpl setValues(Set<String> values) {
             entity.setJsonData("options", String.join(LIST_DELIMITER, values));
@@ -697,28 +721,28 @@ public class ContextVarImpl implements ContextVar {
         private final @Getter String listenSource;
         private final @Getter TransformVariableValueHandler handler;
 
-        public TransformVariableSourceImpl(TransformVariableSource source, ContextVarImpl contextVar) {
+        public TransformVariableSourceImpl(@NotNull TransformVariableSource source, @NotNull ContextVarImpl contextVar) {
             this.listenSource = getListenerSource(source);
             this.handler = createHandler(source);
             this.contextVar = contextVar;
         }
 
-        private String getListenerSource(TransformVariableSource source) {
+        private String getListenerSource(@NotNull TransformVariableSource source) {
             String value = DataSourceUtil.getSelection(Objects.requireNonNull(source.getValue())).getEntityValue();
             return switch (source.getType()) {
-                case "mqtt" -> MQTTEntityService.buildMqttListenEvent(source.getMeta(), value);
+                case "mqtt" -> MQTTEntityService.buildMqttListenEvent(Objects.requireNonNull(source.getMeta()), value);
                 case "var" -> value;
                 default -> throw new IllegalArgumentException("Unable to find source listened for type: " + source.getType());
             };
         }
 
-        private TransformVariableValueHandler createHandler(TransformVariableSource source) {
+        private TransformVariableValueHandler createHandler(@NotNull TransformVariableSource source) {
             return switch (source.getType()) {
                 case "mqtt" -> () -> {
                     State state = contextVar.context.event().getLastValues().get(listenSource);
                     return state == null ? null : state.floatValue();
                 };
-                case "var" -> () -> (Number) contextVar.get(listenSource);
+                case "var" -> () -> (Number) contextVar.getRawValue(listenSource);
                 default -> throw new IllegalArgumentException("Unable to handle source with type: " + source.getType());
             };
         }

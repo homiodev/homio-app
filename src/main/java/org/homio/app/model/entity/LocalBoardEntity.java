@@ -6,10 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import java.awt.Font;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -43,7 +40,7 @@ import org.springframework.web.multipart.MultipartFile;
 @UISidebarChildren(icon = "", color = "", allowCreateItem = false)
 public class LocalBoardEntity extends MicroControllerBaseEntity
     implements EntityService<LocalBoardService>,
-    BaseFileSystemEntity<LocalBoardEntity, LocalFileSystemProvider> {
+    BaseFileSystemEntity<LocalFileSystemProvider> {
 
     @Override
     public String getDefaultName() {
@@ -55,7 +52,7 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
         return getJsonDataRequire("fs_root", CommonUtils.getRootPath().toString());
     }
 
-    @UIField(order = 250, inlineEdit = true)
+    @UIField(order = 250)
     @UIFieldSlider(min = 1, max = 60)
     public int getCpuFetchInterval() {
         return getJsonData("cpu_interval", 10);
@@ -86,8 +83,8 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
     }
 
     @Override
-    public @NotNull LocalFileSystemProvider buildFileSystem(@NotNull Context context) {
-        return new LocalFileSystemProvider(this);
+    public @NotNull LocalFileSystemProvider buildFileSystem(@NotNull Context context, int alias) {
+        return new LocalFileSystemProvider(this, alias);
     }
 
     @Override
@@ -155,11 +152,6 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
     @Override
     protected @NotNull String getDevicePrefix() {
         return "board";
-    }
-
-    @Override
-    public boolean isDisableEdit() {
-        return true;
     }
 
     public void setCpuFetchInterval(@Min(0) @Max(60) int value) {

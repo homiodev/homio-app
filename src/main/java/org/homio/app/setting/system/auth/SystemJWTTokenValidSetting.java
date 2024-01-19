@@ -18,7 +18,7 @@ public class SystemJWTTokenValidSetting implements CoreSettingPlugin<Integer>, S
 
     @Override
     public int defaultValue() {
-        return 30;
+        return 480;
     }
 
     @Override

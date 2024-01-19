@@ -107,11 +107,6 @@ public class MainController {
                 } catch (Exception ex) {
                     System.err.println("Error while made device update: " + ex.getMessage());
                 }
-                try {
-                    InstallUtils.downloadTmate(progressBar, repository, rootPath);
-                } catch (Exception te) {
-                    System.err.println("Error while install tmate: " + te.getMessage());
-                }
                 InstallUtils.downloadApp(progressBar, rootPath, repository);
 
                 finishInstallApp(progressBar);
