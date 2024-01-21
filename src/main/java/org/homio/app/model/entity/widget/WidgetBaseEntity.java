@@ -67,16 +67,6 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
         return null;
     }
 
-    @UIField(order = 1000)
-    @UIFieldGroup(order = 10, value = "UI", borderColor = "#009688")
-    public boolean isAdjustFontSize() {
-        return getJsonData("adjfs", Boolean.FALSE);
-    }
-
-    public void setAdjustFontSize(boolean value) {
-        setJsonData("adjfs", value);
-    }
-
     public String getFieldFetchType() {
         return getJsonData("fieldFetchType", (String) null);
     }
@@ -93,32 +83,6 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     }
 
     public abstract @NotNull String getImage();
-
-    @UIField(order = 21)
-    @UIFieldGroup("UI")
-    @UIFieldColorPicker(allowThreshold = true, pulseColorCondition = true, thresholdSource = true)
-    @UIFieldReadDefaultValue
-    public String getBackground() {
-        return getJsonData("bg", "transparent");
-    }
-
-    public void setBackground(String value) {
-        setJsonData("bg", value);
-    }
-
-    @UIField(order = 25)
-    @UIFieldGroup("UI")
-    @UIFieldSlider(min = 15, max = 25)
-    public int getIndex() {
-        return getJsonData("zi", 20);
-    }
-
-    public void setIndex(Integer value) {
-        if (value == null || value == 20) {
-            value = null;
-        }
-        setJsonData("zi", value);
-    }
 
     public boolean isVisible() {
         return true;

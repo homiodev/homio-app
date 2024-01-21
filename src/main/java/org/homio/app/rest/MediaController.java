@@ -63,7 +63,7 @@ import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.Go2RTCEntity;
 import org.homio.app.model.entity.MediaMTXEntity;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity.VideoSeriesDataSourceDynamicOptionLoader;
-import org.homio.app.rest.FileSystemController.ListRequest;
+import org.homio.app.rest.FileSystemController.NodeRequest;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.video.ffmpeg.FfmpegHardwareRepository;
 import org.jetbrains.annotations.NotNull;
@@ -301,7 +301,7 @@ public class MediaController implements ContextCreated {
             return null;
         }
         if (StringUtils.isNotEmpty(fs)) {
-            return fileSystemController.download(fs, new ListRequest(entityID));
+            return fileSystemController.download(fs, new NodeRequest(entityID));
         }
         return toResponse(imageService.getImage(entityID), eTag);
     }

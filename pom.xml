@@ -73,12 +73,18 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.mpatric</groupId>
+      <artifactId>mp3agic</artifactId>
+      <version>0.9.1</version>
+    </dependency>
+    <dependency>
       <artifactId>jsoup</artifactId>
       <groupId>org.jsoup</groupId>
     </dependency>
     <dependency>
       <artifactId>maven-artifact</artifactId>
       <groupId>org.apache.maven</groupId>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>com.jcraft</groupId>

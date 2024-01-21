@@ -5,10 +5,11 @@ import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldCodeEditor;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.attributes.HasBackground;
 import org.jetbrains.annotations.NotNull;
 
 @Entity
-public class WidgetTextEntity extends WidgetBaseEntity<WidgetTextEntity> {
+public class WidgetTextEntity extends WidgetBaseEntity<WidgetTextEntity> implements HasBackground {
 
     @Override
     public @NotNull String getImage() {

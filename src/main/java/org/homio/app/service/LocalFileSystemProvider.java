@@ -184,9 +184,13 @@ public class LocalFileSystemProvider implements FileSystemProvider {
         this.updateBasePath();
     }
 
+    public File getFile(String id) {
+        return Paths.get(basePath).resolve(id).toFile();
+    }
+
     private void updateBasePath() {
         Path basePath = Paths.get(entity.getFileSystemRoot());
-        if (alias > -1) {
+        if (alias > 0) {
             basePath = basePath.resolve(entity.getAliasPath(alias));
         }
         this.basePath = basePath.toString();

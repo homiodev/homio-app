@@ -11,6 +11,7 @@ import org.homio.api.ContextWidget.WidgetBaseBuilder;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.WidgetTabEntity;
+import org.homio.app.model.entity.widget.attributes.HasBackground;
 import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -28,7 +29,9 @@ public class WidgetBaseBuilderImpl<T, W extends WidgetBaseEntity> implements Wid
 
     @Override
     public @NotNull T setZIndex(int index) {
-        widget.setIndex(index);
+        if (widget instanceof HasBackground bg) {
+            bg.setIndex(index);
+        }
         return (T) this;
     }
 
@@ -49,7 +52,9 @@ public class WidgetBaseBuilderImpl<T, W extends WidgetBaseEntity> implements Wid
                                     @Nullable Consumer<ThresholdBuilder> colorBuilder,
                                     @Nullable Consumer<PulseBuilder> pulseBuilder) {
         if (colorBuilder == null && pulseBuilder == null) {
-            getWidget().setBackground(backgroundColor);
+            if (widget instanceof HasBackground bg) {
+                bg.setBackground(backgroundColor);
+            }
         } else {
             ThresholdBuilderImpl builder = new ThresholdBuilderImpl(backgroundColor);
             if (colorBuilder != null) {
@@ -58,14 +63,18 @@ public class WidgetBaseBuilderImpl<T, W extends WidgetBaseEntity> implements Wid
             if (pulseBuilder != null) {
                 pulseBuilder.accept(builder);
             }
-            getWidget().setBackground(builder.build());
+            if (widget instanceof HasBackground bg) {
+                bg.setBackground(builder.build());
+            }
         }
         return (T) this;
     }
 
     @Override
     public @NotNull T setBackground(String value) {
-        widget.setBackground(value);
+        if (widget instanceof HasBackground bg) {
+            bg.setBackground(value);
+        }
         return (T) this;
     }
 

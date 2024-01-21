@@ -7,6 +7,7 @@ import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 import static org.homio.app.model.entity.user.UserBaseEntity.FILE_MANAGER_RESOURCE_AUTHORIZE;
 
 import jakarta.ws.rs.BadRequestException;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,7 +40,9 @@ import org.homio.api.fs.TreeNode;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
 import org.homio.api.util.CommonUtils;
+import org.homio.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
 import org.homio.app.service.FileSystemService;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -83,7 +86,7 @@ public class FileSystemController {
 
     @PostMapping("/list")
     @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
-    public Collection<TreeNode> list(@RequestBody ListRequest request) {
+    public Collection<TreeNode> list(@RequestBody NodeRequest request) {
         return fileSystemService.getFileSystem(request.sourceFs, request.alias)
                                 .getChildren(request.sourceFileId);
     }
@@ -98,7 +101,7 @@ public class FileSystemController {
     @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
     public ResponseEntity<InputStreamResource> download(
         @PathVariable("sourceFs") String sourceFs,
-        @RequestBody ListRequest request) throws Exception {
+        @RequestBody NodeRequest request) {
         FileSystemProvider fileSystem = fileSystemService.getFileSystem(sourceFs, request.alias);
         TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileId);
         if (treeNode == null || treeNode.getId() == null) {
@@ -106,6 +109,30 @@ public class FileSystemController {
         }
         InputStream inputStream = fileSystem.getEntryInputStream(treeNode.getId());
 
+        MediaType mediaType = findMediaType(treeNode);
+        return CommonUtils.inputStreamToResource(inputStream, mediaType, null);
+    }
+
+    @PostMapping("/{sourceFs}/preview")
+    @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
+    public ResponseEntity<InputStreamResource> preview(
+        @PathVariable("sourceFs") String sourceFs,
+        @RequestParam("w") int width,
+        @RequestParam("h") int height,
+        @RequestBody NodeRequest request) {
+        FileSystemProvider fileSystem = fileSystemService.getFileSystem(sourceFs, request.alias);
+        TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileId);
+        if (treeNode == null || treeNode.getId() == null) {
+            throw NotFoundException.fileNotFound(request.sourceFileId);
+        }
+        WidgetFMNodeValue node = new WidgetFMNodeValue(treeNode, width, height, null);
+
+        MediaType mediaType = findMediaType(treeNode);
+        return CommonUtils.inputStreamToResource(new ByteArrayInputStream(node.getContent().getBytes()), mediaType, null);
+    }
+
+    @NotNull
+    private static MediaType findMediaType(TreeNode treeNode) {
         MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
         try {
             String contentType = treeNode.getAttributes().getContentType();
@@ -114,14 +141,15 @@ public class FileSystemController {
             }
         } catch (Exception ignore) {
         }
-        return CommonUtils.inputStreamToResource(inputStream, mediaType, null);
+        return mediaType;
     }
 
     @SneakyThrows
     @PostMapping("/download")
     @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
-    public ResponseEntity<InputStreamResource> downloadArchive(@RequestBody DownloadRequest request) {
-        Path zipFile = archiveSource(request.sourceFs, request.alias, "zip", request.sourceFileIds, "downloadContent", null, null);
+    public ResponseEntity<InputStreamResource> download(@RequestBody DownloadRequest request) {
+        Path zipFile = archiveSource(request.sourceFs, request.alias, "zip", request.sourceFileIds,
+            "downloadContent", null, null);
         return CommonUtils.inputStreamToResource(
             Files.newInputStream(zipFile), new MediaType("application", "zip"), null);
     }
@@ -370,7 +398,7 @@ public class FileSystemController {
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class ListRequest extends BaseNodeRequest {
+    public static class NodeRequest extends BaseNodeRequest {
 
         private String sourceFileId;
     }

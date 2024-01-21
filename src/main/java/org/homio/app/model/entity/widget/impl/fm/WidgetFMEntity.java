@@ -83,7 +83,7 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
     }
 
     @UIField(order = 50, showInContextMenu = true, icon = "fas fa-eye")
-    @UIFieldGroup("FILE_NAME")
+    @UIFieldGroup("UI")
     public boolean getShowFileName() {
         return getJsonData("sfn", true);
     }
@@ -93,33 +93,32 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
         return this;
     }
 
-    @UIField(order = 51)
-    @UIFieldSlider(min = 0, max = 1, step = 0.1)
-    @UIFieldGroup("FILE_NAME")
-    public double getFileNameOpacity() {
-        return getJsonData("fnop", 0.2);
-    }
-
-    public WidgetFMEntity setFileNameOpacity(double value) {
-        setJsonData("fnop", value);
-        return this;
-    }
-
     @UIField(order = 54)
     @UIFieldColorPicker
-    @UIFieldGroup("FILE_NAME")
+    @UIFieldGroup("UI")
     @UIFieldReadDefaultValue
-    public String getFileNameColor() {
-        return getJsonData("fnc", "#ADB5BD");
+    public String getFileColor() {
+        return getJsonData("fnc", "#ADB5BDAA");
     }
 
-    public WidgetFMEntity setFileNameColor(String value) {
+    public void setFileColor(String value) {
         setJsonData("fnc", value);
-        return this;
+    }
+
+    @UIField(order = 55)
+    @UIFieldColorPicker
+    @UIFieldGroup("UI")
+    @UIFieldReadDefaultValue
+    public String getDirectoryColor() {
+        return getJsonData("dnc", "#D8D03AAA");
+    }
+
+    public void setDirectoryColor(String value) {
+        setJsonData("dnc", value);
     }
 
     @UIField(order = 56, showInContextMenu = true, icon = "fas fa-eye")
-    @UIFieldGroup("FILE_NAME")
+    @UIFieldGroup("UI")
     public boolean getShowFileCount() {
         return getJsonData("sfc", true);
     }

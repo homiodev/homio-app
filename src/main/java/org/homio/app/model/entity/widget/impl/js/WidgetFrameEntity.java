@@ -87,20 +87,6 @@ public class WidgetFrameEntity extends WidgetBaseEntity<WidgetFrameEntity> imple
     }
 
     @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public String getBackground() {
-        return super.getBackground();
-    }
-
-    @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public boolean isAdjustFontSize() {
-        return super.isAdjustFontSize();
-    }
-
-    @Override
     public void beforePersist() {
         super.beforePersist();
         setHtml("<html>\n"

@@ -21,6 +21,7 @@ import org.homio.app.model.entity.widget.UIFieldJSONLine;
 import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.homio.app.model.entity.widget.attributes.HasActionOnClick;
+import org.homio.app.model.entity.widget.attributes.HasBackground;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.model.entity.widget.attributes.HasName;
 import org.homio.app.model.entity.widget.attributes.HasPadding;
@@ -37,6 +38,7 @@ import org.jetbrains.annotations.NotNull;
 public class WidgetDisplayEntity
         extends WidgetBaseEntityAndSeries<WidgetDisplayEntity, WidgetDisplaySeriesEntity>
         implements HasLineChartBehaviour,
+        HasBackground,
         HasDynamicParameterFields,
         HasChartDataSource,
         HasHorizontalLine,

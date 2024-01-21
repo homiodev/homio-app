@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -143,9 +144,9 @@ public class WidgetController {
         List<BaseFileSystemEntity> fileSystems = context.getEntityServices(BaseFileSystemEntity.class);
         List<WidgetFMNodes> nodes = new ArrayList<>();
         for (WidgetFMSeriesEntity seriesEntity : entity.getSeries()) {
-            String[] path = seriesEntity.getValueDataSource().split("###");
-            String parentId = path[0];
-            String fs = path[1];
+            SelectionSource source = DataSourceUtil.getSelection(seriesEntity.getValueDataSource());
+            String parentId = source.getValue();
+            String fs = DataSourceUtil.getSelection(seriesEntity.getValueDataSource()).getMetadata().get("fs").asText();
             BaseFileSystemEntity fileSystemEntity = fileSystems.stream().filter(fileSystem -> fileSystem.getEntityID().equals(fs)).findAny().orElse(null);
             if (fileSystemEntity != null) {
                 Long snapshot = seriesToSnapValue.get(seriesEntity.getEntityID());
@@ -153,8 +154,11 @@ public class WidgetController {
                 Long lastUpdated = fileSystem.toTreeNode(parentId).getAttributes().getLastUpdated();
                 Set<WidgetFMNodeValue> items = null;
                 if (!Objects.equals(snapshot, lastUpdated)) {
-                    Set<TreeNode> children = fileSystem.getChildren(parentId).stream().filter(n -> !n.getAttributes().isDir()).collect(Collectors.toSet());
-                    items = children.stream().map(treeNode -> new WidgetFMNodeValue(treeNode, width, height)).collect(Collectors.toSet());
+                    List<Pattern> filters = seriesEntity.getFileFilters().stream().map(Pattern::compile).toList();
+                    Set<TreeNode> children = fileSystem.getChildren(parentId).stream().filter(n -> filterFile(n, seriesEntity, filters))
+                                                       .collect(Collectors.toSet());
+                    items =
+                        children.stream().map(treeNode -> new WidgetFMNodeValue(treeNode, width, height, 10_000)).collect(Collectors.toSet());
                 }
                 nodes.add(new WidgetFMNodes(fileSystemEntity.getTitle(), seriesEntity.getEntityID(), lastUpdated, items));
             } else {
@@ -517,6 +521,21 @@ public class WidgetController {
             context,
             dynamicParameters,
             value));
+    }
+
+    private static boolean filterFile(TreeNode n, WidgetFMSeriesEntity entity, List<Pattern> filters) {
+        if (!entity.getShowDirectories() && n.getAttributes().isDir()) {
+            return false;
+        }
+        if (!filters.isEmpty()) {
+            for (Pattern filter : filters) {
+                if (filter.matcher(n.getName()).matches()) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return true;
     }
 
     @Getter
