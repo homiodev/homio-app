@@ -34,9 +34,11 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.codec.binary.Base64OutputStream;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.fs.FileRequireThumbnailer;
 import org.homio.addon.fs.Mp3Thumbnailer;
 import org.homio.addon.fs.Mp4Thumbnailer;
+import org.homio.addon.fs.TextThumbnailer;
 import org.homio.api.fs.TreeNode;
 import org.homio.app.service.LocalFileSystemProvider;
 import org.jetbrains.annotations.NotNull;
@@ -47,11 +49,10 @@ import org.jetbrains.annotations.Nullable;
 public class WidgetFMNodeValue {
 
     private final TreeNode treeNode;
-    private String content;
     private ResolveContentType resolveType = ResolveContentType.unknown;
 
     @SneakyThrows
-    public WidgetFMNodeValue(TreeNode treeNode, int width, int height, @Nullable Integer maxExceededSize) {
+    public WidgetFMNodeValue(TreeNode treeNode) {
         this.treeNode = treeNode;
         String contentType = treeNode.getAttributes().getContentType();
         if (contentType == null) {
@@ -65,12 +66,6 @@ public class WidgetFMNodeValue {
             || contentType.equals(APPLICATION_JSON_VALUE)) {
             this.resolveType = ResolveContentType.text;
         }
-
-        Long size = treeNode.getAttributes().getSize();
-        if (size != null && maxExceededSize != null && size > maxExceededSize) {
-            return;
-        }
-        this.content = getThumbnail(treeNode, width, height, contentType);
     }
 
     private static final LoadingCache<ThumbnailRequest, String> thumbnailCache =
@@ -90,20 +85,23 @@ public class WidgetFMNodeValue {
             }
         });
 
-    private String getThumbnail(TreeNode treeNode, int width, int height, String contentType) throws IOException {
-        Thumbnailer thumbnailer = buildThumbnail(contentType);
-        if (thumbnailer != null) {
-            try {
-                return thumbnailCache.get(new ThumbnailRequest(treeNode, thumbnailer, width, height));
-            } catch (Exception ex) {
-                log.debug("Unable to fetch thumbnail from file: <{}>", treeNode.getName());
-            }
-        } else if (contentType.startsWith("text/")
+    public static String getThumbnail(TreeNode treeNode, int width, int height, boolean drawTextAsImage) throws IOException {
+        String contentType = StringUtils.defaultString(treeNode.getAttributes().getContentType(), "text/plain");
+        if (contentType.startsWith("text/")
             || contentType.equals("application/javascript")
             || contentType.equals(APPLICATION_JSON_VALUE)) {
-            try (InputStream stream = treeNode.getInputStream()) {
-                return IOUtils.toString(stream, StandardCharsets.UTF_8);
+            if (!drawTextAsImage) {
+                try (InputStream stream = treeNode.getInputStream()) {
+                    return IOUtils.toString(stream, StandardCharsets.UTF_8);
+                }
             }
+        }
+        Thumbnailer thumbnailer = buildThumbnail(contentType);
+        try {
+            String content = thumbnailCache.get(new ThumbnailRequest(treeNode, thumbnailer, width, height));
+            return StringUtils.isEmpty(content) ? "" : "data:image/png;base64," + content;
+        } catch (Exception ex) {
+            log.debug("Unable to fetch thumbnail from file: <{}>", treeNode.getName());
         }
         return "";
     }
@@ -129,7 +127,7 @@ public class WidgetFMNodeValue {
         return treeNode.hashCode();
     }
 
-    private Thumbnailer buildThumbnail(String contentType) {
+    private static Thumbnailer buildThumbnail(String contentType) {
         return switch (contentType) {
             case "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> new DOCXThumbnailer();
             case "application/msword" -> new DOCThumbnailer();
@@ -140,7 +138,7 @@ public class WidgetFMNodeValue {
             case "application/vnd.openxmlformats-officedocument.presentationml.presentation" -> new PPTXThumbnailer();
             case "application/vnd.ms-excel" -> new XLSThumbnailer();
             case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> new XLSXThumbnailer();
-            default -> null;
+            default -> new TextThumbnailer();
         };
     }
 

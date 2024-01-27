@@ -7,14 +7,14 @@ import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.api.ui.field.UIFieldTableLayout;
 import org.homio.api.ui.field.condition.UIFieldDisableEditOnCondition;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.attributes.HasBackground;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.setting.dashboard.WidgetBorderColorMenuSetting;
 import org.jetbrains.annotations.NotNull;
 
 @Entity
-public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
+public class WidgetLayoutEntity extends WidgetEntity<WidgetLayoutEntity>
         implements HasLayout, HasBackground {
 
     @Override
@@ -53,7 +53,7 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
 
     @Override
     public void afterDelete() {
-        for (WidgetBaseEntity entity : context().db().findAll(WidgetBaseEntity.class)) {
+        for (WidgetEntity entity : context().db().findAll(WidgetEntity.class)) {
             if (getEntityID().equals(entity.getParent())) {
                 context().db().delete(entity);
             }

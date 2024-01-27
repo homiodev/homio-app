@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import org.apache.commons.lang3.NotImplementedException;
 import org.homio.api.ui.field.UIFieldIgnore;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.attributes.HasActionOnClick;
 import org.homio.app.model.entity.widget.attributes.HasAlign;
 import org.homio.app.model.entity.widget.attributes.HasBackground;
@@ -17,7 +17,7 @@ import org.homio.app.model.entity.widget.attributes.HasValueTemplate;
 import org.jetbrains.annotations.NotNull;
 
 @Entity
-public class WidgetSimpleValueEntity extends WidgetBaseEntity<WidgetSimpleValueEntity>
+public class WidgetSimpleValueEntity extends WidgetEntity<WidgetSimpleValueEntity>
         implements
     HasBackground,
     HasIcon,

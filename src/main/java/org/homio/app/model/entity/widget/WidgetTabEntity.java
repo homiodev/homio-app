@@ -33,7 +33,7 @@ public final class WidgetTabEntity extends BaseEntity implements
     public static final String MAIN_TAB_ID = PREFIX + "main";
     @JsonIgnore
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "widgetTabEntity")
-    private Set<WidgetBaseEntity> widgetBaseEntities;
+    private Set<WidgetEntity> widgetBaseEntities;
 
     @Column(length = 10_000)
     @Convert(converter = JSONConverter.class)

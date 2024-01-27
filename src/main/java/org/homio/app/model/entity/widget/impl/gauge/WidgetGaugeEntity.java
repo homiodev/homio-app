@@ -5,12 +5,12 @@ import jakarta.persistence.Entity;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.*;
 import org.homio.app.model.entity.widget.UIFieldMarkers;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.attributes.*;
 import org.jetbrains.annotations.NotNull;
 
 @Entity
-public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
+public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
         implements HasSingleValueDataSource,
         HasIcon,
         HasValueConverter,

@@ -24,7 +24,7 @@ import org.homio.api.widget.JavaScriptBuilder;
 import org.homio.api.widget.template.TemplateWidgetBuilder;
 import org.homio.api.widget.template.WidgetDefinition;
 import org.homio.app.manager.common.ContextImpl;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.WidgetTabEntity;
 import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
 import org.homio.app.model.entity.widget.impl.WidgetSimpleValueEntity;
@@ -278,7 +278,7 @@ public class ContextWidgetImpl implements ContextWidget {
     }
 
     @SuppressWarnings("rawtypes")
-    private <T extends WidgetBaseEntity> T createStubWidget(@NotNull String entityID, T widget) {
+    private <T extends WidgetEntity> T createStubWidget(@NotNull String entityID, T widget) {
         entityID = ensureWidgetNotExists(entityID, widget.getEntityPrefix());
 
         WidgetTabEntity generalTabEntity = context.db().getEntity(MAIN_TAB_ID);

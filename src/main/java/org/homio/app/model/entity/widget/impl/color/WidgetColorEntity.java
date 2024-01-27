@@ -22,7 +22,7 @@ import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;
 import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.attributes.HasIconWithoutThreshold;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.model.entity.widget.attributes.HasName;
@@ -30,7 +30,7 @@ import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.jetbrains.annotations.NotNull;
 
 @Entity
-public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
+public class WidgetColorEntity extends WidgetEntity<WidgetColorEntity>
         implements
         HasLayout,
         HasIconWithoutThreshold,

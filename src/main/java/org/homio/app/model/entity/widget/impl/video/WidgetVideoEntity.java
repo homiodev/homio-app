@@ -2,7 +2,7 @@ package org.homio.app.model.entity.widget.impl.video;
 
 import jakarta.persistence.Entity;
 import org.homio.api.entity.validation.MaxItems;
-import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
+import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.jetbrains.annotations.NotNull;
 
@@ -10,7 +10,7 @@ import java.util.Set;
 
 @Entity
 public class WidgetVideoEntity
-        extends WidgetBaseEntityAndSeries<WidgetVideoEntity, WidgetVideoSeriesEntity> {
+        extends WidgetEntityAndSeries<WidgetVideoEntity, WidgetVideoSeriesEntity> {
 
     @Override
     public WidgetGroup getGroup() {

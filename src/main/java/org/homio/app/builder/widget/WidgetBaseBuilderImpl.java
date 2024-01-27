@@ -9,7 +9,7 @@ import org.homio.api.ContextWidget.PulseBuilder;
 import org.homio.api.ContextWidget.ThresholdBuilder;
 import org.homio.api.ContextWidget.WidgetBaseBuilder;
 import org.homio.app.manager.common.ContextImpl;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.WidgetTabEntity;
 import org.homio.app.model.entity.widget.attributes.HasBackground;
 import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
@@ -17,7 +17,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Getter
-public class WidgetBaseBuilderImpl<T, W extends WidgetBaseEntity> implements WidgetBaseBuilder<T> {
+public class WidgetBaseBuilderImpl<T, W extends WidgetEntity> implements WidgetBaseBuilder<T> {
 
     protected final W widget;
     private final ContextImpl context;

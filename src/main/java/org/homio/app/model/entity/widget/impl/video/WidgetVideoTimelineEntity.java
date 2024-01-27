@@ -10,12 +10,12 @@ import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldNumber;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.jetbrains.annotations.NotNull;
 
 @Entity
-public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimelineEntity> {
+public class WidgetVideoTimelineEntity extends WidgetEntity<WidgetVideoTimelineEntity> {
 
     @Override
     public WidgetGroup getGroup() {

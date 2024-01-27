@@ -9,7 +9,7 @@ import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.field.MonacoLanguage;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldCodeEditor;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.WidgetEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,7 +17,7 @@ import org.jetbrains.annotations.Nullable;
 @Getter
 @Setter
 @Accessors(chain = true)
-public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> implements HasJsonData {
+public class WidgetJsEntity extends WidgetEntity<WidgetJsEntity> implements HasJsonData {
 
     @Override
     protected @NotNull String getWidgetPrefix() {

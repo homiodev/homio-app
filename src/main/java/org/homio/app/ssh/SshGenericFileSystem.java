@@ -32,6 +32,16 @@ public class SshGenericFileSystem extends BaseCachedFileSystemProvider<SshGeneri
     }
 
     @Override
+    public int getFileSystemAlias() {
+        return 0;
+    }
+
+    @Override
+    public String getFileSystemId() {
+        return entity.getEntityID();
+    }
+
+    @Override
     protected @NotNull SshFileService createService() {
         return new SshFileService();
     }

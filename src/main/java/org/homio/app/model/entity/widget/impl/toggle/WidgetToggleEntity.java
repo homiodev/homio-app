@@ -7,7 +7,7 @@ import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldLayout;
 import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
-import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
+import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
 import org.homio.app.model.entity.widget.attributes.HasBackground;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.model.entity.widget.attributes.HasName;
@@ -17,7 +17,7 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetToggleEntity
-        extends WidgetBaseEntityAndSeries<WidgetToggleEntity, WidgetToggleSeriesEntity>
+        extends WidgetEntityAndSeries<WidgetToggleEntity, WidgetToggleSeriesEntity>
         implements HasBackground, HasLayout, HasPadding, HasSourceServerUpdates, HasName {
 
     @UIField(order = 1)

@@ -7,7 +7,7 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.WidgetEntity;
 
 @Getter
 @Setter
@@ -27,8 +27,8 @@ public class WidgetDataRequest {
     }
 
     @SneakyThrows
-    public WidgetBaseEntity getEntity(Context context, ObjectMapper objectMapper) {
-        WidgetBaseEntity entity = context.db().getEntity(entityID);
+    public WidgetEntity getEntity(Context context, ObjectMapper objectMapper) {
+        WidgetEntity entity = context.db().getEntity(entityID);
         if (liveEntity != null) {
             return objectMapper.readValue(liveEntity, entity.getClass());
         }

@@ -6,7 +6,7 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.homio.api.ContextWidget.ToggleType;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.UIFieldIgnore;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.attributes.HasAlign;
 import org.homio.app.model.entity.widget.attributes.HasBackground;
 import org.homio.app.model.entity.widget.attributes.HasPadding;
@@ -15,7 +15,7 @@ import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.jetbrains.annotations.NotNull;
 
 @Entity
-public class WidgetSimpleToggleEntity extends WidgetBaseEntity<WidgetSimpleToggleEntity>
+public class WidgetSimpleToggleEntity extends WidgetEntity<WidgetSimpleToggleEntity>
         implements HasBackground, HasSourceServerUpdates, HasSingleValueDataSource, HasToggle, HasAlign, HasPadding {
 
     @Override

@@ -25,7 +25,7 @@ import org.jetbrains.annotations.NotNull;
 @Accessors(chain = true)
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-public abstract class WidgetSeriesEntity<T extends WidgetBaseEntityAndSeries>
+public abstract class WidgetSeriesEntity<T extends WidgetEntityAndSeries>
         extends BaseEntity implements HasDynamicParameterFields, HasJsonData {
 
     private int priority;
@@ -40,7 +40,7 @@ public abstract class WidgetSeriesEntity<T extends WidgetBaseEntityAndSeries>
     protected abstract String getSeriesPrefix();
 
     @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY, targetEntity = WidgetBaseEntityAndSeries.class)
+    @ManyToOne(fetch = FetchType.LAZY, targetEntity = WidgetEntityAndSeries.class)
     private T widgetEntity;
 
     @Column(length = 65535)

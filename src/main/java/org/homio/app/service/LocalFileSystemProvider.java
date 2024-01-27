@@ -43,16 +43,16 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 
+@Getter
 public class LocalFileSystemProvider implements FileSystemProvider {
 
-    @Getter
     private LocalBoardEntity entity;
-    private final int alias;
+    private final int fileSystemAlias;
     private String basePath;
 
-    public LocalFileSystemProvider(LocalBoardEntity entity, int alias) {
+    public LocalFileSystemProvider(@NotNull LocalBoardEntity entity, int fileSystemAlias) {
         this.entity = entity;
-        this.alias = alias;
+        this.fileSystemAlias = fileSystemAlias;
         this.updateBasePath();
     }
 
@@ -174,6 +174,11 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     }
 
     @Override
+    public String getFileSystemId() {
+        return entity.getEntityID();
+    }
+
+    @Override
     public boolean restart(boolean force) {
         return true;
     }
@@ -190,8 +195,8 @@ public class LocalFileSystemProvider implements FileSystemProvider {
 
     private void updateBasePath() {
         Path basePath = Paths.get(entity.getFileSystemRoot());
-        if (alias > 0) {
-            basePath = basePath.resolve(entity.getAliasPath(alias));
+        if (fileSystemAlias > 0) {
+            basePath = basePath.resolve(entity.getAliasPath(fileSystemAlias));
         }
         this.basePath = basePath.toString();
     }

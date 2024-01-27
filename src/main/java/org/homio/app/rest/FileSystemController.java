@@ -4,8 +4,14 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.homio.api.ui.field.selection.UIFieldTreeNodeSelection.LOCAL_FS;
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.model.entity.user.UserBaseEntity.FILE_MANAGER_RESOURCE_AUTHORIZE;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import io.jsonwebtoken.Jwt;
+import io.jsonwebtoken.Jwts;
 import jakarta.ws.rs.BadRequestException;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -16,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -30,6 +37,7 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
+import lombok.experimental.Accessors;
 import org.apache.commons.io.FileUtils;
 import org.homio.api.Context;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
@@ -41,9 +49,14 @@ import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
+import org.homio.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver;
 import org.homio.app.service.FileSystemService;
+import org.homio.app.utils.HardwareUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.ResourceRegion;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -52,6 +65,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -108,27 +122,38 @@ public class FileSystemController {
             throw NotFoundException.fileNotFound(request.sourceFileId);
         }
         InputStream inputStream = fileSystem.getEntryInputStream(treeNode.getId());
-
         MediaType mediaType = findMediaType(treeNode);
         return CommonUtils.inputStreamToResource(inputStream, mediaType, null);
     }
 
+    @SneakyThrows
+    @GetMapping("/{jsonContent}/download")
+    @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
+    public ResponseEntity<InputStreamResource> download(@PathVariable("jsonContent") String jsonContent) {
+        byte[] content = Base64.getDecoder().decode(jsonContent.getBytes());
+        NodeRequest nodeRequest = OBJECT_MAPPER.readValue(content, NodeRequest.class);
+        return download(nodeRequest.getSourceFs(), nodeRequest);
+    }
+
+    @SneakyThrows
     @PostMapping("/{sourceFs}/preview")
     @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
     public ResponseEntity<InputStreamResource> preview(
         @PathVariable("sourceFs") String sourceFs,
         @RequestParam("w") int width,
         @RequestParam("h") int height,
+        @RequestParam(value = "drawTextAsImage", required = false) boolean drawTextAsImage,
         @RequestBody NodeRequest request) {
         FileSystemProvider fileSystem = fileSystemService.getFileSystem(sourceFs, request.alias);
         TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileId);
         if (treeNode == null || treeNode.getId() == null) {
             throw NotFoundException.fileNotFound(request.sourceFileId);
         }
-        WidgetFMNodeValue node = new WidgetFMNodeValue(treeNode, width, height, null);
+        WidgetFMNodeValue node = new WidgetFMNodeValue(treeNode);
+        String content = WidgetFMNodeValue.getThumbnail(node.getTreeNode(), width, height, drawTextAsImage);
 
         MediaType mediaType = findMediaType(treeNode);
-        return CommonUtils.inputStreamToResource(new ByteArrayInputStream(node.getContent().getBytes()), mediaType, null);
+        return CommonUtils.inputStreamToResource(new ByteArrayInputStream(content.getBytes()), mediaType, null);
     }
 
     @NotNull
@@ -398,6 +423,7 @@ public class FileSystemController {
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
+    @JsonInclude(Include.NON_EMPTY)
     public static class NodeRequest extends BaseNodeRequest {
 
         private String sourceFileId;
@@ -422,6 +448,8 @@ public class FileSystemController {
 
     @Getter
     @Setter
+    @Accessors(chain = true)
+    @JsonInclude(Include.NON_EMPTY)
     public static class BaseNodeRequest {
 
         public String sourceFs;

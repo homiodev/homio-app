@@ -9,7 +9,7 @@ import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
 import org.homio.app.manager.common.ContextImpl;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.homio.app.model.entity.widget.WidgetTabEntity;
 import org.homio.app.spring.ContextCreated;
@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
 public class WidgetService implements ContextCreated {
 
     private final Context context;
-    private final List<WidgetBaseEntity<?>> widgetBaseEntities;
+    private final List<WidgetEntity<?>> widgetBaseEntities;
 
     @Override
     public void onContextCreated(ContextImpl context) {
@@ -35,7 +35,7 @@ public class WidgetService implements ContextCreated {
         AvailableWidget mediaWidgets = new AvailableWidget("media-widgets", "fas fa-compact-disc", new ArrayList<>());
         options.add(chartWidgets);
         options.add(mediaWidgets);
-        for (WidgetBaseEntity<?> entity : this.widgetBaseEntities) {
+        for (WidgetEntity<?> entity : this.widgetBaseEntities) {
             if (entity.isVisible()) {
                 AvailableWidget widget = new AvailableWidget(entity.getType(), entity.getImage(), null);
                 if (entity.getGroup() == WidgetGroup.Chart) {

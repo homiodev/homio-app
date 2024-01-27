@@ -5,7 +5,7 @@ import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldLayout;
 import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
-import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
+import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.model.entity.widget.attributes.HasName;
 import org.homio.app.model.entity.widget.attributes.HasPadding;
@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetSliderEntity
-        extends WidgetBaseEntityAndSeries<WidgetSliderEntity, WidgetSliderSeriesEntity>
+        extends WidgetEntityAndSeries<WidgetSliderEntity, WidgetSliderSeriesEntity>
         implements HasLayout, HasSourceServerUpdates, HasName, HasPadding {
 
     @UIField(order = 1)

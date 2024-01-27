@@ -41,11 +41,10 @@ import org.homio.api.util.DataSourceUtil.SelectionSource;
 import org.homio.api.util.Lang;
 import org.homio.app.config.cacheControl.CacheControl;
 import org.homio.app.config.cacheControl.CachePolicy;
-import org.homio.app.manager.ScriptService;
 import org.homio.app.manager.WidgetService;
 import org.homio.app.manager.common.ContextImpl;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
-import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
+import org.homio.app.model.entity.widget.WidgetEntity;
+import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.WidgetTabEntity;
 import org.homio.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
@@ -54,7 +53,6 @@ import org.homio.app.model.entity.widget.impl.color.WidgetColorEntity;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.homio.app.model.entity.widget.impl.fm.WidgetFMEntity;
 import org.homio.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
-import org.homio.app.model.entity.widget.impl.fm.WidgetFMSeriesEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
@@ -64,8 +62,8 @@ import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 import org.homio.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver;
 import org.homio.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver.VideoEntityResponse;
 import org.homio.app.model.rest.WidgetDataRequest;
-import org.homio.app.repository.widget.WidgetTabRepository;
 import org.homio.app.rest.widget.WidgetChartsController.SingleValueData;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -83,30 +81,24 @@ public class WidgetController {
 
     private final ObjectMapper objectMapper;
     private final ContextImpl context;
-    private final ScriptService scriptService;
     private final WidgetService widgetService;
     private final List<WidgetVideoSourceResolver> videoSourceResolvers;
     private final TimeSeriesUtil timeSeriesUtil;
-    private final WidgetTabRepository widgetTabRepository;
 
     public WidgetController(
-            ObjectMapper objectMapper,
+        ObjectMapper objectMapper,
         ContextImpl context,
-            ScriptService scriptService,
-            WidgetService widgetService,
-            List<WidgetVideoSourceResolver> videoSourceResolvers,
-            WidgetTabRepository widgetTabRepository) {
+        WidgetService widgetService,
+        List<WidgetVideoSourceResolver> videoSourceResolvers) {
         this.objectMapper = objectMapper;
         this.context = context;
-        this.scriptService = scriptService;
         this.widgetService = widgetService;
-        this.widgetTabRepository = widgetTabRepository;
         this.videoSourceResolvers = videoSourceResolvers;
         this.timeSeriesUtil = new TimeSeriesUtil(context);
     }
 
     @PostMapping("/sources")
-    public Map<String, Object> getSources(@Valid @RequestBody Sources request) {
+    public Map<String, Object> getSources(@Valid @RequestBody WidgetController.SourcesRequest request) {
         Map<String, Object> result = new HashMap<>();
         for (String source : request.sources) {
             SelectionSource selection = DataSourceUtil.getSelection(source);
@@ -131,7 +123,7 @@ public class WidgetController {
     }
 
     @PostMapping("/fm/{entityID}")
-    public List<WidgetFMNodes> getWidgetFileManagerData(
+    public @NotNull Set<WidgetFMNodeValue> getWidgetFileManagerData(
             @PathVariable("entityID") String entityID,
             @RequestParam("w") int width,
             @RequestParam("h") int height,
@@ -139,33 +131,59 @@ public class WidgetController {
         Map<String, Long> seriesToSnapValue = prevValues.stream().collect(Collectors.toMap(n -> n.sid, n -> n.sn));
         WidgetFMEntity entity = context.db().getEntity(entityID);
         if (entity == null) { // in case if deleted but still requested
-            return null;
+            return Set.of();
         }
         List<BaseFileSystemEntity> fileSystems = context.getEntityServices(BaseFileSystemEntity.class);
-        List<WidgetFMNodes> nodes = new ArrayList<>();
-        for (WidgetFMSeriesEntity seriesEntity : entity.getSeries()) {
-            SelectionSource source = DataSourceUtil.getSelection(seriesEntity.getValueDataSource());
-            String parentId = source.getValue();
-            String fs = DataSourceUtil.getSelection(seriesEntity.getValueDataSource()).getMetadata().get("fs").asText();
-            BaseFileSystemEntity fileSystemEntity = fileSystems.stream().filter(fileSystem -> fileSystem.getEntityID().equals(fs)).findAny().orElse(null);
-            if (fileSystemEntity != null) {
-                Long snapshot = seriesToSnapValue.get(seriesEntity.getEntityID());
-                FileSystemProvider fileSystem = fileSystemEntity.getFileSystem(context, 0);
-                Long lastUpdated = fileSystem.toTreeNode(parentId).getAttributes().getLastUpdated();
-                Set<WidgetFMNodeValue> items = null;
-                if (!Objects.equals(snapshot, lastUpdated)) {
-                    List<Pattern> filters = seriesEntity.getFileFilters().stream().map(Pattern::compile).toList();
-                    Set<TreeNode> children = fileSystem.getChildren(parentId).stream().filter(n -> filterFile(n, seriesEntity, filters))
-                                                       .collect(Collectors.toSet());
-                    items =
-                        children.stream().map(treeNode -> new WidgetFMNodeValue(treeNode, width, height, 10_000)).collect(Collectors.toSet());
-                }
-                nodes.add(new WidgetFMNodes(fileSystemEntity.getTitle(), seriesEntity.getEntityID(), lastUpdated, items));
-            } else {
-                log.info("Unable to find fileSystem");
-            }
+        SelectionSource source = DataSourceUtil.getSelection(entity.getValueDataSource());
+        String parentId = source.getValue();
+        String fs = DataSourceUtil.getSelection(entity.getValueDataSource()).getMetadata().get("fs").asText();
+        BaseFileSystemEntity fileSystemEntity = fileSystems.stream().filter(fileSystem -> fileSystem.getEntityID().equals(fs)).findAny().orElse(null);
+        if (fileSystemEntity != null) {
+            return getWidgetFMNodes(width, height, seriesToSnapValue, entity, fileSystemEntity, parentId);
+        } else {
+            log.info("Unable to find fileSystem");
         }
-        return nodes;
+        return Set.of();
+    }
+
+    private Set<WidgetFMNodeValue> getWidgetFMNodes(int width, int height, Map<String, Long> seriesToSnapValue, WidgetFMEntity entity,
+        BaseFileSystemEntity fileSystemEntity, String parentId) {
+        Long snapshot = seriesToSnapValue.get(entity.getEntityID());
+        FileSystemProvider fileSystem = fileSystemEntity.getFileSystem(context, 0);
+        Long lastUpdated = fileSystem.toTreeNode(parentId).getAttributes().getLastUpdated();
+        Set<WidgetFMNodeValue> items = null;
+        if (!Objects.equals(snapshot, lastUpdated)) {
+            Set<TreeNode> children = findVisibleNodes(entity, parentId, fileSystem);
+            items = children
+                .stream()
+                .map(WidgetFMNodeValue::new)
+                .collect(Collectors.toSet());
+        }
+        return items;
+    }
+
+    @NotNull
+    private static Set<TreeNode> findVisibleNodes(WidgetFMEntity entity, String parentId, FileSystemProvider fileSystem) {
+        List<Pattern> filters = entity
+            .getFileFilters()
+            .stream()
+            .map(regex -> {
+                if (regex.startsWith("*")) {
+                    regex = "." + regex;
+                } else if (!regex.startsWith(".*")) {
+                    regex = ".*" + regex;
+                }
+                try {
+                    return Pattern.compile(regex);
+                } catch (Exception ignore) {}
+                return null;
+            }).filter(Objects::nonNull)
+            .toList();
+        Set<TreeNode> allNodes = fileSystem.getChildren(parentId);
+        return allNodes
+            .stream()
+            .filter(n -> filterFile(n, entity, filters))
+            .collect(Collectors.toSet());
     }
 
     @PostMapping("/videoSource")
@@ -233,7 +251,7 @@ public class WidgetController {
 
     @PostMapping("/value")
     public SingleValueData getValue(@Valid @RequestBody WidgetDataRequest request) {
-        WidgetBaseEntity entity = request.getEntity(context, objectMapper);
+        WidgetEntity entity = request.getEntity(context, objectMapper);
         if (entity instanceof HasSingleValueDataSource) {
             return new SingleValueData(timeSeriesUtil.getSingleValue(entity, (HasSingleValueDataSource) entity, o -> o), null);
         }
@@ -282,9 +300,9 @@ public class WidgetController {
     }
 
     @PostMapping("/colors/value")
-    public WidgetColorValue getColorValues(@RequestBody WidgetDataRequest request) {
+    public WidgetColorValueResponse getColorValues(@RequestBody WidgetDataRequest request) {
         WidgetColorEntity entity = request.getEntity(context, objectMapper, WidgetColorEntity.class);
-        return new WidgetColorValue(
+        return new WidgetColorValueResponse(
                 timeSeriesUtil.getSingleValue(entity,
                         entity.getBrightnessValueDataSource(),
                         entity.getDynamicParameterFields("brightness"),
@@ -334,26 +352,30 @@ public class WidgetController {
     }
 
     @GetMapping("/{entityID}")
-    public WidgetBaseEntity getWidget(@PathVariable("entityID") String entityID) {
-        WidgetBaseEntity widget = context.db().getEntity(entityID);
+    public WidgetEntity getWidget(@PathVariable("entityID") String entityID) {
+        WidgetEntity widget = context.db().getEntity(entityID);
         updateWidgetBeforeReturnToUI(widget);
         return widget;
     }
 
     @GetMapping("/tab/{tabId}")
-    public List<WidgetEntity> getWidgetsInTab(@PathVariable("tabId") String tabId) {
-        List<WidgetBaseEntity> widgets = context.db().findAll(WidgetBaseEntity.class).stream()
-                .filter(w -> w.getWidgetTabEntity().getEntityID().equals(tabId)).toList();
+    public List<WidgetEntityResponse> getWidgetsInTab(@PathVariable("tabId") String tabId) {
+        List<WidgetEntity> widgets = context
+            .db()
+            .findAll(WidgetEntity.class)
+            .stream()
+            .filter(w -> w.getWidgetTabEntity().getEntityID().equals(tabId))
+            .toList();
 
-        List<WidgetEntity> result = new ArrayList<>();
-        for (WidgetBaseEntity<?> widget : widgets) {
+        List<WidgetEntityResponse> result = new ArrayList<>();
+        for (WidgetEntity<?> widget : widgets) {
             updateWidgetBeforeReturnToUI(widget);
 
             UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
             if (widget instanceof HasDynamicContextMenuActions) {
                 ((HasDynamicContextMenuActions) widget).assembleActions(uiInputBuilder);
             }
-            result.add(new WidgetEntity(widget, uiInputBuilder.buildAll()));
+            result.add(new WidgetEntityResponse(widget, uiInputBuilder.buildAll()));
         }
 
         return result;
@@ -369,7 +391,8 @@ public class WidgetController {
         }
 
         Class<? extends EntityFieldMetadata> typeClass = ContextImpl.uiFieldClasses.get(type);
-        WidgetBaseEntity<?> baseEntity = (WidgetBaseEntity<?>) typeClass.getConstructor().newInstance();
+        WidgetEntity<?> baseEntity = (WidgetEntity<?>) typeClass.getConstructor()
+                                                                .newInstance();
 
         baseEntity.setWidgetTabEntity(widgetTabEntity);
         return context.db().save(baseEntity);
@@ -471,7 +494,7 @@ public class WidgetController {
         context.db().save(replaceTab, false);
     }
 
-    private void updateWidgetBeforeReturnToUI(WidgetBaseEntity<?> widget) {
+    private void updateWidgetBeforeReturnToUI(WidgetEntity<?> widget) {
         /*TODO: fix:::if (widget instanceof WidgetJsEntity) {
             WidgetJsEntity jsEntity = (WidgetJsEntity) widget;
             try {
@@ -498,7 +521,7 @@ public class WidgetController {
     }
 
     private <T extends WidgetSeriesEntity> T getSeriesEntity(SingleValueRequest<?> request) {
-        WidgetBaseEntityAndSeries entity = context.db().getEntityRequire(request.entityID);
+        WidgetEntityAndSeries entity = context.db().getEntityRequire(request.entityID);
         T series = ((Set<T>) entity.getSeries()).stream().filter(s -> s.getEntityID().equals(request.seriesEntityID)).findAny().orElse(null);
         if (series == null) {
             throw new NotFoundException("Unable to find series: " + request.seriesEntityID + " for entity: " + entity.getTitle());
@@ -523,13 +546,13 @@ public class WidgetController {
             value));
     }
 
-    private static boolean filterFile(TreeNode n, WidgetFMSeriesEntity entity, List<Pattern> filters) {
+    private static boolean filterFile(TreeNode n, WidgetFMEntity entity, List<Pattern> filters) {
         if (!entity.getShowDirectories() && n.getAttributes().isDir()) {
             return false;
         }
         if (!filters.isEmpty()) {
             for (Pattern filter : filters) {
-                if (filter.matcher(n.getName()).matches()) {
+                if (filter.matcher(StringUtils.defaultIfEmpty(n.getId(), n.getId())).matches()) {
                     return true;
                 }
             }
@@ -540,24 +563,14 @@ public class WidgetController {
 
     @Getter
     @Setter
-    private static class WidgetFMPrevSnapshot {
+    public static class WidgetFMPrevSnapshot {
 
         private long sn;
         private String sid;
     }
 
-    @Getter
-    @AllArgsConstructor
-    private static class WidgetFMNodes {
-
-        private String title;
-        private String seriesEntityID;
-        private long snapshotHashCode;
-        private Set<WidgetFMNodeValue> nodes;
-    }
-
     @Setter
-    private static class VideoActionRequest extends SingleValueRequest<Void> {
+    public static class VideoActionRequest extends SingleValueRequest<Void> {
 
         private String name;
         private String value;
@@ -566,7 +579,7 @@ public class WidgetController {
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
-    private static class SingleValueRequest<T> {
+    public static class SingleValueRequest<T> {
 
         private String entityID;
         private String seriesEntityID;
@@ -575,15 +588,15 @@ public class WidgetController {
 
     @Getter
     @AllArgsConstructor
-    private static class WidgetEntity {
+    public static class WidgetEntityResponse {
 
-        private WidgetBaseEntity widget;
+        private WidgetEntity<?> widget;
         private Collection<UIInputEntity> actions;
     }
 
     @Getter
     @AllArgsConstructor
-    private static class WidgetColorValue {
+    public static class WidgetColorValueResponse {
 
         private Integer brightness;
         private String color;
@@ -594,7 +607,7 @@ public class WidgetController {
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
-    private static class ColorValueRequest {
+    public static class ColorValueRequest {
 
         private String entityID;
         private Object value;
@@ -606,7 +619,7 @@ public class WidgetController {
     }
 
     @Setter
-    private static class Sources {
+    public static class SourcesRequest {
         private String[] sources;
     }
 

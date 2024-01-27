@@ -40,7 +40,7 @@ import org.homio.app.json.jsog.JSOGResolver;
 import org.homio.app.manager.CacheService;
 import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.ContextImpl;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.workspace.block.Scratch3Space;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.ObjectProvider;
@@ -157,8 +157,8 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
     }
 
     @Bean
-    public List<WidgetBaseEntity> widgetBaseEntities(ClassFinder classFinder) {
-        return ClassFinder.createClassesWithParent(WidgetBaseEntity.class, classFinder);
+    public List<WidgetEntity> widgetBaseEntities(ClassFinder classFinder) {
+        return ClassFinder.createClassesWithParent(WidgetEntity.class, classFinder);
     }
 
     @Bean

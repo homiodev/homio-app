@@ -1,25 +1,34 @@
 package org.homio.app.model.entity.widget.impl.fm;
 
 import jakarta.persistence.Entity;
+import java.util.List;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldColorPicker;
 import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldIgnoreParent;
 import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.UIFieldTableLayout;
+import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
+import org.homio.api.ui.field.selection.UIFieldTreeNodeSelection;
+import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
+import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
 @Entity
-public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, WidgetFMSeriesEntity>
-        implements HasDynamicContextMenuActions, HasLayout, HasSourceServerUpdates {
+public class WidgetFMEntity extends WidgetEntity<WidgetFMEntity>
+        implements
+    HasDynamicContextMenuActions,
+    HasLayout,
+    HasSingleValueDataSource,
+    HasSourceServerUpdates {
 
     @Override
     protected @NotNull String getWidgetPrefix() {
@@ -93,6 +102,17 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
         return this;
     }
 
+    @UIField(order = 55)
+    @UIFieldGroup("UI")
+    public boolean getDrawTextAsThumbnail() {
+        return getJsonData("dtat", false);
+    }
+
+    public void setDrawTextAsThumbnail(boolean value) {
+        setJsonData("dtat", value);
+    }
+
+
     @UIField(order = 54)
     @UIFieldColorPicker
     @UIFieldGroup("UI")
@@ -126,6 +146,37 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
     public WidgetFMEntity setShowFileCount(boolean value) {
         setJsonData("sfc", value);
         return this;
+    }
+
+    @Override
+    @UIField(order = 14, required = true)
+    @UIFieldTreeNodeSelection(
+        allowSelectDirs = true,
+        allowSelectFiles = false,
+        iconColor = "#14A669")
+    @UIFieldIgnoreParent
+    public String getValueDataSource() {
+        return HasSingleValueDataSource.super.getValueDataSource();
+    }
+
+    @UIField(order = 1)
+    @UIFieldGroup(value = "FILTER", order = 100, borderColor = "#C1C436")
+    public boolean getShowDirectories() {
+        return getJsonData("sd", false);
+    }
+
+    public void setShowDirectories(boolean value) {
+        setJsonData("sd", value);
+    }
+
+    @UIField(order = 2, type = UIFieldType.Chips)
+    @UIFieldGroup("FILTER")
+    public List<String> getFileFilters() {
+        return getJsonDataList("flt");
+    }
+
+    public void setFileFilters(String value) {
+        setJsonData("flt", value);
     }
 
     @Override
