@@ -55,6 +55,7 @@ public class MainController {
     @PostConstruct
     public void test() {
         repository.getDiscCapacity();
+        System.out.println("Please, go to https://homio.org and proceed installation");
     }
 
     @ExceptionHandler(Exception.class)

@@ -35,27 +35,6 @@ public final class InstallUtils {
         }
         System.out.printf("Downloading '%s' to '%s'%n", archiveAppPath.getFileName(), archiveAppPath);
         Curl.downloadWithProgress(asset.browser_download_url, archiveAppPath, progressBar);
-
-        System.out.println("Extracting homio-app.zip");
-        repository.execute("unzip -o " + archiveAppPath, 300, progressBar);
-        Files.delete(archiveAppPath);
-        System.out.println("Finished extract homio-app.zip");
-    }
-
-    private static String getTmateArm(MachineHardwareRepository repository) {
-        String architecture = repository.getMachineInfo().getArchitecture();
-        if (architecture.startsWith("armv6")) {
-            return "arm32v6";
-        } else if (architecture.startsWith("armv7")) {
-            return "arm32v7";
-        } else if (architecture.startsWith("i386")) {
-            return "i386";
-        } else if (architecture.startsWith("armv8") || architecture.startsWith("aarch64")) {
-            return "arm64v8";
-        } else if (architecture.startsWith("x86_64")) {
-            return "amd64";
-        }
-        return null;
     }
 
     @Setter

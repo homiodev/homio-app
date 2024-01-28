@@ -21,7 +21,6 @@ import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-
 @Configuration
 @EntityScan(basePackages = {"org.homio"})
 @ComponentScan({"org.homio"})
@@ -32,9 +31,8 @@ public class LaunchConfig implements WebMvcConfigurer, SchedulingConfigurer {
         registry.addMapping("/**");
     }
 
-    // not too safe for now
     @Bean
-    public FilterRegistrationBean<CorsFilter> corsFilter() {
+    public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(false);
@@ -44,19 +42,6 @@ public class LaunchConfig implements WebMvcConfigurer, SchedulingConfigurer {
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
     }
-
-    /*@Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(5);
-    }*/
-
-   /* @Bean
-    public CommonsMultipartResolver multipartResolver() {
-        CommonsMultipartResolver resolver = new CommonsMultipartResolver();
-        resolver.setDefaultEncoding("utf-8");
-        resolver.setMaxUploadSize(20971520);
-        return resolver;
-    }*/
 
     @Override
     public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
