@@ -73,6 +73,11 @@
 
   <dependencies>
     <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+      <version>2.3.0</version>
+    </dependency>
+    <dependency>
       <groupId>com.mpatric</groupId>
       <artifactId>mp3agic</artifactId>
       <version>0.9.1</version>
@@ -144,43 +149,8 @@
     </dependency>
 
     <dependency>
-      <groupId>org.graalvm.sdk</groupId>
-      <artifactId>graal-sdk</artifactId>
-      <version>${graalvm.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.graalvm.js</groupId>
-      <artifactId>js</artifactId>
-      <version>${graalvm.version}</version>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.graalvm.js</groupId>
-      <artifactId>js-scriptengine</artifactId>
-      <version>${graalvm.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.graalvm.tools</groupId>
-      <artifactId>profiler</artifactId>
-      <version>${graalvm.version}</version>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.graalvm.tools</groupId>
-      <artifactId>chromeinspector</artifactId>
-      <version>${graalvm.version}</version>
-      <scope>runtime</scope>
-    </dependency>
-
-    <dependency>
       <artifactId>maverick-synergy-client</artifactId>
       <groupId>com.sshtools</groupId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcpkix-jdk15on</artifactId>
-      <version>1.70</version>
     </dependency>
 
     <dependency>
@@ -216,10 +186,6 @@
     <dependency>
       <artifactId>spring-boot-starter-validation</artifactId>
       <groupId>org.springframework.boot</groupId>
-    </dependency>
-    <dependency>
-      <artifactId>saaj-impl</artifactId>
-      <groupId>com.sun.xml.messaging.saaj</groupId>
     </dependency>
     <dependency>
       <artifactId>mongo-java-server</artifactId>
@@ -309,6 +275,7 @@
     <dependency>
       <artifactId>annotations</artifactId>
       <groupId>org.jetbrains</groupId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <artifactId>dbus-java</artifactId>
@@ -328,6 +295,7 @@
     <dependency>
       <artifactId>lombok</artifactId>
       <groupId>org.projectlombok</groupId>
+      <scope>provided</scope>
     </dependency>
 
     <dependency>

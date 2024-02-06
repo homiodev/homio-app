@@ -26,6 +26,10 @@ public class JwtTokenFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain chain)
             throws ServletException, IOException {
         log.debug("Request: {}. Host: {}", request.getRequestURI(), request.getHeader("Host"));
+        if(request.getRequestURI().startsWith("/rest/route/proxy")) {
+            chain.doFilter(request, response);
+            return;
+        }
         if (request.getRequestURI().equals("/")) {
             response.setContentType("text/html");
             response.getOutputStream().write("""

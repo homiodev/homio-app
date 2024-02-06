@@ -69,6 +69,8 @@ public class SecurityConfiguration {
                 authorize.requestMatchers(
                         WEB_SOCKET_ENDPOINT,
                         CUSTOM_WEB_SOCKET_ENDPOINT + "/**",
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
                         "/rest/auth/status",
                         "/rest/auth/login",
                         "/rest/auth/register",

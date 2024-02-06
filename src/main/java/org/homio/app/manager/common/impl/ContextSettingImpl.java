@@ -41,6 +41,7 @@ import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.setting.system.SystemPlaceSetting;
+import org.homio.app.setting.system.proxy.SystemProxyAddressSetting;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.core.env.ConfigurableEnvironment;
@@ -278,6 +279,8 @@ public class ContextSettingImpl implements ContextSetting {
     public void onContextCreated() {
         List<Class<? extends SettingPlugin>> settingClasses = classFinder.getClassesWithParent(SettingPlugin.class);
         addSettingsFromSystem(settingClasses);
+
+        configureProxy();
     }
 
     public void addSettingsFromClassLoader(AddonContext addonContext) {
@@ -382,5 +385,26 @@ public class ContextSettingImpl implements ContextSetting {
                 context.db().save(settingEntity.setValue(value));
             }
         }
+    }
+
+    @SneakyThrows
+    private void configureProxy() {
+        listenValueAndGet(SystemProxyAddressSetting.class, "proxy-host", proxyUrl -> {
+            if (StringUtils.isEmpty(proxyUrl)) {
+                setSystemProxy("", "");
+                return;
+            }
+            String[] items = proxyUrl.split(":");
+            if (items.length != 2) {throw new IllegalArgumentException("Proxy address must be in format: ip:port");}
+            setSystemProxy(items[0], items[1]);
+        });
+    }
+
+    private static void setSystemProxy(String ip, String port) {
+        System.setProperty("java.net.useSystemProxies", StringUtils.isEmpty(ip) ? "false" : "true");
+        System.setProperty("http.proxyHost", ip);
+        System.setProperty("https.proxyHost", ip);
+        System.setProperty("http.proxyPort", port);
+        System.setProperty("https.proxyPort", port);
     }
 }

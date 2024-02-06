@@ -13,12 +13,12 @@ public class ItemShowFilterThresholdCountSetting
     }
 
     @Override
-    public Integer getMin() {
+    public int getMin() {
         return 3;
     }
 
     @Override
-    public Integer getMax() {
+    public int getMax() {
         return 20;
     }
 

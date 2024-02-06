@@ -13,12 +13,12 @@ public class ConsoleFontSizeSetting implements ConsoleSettingPlugin<Integer>, Se
     }
 
     @Override
-    public Integer getMin() {
+    public int getMin() {
         return 6;
     }
 
     @Override
-    public Integer getMax() {
+    public int getMax() {
         return 20;
     }
 

@@ -278,8 +278,11 @@ public class ConsoleController implements ContextCreated {
     @PostMapping("/frame")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void createFrame(@RequestBody CreateFrameRequest request) {
+        if (!request.host.startsWith("http")) {
+            request.host = "http://" + request.host;
+        }
         URL url = new URL(request.host);
-        ContextNetwork.ping(url.getHost(), url.getPort());
+        ContextNetwork.ping(url.getHost(), url.getPort() == -1 ? 80 : url.getPort());
         if (context.ui().console().getRegisteredPlugin(request.name) != null) {
             throw new ServerException("Console plugin %s already exists".formatted(request.name));
         }

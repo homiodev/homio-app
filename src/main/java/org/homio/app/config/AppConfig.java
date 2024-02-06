@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -51,9 +52,12 @@ import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcRegistrations;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cloud.gateway.mvc.config.ProxyExchangeArgumentResolver;
+import org.springframework.cloud.gateway.mvc.config.ProxyProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
@@ -67,7 +71,10 @@ import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.format.FormatterRegistry;
+import org.springframework.http.HttpInputMessage;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.orm.jpa.persistenceunit.PersistenceUnitManager;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
@@ -77,6 +84,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.client.DefaultResponseErrorHandler;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
@@ -318,5 +327,34 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
     @JsonIdentityInfo(generator = JSOGGenerator.class, property = "entityID", resolver = JSOGResolver.class)
     interface Bean2MixIn {
 
+    }
+
+    @Bean
+    public ProxyExchangeArgumentResolver proxyExchangeArgumentResolver(Optional<RestTemplateBuilder> optional,
+        ProxyProperties proxy) {
+        RestTemplateBuilder builder = optional.orElse(new RestTemplateBuilder());
+        RestTemplate template = builder.build();
+        template.setErrorHandler(new DefaultResponseErrorHandler() {
+            @Override
+            public void handleError(ClientHttpResponse response) throws IOException {
+            }
+        });
+        template.getMessageConverters().add(new ByteArrayHttpMessageConverter() {
+            @Override
+            public boolean supports(Class<?> clazz) {
+                return true;
+            }
+
+            @Override
+            public byte[] readInternal(Class<? extends byte[]> clazz, HttpInputMessage message) throws IOException {
+                // avoid read content-length. sometime it's not match!
+                return message.getBody().readAllBytes();
+            }
+        });
+        ProxyExchangeArgumentResolver resolver = new ProxyExchangeArgumentResolver(template);
+        resolver.setHeaders(proxy.convertHeaders());
+        resolver.setAutoForwardedHeaders(proxy.getAutoForward());
+        resolver.setSensitive(proxy.getSensitive()); // can be null
+        return resolver;
     }
 }

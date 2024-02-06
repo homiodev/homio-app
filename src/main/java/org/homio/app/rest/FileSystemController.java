@@ -7,11 +7,8 @@ import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.model.entity.user.UserBaseEntity.FILE_MANAGER_RESOURCE_AUTHORIZE;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import io.jsonwebtoken.Jwt;
-import io.jsonwebtoken.Jwts;
 import jakarta.ws.rs.BadRequestException;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -49,14 +46,10 @@ import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
-import org.homio.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver;
 import org.homio.app.service.FileSystemService;
-import org.homio.app.utils.HardwareUtils;
+import org.homio.app.service.LocalFileSystemProvider;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.core.io.InputStreamResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.ResourceRegion;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -65,7 +58,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -129,10 +121,45 @@ public class FileSystemController {
     @SneakyThrows
     @GetMapping("/{jsonContent}/download")
     @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
-    public ResponseEntity<InputStreamResource> download(@PathVariable("jsonContent") String jsonContent) {
+    public ResponseEntity<InputStreamResource> download(@PathVariable("jsonContent") String jsonContent,
+        @RequestParam(value = "start", required = false) double start,
+        @RequestParam(value = "end", required = false) double end) {
         byte[] content = Base64.getDecoder().decode(jsonContent.getBytes());
         NodeRequest nodeRequest = OBJECT_MAPPER.readValue(content, NodeRequest.class);
+        if (end > 0) {
+            return downloadWithCut(nodeRequest, start, end);
+        }
         return download(nodeRequest.getSourceFs(), nodeRequest);
+    }
+
+    private ResponseEntity<InputStreamResource> downloadWithCut(NodeRequest request, double start, double end) {
+        FileSystemProvider fileSystem = fileSystemService.getFileSystem(request.sourceFs, request.alias);
+        InputStream io = getTrimVideoInputStream(fileSystem, request.sourceFileId, start, end);
+        if (io == null) {
+            throw new IllegalStateException("Unable to trim video. IO is null");
+        }
+        TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileId);
+        MediaType mediaType = findMediaType(treeNode);
+        return CommonUtils.inputStreamToResource(io, mediaType, null);
+    }
+
+    @SneakyThrows
+    private InputStream getTrimVideoInputStream(FileSystemProvider fileSystem, String sourceFileId, double start, double end) {
+        TreeNode treeNode = fileSystem.toTreeNode(sourceFileId);
+        String fn = treeNode.getName() + "." + treeNode.getAttributes().getType();
+        Path trimFile = CommonUtils.getTmpPath().resolve(fn);
+        Files.deleteIfExists(trimFile);
+        if (fileSystem instanceof LocalFileSystemProvider fsl) {
+            File videoFile = fsl.getFile(sourceFileId);
+            context.media().fireFfmpeg("-ss " + start,
+                videoFile.getAbsolutePath(), "-to " + end + " -c:v copy -c:a copy \"" + trimFile + "\"", 600);
+        } else {
+            Files.copy(fileSystem.getEntryInputStream(sourceFileId), trimFile, REPLACE_EXISTING);
+        }
+        if (Files.exists(trimFile) && Files.size(trimFile) > 0) {
+            return Files.newInputStream(trimFile);
+        }
+        return null;
     }
 
     @SneakyThrows

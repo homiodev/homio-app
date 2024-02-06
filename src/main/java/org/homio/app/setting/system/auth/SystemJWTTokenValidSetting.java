@@ -22,12 +22,12 @@ public class SystemJWTTokenValidSetting implements CoreSettingPlugin<Integer>, S
     }
 
     @Override
-    public Integer getMin() {
+    public int getMin() {
         return 30;
     }
 
     @Override
-    public Integer getMax() {
+    public int getMax() {
         return 1440;
     }
 

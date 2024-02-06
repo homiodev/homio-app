@@ -6,6 +6,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -55,7 +57,15 @@ public class MainController {
     @PostConstruct
     public void test() {
         repository.getDiscCapacity();
-        System.out.println("Please, go to https://homio.org and proceed installation");
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                System.out.println("################################################################");
+                System.out.println("#   Please, go to https://homio.org and proceed installation   #");
+                System.out.println("################################################################");
+            }
+        }, 5000);
     }
 
     @ExceptionHandler(Exception.class)
