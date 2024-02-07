@@ -31,7 +31,12 @@
             <argument>--add-opens java.base/java.net=ALL-UNNAMED</argument>
             <argument>--add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED</argument>
           </arguments>
-          <mainClass>${start-class}</mainClass>
+          <excludes>
+            <exclude>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+            </exclude>
+          </excludes>
         </configuration>
         <executions>
           <execution>
@@ -73,9 +78,9 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.springdoc</groupId>
-      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-      <version>2.3.0</version>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>com.mpatric</groupId>
