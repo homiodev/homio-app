@@ -47,7 +47,6 @@ public class HomioApplication implements WebMvcConfigurer {
         // set root path before init log4j2
         setRootPath();
         System.setProperty("server.version", defaultIfEmpty(HomioApplication.class.getPackage().getImplementationVersion(), "0.0"));
-        setProperty("server.port", "port", "9111");
         Logger log = LogManager.getLogger(HomioApplication.class);
         setDatabaseProperties(log);
         redirectConsoleOutput(log);

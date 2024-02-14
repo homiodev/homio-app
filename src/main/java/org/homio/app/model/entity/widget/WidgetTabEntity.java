@@ -11,6 +11,7 @@ import jakarta.persistence.OneToMany;
 import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.LazyInitializationException;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasOrder;
@@ -46,9 +47,13 @@ public final class WidgetTabEntity extends BaseEntity implements
 
     private boolean locked = false;
 
-    private int horizontalBlocks = 8;
+    private int hb = 8;
 
-    private int verticalBlocks = 8;
+    private int vb = 8;
+
+    private int mhb = 3;
+
+    private int mvb = 6;
 
     @Override
     public boolean enableUiOrdering() {
@@ -89,7 +94,11 @@ public final class WidgetTabEntity extends BaseEntity implements
 
     @Override
     public boolean isDisableDelete() {
-        return super.isDisableDelete() || isLocked() || !widgetBaseEntities.isEmpty();
+        try {
+            return super.isDisableDelete() || isLocked() || (widgetBaseEntities != null && !widgetBaseEntities.isEmpty());
+        } catch (LazyInitializationException ex) {
+            return true;
+        }
     }
 
     @Override

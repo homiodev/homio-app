@@ -451,12 +451,14 @@ public class WidgetController {
     @SneakyThrows
     @PostMapping("/tab/{name}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public WidgetTabEntity createWidgetTab(@PathVariable("name") String name) {
+    public WidgetTabEntity createWidgetTab(@PathVariable("name") String name, @RequestBody CreateWidgetRequest request) {
         BaseEntity widgetTab = context.db().getEntity(WidgetTabEntity.PREFIX + name);
         if (widgetTab == null) {
             WidgetTabEntity widgetTabEntity = new WidgetTabEntity();
             widgetTabEntity.setEntityID(name);
             widgetTabEntity.setName(name);
+            widgetTabEntity.setIcon(request.icon);
+            widgetTabEntity.setIconColor(request.color);
             widgetTabEntity.setOrder(this.findHighestOrder() + 1);
             return context.db().save(widgetTabEntity);
         }
@@ -628,5 +630,13 @@ public class WidgetController {
     public static class VideoSourceRequest {
 
         private String source;
+    }
+
+    @Getter
+    @Setter
+    public static class CreateWidgetRequest {
+
+        private String icon;
+        private String color;
     }
 }
