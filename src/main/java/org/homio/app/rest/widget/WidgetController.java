@@ -465,6 +465,18 @@ public class WidgetController {
         throw new ServerException("Widget tab with same name already exists");
     }
 
+    @SneakyThrows
+    @PostMapping("/tab/{tabId}/layout")
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    public void updateTabLayout(@PathVariable("tabId") String tabId, @RequestBody LayoutTabRequest request) {
+        WidgetTabEntity tab = context.db().getEntity(tabId);
+        if (tab == null) {
+            throw new IllegalArgumentException("No tab: " + tabId + " found");
+        }
+        tab.addLayout(request.hb, request.vb, request.sw, request.sh);
+        context.db().save(tab);
+    }
+
     @PostMapping("/tab/{tabId}/move")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void moveWidgetTab(@PathVariable("tabId") String tabId, @RequestParam("left") boolean left) {
@@ -638,5 +650,15 @@ public class WidgetController {
 
         private String icon;
         private String color;
+    }
+
+    @Getter
+    @Setter
+    private static class LayoutTabRequest {
+
+        private int hb;
+        private int vb;
+        private int sw;
+        private int sh;
     }
 }

@@ -156,7 +156,6 @@ public abstract class WidgetEntity<T extends WidgetEntity> extends BaseEntity
             return;
         }
 
-
         var hBlockCount = this.widgetTabEntity.getHb();
         var vBlockCount = this.widgetTabEntity.getVb();
         boolean[][] matrix = new boolean[vBlockCount][hBlockCount];

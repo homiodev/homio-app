@@ -70,10 +70,6 @@ create table if not exists widget_tab_entity
     locked           boolean,
     icon             varchar(32),
     icon_color       varchar(32),
-    hb               integer default 8,
-    vb               integer default 8,
-    mhb              integer default 3,
-    mvb              integer default 6,
     json_data        varchar(10000),
     primary key (entityid)
     );

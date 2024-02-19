@@ -1,6 +1,7 @@
 package org.homio.app.model.entity.widget;
 
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
@@ -8,9 +9,13 @@ import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.OneToMany;
+import java.util.HashSet;
 import java.util.Set;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import org.hibernate.LazyInitializationException;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
@@ -51,10 +56,6 @@ public final class WidgetTabEntity extends BaseEntity implements
 
     private int vb = 8;
 
-    private int mhb = 3;
-
-    private int mvb = 6;
-
     @Override
     public boolean enableUiOrdering() {
         return true;
@@ -66,6 +67,7 @@ public final class WidgetTabEntity extends BaseEntity implements
             WidgetTabEntity mainTab = new WidgetTabEntity();
             mainTab.setEntityID(PRIMARY_DEVICE);
             mainTab.setName(name);
+            mainTab.setIcon("fas fa-user");
             mainTab.setLocked(true);
             mainTab.setOrder(0);
             context.db().save(mainTab);
@@ -80,6 +82,18 @@ public final class WidgetTabEntity extends BaseEntity implements
     @Override
     public @NotNull Icon getSelectionIcon() {
         return new Icon(icon, iconColor);
+    }
+
+    public Set<ScreenLayout> getLayout() {
+        return getJsonDataSet("wl", ScreenLayout.class);
+    }
+
+    @SneakyThrows
+    public void addLayout(int hb, int vb, int sw, int sh) {
+        Set<ScreenLayout> layouts = getLayout();
+        layouts = layouts == null ? new HashSet<>() : layouts;
+        layouts.add(new ScreenLayout(hb, vb, sw, sh));
+        setJsonData("wl", OBJECT_MAPPER.writeValueAsString(layouts));
     }
 
     @Override
@@ -121,6 +135,36 @@ public final class WidgetTabEntity extends BaseEntity implements
                 tabEntity.setOrder(tabEntity.getOrder() - 1);
                 context().db().save(tabEntity, false);
             }
+        }
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ScreenLayout {
+
+        private int hb;
+        private int vb;
+
+        private int sw;
+        private int sh;
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {return true;}
+            if (o == null || getClass() != o.getClass()) {return false;}
+
+            ScreenLayout that = (ScreenLayout) o;
+
+            if (sw != that.sw) {return false;}
+            return sh == that.sh;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = sw;
+            result = 31 * result + sh;
+            return result;
         }
     }
 }
