@@ -38,8 +38,8 @@ import org.homio.app.manager.CacheService;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.ContextImpl.ItemAction;
 import org.homio.app.manager.common.EntityManager;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
-import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
+import org.homio.app.model.entity.widget.WidgetEntity;
+import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
@@ -221,7 +221,7 @@ public class ContextStorageImpl implements ContextStorage {
 
         // copy children if current entity is layout(it may contain children)
         if (entity instanceof WidgetLayoutEntity) {
-            for (BaseEntity baseEntity : findAll(WidgetBaseEntity.class)) {
+            for (BaseEntity baseEntity : findAll(WidgetEntity.class)) {
                 if (baseEntity instanceof HasPosition<?> positionEntity) {
                     if (entity.getEntityID().equals(positionEntity.getParent())) {
                         BaseEntity newChildEntity = copyEntityItem(baseEntity);
@@ -259,21 +259,21 @@ public class ContextStorageImpl implements ContextStorage {
 
     private BaseEntity copyEntityItem(BaseEntity entity) {
         BaseEntity newEntity = buildInitialCopyEntity(entity);
-        if (newEntity instanceof WidgetBaseEntity<?> widget) {
+        if (newEntity instanceof WidgetEntity<?> widget) {
             widget.setParent(null);
         }
 
         // save to assign id
         newEntity = save(newEntity, false);
 
-        if (entity instanceof WidgetBaseEntityAndSeries widgetSeriesEntity) {
-            WidgetBaseEntityAndSeries newWidgetSeriesData = (WidgetBaseEntityAndSeries) newEntity;
+        if (entity instanceof WidgetEntityAndSeries widgetSeriesEntity) {
+            WidgetEntityAndSeries newWidgetSeriesData = (WidgetEntityAndSeries) newEntity;
             Set<WidgetSeriesEntity> entitySeries = widgetSeriesEntity.getSeries();
             Set<WidgetSeriesEntity> series = new HashSet<>();
             for (WidgetSeriesEntity entry : entitySeries) {
                 WidgetSeriesEntity seriesEntry = (WidgetSeriesEntity) buildInitialCopyEntity(entry);
                 seriesEntry.setPriority(entry.getPriority());
-                seriesEntry.setWidgetEntity((WidgetBaseEntityAndSeries) newEntity);
+                seriesEntry.setWidgetEntity((WidgetEntityAndSeries) newEntity);
                 seriesEntry = save(seriesEntry, false);
                 series.add(seriesEntry);
             }
@@ -294,8 +294,8 @@ public class ContextStorageImpl implements ContextStorage {
             }
         }
 
-        if (entity instanceof WidgetBaseEntity widgetEntity) {
-            WidgetBaseEntity newWidgetData = (WidgetBaseEntity) newEntity;
+        if (entity instanceof WidgetEntity widgetEntity) {
+            WidgetEntity newWidgetData = (WidgetEntity) newEntity;
             newWidgetData.setWidgetTabEntity(widgetEntity.getWidgetTabEntity());
         }
 
@@ -369,7 +369,7 @@ public class ContextStorageImpl implements ContextStorage {
         if (Modifier.isAbstract(clazz.getModifiers())) {
             if (DeviceBaseEntity.class.isAssignableFrom(clazz)) {
                 repository = allDeviceRepository;
-            } else if (WidgetBaseEntity.class.isAssignableFrom(clazz)) {
+            } else if (WidgetEntity.class.isAssignableFrom(clazz)) {
                 repository = widgetRepository;
             } else if (WidgetSeriesEntity.class.isAssignableFrom(clazz)) {
                 repository = widgetSeriesRepository;

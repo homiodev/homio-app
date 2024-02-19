@@ -2,14 +2,14 @@ package org.homio.app.model.entity.widget.impl.chart;
 
 import jakarta.persistence.Entity;
 import org.homio.api.ui.field.*;
-import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
+import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 
 @Entity
-public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S extends WidgetSeriesEntity<T>>
-        extends WidgetBaseEntityAndSeries<T, S> implements HasLegend, HasSourceServerUpdates {
+public abstract class ChartBaseEntity<T extends WidgetEntityAndSeries, S extends WidgetSeriesEntity<T>>
+        extends WidgetEntityAndSeries<T, S> implements HasLegend, HasSourceServerUpdates {
 
     @Override
     public WidgetGroup getGroup() {

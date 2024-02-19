@@ -5,7 +5,7 @@ import jakarta.persistence.Entity;
 import org.apache.commons.lang3.NotImplementedException;
 import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.UIFieldKeyValue.KeyValueType;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.attributes.HasAlign;
 import org.homio.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Entity
-public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorEntity>
+public class WidgetSimpleColorEntity extends WidgetEntity<WidgetSimpleColorEntity>
         implements HasSourceServerUpdates, HasAlign, HasSingleValueDataSource, HasSetSingleValueDataSource {
 
     @Override

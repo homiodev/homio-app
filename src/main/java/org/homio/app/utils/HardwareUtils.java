@@ -2,6 +2,8 @@ package org.homio.app.utils;
 
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.util.CommonUtils;
 
@@ -9,9 +11,40 @@ import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.*;
 import java.util.Collections;
+import org.homio.app.model.entity.widget.impl.video.sourceResolver.FSWidgetVideoSourceResolver;
+import org.jetbrains.annotations.NotNull;
 
 @Log4j2
 public final class HardwareUtils {
+
+    public static @NotNull String getVideoType(String url) {
+        if (url.startsWith("https://youtu")) {
+            return "video/youtube";
+        }
+        if (url.startsWith("https://vimeo")) {
+            return "video/vimeo";
+        }
+        if (url.endsWith(".ts")) {
+            return "video/MP2T";
+        }
+        if (url.endsWith(".ogv")) {
+            return "video/ogg";
+        }
+        if (url.endsWith(".m3u8")) {
+            return "application/x-mpegURL";
+        }
+        if (url.endsWith(".mpd")) {
+            return "application/dash+xml";
+        }
+        String extension = StringUtils.defaultString(FilenameUtils.getExtension(url));
+        if (FSWidgetVideoSourceResolver.IMAGE_FORMATS.matcher(extension).matches()) {
+            return "image/" + extension;
+        }
+        if (FSWidgetVideoSourceResolver.VIDEO_FORMATS.matcher(extension).matches()) {
+            return "video/" + extension;
+        }
+        return "video/unknown";
+    }
 
     @SneakyThrows
     public static void copyResources(URL url) {

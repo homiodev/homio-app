@@ -63,7 +63,7 @@ if exist "%root_path%\homio-app.jar" (
 )
 
 echo "Run '!java_path! -jar %root_path%/%app%'"
-"!java_path!" -jar "%root_path%\%app%"
+call "!java_path!" -jar "%root_path%\%app%"
 set "exit_code=%errorlevel%"
 
 if %exit_code% equ 4 (

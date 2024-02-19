@@ -61,7 +61,7 @@ import org.homio.app.builder.ui.UIInputBuilderImpl;
 import org.homio.app.builder.ui.UIInputEntityActionHandler;
 import org.homio.app.config.WebSocketConfig;
 import org.homio.app.manager.common.ContextImpl;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.rest.DynamicUpdateRequest;
 import org.homio.app.notification.HeaderButtonNotification;
 import org.homio.app.notification.NotificationBlock;
@@ -743,7 +743,7 @@ public class ContextUIImpl implements ContextUI {
     }
 
     private static String buildEntityDynamicUpdateId(@NotNull BaseEntityIdentifier parentEntity) {
-        return "entity-type-%s".formatted(parentEntity instanceof WidgetBaseEntity ? "widget" : parentEntity.getType());
+        return "entity-type-%s".formatted(parentEntity instanceof WidgetEntity ? "widget" : parentEntity.getType());
     }
 
     private record SendUpdateContext(@NotNull String dynamicUpdateID, @NotNull Supplier<ObjectNode> handler) {

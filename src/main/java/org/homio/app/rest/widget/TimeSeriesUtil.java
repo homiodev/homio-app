@@ -25,7 +25,7 @@ import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.api.util.DataSourceUtil.SelectionSource;
 import org.homio.app.manager.common.ContextImpl;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod.TimeRange;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
@@ -106,7 +106,7 @@ public class TimeSeriesUtil {
     /**
      * Evaluate single value from specific data source and attach listener on it for dynamic updates
      */
-    public <T extends WidgetBaseEntity<T>, R> R getSingleValue(
+    public <T extends WidgetEntity<T>, R> R getSingleValue(
             @NotNull T entity,
             @Nullable String valueDataSource,
             @Nullable JSONObject dynamicParameters,
@@ -125,7 +125,7 @@ public class TimeSeriesUtil {
         return resultConverter.apply(value);
     }
 
-    public <T extends WidgetBaseEntity<T>, DS extends HasSingleValueDataSource, R> R
+    public <T extends WidgetEntity<T>, DS extends HasSingleValueDataSource, R> R
     getSingleValue(@NotNull T entity, @NotNull DS dataSource, @NotNull Function<Object, R> resultConverter) {
         String seriesEntityId = ((HasEntityIdentifier) dataSource).getEntityID();
         JSONObject dynamicParameters = dataSource.getValueDynamicParameterFields();
@@ -187,7 +187,7 @@ public class TimeSeriesUtil {
         return result;
     }
 
-    private <T extends WidgetBaseEntity<T>, R> Object getValueFromGetStatusValue(
+    private <T extends WidgetEntity<T>, R> Object getValueFromGetStatusValue(
         @NotNull T entity,
         @NotNull Function<Object, R> resultConverter,
         String seriesEntityId,

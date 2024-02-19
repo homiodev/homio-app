@@ -70,13 +70,11 @@ create table if not exists widget_tab_entity
     locked           boolean,
     icon             varchar(32),
     icon_color       varchar(32),
-    horizontal_blocks integer default 8,
-    vertical_blocks   integer default 8,
     json_data        varchar(10000),
     primary key (entityid)
     );
 
-create table if not exists widget_base_entity
+create table if not exists widget_entity
 (
     dtype                      varchar(31)  not null,
     entityid                   varchar(128)  not null,
@@ -104,7 +102,7 @@ create table if not exists widget_series_entity
     widget_entity_entityid varchar(128),
     primary key (entityid),
     constraint fkt9ob3e4d6lewp7wmcqdb57its
-    foreign key (widget_entity_entityid) references widget_base_entity
+    foreign key (widget_entity_entityid) references widget_entity
     );
 
 create table if not exists workspace_entity

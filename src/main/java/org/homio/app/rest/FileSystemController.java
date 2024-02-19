@@ -4,9 +4,13 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.homio.api.ui.field.selection.UIFieldTreeNodeSelection.LOCAL_FS;
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.model.entity.user.UserBaseEntity.FILE_MANAGER_RESOURCE_AUTHORIZE;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import jakarta.ws.rs.BadRequestException;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -29,6 +34,7 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
+import lombok.experimental.Accessors;
 import org.apache.commons.io.FileUtils;
 import org.homio.api.Context;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
@@ -39,7 +45,10 @@ import org.homio.api.fs.TreeNode;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
 import org.homio.api.util.CommonUtils;
+import org.homio.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
 import org.homio.app.service.FileSystemService;
+import org.homio.app.service.LocalFileSystemProvider;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -83,7 +92,7 @@ public class FileSystemController {
 
     @PostMapping("/list")
     @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
-    public Collection<TreeNode> list(@RequestBody ListRequest request) {
+    public Collection<TreeNode> list(@RequestBody NodeRequest request) {
         return fileSystemService.getFileSystem(request.sourceFs, request.alias)
                                 .getChildren(request.sourceFileId);
     }
@@ -98,14 +107,84 @@ public class FileSystemController {
     @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
     public ResponseEntity<InputStreamResource> download(
         @PathVariable("sourceFs") String sourceFs,
-        @RequestBody ListRequest request) throws Exception {
+        @RequestBody NodeRequest request) {
         FileSystemProvider fileSystem = fileSystemService.getFileSystem(sourceFs, request.alias);
         TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileId);
         if (treeNode == null || treeNode.getId() == null) {
             throw NotFoundException.fileNotFound(request.sourceFileId);
         }
         InputStream inputStream = fileSystem.getEntryInputStream(treeNode.getId());
+        MediaType mediaType = findMediaType(treeNode);
+        return CommonUtils.inputStreamToResource(inputStream, mediaType, null);
+    }
 
+    @SneakyThrows
+    @GetMapping("/{jsonContent}/download")
+    @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
+    public ResponseEntity<InputStreamResource> download(@PathVariable("jsonContent") String jsonContent,
+        @RequestParam(value = "start", required = false) double start,
+        @RequestParam(value = "end", required = false) double end) {
+        byte[] content = Base64.getDecoder().decode(jsonContent.getBytes());
+        NodeRequest nodeRequest = OBJECT_MAPPER.readValue(content, NodeRequest.class);
+        if (end > 0) {
+            return downloadWithCut(nodeRequest, start, end);
+        }
+        return download(nodeRequest.getSourceFs(), nodeRequest);
+    }
+
+    private ResponseEntity<InputStreamResource> downloadWithCut(NodeRequest request, double start, double end) {
+        FileSystemProvider fileSystem = fileSystemService.getFileSystem(request.sourceFs, request.alias);
+        InputStream io = getTrimVideoInputStream(fileSystem, request.sourceFileId, start, end);
+        if (io == null) {
+            throw new IllegalStateException("Unable to trim video. IO is null");
+        }
+        TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileId);
+        MediaType mediaType = findMediaType(treeNode);
+        return CommonUtils.inputStreamToResource(io, mediaType, null);
+    }
+
+    @SneakyThrows
+    private InputStream getTrimVideoInputStream(FileSystemProvider fileSystem, String sourceFileId, double start, double end) {
+        TreeNode treeNode = fileSystem.toTreeNode(sourceFileId);
+        String fn = treeNode.getName() + "." + treeNode.getAttributes().getType();
+        Path trimFile = CommonUtils.getTmpPath().resolve(fn);
+        Files.deleteIfExists(trimFile);
+        if (fileSystem instanceof LocalFileSystemProvider fsl) {
+            File videoFile = fsl.getFile(sourceFileId);
+            context.media().fireFfmpeg("-ss " + start,
+                videoFile.getAbsolutePath(), "-to " + end + " -c:v copy -c:a copy \"" + trimFile + "\"", 600);
+        } else {
+            Files.copy(fileSystem.getEntryInputStream(sourceFileId), trimFile, REPLACE_EXISTING);
+        }
+        if (Files.exists(trimFile) && Files.size(trimFile) > 0) {
+            return Files.newInputStream(trimFile);
+        }
+        return null;
+    }
+
+    @SneakyThrows
+    @PostMapping("/{sourceFs}/preview")
+    @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
+    public ResponseEntity<InputStreamResource> preview(
+        @PathVariable("sourceFs") String sourceFs,
+        @RequestParam("w") int width,
+        @RequestParam("h") int height,
+        @RequestParam(value = "drawTextAsImage", required = false) boolean drawTextAsImage,
+        @RequestBody NodeRequest request) {
+        FileSystemProvider fileSystem = fileSystemService.getFileSystem(sourceFs, request.alias);
+        TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileId);
+        if (treeNode == null || treeNode.getId() == null) {
+            throw NotFoundException.fileNotFound(request.sourceFileId);
+        }
+        WidgetFMNodeValue node = new WidgetFMNodeValue(treeNode);
+        String content = WidgetFMNodeValue.getThumbnail(node.getTreeNode(), width, height, drawTextAsImage);
+
+        MediaType mediaType = findMediaType(treeNode);
+        return CommonUtils.inputStreamToResource(new ByteArrayInputStream(content.getBytes()), mediaType, null);
+    }
+
+    @NotNull
+    private static MediaType findMediaType(TreeNode treeNode) {
         MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
         try {
             String contentType = treeNode.getAttributes().getContentType();
@@ -114,14 +193,15 @@ public class FileSystemController {
             }
         } catch (Exception ignore) {
         }
-        return CommonUtils.inputStreamToResource(inputStream, mediaType, null);
+        return mediaType;
     }
 
     @SneakyThrows
     @PostMapping("/download")
     @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
-    public ResponseEntity<InputStreamResource> downloadArchive(@RequestBody DownloadRequest request) {
-        Path zipFile = archiveSource(request.sourceFs, request.alias, "zip", request.sourceFileIds, "downloadContent", null, null);
+    public ResponseEntity<InputStreamResource> download(@RequestBody DownloadRequest request) {
+        Path zipFile = archiveSource(request.sourceFs, request.alias, "zip", request.sourceFileIds,
+            "downloadContent", null, null);
         return CommonUtils.inputStreamToResource(
             Files.newInputStream(zipFile), new MediaType("application", "zip"), null);
     }
@@ -370,7 +450,8 @@ public class FileSystemController {
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class ListRequest extends BaseNodeRequest {
+    @JsonInclude(Include.NON_EMPTY)
+    public static class NodeRequest extends BaseNodeRequest {
 
         private String sourceFileId;
     }
@@ -394,6 +475,8 @@ public class FileSystemController {
 
     @Getter
     @Setter
+    @Accessors(chain = true)
+    @JsonInclude(Include.NON_EMPTY)
     public static class BaseNodeRequest {
 
         public String sourceFs;

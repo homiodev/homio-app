@@ -1,11 +1,15 @@
 package org.homio.app.rest;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +22,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.api.Context;
 import org.homio.api.ContextService.RouteProxyBuilder.ProxyUrl;
 import org.homio.api.exception.ServerException;
@@ -113,30 +118,21 @@ public class RouteController {
         ProxyUrl proxyUrl = routeProxy.buildUrl(request);
         URI uri = new URI(proxyUrl.url());
         uri = new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), request.getQueryString(), null);
+
+        modifyRequestBody(proxy, request);
+
         ProxyExchange<byte[]> proxyExchange = proxy.uri(uri);
-        if (proxyUrl.headers() != null) {
-            for (Entry<String, List<String>> header : proxyUrl.headers().entrySet()) {
-                proxyExchange.header(header.getKey(), header.getValue().toArray(new String[0]));
-            }
-        }
+        proxyExchange.sensitive(""); // allow pass Cookie and Authentication headers
+        modifyHeaders(request, proxyExchange, uri, routeProxy);
 
         ResponseEntity<byte[]> response = handler.apply(proxyExchange);
+        if(response.getStatusCode().isError()) {
+            System.out.println("error");
+            handler.apply(proxyExchange);
+        }
         HttpHeaders responseHeaders = new HttpHeaders();
         responseHeaders.addAll(response.getHeaders());
         byte[] body = response.getBody();
-        /*if (request.getRequestURI().endsWith("/proxy_index.html")) {
-            MediaType contentType = responseHeaders.getContentType();
-            if (contentType != null && contentType.toString().startsWith(MediaType.TEXT_HTML_VALUE)) {
-                StringBuilder stringBuilder = new StringBuilder(new String(body, StandardCharsets.UTF_8));
-                int headIndex = stringBuilder.indexOf("<head>");
-                if(headIndex >= 0) {
-                    String hp = "http://%s:%s".formatted(request.getRemoteHost(), request.getLocalPort());
-                    String base = request.getRequestURI().substring(0, request.getRequestURI().lastIndexOf("/"));
-                    stringBuilder.insert(headIndex + "<head>".length(), "<base href=\"%s%s/test/\">".formatted(hp, base));
-                    body = stringBuilder.toString().getBytes();
-                }
-            }
-        }*/
 
         Map<String, String> applyHeader = routeProxy.applyResponseHeaders(proxyUrl);
         if (applyHeader != null) {
@@ -145,30 +141,67 @@ public class RouteController {
             }
         }
 
-        if (request.getRequestURI().endsWith(".html")) {
-            Document doc = Jsoup.parse(new String(body));
-            doc.head().appendElement("script")
-               .attr("type", "text/javascript")
-               .appendChild(new DataNode("""
-                   window.addEventListener('message', function(event) {
-                     if (event.data === 'back') {
-                       window.history.back();
-                     }
-                     if (event.data === 'forward') {
-                       window.history.forward();
-                     }
-                     if (event.data === 'reload') {
-                       window.location.reload();
-                     }
-                   });
-                   """));
-            body = doc.toString().getBytes();
+        if (body != null && request.getRequestURI().endsWith(".html")) {
+            body = modifyResponseBody(body);
         }
 
         responseHeaders.add(ACCESS_CONTROL_EXPOSE_HEADERS, "*");
         return ResponseEntity.status(response.getStatusCode())
                              .headers(responseHeaders)
                              .body(body);
+    }
+
+    private static byte[] modifyResponseBody(byte[] body) {
+        Document doc = Jsoup.parse(new String(body));
+        doc.head().appendElement("script")
+           .attr("type", "text/javascript")
+           .appendChild(new DataNode("""
+                  
+               $(document).ajaxSend(function(event, jqXHR, ajaxOptions) {
+                  ajaxOptions.url = ajaxOptions.url.startsWith('/') ? ajaxOptions.url.substr(1) : ajaxOptions.url;
+               });
+               $.ajaxSetup({
+                   beforeSend: function(xhr, settings) {
+                       settings.url = settings.url.startsWith('/') ? settings.url.substr(1) : settings.url;
+                   }
+               });
+                                  
+               window.addEventListener('message', function(event) {
+                 if (event.data === 'back') {
+                   window.history.back();
+                 }
+                 if (event.data === 'forward') {
+                   window.history.forward();
+                 }
+                 if (event.data === 'reload') {
+                   window.location.reload();
+                 }
+               });
+               """));
+        body = doc.toString().getBytes();
+        return body;
+    }
+
+    private static void modifyRequestBody(@NotNull ProxyExchange<byte[]> proxy, @NotNull HttpServletRequest request)
+        throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+        String contentType = request.getHeader("Content-Type");
+        // somehow if request url is i.e.: data=blabla=2 it converts second '=' to %3X
+        if (contentType != null && contentType.startsWith("application/x-www-form-urlencoded")) {
+            byte[] body = (byte[]) MethodUtils.invokeMethod(proxy, true, "body");
+            String decodedValue = URLDecoder.decode(new String(body, UTF_8), UTF_8);
+            proxy.body(decodedValue.getBytes(UTF_8));
+        }
+    }
+
+    private static void modifyHeaders(@NotNull HttpServletRequest request, ProxyExchange<byte[]> proxyExchange, URI uri, RouteProxyImpl routeProxy) {
+        Enumeration<String> names = request.getHeaderNames();
+        while (names.hasMoreElements()) {
+            String headerName = names.nextElement();
+            proxyExchange.header(headerName, request.getHeader(headerName));
+        }
+        proxyExchange.header("Host", uri.getHost());
+        proxyExchange.header("Origin", routeProxy.getUrl());
+        proxyExchange.header("Referer", routeProxy.getUrl());
     }
 
     private Map<String, List<SidebarMenuItem>> getMenu() {

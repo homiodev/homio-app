@@ -19,8 +19,9 @@ import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.homio.app.model.entity.widget.UIFieldJSONLine;
 import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
-import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
+import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
 import org.homio.app.model.entity.widget.attributes.HasActionOnClick;
+import org.homio.app.model.entity.widget.attributes.HasBackground;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.model.entity.widget.attributes.HasName;
 import org.homio.app.model.entity.widget.attributes.HasPadding;
@@ -35,8 +36,9 @@ import org.jetbrains.annotations.NotNull;
 @SuppressWarnings("unused")
 @Entity
 public class WidgetDisplayEntity
-        extends WidgetBaseEntityAndSeries<WidgetDisplayEntity, WidgetDisplaySeriesEntity>
+        extends WidgetEntityAndSeries<WidgetDisplayEntity, WidgetDisplaySeriesEntity>
         implements HasLineChartBehaviour,
+        HasBackground,
         HasDynamicParameterFields,
         HasChartDataSource,
         HasHorizontalLine,

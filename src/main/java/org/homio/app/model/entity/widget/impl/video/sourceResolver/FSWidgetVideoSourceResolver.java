@@ -1,15 +1,18 @@
 package org.homio.app.model.entity.widget.impl.video.sourceResolver;
 
-import static org.homio.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver.VideoEntityResponse.getVideoType;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
+import java.util.Base64;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.fs.FileSystemProvider;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.api.util.DataSourceUtil.SelectionSource;
-import org.homio.app.rest.MediaController;
+import org.homio.app.rest.FileSystemController.NodeRequest;
 import org.homio.app.service.FileSystemService;
+import org.homio.app.utils.HardwareUtils;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -25,12 +28,12 @@ public class FSWidgetVideoSourceResolver implements WidgetVideoSourceResolver {
             String resource = selection.getValue();
             String fs = selection.getMetadata().path("fs").asText();
 
-            FileSystemProvider fileSystem = fileSystemService.getFileSystem(fs, 0);
+            FileSystemProvider fileSystem = fileSystemService.getFileSystem(fs, selection.getMetadata().path("alias").asInt(0));
             if (fileSystem != null && fileSystem.exists(resource)) {
                 String extension = StringUtils.defaultString(FilenameUtils.getExtension(resource));
-                String videoType = getVideoType(resource);
+                String videoType = HardwareUtils.getVideoType(resource);
                 if (VIDEO_FORMATS.matcher(extension).matches()) {
-                    String fsSource = MediaController.createVideoPlayLink(fileSystem, resource, videoType, extension);
+                    String fsSource = createVideoPlayLink(fileSystem, resource);
                     return new VideoEntityResponse(valueDataSource, valueDataSource, fsSource, videoType);
                 } else if (IMAGE_FORMATS.matcher(extension).matches()) {
                     String fsSource = "$DEVICE_URL/rest/media/image/%s?fs=%s".formatted(resource, fs);
@@ -42,5 +45,16 @@ public class FSWidgetVideoSourceResolver implements WidgetVideoSourceResolver {
             }
         }
         return null;
+    }
+
+    @SneakyThrows
+    private String createVideoPlayLink(FileSystemProvider fileSystem, String resource) {
+        byte[] content = OBJECT_MAPPER.writeValueAsBytes(
+            new NodeRequest(resource)
+                .setAlias(fileSystem.getFileSystemAlias())
+                .setSourceFs(fileSystem.getFileSystemId()));
+        byte[] encodedBytes = Base64.getEncoder().encode(content);
+        String id = new String(encodedBytes);
+        return "$DEVICE_URL/rest/media/video/" + id + "/play";
     }
 }

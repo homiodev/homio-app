@@ -327,6 +327,7 @@ public class UIFieldUtils {
         UIFieldIconPicker fieldIconPicker = fieldContext.getDeclaredAnnotation(UIFieldIconPicker.class);
         if (fieldIconPicker != null) {
             entityUIMetaData.setType("IconPicker");
+            putIfTrue(jsonTypeMetadata, "simple", fieldIconPicker.simple());
             putIfTrue(jsonTypeMetadata, "allowEmptyIcon", fieldIconPicker.allowEmptyIcon());
             putIfTrue(jsonTypeMetadata, "allowSize", fieldIconPicker.allowSize());
             putIfTrue(jsonTypeMetadata, "allowSpin", fieldIconPicker.allowSpin());

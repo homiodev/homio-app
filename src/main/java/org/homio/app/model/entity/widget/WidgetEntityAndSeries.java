@@ -16,8 +16,8 @@ import org.homio.api.ui.field.UIField;
 
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-public abstract class WidgetBaseEntityAndSeries<T extends WidgetBaseEntityAndSeries, S extends WidgetSeriesEntity<T>>
-        extends WidgetBaseEntity<T> {
+public abstract class WidgetEntityAndSeries<T extends WidgetEntityAndSeries, S extends WidgetSeriesEntity<T>>
+        extends WidgetEntity<T> {
 
     @Getter
     @Setter

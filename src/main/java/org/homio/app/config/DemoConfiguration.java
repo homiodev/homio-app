@@ -7,7 +7,7 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.app.model.entity.ScriptEntity;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.WidgetTabEntity;
 import org.homio.app.repository.WorkspaceVariableRepository;
 import org.json.JSONObject;
@@ -29,7 +29,7 @@ public class DemoConfiguration {
     private void clearOutdatedData() {
         try {
             log.info("demo profile: clear");
-            removeItems(WidgetBaseEntity.class, ScriptEntity.class);
+            removeItems(WidgetEntity.class, ScriptEntity.class);
 
             clearWidgets();
             clearWorkspace();

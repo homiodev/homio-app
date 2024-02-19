@@ -22,12 +22,7 @@ import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.model.JSON;
 import org.homio.api.ui.UISidebarMenu;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.entity.widget.attributes.HasStyle;
@@ -40,8 +35,8 @@ import org.jetbrains.annotations.NotNull;
 @UISidebarMenu(icon = "fas fa-tachometer-alt", bg = "#107d6b", overridePath = "widgets")
 @Accessors(chain = true)
 @NoArgsConstructor
-public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseEntity
-        implements HasPosition<WidgetBaseEntity>, HasStyle, HasJsonData {
+public abstract class WidgetEntity<T extends WidgetEntity> extends BaseEntity
+        implements HasPosition<WidgetEntity>, HasStyle, HasJsonData {
 
     private static final String PREFIX = "widget_";
 
@@ -67,16 +62,6 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
         return null;
     }
 
-    @UIField(order = 1000)
-    @UIFieldGroup(order = 10, value = "UI", borderColor = "#009688")
-    public boolean isAdjustFontSize() {
-        return getJsonData("adjfs", Boolean.FALSE);
-    }
-
-    public void setAdjustFontSize(boolean value) {
-        setJsonData("adjfs", value);
-    }
-
     public String getFieldFetchType() {
         return getJsonData("fieldFetchType", (String) null);
     }
@@ -93,32 +78,6 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     }
 
     public abstract @NotNull String getImage();
-
-    @UIField(order = 21)
-    @UIFieldGroup("UI")
-    @UIFieldColorPicker(allowThreshold = true, pulseColorCondition = true, thresholdSource = true)
-    @UIFieldReadDefaultValue
-    public String getBackground() {
-        return getJsonData("bg", "transparent");
-    }
-
-    public void setBackground(String value) {
-        setJsonData("bg", value);
-    }
-
-    @UIField(order = 25)
-    @UIFieldGroup("UI")
-    @UIFieldSlider(min = 15, max = 25)
-    public int getIndex() {
-        return getJsonData("zi", 20);
-    }
-
-    public void setIndex(Integer value) {
-        if (value == null || value == 20) {
-            value = null;
-        }
-        setJsonData("zi", value);
-    }
 
     public boolean isVisible() {
         return true;
@@ -166,8 +125,8 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
         return true;
     }
 
-    private static void initMatrix(List<WidgetBaseEntity> widgets, boolean[][] matrix) {
-        for (WidgetBaseEntity model : widgets) {
+    private static void initMatrix(List<WidgetEntity> widgets, boolean[][] matrix) {
+        for (WidgetEntity model : widgets) {
             if (isEmpty(model.getParent())) {
                 for (int j = model.getXb(); j < model.getXb() + model.getBw(); j++) {
                     for (int i = model.getYb(); i < model.getYb() + model.getBh(); i++) {
@@ -187,9 +146,9 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
      * Find free space in matrix for new item
      */
     private void findSuitablePosition() {
-        List<WidgetBaseEntity> widgets = context().db().findAll(WidgetBaseEntity.class);
+        List<WidgetEntity> widgets = context().db().findAll(WidgetEntity.class);
         if (isNotEmpty(getParent())) {
-            WidgetBaseEntity layout = widgets.stream().filter(w -> w.getEntityID().equals(getParent())).findAny().orElse(null);
+            WidgetEntity layout = widgets.stream().filter(w -> w.getEntityID().equals(getParent())).findAny().orElse(null);
             if (layout == null) {
                 throw new IllegalArgumentException("Widget: " + getTitle() + " has xbl/tbl and have to be belong to layout widget but it's not found");
             }
@@ -197,9 +156,8 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
             return;
         }
 
-
-        var hBlockCount = this.widgetTabEntity.getHorizontalBlocks();
-        var vBlockCount = this.widgetTabEntity.getVerticalBlocks();
+        var hBlockCount = this.widgetTabEntity.getHb();
+        var vBlockCount = this.widgetTabEntity.getVb();
         boolean[][] matrix = new boolean[vBlockCount][hBlockCount];
         for (int j = 0; j < vBlockCount; j++) {
             matrix[j] = new boolean[hBlockCount];

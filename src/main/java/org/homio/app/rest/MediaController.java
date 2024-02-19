@@ -3,14 +3,13 @@ package org.homio.app.rest;
 import static java.lang.String.format;
 import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION;
 import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
 import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
 import static org.springframework.http.HttpHeaders.ETAG;
 import static org.springframework.http.HttpHeaders.LAST_MODIFIED;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import dev.failsafe.ExecutionContext;
 import dev.failsafe.Failsafe;
 import dev.failsafe.Fallback;
@@ -63,8 +62,10 @@ import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.Go2RTCEntity;
 import org.homio.app.model.entity.MediaMTXEntity;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity.VideoSeriesDataSourceDynamicOptionLoader;
-import org.homio.app.rest.FileSystemController.ListRequest;
+import org.homio.app.rest.FileSystemController.NodeRequest;
+import org.homio.app.service.FileSystemService;
 import org.homio.app.spring.ContextCreated;
+import org.homio.app.utils.HardwareUtils;
 import org.homio.app.video.ffmpeg.FfmpegHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.cloud.gateway.mvc.ProxyExchange;
@@ -96,6 +97,8 @@ import org.springframework.web.context.request.WebRequest;
 @RequiredArgsConstructor
 public class MediaController implements ContextCreated {
 
+    private final FileSystemService fileSystemService;
+
     private int go2rtcWebRtcPort;
     private int mtxWebRtcPort;
     private int mtxHlsPort;
@@ -106,13 +109,24 @@ public class MediaController implements ContextCreated {
         MediaMTXEntity mtx = MediaMTXEntity.ensureEntityExists(context);
         mtxWebRtcPort = mtx.getWebRtcPort();
         mtxHlsPort = mtx.getHlsPort();
-        context.event().addEntityUpdateListener(Go2RTCEntity.class, "media", upd -> {
-            go2rtcWebRtcPort = upd.getWebRtcPort();
-        });
+        context.event().addEntityUpdateListener(Go2RTCEntity.class, "media", upd ->
+            go2rtcWebRtcPort = upd.getWebRtcPort());
         context.event().addEntityUpdateListener(MediaMTXEntity.class, "media", upd -> {
             mtxWebRtcPort = upd.getWebRtcPort();
             mtxHlsPort = upd.getHlsPort();
         });
+    }
+
+    @SneakyThrows
+    @GetMapping("/video/{jsonContent}/play")
+    public ResponseEntity<ResourceRegion> playFile(@PathVariable("jsonContent") String jsonContent, @RequestHeader HttpHeaders headers) {
+        byte[] content = Base64.getDecoder().decode(jsonContent.getBytes());
+        NodeRequest nodeRequest = OBJECT_MAPPER.readValue(content, NodeRequest.class);
+        FileSystemProvider fileSystem = fileSystemService.getFileSystem(nodeRequest.sourceFs, nodeRequest.alias);
+        Resource resource =  fileSystem.getEntryResource(nodeRequest.getSourceFileId());
+        String videoType = HardwareUtils.getVideoType(fileSystem.toTreeNode(nodeRequest.getSourceFileId()).getName());
+        MediaType type = MediaType.parseMediaType(videoType);
+        return resourceRegion(resource, resource.contentLength(), headers, type);
     }
 
     @GetMapping("/video/{entityID}/sources")
@@ -150,12 +164,10 @@ public class MediaController implements ContextCreated {
         return proxyUrl(proxy, mtxHlsPort, entityID, filename + ".mp4", request.getQueryString(), ProxyExchange::get);
     }
 
-    private static final Cache<String, MediaPlayContext> fileIdToMedia = CacheBuilder
-        .newBuilder().expireAfterAccess(Duration.ofHours(24)).build();
-
     private final ImageService imageService;
     private final Context context;
     private final AudioService audioService;
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     private final FfmpegHardwareRepository ffmpegHardwareRepository;
     private final AddonService addonService;
     private final FileSystemController fileSystemController;
@@ -172,33 +184,6 @@ public class MediaController implements ContextCreated {
                    .withDelay(Duration.ofSeconds(5))
                    .withMaxRetries(3)
                    .build();
-
-    public static @NotNull String createVideoPlayLink(@NotNull FileSystemProvider fileSystem, @NotNull String resource, String videoType, String extension) {
-        String id = "file_" + resource.hashCode();
-        fileIdToMedia.put(id, new MediaPlayContext(fileSystem, resource, resource, fileSystem.size(resource), videoType));
-        return "$DEVICE_URL/rest/media/video/" + id + "/play";
-    }
-
-    /*@GetMapping("/video/{fileId}/content")
-    public ResponseEntity<Resource> getVideoFileContent(@PathVariable("fileId") String fileId) {
-        MediaPlayContext context = fileIdToMedia.getIfPresent(fileId);
-        if (context == null) {
-            throw NotFoundException.fileNotFound(fileId);
-        }
-        Resource resource = context.fileSystem.getEntryResource(context.id);
-        return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.parseMediaType(context.type)).body(resource);
-    }*/
-
-    @GetMapping("/video/{fileId}/play")
-    public ResponseEntity<ResourceRegion> downloadFile(@PathVariable("fileId") String fileId, @RequestHeader HttpHeaders headers) {
-        MediaPlayContext context = fileIdToMedia.getIfPresent(fileId);
-        if (context == null) {
-            throw NotFoundException.fileNotFound(fileId);
-        }
-        Resource resource = context.fileSystem.getEntryResource(context.id);
-        ResourceRegion region = resourceRegion(resource, context.size, headers);
-        return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).contentType(MediaType.parseMediaType(context.type)).body(region);
-    }
 
     @GetMapping("/video/playback/days/{entityID}/{from}/{to}")
     public LinkedHashMap<Long, Boolean> getAvailableDaysPlaybacks(
@@ -225,8 +210,9 @@ public class MediaController implements ContextCreated {
         @RequestBody ThumbnailRequest thumbnailRequest,
         @RequestParam(value = "size", defaultValue = "800x600") String size)
         throws Exception {
-        Map<String, Path> filePathList = thumbnailRequest.fileIds.stream().sequential()
-                                                                 .collect(Collectors.toMap(id -> id, id -> getPlaybackThumbnailPath(entityID, id, size)));
+        Map<String, Path> filePathList = thumbnailRequest.fileIds
+            .stream()
+            .collect(Collectors.toMap(id -> id, id -> getPlaybackThumbnailPath(entityID, id, size)));
 
         Thread.sleep(500); // wait till ffmpeg close all file handlers
         List<String> result = new ArrayList<>();
@@ -279,9 +265,9 @@ public class MediaController implements ContextCreated {
                                    });
         }
 
-        ResourceRegion region = resourceRegion(downloadFile.stream(), downloadFile.size(), headers);
-        MediaType mediaType = MediaTypeFactory.getMediaType(downloadFile.stream()).orElse(MediaType.APPLICATION_OCTET_STREAM);
-        return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).contentType(mediaType).body(region);
+        MediaType mediaType = MediaTypeFactory.getMediaType(downloadFile.stream())
+                                              .orElse(MediaType.APPLICATION_OCTET_STREAM);
+        return resourceRegion(downloadFile.stream(), downloadFile.size(), headers, mediaType);
     }
 
     @SneakyThrows
@@ -301,7 +287,7 @@ public class MediaController implements ContextCreated {
             return null;
         }
         if (StringUtils.isNotEmpty(fs)) {
-            return fileSystemController.download(fs, new ListRequest(entityID));
+            return fileSystemController.download(fs, new NodeRequest(entityID));
         }
         return toResponse(imageService.getImage(entityID), eTag);
     }
@@ -411,16 +397,25 @@ public class MediaController implements ContextCreated {
             60);
     }
 
-    private ResourceRegion resourceRegion(Resource video, long contentLength, HttpHeaders headers) {
+    private ResponseEntity<ResourceRegion> resourceRegion(Resource resource, long contentLength, HttpHeaders headers, MediaType mediaType) {
+        HttpStatus status = HttpStatus.PARTIAL_CONTENT;
         HttpRange range = headers.getRange().isEmpty() ? null : headers.getRange().get(0);
-        if (range != null) {
+        ResourceRegion region;
+        if (range == null) {
+            region = new ResourceRegion(resource, 0, contentLength);
+        } else {
             long start = range.getRangeStart(contentLength);
             long end = range.getRangeEnd(contentLength);
             long rangeLength = end - start + 1; // Math.min(1024 * 1024, end - start + 1);
-            return new ResourceRegion(video, start, rangeLength);
-        } else {
-            return new ResourceRegion(video, 0, contentLength);
+            region = new ResourceRegion(resource, start, rangeLength);
         }
+
+        return ResponseEntity
+            .status(status)
+            .header("Accept-Ranges", "bytes")
+            .contentType(mediaType)
+            .contentLength(contentLength)
+            .body(region);
     }
 
     private ResponseEntity<InputStreamResource> toResponse(ImageResponse response, String eTag) {
@@ -437,10 +432,6 @@ public class MediaController implements ContextCreated {
     public static class ThumbnailRequest {
 
         private List<String> fileIds;
-    }
-
-    private record MediaPlayContext(@NotNull FileSystemProvider fileSystem, @NotNull String dataSource, @NotNull String id, long size, @NotNull String type) {
-
     }
 
     private ResponseEntity<?> proxyUrl(ProxyExchange<byte[]> proxy, int port, String entityID, String path,

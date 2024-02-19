@@ -38,34 +38,5 @@ public interface WidgetVideoSourceResolver {
         private final @NotNull List<String> resolutions = new ArrayList<>();
         private @Nullable @Setter Collection<UIInputEntity> actions;
         private @Nullable @Setter String poster;
-
-        public static @NotNull String getVideoType(String url) {
-            if (url.startsWith("https://youtu")) {
-                return "video/youtube";
-            }
-            if (url.startsWith("https://vimeo")) {
-                return "video/vimeo";
-            }
-            if (url.endsWith(".ts")) {
-                return "video/MP2T";
-            }
-            if (url.endsWith(".ogv")) {
-                return "video/ogg";
-            }
-            if (url.endsWith(".m3u8")) {
-                return "application/x-mpegURL";
-            }
-            if (url.endsWith(".mpd")) {
-                return "application/dash+xml";
-            }
-            String extension = StringUtils.defaultString(FilenameUtils.getExtension(url));
-            if (FSWidgetVideoSourceResolver.IMAGE_FORMATS.matcher(extension).matches()) {
-                return "image/" + extension;
-            }
-            if (FSWidgetVideoSourceResolver.VIDEO_FORMATS.matcher(extension).matches()) {
-                return "video/" + extension;
-            }
-            return "video/unknown";
-        }
     }
 }

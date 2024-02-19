@@ -1,14 +1,12 @@
 package org.homio.app.model.entity.widget.impl.video.sourceResolver;
 
-import static org.homio.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver.VideoEntityResponse.getVideoType;
-
 import lombok.RequiredArgsConstructor;
 import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.api.Context;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.DataSourceUtil;
-import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
+import org.homio.app.utils.HardwareUtils;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -26,10 +24,10 @@ public class CameraServiceVideoSourceResolver implements WidgetVideoSourceResolv
         if (entity != null && keys.length >= 2) {
             String videoIdentifier = keys[keys.length - 1];
             if (videoIdentifier.startsWith("http") || videoIdentifier.startsWith("$DEVICE_URL")) {
-                return new VideoEntityResponse(valueDataSource, videoIdentifier, videoIdentifier, getVideoType(videoIdentifier));
+                return new VideoEntityResponse(valueDataSource, videoIdentifier, videoIdentifier, HardwareUtils.getVideoType(videoIdentifier));
             }
             String url = getUrl(videoIdentifier, entityID);
-            VideoEntityResponse response = new VideoEntityResponse(valueDataSource, ds, url, getVideoType(url));
+            VideoEntityResponse response = new VideoEntityResponse(valueDataSource, ds, url, HardwareUtils.getVideoType(url));
 
             if (entity instanceof BaseCameraEntity<?, ?> camera) {
                 UIInputBuilder uiInputBuilder = context.ui().inputBuilder();

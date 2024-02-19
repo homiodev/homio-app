@@ -7,12 +7,12 @@ public class ConsoleSshFontSizeSetting
         implements ConsoleSettingPlugin<Integer>, SettingPluginSlider {
 
     @Override
-    public Integer getMin() {
+    public int getMin() {
         return 5;
     }
 
     @Override
-    public Integer getMax() {
+    public int getMax() {
         return 24;
     }
 

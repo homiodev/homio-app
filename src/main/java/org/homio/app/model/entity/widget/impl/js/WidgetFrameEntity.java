@@ -11,15 +11,14 @@ import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.field.MonacoLanguage;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldCodeEditor;
-import org.homio.api.ui.field.UIFieldIgnore;
-import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.WidgetEntity;
 import org.jetbrains.annotations.NotNull;
 
 @Entity
 @Getter
 @Setter
 @Accessors(chain = true)
-public class WidgetFrameEntity extends WidgetBaseEntity<WidgetFrameEntity> implements HasJsonData {
+public class WidgetFrameEntity extends WidgetEntity<WidgetFrameEntity> implements HasJsonData {
 
     @Transient
     private String javaScriptResponse;
@@ -84,20 +83,6 @@ public class WidgetFrameEntity extends WidgetBaseEntity<WidgetFrameEntity> imple
             }
         }
         return html.toString();
-    }
-
-    @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public String getBackground() {
-        return super.getBackground();
-    }
-
-    @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public boolean isAdjustFontSize() {
-        return super.isAdjustFontSize();
     }
 
     @Override
