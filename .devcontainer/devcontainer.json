@@ -1,5 +1,8 @@
 // Info https://containers.dev/implementors/json_reference/
 {
 //	name of the dev container
-	"name": "demo"
+	"name": "demo",
+	"build": {
+		"dockerfile": "Dockerfile"
+	}
 }
