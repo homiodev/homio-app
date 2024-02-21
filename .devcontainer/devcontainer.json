@@ -1,5 +1,5 @@
 // Info https://containers.dev/implementors/json_reference/
 {
 //	name of the dev container
-	"name": "idea-demo",
+	"name": "idea-demo"
 }
