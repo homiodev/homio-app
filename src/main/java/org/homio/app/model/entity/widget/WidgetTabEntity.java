@@ -52,10 +52,6 @@ public final class WidgetTabEntity extends BaseEntity implements
 
     private boolean locked = false;
 
-    private int hb = 8;
-
-    private int vb = 8;
-
     @Override
     public boolean enableUiOrdering() {
         return true;
@@ -94,6 +90,17 @@ public final class WidgetTabEntity extends BaseEntity implements
         layouts = layouts == null ? new HashSet<>() : layouts;
         layouts.add(new ScreenLayout(hb, vb, sw, sh));
         setJsonData("wl", OBJECT_MAPPER.writeValueAsString(layouts));
+    }
+
+    @SneakyThrows
+    public void addLayoutOptional(int sw, int sh) {
+        Set<ScreenLayout> layouts = getLayout();
+        layouts = layouts == null ? new HashSet<>() : layouts;
+        ScreenLayout layout = new ScreenLayout(8, 8, sw, sh);
+        if (!layouts.contains(layout)) {
+            layouts.add(layout);
+            setJsonData("wl", OBJECT_MAPPER.writeValueAsString(layouts));
+        }
     }
 
     @Override

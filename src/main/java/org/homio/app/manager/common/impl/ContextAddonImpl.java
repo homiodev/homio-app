@@ -78,9 +78,9 @@ public class ContextAddonImpl {
         log.info("Initialize addons...");
         ArrayList<AddonEntrypoint> addonEntrypoints = new ArrayList<>(applicationContext.getBeansOfType(AddonEntrypoint.class).values());
         Collections.sort(addonEntrypoints);
-        log.info("Found addons: \r\n{}",
+        log.info("Found addons: \r\n---{}",
             addonEntrypoints.stream().map(AddonEntrypoint::getAddonID)
-                            .collect(Collectors.joining("\r\n")));
+                            .collect(Collectors.joining("---\r\n")));
         for (AddonEntrypoint entrypoint : addonEntrypoints) {
             //this.addons.put("addon-" + entrypoint.getAddonID(), new InternalAddonContext(entrypoint, null));
             fireAddonEntrypoint(entrypoint);

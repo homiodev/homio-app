@@ -1,5 +1,7 @@
 package org.homio.app.rest.widget;
 
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,6 +23,7 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
@@ -47,6 +50,7 @@ import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.WidgetTabEntity;
+import org.homio.app.model.entity.widget.WidgetTabEntity.ScreenLayout;
 import org.homio.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.impl.color.WidgetColorEntity;
@@ -383,7 +387,11 @@ public class WidgetController {
 
     @PostMapping("/create/{tabId}/{type}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public BaseEntity createWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type) throws Exception {
+    public BaseEntity createWidget(
+        @PathVariable("tabId") String tabId,
+        @PathVariable("type") String type,
+        @RequestParam("w") int width,
+        @RequestParam("h") int height) throws Exception {
         log.debug("Request creating widget entity by type: <{}> in tabId <{}>", type, tabId);
         WidgetTabEntity widgetTabEntity = context.db().getEntity(tabId);
         if (widgetTabEntity == null) {
@@ -395,6 +403,8 @@ public class WidgetController {
                                                                 .newInstance();
 
         baseEntity.setWidgetTabEntity(widgetTabEntity);
+        baseEntity.getWidgetTabEntity().addLayoutOptional(width, height);
+        findSuitablePosition(baseEntity);
         return context.db().save(baseEntity);
     }
 
@@ -573,6 +583,79 @@ public class WidgetController {
             return false;
         }
         return true;
+    }
+
+    /**
+     * Find free space in matrix for new item
+     */
+    private void findSuitablePosition(WidgetEntity<?> widget) {
+        List<WidgetEntity> widgets = context.db().findAll(WidgetEntity.class);
+        if (isNotEmpty(widget.getParent())) {
+            WidgetEntity layout = widgets.stream().filter(w -> w.getEntityID().equals(widget.getParent())).findAny().orElse(null);
+            if (layout == null) {
+                throw new IllegalArgumentException("Widget: " + widget.getTitle() + " has xbl/tbl and have to be belong to layout widget but it's not found");
+            }
+            // do not change position for widget which belong to layout
+            return;
+        }
+
+        for (ScreenLayout sl : widget.getWidgetTabEntity().getLayout()) {
+            var hBlockCount = sl.getHb();
+            var vBlockCount = sl.getVb();
+            boolean[][] matrix = new boolean[vBlockCount][hBlockCount];
+            for (int j = 0; j < vBlockCount; j++) {
+                matrix[j] = new boolean[hBlockCount];
+            }
+            initMatrix(widgets, matrix);
+            if (!isSatisfyPosition(matrix, widget.getXb(), widget.getYb(), widget.getBw(), widget.getBh(), hBlockCount, vBlockCount)) {
+                Pair<Integer, Integer> freePosition = findMatrixFreePosition(matrix, widget.getBw(), widget.getBh(), hBlockCount, vBlockCount);
+                if (freePosition == null) {
+                    widget.setXb(-1);
+                    widget.setYb(-1);
+                } else {
+                    widget.setXb(freePosition.getKey());
+                    widget.setYb(freePosition.getValue());
+                }
+            }
+
+        }
+    }
+
+    /**
+     * Check if matrix has free slot for specific width/height and return first available position
+     */
+    private static Pair<Integer, Integer> findMatrixFreePosition(boolean[][] matrix, int bw, int bh, int hBlockCount, int vBlockCount) {
+        for (int j = 0; j < hBlockCount; j++) {
+            for (int i = 0; i < vBlockCount; i++) {
+                if (isSatisfyPosition(matrix, i, j, bw, bh, hBlockCount, vBlockCount)) {
+                    return Pair.of(i, j);
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean isSatisfyPosition(boolean[][] matrix, int xPos, int yPos, int width, int height, int hBlockCount, int vBlockCount) {
+        for (int j = xPos; j < xPos + width; j++) {
+            for (int i = yPos; i < yPos + height; i++) {
+                if (i >= vBlockCount || j >= hBlockCount || matrix[i][j]) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static void initMatrix(List<WidgetEntity> widgets, boolean[][] matrix) {
+        for (WidgetEntity model : widgets) {
+            if (isEmpty(model.getParent())) {
+                for (int j = model.getXb(); j < model.getXb() + model.getBw(); j++) {
+                    for (int i = model.getYb(); i < model.getYb() + model.getBh(); i++) {
+                        matrix[i][j] = true;
+                    }
+                }
+            }
+        }
     }
 
     @Getter
