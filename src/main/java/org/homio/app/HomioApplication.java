@@ -31,8 +31,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @EnableHQuery(scanBaseClassesPackage = "org.homio")
 @SpringBootApplication(exclude = {
-        ErrorMvcAutoConfiguration.class,
-        MongoAutoConfiguration.class
+    ErrorMvcAutoConfiguration.class,
+    MongoAutoConfiguration.class
 })
 public class HomioApplication implements WebMvcConfigurer {
 
@@ -52,7 +52,9 @@ public class HomioApplication implements WebMvcConfigurer {
         redirectConsoleOutput(log);
 
         try {
-            ConfigurableApplicationContext context = new SpringApplicationBuilder(AppConfig.class).listeners(new LogService()).run(args);
+            ConfigurableApplicationContext context = new SpringApplicationBuilder(AppConfig.class)
+                .listeners(new LogService())
+                .run(args);
             if (!context.isRunning()) {
                 log.error("Exist Homio due unable to start context");
                 ContextImpl.exitApplication(context, 7);
@@ -130,7 +132,7 @@ public class HomioApplication implements WebMvcConfigurer {
         }
 
         log.info("Use database of type '{}'. Url: {}. Auth: '{}'/'{}'", type,
-                defaultIfEmpty(url, defaultURL), user, pwd);
+            defaultIfEmpty(url, defaultURL), user, pwd);
 
         setProperty("databaseType", "dbType", defaultIfEmpty(type, "sqlite"));
         setProperty("spring.datasource.url", "dbUrl", defaultIfEmpty(url, defaultURL));

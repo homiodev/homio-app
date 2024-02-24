@@ -161,8 +161,12 @@ public class SystemAddonLibraryManagerSetting
             Path iconsPath = addonPath.resolve("icons");
             String iconsURL = repoURL + "/raw/master/icons.7z";
             if (isRequireDownloadIcons(iconsArchivePath, iconsPath, iconsURL)) {
-                Curl.download(iconsURL, iconsArchivePath);
-                ArchiveUtil.unzip(iconsArchivePath, addonPath, UnzipFileIssueHandler.replace);
+                try {
+                    Curl.download(iconsURL, iconsArchivePath);
+                    ArchiveUtil.unzip(iconsArchivePath, addonPath, UnzipFileIssueHandler.replace);
+                } catch (Exception ex) {
+                    log.error("Unable to fetch addon icons", ex);
+                }
             }
 
             Map<String, Map<String, Object>> addons = addonsRepo.getFile("addons.yml", Map.class);
@@ -177,7 +181,7 @@ public class SystemAddonLibraryManagerSetting
     }
 
     private static boolean isRequireDownloadIcons(Path iconsArchivePath, Path iconsPath, String iconsURL) {
-        if (!Files.exists(iconsPath) || !Files.exists(iconsArchivePath)) {
+        if (!Files.exists(iconsPath) || !Files.exists(iconsArchivePath) || Objects.requireNonNull(iconsPath.toFile().listFiles()).length == 0) {
             return true;
         }
         try {
