@@ -10,9 +10,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
 import org.homio.api.model.OptionModel;
+import org.homio.api.service.ssh.SshBaseEntity;
+import org.homio.api.service.ssh.SshProviderService;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.util.CommonUtils;
@@ -144,6 +147,11 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
         @Override
         public SshSession openSshSession(SshRawWebSocketEntity sshEntity) {
             return new SshSession(UUID.randomUUID().toString(), entity.getRawWebSocketAddress(), sshEntity);
+        }
+
+        @Override
+        public void execute(@NotNull SshProviderService.SshSession<SshRawWebSocketEntity> sshSession, @NotNull String command) {
+            throw new NotImplementedException();
         }
 
         @Override

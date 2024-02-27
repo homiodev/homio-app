@@ -38,14 +38,18 @@ import org.homio.api.ContextVar;
 import org.homio.api.entity.widget.AggregationType;
 import org.homio.api.entity.widget.PeriodRequest;
 import org.homio.api.exception.NotFoundException;
+import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
+import org.homio.api.model.OptionModel;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.State;
 import org.homio.api.storage.DataStorageService;
 import org.homio.api.storage.SourceHistory;
 import org.homio.api.storage.SourceHistoryItem;
+import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.DataSourceUtil;
+import org.homio.api.util.Lang;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.impl.ContextVarImpl.TransformVariableContext.ExtendedDoubleEvaluator;
 import org.homio.app.manager.common.impl.javaluator.DynamicVariableSet;
@@ -60,6 +64,7 @@ import org.homio.app.repository.VariableBackupRepository;
 import org.homio.app.repository.WorkspaceVariableRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONObject;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -71,7 +76,7 @@ public class ContextVarImpl implements ContextVar {
     private final ReentrantLock createContextLock = new ReentrantLock();
 
     public void onContextCreated() {
-        context.var().createGroup("broadcasts", "Broadcasts", group ->
+        String broadcastsId = context.var().createGroup("broadcasts", "Broadcasts", group ->
             group.setIcon(new Icon("fas fa-tower-broadcast", "#A32677")).setLocked(true));
 
         context.var().createGroup(getMiscGroup(), "Misc", group ->
@@ -104,6 +109,47 @@ public class ContextVarImpl implements ContextVar {
 
         context.bgp().builder("var-backup").intervalWithDelay(Duration.ofSeconds(60))
                 .cancelOnError(false).execute(this::backupVariables);
+
+        context.ui().addItemContextMenu(broadcastsId, "addSubGroup",
+            uiInputBuilder -> uiInputBuilder.addOpenDialogSelectableButton("ADD_BROADCAST_GROUP", new Icon("fas fa-layer-group"), null,
+                (context1, params) -> {
+                    return createBroadcastGroup(params, broadcastsId);
+                }).editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
+                flex.addTextInput("name", Lang.getServerMessage("field.GROUP_NAME"), true);
+                flex.addTextInput("description", "", false);
+                flex.addIconPicker("icon", "fas fa-object-group");
+                flex.addColorPicker("color", "#999999");
+            })));
+
+        context.ui().addItemContextMenu(broadcastsId, "add",
+            uiInputBuilder -> uiInputBuilder.addOpenDialogSelectableButton("ADD_BROADCAST_VARIABLE", new Icon("fas fa-rss"), null,
+                (context1, params) -> createBroadcastVar(params)).editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
+                flex.addTextInput("name", Lang.getServerMessage("field.BROADCAST_NAME"), true);
+                flex.addTextInput("description", "", false);
+                flex.addSelectBox("parentGroup").setLazyOptionLoader(FetchBroadcastSubGroups.class);
+                flex.addIconPicker("icon", "fas fa-cloud");
+                flex.addColorPicker("color", "#999999");
+            })));
+    }
+
+    @Override
+    public String createSubGroup(
+            @NotNull String parentGroupId,
+            @NotNull String groupId,
+            @NotNull String groupName,
+        @NotNull Consumer<GroupMetaBuilder> groupBuilder) {
+        WorkspaceGroup parentGroup = assertGroupExists(parentGroupId);
+        return saveOrUpdateGroup(parentGroupId + "-" + groupId, groupName, groupBuilder, wg -> wg.setHidden(true).setParent(parentGroup));
+    }
+
+    private @NotNull ActionResponseModel createBroadcastGroup(JSONObject params, String broadcastsId) {
+        String name = params.getString("name");
+        context.var().createSubGroup(broadcastsId, String.valueOf(name.hashCode()), name, builder -> {
+            builder.setIcon(new Icon(params.getString("icon"),
+                       StringUtils.defaultIfEmpty(params.optString("color"), "#999999")))
+                   .setDescription(params.optString("description"));
+        });
+        return ActionResponseModel.success();
     }
 
     private void onVariableRemoved(WorkspaceVariable workspaceVariable) {
@@ -254,14 +300,15 @@ public class ContextVarImpl implements ContextVar {
         return false;
     }
 
-    @Override
-    public String createSubGroup(
-            @NotNull String parentGroupId,
-            @NotNull String groupId,
-            @NotNull String groupName,
-        @NotNull Consumer<GroupMetaBuilder> groupBuilder) {
-        WorkspaceGroup parentGroup = assertGroupExists(groupId);
-        return saveOrUpdateGroup(parentGroupId + "-" + groupId, groupName, groupBuilder, wg -> wg.setHidden(true).setParent(parentGroup));
+    private @NotNull ActionResponseModel createBroadcastVar(JSONObject params) {
+        String name = params.getString("name");
+        String group = params.getString("parentGroup");
+        context.var().createVariable(group, name, name,
+            VariableType.Any, builder ->
+                builder.setDescription(params.optString("description"))
+                       .setIcon(new Icon(params.getString("icon"),
+                           StringUtils.defaultIfEmpty(params.optString("color"), "#999999"))));
+        return ActionResponseModel.success();
     }
 
     @Override
@@ -848,6 +895,15 @@ public class ContextVarImpl implements ContextVar {
             protected Object evaluate(Operator operator, Iterator<Object> operands, Object evaluationContext) {
                 return super.evaluate(operator, operands, evaluationContext);
             }
+        }
+    }
+
+    public static class FetchBroadcastSubGroups implements DynamicOptionLoader {
+
+        @Override
+        public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
+            WorkspaceGroup entity = parameters.context().db().getEntity(WorkspaceGroup.PREFIX + "broadcasts");
+            return OptionModel.entityList(entity.getChildrenGroups());
         }
     }
 }

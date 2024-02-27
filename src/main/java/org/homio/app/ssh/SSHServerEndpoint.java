@@ -24,13 +24,13 @@ import org.apache.commons.collections4.map.PassiveExpiringMap;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.ContextBGP;
 import org.homio.api.ContextBGP.ThreadContext;
+import org.homio.api.service.ssh.SshProviderService.SshSession;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.impl.ContextServiceImpl.DynamicWebSocketHandler;
 import org.homio.app.rest.ConsoleController;
 import org.homio.app.ssh.SSHServerEndpoint.XtermMessage.XtermHandler;
 import org.homio.app.ssh.SSHServerEndpoint.XtermMessage.XtermMessageType;
-import org.homio.app.ssh.SshProviderService.SshSession;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.msgpack.core.MessageBufferPacker;
@@ -124,6 +124,12 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
         if (sessionContext != null && sessionContext.sshChannel != null) {
             sessionContext.sshChannel.changeTerminalDimensions(cols, 30, 0, 0);
         }
+    }
+
+    @SneakyThrows
+    public void execute(@NotNull SshSession session, String command) {
+        SessionContext sessionContext = sessionByToken.get(session.getToken());
+        sessionContext.transToSSH(command.getBytes());
     }
 
     @Override
@@ -269,7 +275,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
             }
         }
 
-        private void transToSSH(byte[] buffer) throws IOException {
+        public void transToSSH(byte[] buffer) throws IOException {
             if (sshChannel != null) {
                 OutputStream outputStream = sshChannel.getOutputStream();
                 outputStream.write(buffer);

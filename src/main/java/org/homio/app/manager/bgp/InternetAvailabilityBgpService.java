@@ -1,6 +1,7 @@
 package org.homio.app.manager.bgp;
 
 import com.pivovarit.function.ThrowingRunnable;
+import java.net.ConnectException;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.Getter;
@@ -24,7 +25,7 @@ public class InternetAvailabilityBgpService {
     public InternetAvailabilityBgpService(Context context, ContextBGPImpl ContextBGP) {
         this.context = context;
         ScheduleBuilder<Boolean> builder = ContextBGP.builder("internet-test");
-        Duration interval = context.setting().getEnvRequire("interval-internet-test", Duration.class, Duration.ofSeconds(10), true);
+        Duration interval = context.setting().getEnvRequire("interval-internet-test", Duration.class, Duration.ofSeconds(15), true);
         ScheduleBuilder<Boolean> internetAccessBuilder = builder
                 .intervalWithDelay(interval)
                 .valueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
@@ -36,7 +37,15 @@ public class InternetAvailabilityBgpService {
                 })
                 .tap(tc -> internetThreadContext = tc);
 
-        internetAccessBuilder.execute(tc -> ContextNetwork.ping("google.com", 80) != null);
+        internetAccessBuilder.execute(tc -> pingTest());
+    }
+
+    private static boolean pingTest() throws ConnectException {
+        try {
+            return ContextNetwork.ping("google.com", 80) != null;
+        } catch (Exception ignore) {
+            return false;
+        }
     }
 
     @SneakyThrows

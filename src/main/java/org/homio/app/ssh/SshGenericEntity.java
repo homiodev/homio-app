@@ -33,6 +33,8 @@ import org.homio.api.model.FileModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.service.EntityService;
+import org.homio.api.service.ssh.SshBaseEntity;
+import org.homio.api.service.ssh.SshProviderService;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
@@ -449,17 +451,22 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         }
 
         @Override
-        public SshSession<SshGenericEntity> openSshSession(SshGenericEntity entity) {
+        public SshSession<SshGenericEntity> openSshSession(@NotNull SshGenericEntity entity) {
             return sshServerEndpoint.openSession(entity);
         }
 
         @Override
-        public void resizeSshConsole(SshSession sshSession, int cols) {
+        public void execute(@NotNull SshSession sshSession, @NotNull String command) {
+            sshServerEndpoint.execute(sshSession, command);
+        }
+
+        @Override
+        public void resizeSshConsole(@NotNull SshSession sshSession, int cols) {
             sshServerEndpoint.resizeSshConsole(sshSession, cols);
         }
 
         @Override
-        public void closeSshSession(SshSession<SshGenericEntity> sshSession) {
+        public void closeSshSession(@NotNull SshSession<SshGenericEntity> sshSession) {
             sshServerEndpoint.closeSession(sshSession);
         }
     }

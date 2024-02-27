@@ -14,6 +14,8 @@ import org.homio.api.model.OptionModel;
 import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.item.UIButtonItemBuilder;
 import org.homio.api.ui.field.action.v1.item.UISelectBoxItemBuilder;
+import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
+import org.homio.app.rest.ItemController;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -70,6 +72,13 @@ public class UISelectBoxItemBuilderImpl
 
     @Override
     public @NotNull UISelectBoxItemBuilder setLazyItemOptions(@NotNull Class<? extends BaseEntity> itemClass) {
+        optionFetcher = "rest/item/type/%s/options".formatted(itemClass.getSimpleName());
+        return this;
+    }
+
+    @Override
+    public @NotNull UISelectBoxItemBuilder setLazyOptionLoader(@NotNull Class<? extends DynamicOptionLoader> itemClass) {
+        ItemController.className2Class.put(itemClass.getSimpleName(), itemClass);
         optionFetcher = "rest/item/type/%s/options".formatted(itemClass.getSimpleName());
         return this;
     }

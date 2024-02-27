@@ -279,7 +279,6 @@ public class ContextSettingImpl implements ContextSetting {
     public void onContextCreated() {
         List<Class<? extends SettingPlugin>> settingClasses = classFinder.getClassesWithParent(SettingPlugin.class);
         addSettingsFromSystem(settingClasses);
-
         configureProxy();
     }
 

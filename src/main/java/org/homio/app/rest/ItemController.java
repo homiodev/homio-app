@@ -86,6 +86,8 @@ import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.UIContextMenuUploadAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
+import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
+import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader.DynamicOptionLoaderParameters;
 import org.homio.api.ui.field.selection.dynamic.DynamicParameterFields;
 import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
 import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields.RequestDynamicParameter;
@@ -139,6 +141,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     private static final Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames =
         new ConcurrentHashMap<>();
+    public static Map<String, Class<?>> className2Class = new ConcurrentHashMap<>();
     private final Map<String, List<ItemContextResponse>> itemsBootstrapContextMap =
         new ConcurrentHashMap<>();
 
@@ -373,7 +376,15 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 entities.add(entity);
             }
         }
-        return context.toOptionModels(entities);
+        if (!entities.isEmpty()) {
+            return context.toOptionModels(entities);
+        }
+        Class<?> dynamicClass = className2Class.get(type);
+        if (dynamicClass != null) {
+            DynamicOptionLoader loader = (DynamicOptionLoader) CommonUtils.newInstance(dynamicClass);
+            return loader.loadOptions(new DynamicOptionLoaderParameters(null, context, null, null));
+        }
+        return List.of();
     }
 
     @PostMapping(value = "/{entityID}/context/actionWithBinary")
