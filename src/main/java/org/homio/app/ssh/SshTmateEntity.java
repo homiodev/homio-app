@@ -14,6 +14,7 @@ import org.apache.commons.lang3.SystemUtils;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.homio.api.Context;
 import org.homio.api.ContextHardware;
+import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.service.ssh.SshBaseEntity;
 import org.homio.api.ui.UISidebarChildren;
@@ -131,6 +132,15 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
     @Override
     public @Nullable SshTmateService createService(@NotNull Context context) {
         return new SshTmateService(context, this);
+    }
+
+    @Override
+    public void configureOptionModel(@NotNull OptionModel optionModel, @NotNull Context context) {
+        try {
+            if (getService().isOpened()) {
+                optionModel.setDisabled(true);
+            }
+        } catch (Exception ignore) {}
     }
 
     @Override

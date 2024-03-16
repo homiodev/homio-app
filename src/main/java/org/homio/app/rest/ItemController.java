@@ -553,8 +553,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         for (String entityID : entityIDs) {
             BaseEntity entity = context.db().getEntityRequire(entityID);
             UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
-            if (entity instanceof HasDynamicContextMenuActions) {
-                ((HasDynamicContextMenuActions) entity).assembleActions(uiInputBuilder);
+            if (entity instanceof HasDynamicContextMenuActions da) {
+                da.assembleActions(uiInputBuilder);
             }
             EntityDynamicData data = new EntityDynamicData(uiInputBuilder.buildAll());
 
@@ -721,7 +721,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 configurator = (entity, optionModel) -> optionModel
                     .setTitle(format("${SELECTION.%s}: %s", entity.getClass().getSimpleName(), entity.getTitle()));
             }
-            parent.setChildren(OptionModel.entityList(entry.getValue(), configurator));
+            parent.setChildren(OptionModel.entityList(entry.getValue(), configurator, context));
         }
 
         Collections.sort(models);
@@ -760,15 +760,16 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     private @Nullable ActionResponseModel executeActionInternal(ActionModelRequest request, Object actionHolder, BaseEntity actionEntity) throws Exception {
+        String actionID = request.params == null ? request.getEntityID() : request.params.optString("action", request.getEntityID());
         for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIContextMenuAction.class)) {
             UIContextMenuAction menuAction = method.getDeclaredAnnotation(UIContextMenuAction.class);
-            if (menuAction.value().equals(request.getEntityID())) {
+            if (menuAction.value().equals(actionID)) {
                 return executeMethodAction(method, actionHolder, context, actionEntity, request.params);
             }
         }
         for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIContextMenuUploadAction.class)) {
             UIContextMenuUploadAction menuAction = method.getDeclaredAnnotation(UIContextMenuUploadAction.class);
-            if (menuAction.value().equals(request.getEntityID())) {
+            if (menuAction.value().equals(actionID)) {
                 return executeMethodAction(method, actionHolder, context, actionEntity, request.params);
             }
         }
@@ -788,14 +789,14 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 return actionEntity.handleTextFieldAction(fieldName, request.params);
             }
         }
-        if (actionHolder instanceof HasDynamicContextMenuActions) {
-            return ((HasDynamicContextMenuActions) actionHolder).handleAction(context, request.getEntityID(), request.params);
+        if (actionHolder instanceof HasDynamicContextMenuActions da) {
+            return da.handleAction(context, actionID, request.params);
         }
 
         Object entityID = request.getParams().optString("entityID", "");
         Map<String, ItemsContextMenuAction> actions = context.ui().getItemsContextMenuActions().get(entityID);
         for (ItemsContextMenuAction action : actions.values()) {
-            UIActionHandler actionHandler = action.getUiInputBuilder().findActionHandler(request.getEntityID());
+            UIActionHandler actionHandler = action.getUiInputBuilder().findActionHandler(actionID);
             if (actionHandler != null) {
                 if (!actionHandler.isEnabled(context)) {
                     throw new IllegalArgumentException("Unable to invoke disabled action");
@@ -804,7 +805,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             }
         }
 
-        throw new IllegalArgumentException("Unable to find action: <" + request.getEntityID() + "> for model: " + actionHolder);
+        throw new IllegalArgumentException("Unable to find action: <" + actionID + "> for model: " + actionHolder);
     }
 
     @NotNull

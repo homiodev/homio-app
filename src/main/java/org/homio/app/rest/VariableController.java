@@ -124,7 +124,7 @@ public class VariableController {
 
     @GetMapping("/{type}")
     public List<OptionModel> getWorkspaceVariables(@PathVariable("type") String type) {
-        return OptionModel.entityList(context.db().findAllByPrefix(type));
+        return OptionModel.entityList(context.db().findAllByPrefix(type), context);
     }
 
     @PostMapping("/source/history/info")
@@ -249,7 +249,7 @@ public class VariableController {
         private int minutes; // show all data if -1
         private long timestamp; // may be 0 to search from last available date
         private boolean forward; // source from or to
-        private int minItems = 100; // minimum items to load if too few items in from..to range
+        private int minItems = 100; // minimum items to load if too few items in from...to range
         private int splitCount = 100; // uses for full chart snapshot loading
     }
 

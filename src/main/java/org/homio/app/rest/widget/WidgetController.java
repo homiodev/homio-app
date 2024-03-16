@@ -376,8 +376,8 @@ public class WidgetController {
             updateWidgetBeforeReturnToUI(widget);
 
             UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
-            if (widget instanceof HasDynamicContextMenuActions) {
-                ((HasDynamicContextMenuActions) widget).assembleActions(uiInputBuilder);
+            if (widget instanceof HasDynamicContextMenuActions da) {
+                da.assembleActions(uiInputBuilder);
             }
             result.add(new WidgetEntityResponse(widget, uiInputBuilder.buildAll()));
         }

@@ -109,7 +109,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
     }
 
     @SneakyThrows
-    public void closeSession(SshSession<SshGenericEntity> session) {
+    public void closeSession(@NotNull SshSession<SshGenericEntity> session) {
         SessionContext sessionContext = sessionByToken.remove(session.getToken());
         if (sessionContext != null) {
             sessionContext.closeSessionContext(null);

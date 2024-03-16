@@ -112,9 +112,7 @@ public class ContextVarImpl implements ContextVar {
 
         context.ui().addItemContextMenu(broadcastsId, "addSubGroup",
             uiInputBuilder -> uiInputBuilder.addOpenDialogSelectableButton("ADD_BROADCAST_GROUP", new Icon("fas fa-layer-group"), null,
-                (context1, params) -> {
-                    return createBroadcastGroup(params, broadcastsId);
-                }).editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
+                (context1, params) -> createBroadcastGroup(params, broadcastsId)).editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
                 flex.addTextInput("name", Lang.getServerMessage("field.GROUP_NAME"), true);
                 flex.addTextInput("description", "", false);
                 flex.addIconPicker("icon", "fas fa-object-group");
@@ -902,8 +900,8 @@ public class ContextVarImpl implements ContextVar {
 
         @Override
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
-            WorkspaceGroup entity = parameters.context().db().getEntity(WorkspaceGroup.PREFIX + "broadcasts");
-            return OptionModel.entityList(entity.getChildrenGroups());
+            WorkspaceGroup entity = parameters.context().db().getEntityRequire(WorkspaceGroup.PREFIX + "broadcasts");
+            return OptionModel.entityList(entity.getChildrenGroups(), parameters.context());
         }
     }
 }

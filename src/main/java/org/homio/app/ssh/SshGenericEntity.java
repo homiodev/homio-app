@@ -55,7 +55,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     implements BaseFileSystemEntity<SshGenericFileSystem> {
 
     @Override
-    public void configureOptionModel(OptionModel optionModel) {
+    public void configureOptionModel(@NotNull OptionModel optionModel, @NotNull Context context) {
         String user = getUser();
         optionModel.setDescription((user.isEmpty() ? "" : user + "@") + getHost() + ":" + getPort());
     }
@@ -408,7 +408,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         return getJsonDataHashCode("host", "port", "user", "pwd", "key_pwd", "prv_key", "ct");
     }
 
-    protected enum PublicKeyAuthSign {
+    public enum PublicKeyAuthSign {
         SHA1, SHA256, SHA512
     }
 
@@ -466,8 +466,11 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         }
 
         @Override
-        public void closeSshSession(@NotNull SshSession<SshGenericEntity> sshSession) {
-            sshServerEndpoint.closeSession(sshSession);
+        public void closeSshSession(@Nullable SshSession<SshGenericEntity> session) {
+            if (session == null) {
+                return;
+            }
+            sshServerEndpoint.closeSession(session);
         }
     }
 }

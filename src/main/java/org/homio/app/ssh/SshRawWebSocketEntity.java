@@ -4,7 +4,6 @@ import jakarta.persistence.Entity;
 import java.net.URI;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -30,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
 public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, RawWebSocketService> {
 
     @Override
-    public void configureOptionModel(OptionModel optionModel) {
+    public void configureOptionModel(OptionModel optionModel, @NotNull Context context) {
         optionModel.setDescription(getRawWebSocketAddress());
     }
 
@@ -145,8 +144,9 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
         }
 
         @Override
-        public SshSession openSshSession(SshRawWebSocketEntity sshEntity) {
-            return new SshSession(UUID.randomUUID().toString(), entity.getRawWebSocketAddress(), sshEntity);
+        public SshSession openSshSession(@NotNull SshRawWebSocketEntity sshEntity) {
+            return new SshSession(String.valueOf(entity.getRawWebSocketAddress().hashCode()),
+                entity.getRawWebSocketAddress(), sshEntity);
         }
 
         @Override
@@ -155,7 +155,7 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
         }
 
         @Override
-        public void closeSshSession(SshSession<SshRawWebSocketEntity> sshSession) {
+        public void closeSshSession(@Nullable SshSession<SshRawWebSocketEntity> sshSession) {
             // no need to close session due it's raw ws address
         }
     }

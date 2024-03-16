@@ -308,9 +308,9 @@ public class ContextUIImpl implements ContextUI {
 
             if (!ignoreExtra) {
                 // insert context actions. maybe it's changed
-                if (entity instanceof HasDynamicContextMenuActions) {
+                if (entity instanceof HasDynamicContextMenuActions da) {
                     UIInputBuilder uiInputBuilder = inputBuilder();
-                    ((HasDynamicContextMenuActions) entity).assembleActions(uiInputBuilder);
+                    da.assembleActions(uiInputBuilder);
                     metadata.putPOJO("actions", uiInputBuilder.buildAll());
                 }
             }

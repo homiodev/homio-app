@@ -1,5 +1,6 @@
 package org.homio.app.console;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.util.Collection;
@@ -16,13 +17,20 @@ import org.apache.commons.lang3.StringUtils;
 import org.homio.api.ContextBGP;
 import org.homio.api.console.ConsolePluginTable;
 import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.FileContentType;
+import org.homio.api.model.FileModel;
 import org.homio.api.model.HasEntityIdentifier;
+import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.action.UIContextMenuAction;
+import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
+import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.impl.ContextBGPImpl;
+import org.homio.app.manager.common.impl.ContextBGPImpl.ThreadContextImpl;
+import org.homio.app.utils.CollectionUtils.LastBytesBuffer;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @RequiredArgsConstructor
 public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<BaseProcessesConsolePlugin.BackgroundProcessJSON> {
@@ -54,9 +62,7 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
                 })
                 .map(e -> {
                     BackgroundProcessJSON bgp = new BackgroundProcessJSON();
-                    if (e.getLogFile() != null && Files.exists(e.getLogFile())) {
-                        bgp = new BackgroundProcessJSONWithLogs();
-                    }
+                    bgp.source = e;
                     bgp.entityID = e.getName();
                     bgp.processName = e.getName();
                     bgp.description = e.getDescription();
@@ -82,7 +88,7 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
                                                            String state, String errorMessage, String bigDescription) {
                 if (BaseProcessesConsolePlugin.this.handleThreads()) {
                     result.add(new BackgroundProcessJSON(name, name, description, creationTime, null, null,
-                            null, null, errorMessage, null, null, bigDescription));
+                        null, null, errorMessage, null, null, bigDescription, null));
                 }
                 return this;
             }
@@ -94,7 +100,7 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
                 if (!BaseProcessesConsolePlugin.this.handleThreads()) {
                     result.add(new BackgroundProcessJSON(name, name, description, creationTime, state,
                         ContextBGPImpl.ScheduleType.DELAY.name(), null, null, errorMessage,
-                            period.toString(), runCount, bigDescription));
+                        period.toString(), runCount, bigDescription, null));
                 }
                 return this;
             }
@@ -115,9 +121,10 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
 
     @Getter
     @Setter
+    @NotNull
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class BackgroundProcessJSON implements HasEntityIdentifier {
+    public static class BackgroundProcessJSON implements HasEntityIdentifier, HasDynamicContextMenuActions {
 
         private String entityID;
 
@@ -153,13 +160,27 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
 
         @UIField(hideInEdit = true, order = 25, style = "max-width: 300px;overflow: hidden;white-space: nowrap;")
         private String bigDescription;
-    }
 
-    public static class BackgroundProcessJSONWithLogs extends BackgroundProcessJSON {
+        @JsonIgnore
+        private @Nullable ThreadContextImpl source;
 
-        @UIContextMenuAction("CONTEXT.ITEM.SHOW_LOGS")
-        public ActionResponseModel showLogs(BackgroundProcessJSON json) {
-            return ActionResponseModel.showSuccess("!!!!!!!!");
+        @Override
+        public void assembleActions(UIInputBuilder uiInputBuilder) {
+            if (source != null && (source.getLogFile() != null || source.getInfo() != null)) {
+                uiInputBuilder.addSelectableButton("SHOW_LOGS", new Icon("fas fa-file-lines"), (context1, params) -> {
+                    LastBytesBuffer info = source.getInfo();
+                    StringBuilder sb = new StringBuilder();
+                    if (info != null) {
+                        sb.append(new String(info.getActualData()));
+                    }
+                    if(source.getLogFile() != null) {
+                        sb.append(Files.readString(source.getLogFile()));
+                    }
+                    return ActionResponseModel.showFile(
+                        new FileModel("logs", sb.toString(), FileContentType.plaintext)
+                    );
+                });
+            }
         }
     }
 }
