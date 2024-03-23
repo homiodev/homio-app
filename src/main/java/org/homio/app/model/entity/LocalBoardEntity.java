@@ -7,14 +7,17 @@ import jakarta.persistence.Entity;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.types.MicroControllerBaseEntity;
+import org.homio.api.fs.TreeConfiguration;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
 import org.homio.api.model.ActionResponseModel;
@@ -28,8 +31,9 @@ import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.action.UIContextMenuUploadAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
-import org.homio.app.service.LocalBoardService;
-import org.homio.app.service.LocalFileSystemProvider;
+import org.homio.app.service.device.LocalBoardService;
+import org.homio.app.service.device.LocalBoardUsbListener.UsbDeviceInfo;
+import org.homio.app.service.device.LocalFileSystemProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -158,19 +162,28 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
         setJsonData("cpu_interval", value);
     }
 
-    public static LocalBoardEntity ensureDeviceExists(Context context) {
+    public static void ensureDeviceExists(Context context) {
         LocalBoardEntity entity = context.db().getEntity(LocalBoardEntity.class, PRIMARY_DEVICE);
         if (entity == null) {
             log.info("Save default compute board device");
             entity = new LocalBoardEntity();
             entity.setEntityID(PRIMARY_DEVICE);
-            entity = context.db().save(entity);
+            context.db().save(entity);
         }
-        return entity;
     }
 
     @Override
     public @NotNull Set<String> getSupportArchiveFormats() {
         return Stream.of(ArchiveUtil.ArchiveFormat.values()).map(ArchiveFormat::getName).collect(Collectors.toSet());
+    }
+
+    @Override
+    public @NotNull List<TreeConfiguration> buildFileSystemConfiguration(@NotNull Context context) {
+        List<TreeConfiguration> configurations = BaseFileSystemEntity.super.buildFileSystemConfiguration(context);
+        for (UsbDeviceInfo usbDevice : getService().getUsbDevices()) {
+            String label = StringUtils.defaultString(usbDevice.getLabel(), usbDevice.getMount());
+            configurations.add(new TreeConfiguration(this, label, usbDevice.alias, new Icon(usbDevice.getIcon(), usbDevice.getColor())));
+        }
+        return configurations;
     }
 }

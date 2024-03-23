@@ -8,6 +8,7 @@
   "BOARD_INFO": "Board info",
   "NO_BOARD_SELECTED": "No selected board",
   "TITLE": {
+    "TMATE_DISABLED": "Tmate: [disabled]. Only one running instance allowed",
     "DEVICES_STAT": "Online {{ONLINE}} of {{TOTAL}} devices"
   },
   "OPTION_DEFAULT": " (Default)",

@@ -68,11 +68,9 @@ public class WidgetVideoTimelineEntity extends WidgetEntity<WidgetVideoTimelineE
         return "video-time";
     }
 
-    @Override
-    public void beforePersist() {
+    public WidgetVideoTimelineEntity() {
         setBh(4);
         setBw(3);
-        super.beforePersist();
     }
 
     public static class VideoTimelineDataSourceDynamicOptionLoader implements DynamicOptionLoader {

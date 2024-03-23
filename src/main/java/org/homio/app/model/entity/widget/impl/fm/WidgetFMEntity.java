@@ -190,10 +190,8 @@ public class WidgetFMEntity extends WidgetEntity<WidgetFMEntity>
                 0);
     }
 
-    @Override
-    public void beforePersist() {
-        setBh(3);
+    public WidgetFMEntity() {
         setBw(3);
-        super.beforePersist();
+        setBh(3);
     }
 }

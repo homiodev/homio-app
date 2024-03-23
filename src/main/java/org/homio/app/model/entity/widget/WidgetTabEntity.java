@@ -88,7 +88,9 @@ public final class WidgetTabEntity extends BaseEntity implements
     public void addLayout(int hb, int vb, int sw, int sh) {
         Set<ScreenLayout> layouts = getLayout();
         layouts = layouts == null ? new HashSet<>() : layouts;
-        layouts.add(new ScreenLayout(hb, vb, sw, sh));
+        ScreenLayout layout = new ScreenLayout(hb, vb, sw, sh);
+        layouts.remove(layout);
+        layouts.add(layout);
         setJsonData("wl", OBJECT_MAPPER.writeValueAsString(layouts));
     }
 
@@ -101,6 +103,15 @@ public final class WidgetTabEntity extends BaseEntity implements
             layouts.add(layout);
             setJsonData("wl", OBJECT_MAPPER.writeValueAsString(layouts));
         }
+    }
+
+    public ScreenLayout getLayoutOrDefault(int width, int height) {
+        for (ScreenLayout layout : getLayout()) {
+            if(layout.sw == width && layout.sh == height) {
+                return layout;
+            }
+        }
+        return new ScreenLayout(8,8, width, height);
     }
 
     @Override
@@ -172,6 +183,10 @@ public final class WidgetTabEntity extends BaseEntity implements
             int result = sw;
             result = 31 * result + sh;
             return result;
+        }
+
+        public String getKey() {
+            return sw + "-" + sh + ":" + hb + "-" + vb;
         }
     }
 }

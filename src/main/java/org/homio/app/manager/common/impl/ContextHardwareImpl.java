@@ -3,7 +3,7 @@ package org.homio.app.manager.common.impl;
 import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
 import static org.apache.commons.lang3.SystemUtils.IS_OS_MAC;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.homio.app.service.LocalBoardService.TOTAL_MEMORY;
+import static org.homio.app.service.device.LocalBoardService.TOTAL_MEMORY;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;

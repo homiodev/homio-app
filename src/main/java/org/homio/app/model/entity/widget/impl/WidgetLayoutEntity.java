@@ -60,14 +60,8 @@ public class WidgetLayoutEntity extends WidgetEntity<WidgetLayoutEntity>
         }
     }
 
-    @Override
-    public void beforePersist() {
-        if (!getJsonData().has("bw")) {
-            setBw(2);
-        }
-        if (!getJsonData().has("zi")) {
-            setIndex(15);
-        }
-        super.beforePersist();
+    public WidgetLayoutEntity() {
+        setBw(2);
+        setIndex(15);
     }
 }

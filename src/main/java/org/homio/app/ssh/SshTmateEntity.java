@@ -138,6 +138,7 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
     public void configureOptionModel(@NotNull OptionModel optionModel, @NotNull Context context) {
         try {
             if (getService().isOpened()) {
+                optionModel.setTitle(Lang.getServerMessage("TITLE.TMATE_DISABLED"));
                 optionModel.setDisabled(true);
             }
         } catch (Exception ignore) {}

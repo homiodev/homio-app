@@ -1,4 +1,4 @@
-package org.homio.app.service;
+package org.homio.app.service.device;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;

@@ -14,7 +14,7 @@ import org.springframework.web.socket.messaging.StompSubProtocolErrorHandler;
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    public static final String DESTINATION_PREFIX = "/smart-dest-ws";
+    public static final String DESTINATION_PREFIX = "/homio-dest-ws";
     static final String WEB_SOCKET_ENDPOINT = "/hws";
 
     @Override

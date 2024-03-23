@@ -47,7 +47,7 @@ import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
 import org.homio.app.service.FileSystemService;
-import org.homio.app.service.LocalFileSystemProvider;
+import org.homio.app.service.device.LocalFileSystemProvider;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;

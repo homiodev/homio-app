@@ -40,7 +40,7 @@ import org.homio.addon.fs.Mp3Thumbnailer;
 import org.homio.addon.fs.Mp4Thumbnailer;
 import org.homio.addon.fs.TextThumbnailer;
 import org.homio.api.fs.TreeNode;
-import org.homio.app.service.LocalFileSystemProvider;
+import org.homio.app.service.device.LocalFileSystemProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

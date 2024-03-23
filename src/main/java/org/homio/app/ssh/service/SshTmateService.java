@@ -98,16 +98,16 @@ public class SshTmateService extends ServiceInstance<SshTmateEntity> implements 
 
     @Override
     public void closeSshSession(@Nullable SshSession<SshTmateEntity> sshSession) {
-        // if (sshSession != null && sshSession.getToken() != null) {
-            if (tmateThread != null) {
-                tmateThread.cancel();
-                tmateThread = null;
-            }
-            if (process != null && process.isAlive()) {
+        if (tmateThread != null) {
+            tmateThread.cancel();
+            tmateThread = null;
+        }
+        if (process != null && process.isAlive()) {
+            try {
                 process.destroy();
-                process = null;
-            }
-        // }
+            } catch (Exception ignore) {}
+            process = null;
+        }
     }
 
     public boolean isOpened() {

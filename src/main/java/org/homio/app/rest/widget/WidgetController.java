@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
@@ -363,13 +364,29 @@ public class WidgetController {
     }
 
     @GetMapping("/tab/{tabId}")
-    public List<WidgetEntityResponse> getWidgetsInTab(@PathVariable("tabId") String tabId) {
+    public List<WidgetEntityResponse> getWidgetsInTab(
+        @PathVariable("tabId") String tabId,
+        @RequestParam("w") int width,
+        @RequestParam("h") int height,
+        @RequestParam(value = "widget", required = false) String widgetEntityID) {
         List<WidgetEntity> widgets = context
             .db()
             .findAll(WidgetEntity.class)
             .stream()
-            .filter(w -> w.getWidgetTabEntity().getEntityID().equals(tabId))
+            .filter(w -> (widgetEntityID == null || w.getEntityID().equals(widgetEntityID)) && w.getWidgetTabEntity().getEntityID().equals(tabId))
             .toList();
+        if (!widgets.isEmpty()) {
+            ScreenLayout layout = widgets.get(0).getWidgetTabEntity().getLayoutOrDefault(width, height);
+
+            for (WidgetEntity widget : widgets) {
+                if (StringUtils.isEmpty(widget.getParent())) {
+                    widget.setXb(widget.getXb(layout.getKey()));
+                    widget.setYb(widget.getYb(layout.getKey()));
+                    widget.setBw(widget.getBh(layout.getKey()));
+                    widget.setBh(widget.getBw(layout.getKey()));
+                }
+            }
+        }
 
         List<WidgetEntityResponse> result = new ArrayList<>();
         for (WidgetEntity<?> widget : widgets) {
@@ -404,7 +421,7 @@ public class WidgetController {
 
         baseEntity.setWidgetTabEntity(widgetTabEntity);
         baseEntity.getWidgetTabEntity().addLayoutOptional(width, height);
-        findSuitablePosition(baseEntity);
+        findSuitablePosition(baseEntity, new AtomicBoolean());
         return context.db().save(baseEntity);
     }
 
@@ -485,6 +502,19 @@ public class WidgetController {
         }
         tab.addLayout(request.hb, request.vb, request.sw, request.sh);
         context.db().save(tab);
+    }
+
+    @SneakyThrows
+    @PostMapping("/insert/{widgetEntityId}")
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    public void updateTabLayout(@PathVariable("widgetEntityId") String widgetEntityID) {
+        WidgetEntity widgetEntity = context.db().getEntityRequire(widgetEntityID);
+        AtomicBoolean processed = new AtomicBoolean(true);
+        findSuitablePosition(widgetEntity, processed);
+        if(!processed.get()) {
+            throw new IllegalStateException("Unable to find free position for widget");
+        }
+        context.db().save(widgetEntity);
     }
 
     @PostMapping("/tab/{tabId}/move")
@@ -588,8 +618,12 @@ public class WidgetController {
     /**
      * Find free space in matrix for new item
      */
-    private void findSuitablePosition(WidgetEntity<?> widget) {
-        List<WidgetEntity> widgets = context.db().findAll(WidgetEntity.class);
+    private void findSuitablePosition(WidgetEntity<?> widget, AtomicBoolean processed) {
+        List<WidgetEntity> widgets = context
+            .db()
+            .findAll(WidgetEntity.class)
+            .stream().filter(w -> w.getWidgetTabEntity().getEntityID().equals(widget.getWidgetTabEntity().getEntityID()))
+            .toList();
         if (isNotEmpty(widget.getParent())) {
             WidgetEntity layout = widgets.stream().filter(w -> w.getEntityID().equals(widget.getParent())).findAny().orElse(null);
             if (layout == null) {
@@ -600,24 +634,51 @@ public class WidgetController {
         }
 
         for (ScreenLayout sl : widget.getWidgetTabEntity().getLayout()) {
-            var hBlockCount = sl.getHb();
-            var vBlockCount = sl.getVb();
-            boolean[][] matrix = new boolean[vBlockCount][hBlockCount];
-            for (int j = 0; j < vBlockCount; j++) {
-                matrix[j] = new boolean[hBlockCount];
-            }
-            initMatrix(widgets, matrix);
-            if (!isSatisfyPosition(matrix, widget.getXb(), widget.getYb(), widget.getBw(), widget.getBh(), hBlockCount, vBlockCount)) {
-                Pair<Integer, Integer> freePosition = findMatrixFreePosition(matrix, widget.getBw(), widget.getBh(), hBlockCount, vBlockCount);
-                if (freePosition == null) {
-                    widget.setXb(-1);
-                    widget.setYb(-1);
-                } else {
-                    widget.setXb(freePosition.getKey());
-                    widget.setYb(freePosition.getValue());
-                }
+            boolean[][] matrix = initMatrix(widgets, sl);
+            AtomicBoolean slProcessed = new AtomicBoolean(false);
+            findMatrixFreePosition(widget, matrix, sl, widget.getBw(sl.getKey()), widget.getBh(sl.getKey()), slProcessed);
+            if(!slProcessed.get()) {
+                processed.set(false);
             }
 
+        }
+    }
+
+    private static void findMatrixFreePosition(WidgetEntity<?> widget, boolean[][] matrix, ScreenLayout sl,
+        int bw, int bh, AtomicBoolean processed) {
+        boolean satisfyPosition = isSatisfyPosition(matrix, widget.getXb(), widget.getYb(), bw, bh, sl.getHb(), sl.getVb());
+        if (!satisfyPosition) {
+            Pair<Integer, Integer> freePosition = findMatrixFreePosition(matrix, bw, bh, sl.getHb(), sl.getVb());
+            if (freePosition == null) {
+                // try decrease widget bw/bh
+                if (bw >= bh && bw > 1) {
+                    findMatrixFreePosition(widget, matrix, sl, bw - 1, bh, processed);
+                    if (processed.get()) {
+                        return;
+                    }
+                }
+                if (bh >= bw && bh > 1) {
+                    findMatrixFreePosition(widget, matrix, sl, bw, bh - 1, processed);
+                    if (processed.get()) {
+                        return;
+                    }
+                }
+
+                if (!processed.get()) {
+                    widget.setXb(-1, sl.getKey());
+                    widget.setYb(-1, sl.getKey());
+                }
+            } else {
+                widget.setBw(bw, sl.getKey());
+                widget.setBh(bh, sl.getKey());
+                widget.setXb(freePosition.getKey(), sl.getKey());
+                widget.setYb(freePosition.getValue(), sl.getKey());
+                processed.set(true);
+            }
+        } else {
+            widget.setBw(bw, sl.getKey());
+            widget.setBh(bh, sl.getKey());
+            processed.set(true);
         }
     }
 
@@ -638,7 +699,7 @@ public class WidgetController {
     private static boolean isSatisfyPosition(boolean[][] matrix, int xPos, int yPos, int width, int height, int hBlockCount, int vBlockCount) {
         for (int j = xPos; j < xPos + width; j++) {
             for (int i = yPos; i < yPos + height; i++) {
-                if (i >= vBlockCount || j >= hBlockCount || matrix[i][j]) {
+                if (j >= vBlockCount || i >= hBlockCount || matrix[j][i]) {
                     return false;
                 }
             }
@@ -646,13 +707,35 @@ public class WidgetController {
         return true;
     }
 
-    private static void initMatrix(List<WidgetEntity> widgets, boolean[][] matrix) {
-        for (WidgetEntity model : widgets) {
-            if (isEmpty(model.getParent())) {
-                for (int j = model.getXb(); j < model.getXb() + model.getBw(); j++) {
-                    for (int i = model.getYb(); i < model.getYb() + model.getBh(); i++) {
-                        matrix[i][j] = true;
-                    }
+    private static boolean[][] initMatrix(List<WidgetEntity> widgets, ScreenLayout sl) {
+        boolean[][] matrix = new boolean[sl.getVb()][sl.getHb()];
+        for (int j = 0; j < sl.getVb(); j++) {
+            matrix[j] = new boolean[sl.getHb()];
+        }
+
+        List<WidgetEntity> copyWidgets = new ArrayList<>(widgets);
+        for (WidgetEntity model : copyWidgets) {
+            try {
+                fillMatrixWidget(matrix, sl, model);
+            } catch (Exception ignore) {
+                // for now we ignore widget if it's unable to insert into matrix
+                copyWidgets.remove(model);
+                return initMatrix(copyWidgets, sl);
+            }
+        }
+        return matrix;
+    }
+
+    private static void fillMatrixWidget(boolean[][] matrix, ScreenLayout sl, WidgetEntity model) {
+        if (isEmpty(model.getParent())) {
+            int x = model.getXb(sl.getKey());
+            int y = model.getYb(sl.getKey());
+            if (x < 0 || y < 0) {
+                return;
+            }
+            for (int j = x; j < x + model.getBw(sl.getKey()); j++) {
+                for (int i = y; i < y + model.getBh(sl.getKey()); i++) {
+                    matrix[i][j] = true;
                 }
             }
         }

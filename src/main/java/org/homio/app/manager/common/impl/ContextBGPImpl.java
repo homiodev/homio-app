@@ -486,7 +486,7 @@ public class ContextBGPImpl implements ContextBGP {
             public @NotNull ProcessContext execute(@NotNull String command) {
                 processContext.threadContext = builder(name)
                         .onError(processContext::onError)
-                        .execute(() -> processContext.run(command));
+                        .execute(() -> processContext.run(command, name));
                 return processContext;
             }
         };
@@ -968,10 +968,10 @@ public class ContextBGPImpl implements ContextBGP {
             }
         }
 
-        public void run(@NotNull String command) throws Exception {
-            getLogger().info("[{}]: Starting process command: '{}'", getName(), command);
+        public void run(@NotNull String command, @NotNull String name) throws Exception {
+            getLogger().info("[{}]: Starting process command: '{}'", name, command);
             process = Runtime.getRuntime().exec(command);
-            executeOnExitImpl("Process: " + getName(), () -> cancelProcess(true, true));
+            executeOnExitImpl("Process: " + name, () -> cancelProcess(true, true));
             if (entity != null) {
                 entity.setStatusOnline();
             }
@@ -982,7 +982,7 @@ public class ContextBGPImpl implements ContextBGP {
                     if (entity != null) {
                         entity.setStatusError(ex);
                     }
-                    getLogger().error("[{}]: Error during run process start handler. Err: {}", getName(), CommonUtils.getErrorMessage(ex));
+                    getLogger().error("[{}]: Error during run process start handler. Err: {}", name, CommonUtils.getErrorMessage(ex));
                     throw ex;
                 }
             }
@@ -990,7 +990,7 @@ public class ContextBGPImpl implements ContextBGP {
             if (errorConsumer != null || inputConsumer != null || logger != null) {
                 if (errorConsumer == null) {
                     if (logger != null) {
-                        errorConsumer = msg -> logger.error("[{}]: {}", getName(), msg);
+                        errorConsumer = msg -> logger.error("[{}]: {}", name, msg);
                     } else {
                         errorConsumer = msg -> {
                         };
@@ -998,17 +998,17 @@ public class ContextBGPImpl implements ContextBGP {
                 }
                 if (inputConsumer == null) {
                     if (logger != null) {
-                        inputConsumer = msg -> logger.info("[{}]: {}", getName(), msg);
+                        inputConsumer = msg -> logger.info("[{}]: {}", name, msg);
                     } else {
                         inputConsumer = msg -> {
                         };
                     }
                 }
-                streamGobbler = new StreamGobbler(getName(), inputConsumer, errorConsumer);
+                streamGobbler = new StreamGobbler(name, inputConsumer, errorConsumer);
                 streamGobbler.stream(process);
             }
 
-            getLogger().info("[{}]: wait process to finish.", getName());
+            getLogger().info("[{}]: wait process to finish.", name);
             sleep(1000);
             int responseCode = process.waitFor();
             sleep(1000);

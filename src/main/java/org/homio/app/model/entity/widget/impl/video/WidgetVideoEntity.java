@@ -37,10 +37,8 @@ public class WidgetVideoEntity
         return "video";
     }
 
-    @Override
-    public void beforePersist() {
-        setBh(3);
+    public WidgetVideoEntity() {
         setBw(3);
-        super.beforePersist();
+        setBh(3);
     }
 }

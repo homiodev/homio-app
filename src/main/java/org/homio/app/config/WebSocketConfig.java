@@ -23,7 +23,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSocketConfigurer {
 
-    public static final String DESTINATION_PREFIX = "/smart-dest-ws";
+    public static final String DESTINATION_PREFIX = "/homio-dest-ws";
     static final String WEB_SOCKET_ENDPOINT = "/hws";
     public static final String CUSTOM_WEB_SOCKET_ENDPOINT = "/cws";
 

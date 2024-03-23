@@ -2,7 +2,7 @@
 
 ###Not ready for production
 
-Backend for Smart homio app
+Backend for Homio app
 https://homio.org/
 
 ###Deprecated. To fix issue Can not open SDP session. No such file or directory”
