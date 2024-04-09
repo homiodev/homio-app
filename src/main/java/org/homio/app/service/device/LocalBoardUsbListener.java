@@ -21,6 +21,7 @@ import org.homio.api.Context;
 import org.homio.api.model.Icon;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.action.ActionInputParameter;
+import org.homio.api.util.Lang;
 import org.jetbrains.annotations.NotNull;
 
 @Log4j2
@@ -38,6 +39,9 @@ public class LocalBoardUsbListener {
                    .interval(Duration.ofSeconds(30))
                    .execute(() -> {
                        String response = context.hardware().execute(CHECK_USB);
+                       if(response.isEmpty()) {
+                           return;
+                       }
                        List<String> devices = List.of(response.split("\n"));
                        Set<UsbDeviceInfo> fetchedUsbDevices = new HashSet<>();
 
@@ -93,16 +97,16 @@ public class LocalBoardUsbListener {
             (responseType, pressedButton, parameters) ->
                 mountUsb(context, parameters, usbDevice),
             dialogModel -> {
-                dialogModel.appearance(new Icon("fab fa-usb"), "#5571E0");
+                dialogModel.appearance(new Icon("fab fa-usb"), "#313A5B");
                 List<ActionInputParameter> inputs = new ArrayList<>();
                 inputs.add(ActionInputParameter.message("Info: " + usbDevice.devicePath + " - " + usbDevice.size));
-                inputs.add(ActionInputParameter.message("USB label: " + usbDevice.label));
-                inputs.add(ActionInputParameter.message("FileSystem type: " + usbDevice.type));
+                inputs.add(ActionInputParameter.message("Label: " + usbDevice.label));
+                inputs.add(ActionInputParameter.message("File system type: " + usbDevice.type));
                 inputs.add(ActionInputParameter.icon("icon", "fab fa-usb"));
                 inputs.add(ActionInputParameter.icon("color", "#5571E0"));
 
                 inputs.add(ActionInputParameter.bool("save", true));
-                inputs.add(ActionInputParameter.text("path", "/mnt/usb"));
+                inputs.add(ActionInputParameter.textRequired("path", "/mnt/usb", 3, 64));
                 dialogModel.submitButton("Mount", button -> {
                 }).group("General", inputs);
             });
@@ -114,6 +118,7 @@ public class LocalBoardUsbListener {
         Files.createDirectories(Paths.get(path));
         context.hardware().execute("mount " + usbDevice.devicePath + " " + path);
         usbDevice.mount = path;
+        String text = "MOUNT.SUCCESS";
         if (parameters.get("save").asBoolean()) {
             Path fstab = Paths.get("/etc/fstab");
             List<String> lines = Files.readAllLines(fstab);
@@ -124,8 +129,9 @@ public class LocalBoardUsbListener {
             lines.add("#INFO:%s~~~%s".formatted(parameters.get("icon").asText(), parameters.get("color").asText()));
             lines.add("UUID=%s %s %s defaults 0 0".formatted(usbDevice.uuid, path, usbDevice.type));
             Files.write(fstab, lines);
-
+            text += "_P";
         }
+        context.ui().toastr().success(Lang.getServerMessage(text, path));
     }
 
     private void findAndFillIconColor(UsbDeviceInfo usbDevice) {

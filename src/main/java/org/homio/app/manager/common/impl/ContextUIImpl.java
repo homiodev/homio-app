@@ -64,6 +64,7 @@ import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.rest.DynamicUpdateRequest;
 import org.homio.app.notification.HeaderButtonNotification;
+import org.homio.app.notification.HeaderButtonSelection;
 import org.homio.app.notification.NotificationBlock;
 import org.homio.app.notification.NotificationBlock.Info;
 import org.homio.app.notification.ProgressNotification;
@@ -87,6 +88,8 @@ public class ContextUIImpl implements ContextUI {
     private final @NotNull Map<String, DialogModel> dialogRequest = new ConcurrentHashMap<>();
     private final @NotNull Map<String, NotificationBlock> blockNotifications = new ConcurrentHashMap<>();
     private final @NotNull Map<String, HeaderButtonNotification> headerButtonNotifications = new ConcurrentHashMap<>();
+    private final @NotNull Map<String, HeaderButtonSelection> headerMenuButtons = new ConcurrentHashMap<>();
+
     // constructor parameters
     private final @Getter @Accessors(fluent = true) ContextImpl context;
     private final @NotNull Map<String, ProgressNotification> progressMap = new ConcurrentHashMap<>();
@@ -291,6 +294,10 @@ public class ContextUIImpl implements ContextUI {
                                .put(key, new ItemsContextMenuAction(uiInputBuilder, uiInputBuilder.buildAll()));
     }
 
+    public void addHeaderMenuButton(String name, Icon icon, @NotNull Class<? extends BaseEntity> page) {
+        headerMenuButtons.put(name, new HeaderButtonSelection(name, icon, getPageName(page)));
+    }
+
     private boolean isUpdateNotRegistered(@NotNull BaseEntityIdentifier parentEntity) {
         return !this.dynamicUpdateRegisters.containsKey(new DynamicUpdateRequest("entity-type-" + parentEntity.getDynamicUpdateType()));
     }
@@ -364,10 +371,7 @@ public class ContextUIImpl implements ContextUI {
                     throw new IllegalArgumentException(
                         "Trying add header button to page without annotation UISidebarMenu");
                 }
-                builder.setPage(
-                    defaultIfEmpty(
-                        page.getDeclaredAnnotation(UISidebarMenu.class).overridePath(),
-                        page.getSimpleName()));
+                builder.setPage(getPageName(page));
                 return this;
             }
 
@@ -387,6 +391,16 @@ public class ContextUIImpl implements ContextUI {
                 return this;
             }
 
+            @NotNull
+            @Override
+            public HeaderButtonBuilder attachToHeaderMenu(@NotNull String name) {
+                if (!headerMenuButtons.containsKey(name)) {
+                    throw new IllegalArgumentException("Unable to find header menu button: " + name);
+                }
+                builder.setAttachToHeaderMenu(name);
+                return this;
+            }
+
             @Override
             public void build() {
                 HeaderButtonNotification existedModel = headerButtonNotifications.get(entityID);
@@ -399,6 +413,12 @@ public class ContextUIImpl implements ContextUI {
                 sendHeaderButtonToUI(builder, null);
             }
         };
+    }
+
+    private static String getPageName(@NotNull Class<? extends BaseEntity> page) {
+        return defaultIfEmpty(
+            page.getDeclaredAnnotation(UISidebarMenu.class).overridePath(),
+            page.getSimpleName());
     }
 
     @Override
@@ -433,6 +453,8 @@ public class ContextUIImpl implements ContextUI {
             });
 
         NotificationResponse notificationResponse = new NotificationResponse();
+        notificationResponse.headerMenuButtons = headerMenuButtons.values();
+
         notificationResponse.dialogs = dialogRequest.values();
         UserEntity user = context.getUser();
         notificationResponse.notifications = blockNotifications.values();
@@ -580,6 +602,7 @@ public class ContextUIImpl implements ContextUI {
     }
 
     enum GlobalSendType {
+        headerMenuButton,
         popup,
         json,
         setting,
@@ -601,6 +624,7 @@ public class ContextUIImpl implements ContextUI {
     @Getter
     public static class NotificationResponse {
 
+        public Collection<HeaderButtonSelection> headerMenuButtons;
         private Collection<HeaderButtonNotification> headerButtonNotifications;
         private Collection<ProgressNotification> progress;
         private Collection<DialogModel> dialogs;

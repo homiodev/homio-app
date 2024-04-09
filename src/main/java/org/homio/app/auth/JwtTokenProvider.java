@@ -5,8 +5,11 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,8 +17,13 @@ import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.entity.UserEntity;
+import org.homio.api.entity.types.IdentityEntity;
+import org.homio.api.model.Icon;
+import org.homio.api.ui.field.action.ActionInputParameter;
+import org.homio.api.util.CommonUtils;
 import org.homio.api.util.HardwareUtils;
 import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.model.entity.user.UserBaseEntity;
 import org.homio.app.setting.system.SystemClearCacheButtonSetting;
 import org.homio.app.setting.system.SystemLogoutButtonSetting;
 import org.homio.app.setting.system.auth.SystemDisableAuthTokenOnRestartSetting;
@@ -39,6 +47,7 @@ public class JwtTokenProvider implements ContextCreated {
     private boolean regenerateSecurityIdOnRestart;
     private int jwtValidityTimeout;
     private byte[] securityId;
+    public static final HashMap<String, AccessUrlRequest> accessUrlRequests = new HashMap<>();
 
     @Override
     public void onContextCreated(ContextImpl context) throws Exception {
@@ -46,6 +55,33 @@ public class JwtTokenProvider implements ContextCreated {
             userCache.clear();
             blockedTokens.clear();
         });
+
+        context.ui().addHeaderMenuButton("access", new Icon("fas fa-key"), IdentityEntity.class);
+        context.ui().headerButtonBuilder("add-access").title("Create guest access token").icon(new Icon("fas fa-key"))
+               .clickAction(() -> {
+                   context.ui().dialog().sendDialogRequest("add-access-dialog", "add-access-dialog",
+                       (responseType, pressedButton, parameters) -> {
+                           String userName = parameters.get("user").asText();
+                           AccessUrlRequest request = new AccessUrlRequest(userName);
+                           accessUrlRequests.put(userName, request);
+                           context.ui().dialog().sendDialogRequest("access-url", "Access Url", (responseType1, pressedButton1, parameters1) -> {}, editor -> {
+                               List<ActionInputParameter> inputs = new ArrayList<>();
+                               inputs.add(ActionInputParameter.message("localhost:8080/?accessId=" + request.accessID));
+                               editor.group("General", inputs);
+                           });
+                       }, dialogEditor -> {
+                           dialogEditor.disableKeepOnUi();
+                           List<ActionInputParameter> inputs = new ArrayList<>();
+                           inputs.add(ActionInputParameter.textRequired("user", "", 3, 20));
+                           dialogEditor.submitButton("Create URL", button -> {
+                           }).group("General", inputs);
+                       });
+                   return null;
+               }).attachToHeaderMenu("access").build();
+        /*
+        for (UserlessEntity entity : context.db().findAll(UserlessEntity.class)) {
+            AccessFilter.accessIds.add(entity.getAccessId());
+        }*/
 
         this.jwtValidityTimeout = context.setting().getValue(SystemJWTTokenValidSetting.class);
         this.regenerateSecurityIdOnRestart = context.setting().getValue(SystemDisableAuthTokenOnRestartSetting.class);
@@ -160,5 +196,11 @@ public class JwtTokenProvider implements ContextCreated {
             securityId += "_" + HardwareUtils.RUN_COUNT;
         }
         return Base64.getEncoder().encode(securityId.getBytes());
+    }
+
+    @RequiredArgsConstructor
+    private static class AccessUrlRequest {
+        private final String accessID = CommonUtils.generateUUID();
+        private final String userName;
     }
 }

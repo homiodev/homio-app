@@ -12,6 +12,7 @@ import java.io.InputStream;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.CopyOption;
 import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -40,6 +41,7 @@ import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONObject;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 
@@ -315,7 +317,9 @@ public class LocalFileSystemProvider implements FileSystemProvider {
         List<Path> result = new ArrayList<>();
         Path targetPath = buildPath(targetId);
         copyEntries(entries, targetPath, options, result);
-        result.add(targetPath);
+        if(!targetId.isEmpty()) {
+            result.add(targetPath);
+        }
         return buildRoot(result);
     }
 
@@ -511,6 +515,12 @@ public class LocalFileSystemProvider implements FileSystemProvider {
                 cursor = cursor.addChild(buildTreeNode(pathCursor, pathCursor.toFile()));
             }
         }
+        try {
+            FileStore fileStore = Files.getFileStore(root);
+            long totalSpace = fileStore.getTotalSpace();
+            long freeSpace = fileStore.getUsableSpace();
+            rootPath.getAttributes().setMeta(new JSONObject().put("totalSize", totalSpace).put("freeSize", freeSpace));
+        } catch (Exception ignore){}
         return rootPath;
     }
 }

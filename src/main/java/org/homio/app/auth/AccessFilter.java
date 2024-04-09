@@ -8,6 +8,9 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
@@ -18,7 +21,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 @Log4j2
 @RequiredArgsConstructor
-public class JwtTokenFilter extends OncePerRequestFilter {
+public class AccessFilter extends OncePerRequestFilter {
+
+    public static final Set<String> accessIds = new ConcurrentSkipListSet<>();
 
     private final JwtTokenProvider jwtTokenProvider;
 

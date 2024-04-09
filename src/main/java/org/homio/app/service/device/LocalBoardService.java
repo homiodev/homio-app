@@ -3,8 +3,6 @@ package org.homio.app.service.device;
 import static org.homio.hquery.hardware.other.MachineHardwareRepository.osBean;
 
 import java.time.Duration;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import org.homio.api.Context;
 import org.homio.api.ContextVar.Variable;
@@ -34,6 +32,10 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
 
     public Set<UsbDeviceInfo> getUsbDevices() {
         return usbListener.getUsbDevices();
+    }
+
+    public UsbDeviceInfo getUsbDevice(int alias) {
+        return getUsbDevices().stream().filter(u -> u.getAlias() == alias).findAny().orElse(null);
     }
 
     @Override

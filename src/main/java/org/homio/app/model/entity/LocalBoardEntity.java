@@ -6,6 +6,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import java.io.IOException;
+import java.nio.file.FileStore;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
@@ -18,6 +21,7 @@ import org.homio.api.Context;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.types.MicroControllerBaseEntity;
 import org.homio.api.fs.TreeConfiguration;
+import org.homio.api.fs.TreeNode;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
 import org.homio.api.model.ActionResponseModel;
@@ -28,6 +32,7 @@ import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIContextMenuUploadAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
@@ -180,10 +185,39 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
     @Override
     public @NotNull List<TreeConfiguration> buildFileSystemConfiguration(@NotNull Context context) {
         List<TreeConfiguration> configurations = BaseFileSystemEntity.super.buildFileSystemConfiguration(context);
-        for (UsbDeviceInfo usbDevice : getService().getUsbDevices()) {
-            String label = StringUtils.defaultString(usbDevice.getLabel(), usbDevice.getMount());
-            configurations.add(new TreeConfiguration(this, label, usbDevice.alias, new Icon(usbDevice.getIcon(), usbDevice.getColor())));
+        for (UsbDeviceInfo usb : getService().getUsbDevices()) {
+            String label = StringUtils.defaultString(usb.getLabel(), usb.getMount());
+            TreeConfiguration configuration = new TreeConfiguration(this, label, usb.alias, new Icon(usb.getIcon(), usb.getColor()));
+            try {
+                FileStore fileStore = Files.getFileStore(Path.of(usb.getMount()));
+                long totalSpace = fileStore.getTotalSpace();
+                long freeSpace = fileStore.getUsableSpace();
+                configuration.setSize(freeSpace, totalSpace);
+            } catch (IOException ignore) {
+            }
+            configurations.add(configuration);
         }
         return configurations;
+    }
+
+    @Override
+    public String getAliasPath(int alias) {
+        UsbDeviceInfo info = getService().getUsbDevice(alias);
+        if (info != null) {
+            return info.getMount();
+        }
+        return BaseFileSystemEntity.super.getAliasPath(alias);
+    }
+
+    @UIField(order = 900, type = UIFieldType.HTML, hideInEdit = true, hideOnEmpty = true)
+    public String getMounts() {
+        return optService().map(service -> {
+            StringBuilder html = new StringBuilder();
+            for (UsbDeviceInfo usbDevice : service.getUsbDevices()) {
+                html.append("<div><i class=\"fa-fw %s\" style=\"color: %s\"></i>%s</div>".
+                    formatted(usbDevice.getIcon(), usbDevice.getColor(), usbDevice.getMount()));
+            }
+            return html.toString();
+        }).orElse(null);
     }
 }
