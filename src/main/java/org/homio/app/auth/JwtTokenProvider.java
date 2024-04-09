@@ -1,5 +1,7 @@
 package org.homio.app.auth;
 
+import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
+
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.JwtParser;
@@ -7,23 +9,23 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.types.IdentityEntity;
 import org.homio.api.model.Icon;
 import org.homio.api.ui.field.action.ActionInputParameter;
-import org.homio.api.util.CommonUtils;
 import org.homio.api.util.HardwareUtils;
+import org.homio.api.util.NotificationLevel;
 import org.homio.app.manager.common.ContextImpl;
-import org.homio.app.model.entity.user.UserBaseEntity;
+import org.homio.app.model.entity.user.UserGuestEntity;
 import org.homio.app.setting.system.SystemClearCacheButtonSetting;
 import org.homio.app.setting.system.SystemLogoutButtonSetting;
 import org.homio.app.setting.system.auth.SystemDisableAuthTokenOnRestartSetting;
@@ -31,6 +33,7 @@ import org.homio.app.setting.system.auth.SystemJWTTokenValidSetting;
 import org.homio.app.spring.ContextCreated;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -45,9 +48,8 @@ public class JwtTokenProvider implements ContextCreated {
     private final Map<String, Object> blockedTokens = new ConcurrentHashMap<>();
     private JwtParser jwtParser;
     private boolean regenerateSecurityIdOnRestart;
-    private int jwtValidityTimeout;
+    private @Getter int jwtValidityTimeout;
     private byte[] securityId;
-    public static final HashMap<String, AccessUrlRequest> accessUrlRequests = new HashMap<>();
 
     @Override
     public void onContextCreated(ContextImpl context) throws Exception {
@@ -56,32 +58,7 @@ public class JwtTokenProvider implements ContextCreated {
             blockedTokens.clear();
         });
 
-        context.ui().addHeaderMenuButton("access", new Icon("fas fa-key"), IdentityEntity.class);
-        context.ui().headerButtonBuilder("add-access").title("Create guest access token").icon(new Icon("fas fa-key"))
-               .clickAction(() -> {
-                   context.ui().dialog().sendDialogRequest("add-access-dialog", "add-access-dialog",
-                       (responseType, pressedButton, parameters) -> {
-                           String userName = parameters.get("user").asText();
-                           AccessUrlRequest request = new AccessUrlRequest(userName);
-                           accessUrlRequests.put(userName, request);
-                           context.ui().dialog().sendDialogRequest("access-url", "Access Url", (responseType1, pressedButton1, parameters1) -> {}, editor -> {
-                               List<ActionInputParameter> inputs = new ArrayList<>();
-                               inputs.add(ActionInputParameter.message("localhost:8080/?accessId=" + request.accessID));
-                               editor.group("General", inputs);
-                           });
-                       }, dialogEditor -> {
-                           dialogEditor.disableKeepOnUi();
-                           List<ActionInputParameter> inputs = new ArrayList<>();
-                           inputs.add(ActionInputParameter.textRequired("user", "", 3, 20));
-                           dialogEditor.submitButton("Create URL", button -> {
-                           }).group("General", inputs);
-                       });
-                   return null;
-               }).attachToHeaderMenu("access").build();
-        /*
-        for (UserlessEntity entity : context.db().findAll(UserlessEntity.class)) {
-            AccessFilter.accessIds.add(entity.getAccessId());
-        }*/
+        addCreateGuestAccessToken(context);
 
         this.jwtValidityTimeout = context.setting().getValue(SystemJWTTokenValidSetting.class);
         this.regenerateSecurityIdOnRestart = context.setting().getValue(SystemDisableAuthTokenOnRestartSetting.class);
@@ -113,6 +90,33 @@ public class JwtTokenProvider implements ContextCreated {
                 }
             }
         });
+    }
+
+    private static void addCreateGuestAccessToken(ContextImpl context) {
+        context.ui().addHeaderMenuButton("access", new Icon("fas fa-key"), IdentityEntity.class);
+        context.ui().headerButtonBuilder("add-access").title("Create guest access token").icon(new Icon("fas fa-key"))
+               .clickAction(() -> {
+                   context.ui().dialog().sendDialogRequest("add-access-dialog", "add-access-dialog",
+                       (responseType, pressedButton, parameters) -> {
+                           String userName = parameters.get("user").asText();
+                           UserGuestEntity entity = new UserGuestEntity();
+                           entity.setName(userName);
+                           entity.setPassword(parameters.get("password").asText());
+                           entity.setEmail("absent");
+                           entity.setJsonData("ip", MACHINE_IP_ADDRESS);
+                           context.db().save(entity);
+                           String url = "localhost:8080?ip=" + MACHINE_IP_ADDRESS + "&user=" + entity.getName();
+                           context.ui().toastr().sendMessage("Access URL", url, NotificationLevel.success, 60);
+                       }, dialogEditor -> {
+                           dialogEditor.disableKeepOnUi();
+                           List<ActionInputParameter> inputs = new ArrayList<>();
+                           inputs.add(ActionInputParameter.textRequired("user", "", 3, 20));
+                           inputs.add(ActionInputParameter.textRequired("password", "", 3, 20));
+                           dialogEditor.submitButton("Create URL", button -> {
+                           }).group("General", inputs);
+                       });
+                   return null;
+               }).attachToHeaderMenu("access").build();
     }
 
     public void revokeToken(String token) {
@@ -148,22 +152,45 @@ public class JwtTokenProvider implements ContextCreated {
         return null;
     }
 
-    String createToken(String username, Authentication authentication) {
-        Date now = new Date();
-        Date validity = new Date(now.getTime() + TimeUnit.MINUTES.toMillis(jwtValidityTimeout));
+    /*public String generateUserId(String accessID, String password) {
+        AccessUrlRequest request = accessUrlRequests
+            .values()
+            .stream()
+            .filter(f -> f.accessID.equals(accessID))
+            .findAny().orElse(null);
+        if (request != null) {
+            if (!request.password.equals(password)) {
+                throw new IllegalArgumentException("Wrong password");
+            }
+            accessUrlRequests.remove(request.userName);
+            context.ui().removeHeaderButton("access-" + request.accessID);
+            Collection<? extends GrantedAuthority> authentication = null;
+            String userToken = createToken(request.userName, authentication, TimeUnit.DAYS.toMillis(365));
+            // we should save it to database
+            return userToken;
+        }
+        return null;
+    }*/
 
-        String token = Jwts.builder()
-                .setId(UUID.randomUUID().toString())
-                .setAudience(username)
-                .claim("auth", authentication.getAuthorities())
-                .setIssuedAt(now)
-                .setIssuer("homio_app")
-                .setExpiration(validity)
-                .signWith(SignatureAlgorithm.HS256, securityId)
-                .compact();
+    String createToken(String username, Authentication authentication, long validMillis) {
+        String token = createToken(username, authentication.getAuthorities(), validMillis);
         userCache.put(token, authentication);
         removeOutdatedTokens();
         return token;
+    }
+
+    private String createToken(String username, Collection<? extends GrantedAuthority> auth, long validMillis) {
+        Date now = new Date();
+        Date validity = new Date(now.getTime() + validMillis);
+        return Jwts.builder()
+                   .setId(UUID.randomUUID().toString())
+                   .setAudience(username)
+                   .claim("auth", auth)
+                   .setIssuedAt(now)
+                   .setIssuer("homio_app")
+                   .setExpiration(validity)
+                   .signWith(SignatureAlgorithm.HS256, securityId)
+                   .compact();
     }
 
     private void regenerateSecurityID(ContextImpl context) {
@@ -196,11 +223,5 @@ public class JwtTokenProvider implements ContextCreated {
             securityId += "_" + HardwareUtils.RUN_COUNT;
         }
         return Base64.getEncoder().encode(securityId.getBytes());
-    }
-
-    @RequiredArgsConstructor
-    private static class AccessUrlRequest {
-        private final String accessID = CommonUtils.generateUUID();
-        private final String userName;
     }
 }

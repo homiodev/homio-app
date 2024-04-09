@@ -8,9 +8,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
@@ -22,8 +19,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Log4j2
 @RequiredArgsConstructor
 public class AccessFilter extends OncePerRequestFilter {
-
-    public static final Set<String> accessIds = new ConcurrentSkipListSet<>();
 
     private final JwtTokenProvider jwtTokenProvider;
 
@@ -60,6 +55,16 @@ public class AccessFilter extends OncePerRequestFilter {
                     jwtTokenProvider.revokeToken(token);
                 }
             }
+            /*String accessId = request.getParameter("access_id");
+            if(accessId != null) {
+                String userId = jwtTokenProvider.generateUserId(accessId, request.getHeader("password"));
+                response.setContentType("text/plain");
+                response.getOutputStream().write(userId.getBytes());
+                return;
+            } else {
+                String guestToken = request.getParameter("guest_token");
+                jwtTokenProvider.validateGuestUser(guestToken);
+            }*/
             chain.doFilter(request, response);
         } catch (ExpiredJwtException ex) {
             SecurityContextHolder.clearContext();

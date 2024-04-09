@@ -4,6 +4,7 @@ import static java.lang.String.format;
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 import jakarta.ws.rs.BadRequestException;
+import java.util.concurrent.TimeUnit;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -92,7 +93,7 @@ public class AuthController {
             String entityID = UserEntityDetailsService.getEntityID(authentication);
             String email = UserEntityDetailsService.getEmail(authentication);
             addUserNotificationBlock(entityID, email, true);
-            return jwtTokenProvider.createToken(username, authentication);
+            return jwtTokenProvider.createToken(username, authentication, TimeUnit.MINUTES.toMillis(jwtTokenProvider.getJwtValidityTimeout()));
         } catch (Exception ex) {
             UserBaseEntity.log.info("Login failed for <{}>", credentials.getEmail(), ex);
             throw ex;
