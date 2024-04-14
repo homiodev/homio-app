@@ -79,7 +79,7 @@ public abstract class UserBaseEntity extends IdentityEntity
     }
 
     public void setPassword(String value) {
-        if (value == null || value.length() < 6) {
+        if (value == null || value.length() < 4) {
             throw new IllegalArgumentException("USER.PASSWORD_TOO_SHORT");
         }
         setJsonDataSecure("pwd", value);

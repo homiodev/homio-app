@@ -19,7 +19,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -107,6 +110,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.stereotype.Component;
 
 @SuppressWarnings("rawtypes")
@@ -115,6 +119,7 @@ import org.springframework.stereotype.Component;
 public class ContextImpl implements Context {
 
     public static final Map<String, Object> FIELD_FETCH_TYPE = new HashMap<>();
+    public static final ThreadLocal<HttpServletRequest> REQUEST = new ThreadLocal();
     private static final Set<Class<? extends ContextCreated>> BEAN_CONTEXT_CREATED = new LinkedHashSet<>();
     private static final Set<Class<? extends ContextRefreshed>> BEAN_CONTEXT_REFRESH = new LinkedHashSet<>();
     private static final long START_TIME = System.currentTimeMillis();

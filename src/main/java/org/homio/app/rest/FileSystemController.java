@@ -177,7 +177,7 @@ public class FileSystemController {
             throw NotFoundException.fileNotFound(request.sourceFileId);
         }
         WidgetFMNodeValue node = new WidgetFMNodeValue(treeNode);
-        String content = WidgetFMNodeValue.getThumbnail(node.getTreeNode(), width, height, drawTextAsImage);
+        String content = WidgetFMNodeValue.getThumbnail(node.treeNode(), width, height, drawTextAsImage);
 
         MediaType mediaType = findMediaType(treeNode);
         return CommonUtils.inputStreamToResource(new ByteArrayInputStream(content.getBytes()), mediaType, null);

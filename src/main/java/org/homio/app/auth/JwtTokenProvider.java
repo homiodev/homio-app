@@ -99,16 +99,19 @@ public class JwtTokenProvider implements ContextCreated {
                    context.ui().dialog().sendDialogRequest("add-access-dialog", "add-access-dialog",
                        (responseType, pressedButton, parameters) -> {
                            String userName = parameters.get("user").asText();
+                           String password = parameters.get("password").asText();
                            UserGuestEntity entity = new UserGuestEntity();
                            entity.setName(userName);
-                           entity.setPassword(parameters.get("password").asText());
-                           entity.setEmail("absent");
+                           entity.setPassword(password);
+                           entity.setIeeeAddress("guest@mail.com");
+                           entity.setEmail("guest@mail.com");
                            entity.setJsonData("ip", MACHINE_IP_ADDRESS);
                            context.db().save(entity);
-                           String url = "localhost:8080?ip=" + MACHINE_IP_ADDRESS + "&user=" + entity.getName();
+                           String url = UserGuestEntity.getAccessURL(entity);
                            context.ui().toastr().sendMessage("Access URL", url, NotificationLevel.success, 60);
                        }, dialogEditor -> {
                            dialogEditor.disableKeepOnUi();
+                           dialogEditor.appearance(new Icon("fas fa-users"), null);
                            List<ActionInputParameter> inputs = new ArrayList<>();
                            inputs.add(ActionInputParameter.textRequired("user", "", 3, 20));
                            inputs.add(ActionInputParameter.textRequired("password", "", 3, 20));

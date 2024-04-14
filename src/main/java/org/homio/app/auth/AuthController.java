@@ -1,9 +1,12 @@
 package org.homio.app.auth;
 
 import static java.lang.String.format;
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 import jakarta.ws.rs.BadRequestException;
+
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -18,11 +21,15 @@ import org.homio.api.util.HardwareUtils;
 import org.homio.app.manager.common.impl.ContextAddonImpl;
 import org.homio.app.model.entity.user.UserAdminEntity;
 import org.homio.app.model.entity.user.UserBaseEntity;
+import org.homio.app.model.entity.user.UserGuestEntity;
 import org.homio.app.setting.system.SystemLogoutButtonSetting;
 import org.json.JSONObject;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -87,8 +94,7 @@ public class AuthController {
         UserBaseEntity.log.info("Login <{}>", credentials.getEmail());
         try {
             String username = credentials.getEmail();
-            val userToken = new UsernamePasswordAuthenticationToken(username, credentials.getPassword());
-            Authentication authentication = authenticationManager.authenticate(userToken);
+           Authentication authentication = getAuthentication(username, credentials.password);
             UserBaseEntity.log.info("Login success for <{}>", credentials.getEmail());
             String entityID = UserEntityDetailsService.getEntityID(authentication);
             String email = UserEntityDetailsService.getEmail(authentication);
@@ -98,6 +104,30 @@ public class AuthController {
             UserBaseEntity.log.info("Login failed for <{}>", credentials.getEmail(), ex);
             throw ex;
         }
+    }
+
+    private Authentication getAuthentication(String username, String password) {
+        if(username.equals("guest@mail.com")) {
+            UserGuestEntity user = context.db().findAll(UserGuestEntity.class)
+                    .stream().filter(u -> u.getPassword().asString().equals(password)).findAny().orElse(null);
+            if(user!=null) {
+                UserDetails principal = User
+                        .withUsername(user.getEntityID() + LIST_DELIMITER + user.getName())
+                        .password(user.getPassword().asString())
+                        .authorities(user.getRoles().toArray(new String[0]))
+                        .build();
+                return UsernamePasswordAuthenticationToken.authenticated(principal,
+                        user.getPassword().asString(), List.of(new SimpleGrantedAuthority("GUEST")));
+               // return jwtTokenProvider.createToken(username, authentication, TimeUnit.MINUTES.toMillis(jwtTokenProvider.getJwtValidityTimeout()));
+                    /*User
+                            .withUsername(user.getEntityID() + LIST_DELIMITER + name)
+                            .password(user.getPassword().asString())
+                            .authorities(roles.toArray(new String[0]))
+                            .build();*/
+            }
+        }
+        val userToken = new UsernamePasswordAuthenticationToken(username, password);
+        return authenticationManager.authenticate(userToken);
     }
 
     private void addUserNotificationBlock(String entityID, String email, boolean replace) {

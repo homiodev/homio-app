@@ -112,31 +112,6 @@ public class WidgetFMEntity extends WidgetEntity<WidgetFMEntity>
         setJsonData("dtat", value);
     }
 
-
-    @UIField(order = 54)
-    @UIFieldColorPicker
-    @UIFieldGroup("UI")
-    @UIFieldReadDefaultValue
-    public String getFileColor() {
-        return getJsonData("fnc", "#ADB5BDAA");
-    }
-
-    public void setFileColor(String value) {
-        setJsonData("fnc", value);
-    }
-
-    @UIField(order = 55)
-    @UIFieldColorPicker
-    @UIFieldGroup("UI")
-    @UIFieldReadDefaultValue
-    public String getDirectoryColor() {
-        return getJsonData("dnc", "#D8D03AAA");
-    }
-
-    public void setDirectoryColor(String value) {
-        setJsonData("dnc", value);
-    }
-
     @UIField(order = 56, showInContextMenu = true, icon = "fas fa-eye")
     @UIFieldGroup("UI")
     public boolean getShowFileCount() {

@@ -1,11 +1,5 @@
 package org.homio.app.rest;
 
-import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.defaultString;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
-import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE_AUTHORIZE;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -14,45 +8,8 @@ import jakarta.annotation.PostConstruct;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.AnnotatedType;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
-import java.nio.channels.WritableByteChannel;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import lombok.SneakyThrows;
+import lombok.*;
 import lombok.extern.log4j.Log4j2;
-import lombok.val;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -79,11 +36,7 @@ import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.UIFilterOptions;
-import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
-import org.homio.api.ui.field.action.HasDynamicUIFields;
-import org.homio.api.ui.field.action.UIActionButton;
-import org.homio.api.ui.field.action.UIContextMenuAction;
-import org.homio.api.ui.field.action.UIContextMenuUploadAction;
+import org.homio.api.ui.field.action.*;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
@@ -101,7 +54,6 @@ import org.homio.app.manager.common.EntityManager;
 import org.homio.app.manager.common.impl.ContextUIImpl.ItemsContextMenuAction;
 import org.homio.app.model.UIHideEntityIfFieldNotNull;
 import org.homio.app.model.entity.DeviceFallbackEntity;
-import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.repository.AbstractRepository;
 import org.homio.app.rest.UIFieldBuilderImpl.FieldBuilderImpl;
@@ -120,18 +72,36 @@ import org.springframework.core.annotation.MergedAnnotations.SearchStrategy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.*;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.Duration;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.defaultString;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE_AUTHORIZE;
 
 @Log4j2
 @RestController
@@ -645,25 +615,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         return context.db().getEntity(entityID);
     }
 
-    @PostMapping("/{entityID}/block")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public void updateBlockPosition(
-        @PathVariable("entityID") String entityID, @RequestBody UpdateBlockPositionRequest position) {
-        BaseEntity entity = context.db().getEntity(entityID);
-        if (entity != null) {
-            if (entity instanceof HasPosition<?> hasPosition) {
-                hasPosition.setXb(position.xb);
-                hasPosition.setYb(position.yb);
-                hasPosition.setBw(position.bw);
-                hasPosition.setBh(position.bh);
-                hasPosition.setParent(position.parent);
-                context.db().save(entity);
-            } else {
-                throw new IllegalArgumentException("Entity: " + entityID + " has no ability to update position");
-            }
-        }
-    }
-
     /*@PostMapping("/{entityID}/image")
     public DeviceBaseEntity updateItemImage(@PathVariable("entityID") String entityID, @RequestBody ImageEntity imageEntity) {
         return updateItem(entityID, true, baseEntity -> baseEntity.setImageEntity(imageEntity));
@@ -1037,17 +988,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         private String fieldFetchType;
         private String selectType;
         private Map<String, String> deps;
-    }
-
-    @Getter
-    @Setter
-    private static class UpdateBlockPositionRequest {
-
-        private int xb;
-        private int yb;
-        private int bw;
-        private int bh;
-        private String parent;
     }
 
     private record ItemContextResponse(
