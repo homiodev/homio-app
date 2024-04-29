@@ -1,13 +1,6 @@
 package org.homio.app.auth;
 
-import static java.lang.String.format;
-import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-
 import jakarta.ws.rs.BadRequestException;
-
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -31,11 +24,14 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import static java.lang.String.format;
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 @RestController
 @RequestMapping("/rest/auth")
@@ -51,16 +47,19 @@ public class AuthController {
         if (user == null) {
             UserAdminEntity userAdminEntity = context.db().getEntityRequire(UserAdminEntity.class, PRIMARY_DEVICE);
             if (StringUtils.isBlank(userAdminEntity.getEmail())) {
-                return new StatusResponse(402, null);
+                return new StatusResponse(402, HardwareUtils.APP_ID);
             }
-            return new StatusResponse(401, null);
+            return new StatusResponse(401, HardwareUtils.APP_ID);
         }
         String email = UserEntityDetailsService.getEmail(user);
         String userEntityID = UserEntityDetailsService.getEntityID(user);
 
         addUserNotificationBlock(userEntityID, email, false);
-        String version = format("%s-%s-%s", context.setting().getApplicationVersion(),
-            ContextAddonImpl.ADDON_UPDATE_COUNT, HardwareUtils.RUN_COUNT);
+        String version = format("%s-%s-%s-%s",
+                HardwareUtils.APP_ID,
+                context.setting().getApplicationVersion(),
+                ContextAddonImpl.ADDON_UPDATE_COUNT,
+                HardwareUtils.RUN_COUNT);
         return new StatusResponse(200, version);
     }
 
@@ -94,7 +93,7 @@ public class AuthController {
         UserBaseEntity.log.info("Login <{}>", credentials.getEmail());
         try {
             String username = credentials.getEmail();
-           Authentication authentication = getAuthentication(username, credentials.password);
+            Authentication authentication = getAuthentication(username, credentials.password);
             UserBaseEntity.log.info("Login success for <{}>", credentials.getEmail());
             String entityID = UserEntityDetailsService.getEntityID(authentication);
             String email = UserEntityDetailsService.getEmail(authentication);
@@ -107,10 +106,10 @@ public class AuthController {
     }
 
     private Authentication getAuthentication(String username, String password) {
-        if(username.equals("guest@mail.com")) {
+        if (username.equals("guest@mail.com")) {
             UserGuestEntity user = context.db().findAll(UserGuestEntity.class)
                     .stream().filter(u -> u.getPassword().asString().equals(password)).findAny().orElse(null);
-            if(user!=null) {
+            if (user != null) {
                 UserDetails principal = User
                         .withUsername(user.getEntityID() + LIST_DELIMITER + user.getName())
                         .password(user.getPassword().asString())
@@ -118,7 +117,7 @@ public class AuthController {
                         .build();
                 return UsernamePasswordAuthenticationToken.authenticated(principal,
                         user.getPassword().asString(), List.of(new SimpleGrantedAuthority("GUEST")));
-               // return jwtTokenProvider.createToken(username, authentication, TimeUnit.MINUTES.toMillis(jwtTokenProvider.getJwtValidityTimeout()));
+                // return jwtTokenProvider.createToken(username, authentication, TimeUnit.MINUTES.toMillis(jwtTokenProvider.getJwtValidityTimeout()));
                     /*User
                             .withUsername(user.getEntityID() + LIST_DELIMITER + name)
                             .password(user.getPassword().asString())
@@ -135,7 +134,7 @@ public class AuthController {
         if (replace || !context.ui().notification().isHasBlock(key)) {
             context.ui().notification().addBlock(key, email, new Icon("fas fa-user", "#AAAC2C"), builder ->
                     builder.visibleForUser(email)
-                           .linkToEntity(context.db().getEntityRequire(entityID))
+                            .linkToEntity(context.db().getEntityRequire(entityID))
                             .setBorderColor("#AAAC2C")
                             .addInfo(key, null, "")
                             .setRightButton(new Icon("fas fa-right-from-bracket"), "W.INFO.LOGOUT", "W.CONFIRM.LOGOUT", (ignore, params) -> {

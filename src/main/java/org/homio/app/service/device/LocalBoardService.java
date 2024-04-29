@@ -4,6 +4,8 @@ import static org.homio.hquery.hardware.other.MachineHardwareRepository.osBean;
 
 import java.time.Duration;
 import java.util.Set;
+
+import lombok.Getter;
 import org.homio.api.Context;
 import org.homio.api.ContextVar.Variable;
 import org.homio.api.ContextVar.VariableType;
@@ -11,14 +13,14 @@ import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Icon;
 import org.homio.api.service.EntityService.ServiceInstance;
 import org.homio.app.model.entity.LocalBoardEntity;
-import org.homio.app.service.device.LocalBoardUsbListener.UsbDeviceInfo;
+import org.homio.app.service.device.LocalBoardUsbListener.DiskInfo;
 import org.jetbrains.annotations.NotNull;
 
 public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
     implements HasEntityIdentifier {
 
     public static final long TOTAL_MEMORY = osBean.getTotalMemorySize();
-    private final LocalBoardUsbListener usbListener;
+    private final @Getter LocalBoardUsbListener usbListener;
 
     private Variable cpuUsageVar;
     private Variable javaCpuUsageVar;
@@ -30,11 +32,11 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
         this.usbListener = new LocalBoardUsbListener(context);
     }
 
-    public Set<UsbDeviceInfo> getUsbDevices() {
+    public Set<DiskInfo> getUsbDevices() {
         return usbListener.getUsbDevices();
     }
 
-    public UsbDeviceInfo getUsbDevice(int alias) {
+    public DiskInfo getUsbDevice(int alias) {
         return getUsbDevices().stream().filter(u -> u.getAlias() == alias).findAny().orElse(null);
     }
 

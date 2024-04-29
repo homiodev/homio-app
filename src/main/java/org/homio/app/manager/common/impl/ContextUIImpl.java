@@ -2,16 +2,16 @@ package org.homio.app.manager.common.impl;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pivovarit.function.ThrowingBiFunction;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
-import lombok.val;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.homio.api.ContextUI;
+import org.homio.api.audio.AudioFormat;
+import org.homio.api.audio.stream.ByteArrayAudioStream;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.BaseEntityIdentifier;
@@ -37,6 +37,7 @@ import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
 import org.homio.api.util.NotificationLevel;
+import org.homio.app.audio.webaudio.WebAudioAudioSink;
 import org.homio.app.builder.ui.UIInputBuilderImpl;
 import org.homio.app.builder.ui.UIInputEntityActionHandler;
 import org.homio.app.config.WebSocketConfig;
@@ -55,6 +56,7 @@ import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
+import java.io.InputStream;
 import java.time.Duration;
 import java.util.*;
 import java.util.Map.Entry;
@@ -105,10 +107,16 @@ public class ContextUIImpl implements ContextUI {
     private final @Getter
     @Accessors(fluent = true) ContextUIProgressImpl progress = new ContextUIProgressImpl();
     private final @Getter
+    @Accessors(fluent = true) ContextUIMediaImpl media = new ContextUIMediaImpl();
+
+    private final @Getter
     @NotNull Map<String, Map<String, ItemsContextMenuAction>> itemsContextMenuActions = new ConcurrentHashMap<>();
     private final @NotNull Map<String, Object> refreshConsolePlugin = new ConcurrentHashMap<>();
 
+    private WebAudioAudioSink webAudioSink;
+
     public void onContextCreated() {
+        webAudioSink = context.getBean(WebAudioAudioSink.class);
         // run hourly script to drop not used dynamicUpdateRegisters
         context
                 .bgp()
@@ -779,12 +787,12 @@ public class ContextUIImpl implements ContextUI {
     public class ContextUIToastrImpl implements ContextUIToastr {
 
         @Override
-        public void sendMessage(@Nullable String title, @Nullable String message, @Nullable NotificationLevel level, @NotNull Integer timeout) {
+        public void sendMessage(@Nullable String title, @Nullable String message, @Nullable NotificationLevel level, @Nullable Integer timeout) {
             ObjectNode param = OBJECT_MAPPER.createObjectNode();
             if (level != null) {
                 param.put("level", level.name());
             }
-            if (timeout > 3) {
+            if (timeout != null && timeout > 3) {
                 param.put("timeout", timeout);
             }
             sendGlobal(GlobalSendType.popup, null, message, title, param);
@@ -976,6 +984,16 @@ public class ContextUIImpl implements ContextUI {
             if (removed != null) {
                 removed.getValue().run();
             }
+        }
+    }
+
+    public class ContextUIMediaImpl implements ContextUIMedia {
+
+        @Override
+        @SneakyThrows
+        public void playWebAudio(InputStream stream, AudioFormat format, Integer from, Integer to) {
+            ByteArrayAudioStream audioStream = new ByteArrayAudioStream(IOUtils.toByteArray(stream), format);
+            webAudioSink.play(audioStream, null, from, to);
         }
     }
 

@@ -1,19 +1,9 @@
 package org.homio.app.model.entity;
 
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import java.io.IOException;
-import java.nio.file.FileStore;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
@@ -21,7 +11,6 @@ import org.homio.api.Context;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.types.MicroControllerBaseEntity;
 import org.homio.api.fs.TreeConfiguration;
-import org.homio.api.fs.TreeNode;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
 import org.homio.api.model.ActionResponseModel;
@@ -37,19 +26,30 @@ import org.homio.api.ui.field.action.UIContextMenuUploadAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.service.device.LocalBoardService;
-import org.homio.app.service.device.LocalBoardUsbListener.UsbDeviceInfo;
+import org.homio.app.service.device.LocalBoardUsbListener.DiskInfo;
 import org.homio.app.service.device.LocalFileSystemProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.FileStore;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+
 @Entity
 @Log4j2
 @UISidebarChildren(icon = "", color = "", allowCreateItem = false)
 public class LocalBoardEntity extends MicroControllerBaseEntity
-    implements EntityService<LocalBoardService>,
-    BaseFileSystemEntity<LocalFileSystemProvider> {
+        implements EntityService<LocalBoardService>,
+        BaseFileSystemEntity<LocalFileSystemProvider> {
 
     @Override
     public String getDefaultName() {
@@ -154,11 +154,6 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
     }
 
     @Override
-    public void assembleActions(UIInputBuilder uiInputBuilder) {
-
-    }
-
-    @Override
     protected @NotNull String getDevicePrefix() {
         return "board";
     }
@@ -185,8 +180,11 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
     @Override
     public @NotNull List<TreeConfiguration> buildFileSystemConfiguration(@NotNull Context context) {
         List<TreeConfiguration> configurations = BaseFileSystemEntity.super.buildFileSystemConfiguration(context);
-        for (UsbDeviceInfo usb : getService().getUsbDevices()) {
-            String label = StringUtils.defaultString(usb.getLabel(), usb.getMount());
+        for (DiskInfo usb : getService().getUsbDevices()) {
+            if (usb.getMount().isEmpty()) {
+                continue;
+            }
+            String label = StringUtils.defaultString(usb.getModel(), usb.getMount());
             TreeConfiguration configuration = new TreeConfiguration(this, label, usb.alias, new Icon(usb.getIcon(), usb.getColor()));
             try {
                 FileStore fileStore = Files.getFileStore(Path.of(usb.getMount()));
@@ -202,7 +200,7 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
 
     @Override
     public String getAliasPath(int alias) {
-        UsbDeviceInfo info = getService().getUsbDevice(alias);
+        DiskInfo info = getService().getUsbDevice(alias);
         if (info != null) {
             return info.getMount();
         }
@@ -213,11 +211,24 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
     public String getMounts() {
         return optService().map(service -> {
             StringBuilder html = new StringBuilder();
-            for (UsbDeviceInfo usbDevice : service.getUsbDevices()) {
-                html.append("<div><i class=\"fa-fw %s\" style=\"color: %s\"></i>%s</div>".
-                    formatted(usbDevice.getIcon(), usbDevice.getColor(), usbDevice.getMount()));
+            for (DiskInfo usbDevice : service.getUsbDevices()) {
+                html.append("<div><i class=\"fa-fw %s\" style=\"color: %s\"></i>%s - %s</div>".
+                        formatted(usbDevice.getIcon(), usbDevice.getColor(), usbDevice.getModel(),
+                                StringUtils.defaultIfEmpty(usbDevice.getMount(), "No mounted")));
             }
             return html.toString();
         }).orElse(null);
+    }
+
+    @Override
+    public void assembleActions(UIInputBuilder uiInputBuilder) {
+        optService().ifPresent(service -> service.getUsbDevices().stream()
+                .filter(d -> d.getMount().isEmpty()).forEach(diskInfo -> {
+                    uiInputBuilder.addSelectableButton("mount_" + diskInfo.getUuid(),
+                            new Icon("fab fa-usb", "#215A6A"), (context, params) -> {
+                                service.getUsbListener().handleUsbDeviceAdded(diskInfo);
+                                return null;
+                            });
+                }));
     }
 }

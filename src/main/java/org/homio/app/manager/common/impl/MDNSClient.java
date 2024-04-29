@@ -93,7 +93,7 @@ public class MDNSClient {
 
     private void registerServiceInternal(ServiceDescription service) throws IOException {
         for (JmDNS instance : jmdnsInstances.values()) {
-            log.debug("Registering new service {} at {}:{} ({})", service.serviceType,
+            log.info("Registering new service {} at {}:{} ({})", service.serviceType,
                 instance.getInetAddress().getHostAddress(), service.port, instance.getName());
             // Create one ServiceInfo object for each JmDNS instance
             ServiceInfo serviceInfo = ServiceInfo.create(service.serviceType, service.serviceName, service.port,

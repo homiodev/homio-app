@@ -41,8 +41,8 @@ public final class UserGuestEntity extends UserBaseEntity {
 
 
     public static String getAccessURL(UserGuestEntity entity) {
-        String remoteAddr = ContextImpl.REQUEST.get().getRemoteAddr();
+        String remoteHost = ContextImpl.REQUEST.get().getHeader("origin");
         String encodedText = Base64.getEncoder().encodeToString((MACHINE_IP_ADDRESS + "~~~" + entity.getName()).getBytes());
-        return "http://localhost:8888?aid=" + encodedText;
+        return remoteHost + "?aid=" + encodedText;
     }
 }
