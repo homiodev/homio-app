@@ -29,6 +29,7 @@ public class HeaderButtonNotification extends BaseNotificationModel<HeaderButton
     private String handleActionID;
     private String page;
     private Supplier<ActionResponseModel> clickAction;
+    private String attachToHeaderMenu;
 
     public HeaderButtonNotification(String entityID) {
         super(entityID);

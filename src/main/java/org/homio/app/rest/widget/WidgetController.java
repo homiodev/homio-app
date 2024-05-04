@@ -1,27 +1,9 @@
 package org.homio.app.rest.widget;
 
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.SneakyThrows;
+import lombok.*;
 import lombok.extern.log4j.Log4j2;
-import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.homio.addon.camera.entity.BaseCameraEntity;
@@ -70,13 +52,16 @@ import org.homio.app.rest.widget.WidgetChartsController.SingleValueData;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 @Log4j2
 @RestController
@@ -90,10 +75,10 @@ public class WidgetController {
     private final TimeSeriesUtil timeSeriesUtil;
 
     public WidgetController(
-        ObjectMapper objectMapper,
-        ContextImpl context,
-        WidgetService widgetService,
-        List<WidgetVideoSourceResolver> videoSourceResolvers) {
+            ObjectMapper objectMapper,
+            ContextImpl context,
+            WidgetService widgetService,
+            List<WidgetVideoSourceResolver> videoSourceResolvers) {
         this.objectMapper = objectMapper;
         this.context = context;
         this.widgetService = widgetService;
@@ -113,8 +98,8 @@ public class WidgetController {
             val valueRequest = new HasGetStatusValue.GetStatusValueRequest(context, null);
             result.put(source, ((HasGetStatusValue) entity).getStatusValue(valueRequest));
             timeSeriesUtil.addListenValueIfRequire(true, "dashboard",
-                entity, null, null, source,
-                object -> ((HasGetStatusValue) entity).getStatusValue(valueRequest));
+                    entity, null, null, source,
+                    object -> ((HasGetStatusValue) entity).getStatusValue(valueRequest));
         }
         return result;
     }
@@ -131,8 +116,11 @@ public class WidgetController {
             @PathVariable("entityID") String entityID,
             @RequestParam("w") int width,
             @RequestParam("h") int height,
-            @RequestBody List<WidgetFMPrevSnapshot> prevValues) {
-        Map<String, Long> seriesToSnapValue = prevValues.stream().collect(Collectors.toMap(n -> n.sid, n -> n.sn));
+            @RequestBody FMRequest request) {
+        if(request.prevValues==null) {
+            request.prevValues = List.of();
+        }
+        Map<String, Long> seriesToSnapValue = request.prevValues.stream().collect(Collectors.toMap(n -> n.sid, n -> n.sn));
         WidgetFMEntity entity = context.db().getEntity(entityID);
         if (entity == null) { // in case if deleted but still requested
             return Set.of();
@@ -141,7 +129,15 @@ public class WidgetController {
         SelectionSource source = DataSourceUtil.getSelection(entity.getValueDataSource());
         String parentId = source.getValue();
         String fs = DataSourceUtil.getSelection(entity.getValueDataSource()).getMetadata().get("fs").asText();
-        BaseFileSystemEntity fileSystemEntity = fileSystems.stream().filter(fileSystem -> fileSystem.getEntityID().equals(fs)).findAny().orElse(null);
+        if (fs.equals(parentId)) {
+            parentId = "";
+        }
+        if(request.cursor != null) {
+            parentId = request.cursor;
+        }
+        BaseFileSystemEntity fileSystemEntity = fileSystems.stream()
+                .filter(fileSystem -> fileSystem.getEntityID().equals(fs))
+                .findAny().orElse(null);
         if (fileSystemEntity != null) {
             return getWidgetFMNodes(width, height, seriesToSnapValue, entity, fileSystemEntity, parentId);
         } else {
@@ -151,7 +147,7 @@ public class WidgetController {
     }
 
     private Set<WidgetFMNodeValue> getWidgetFMNodes(int width, int height, Map<String, Long> seriesToSnapValue, WidgetFMEntity entity,
-        BaseFileSystemEntity fileSystemEntity, String parentId) {
+                                                    BaseFileSystemEntity fileSystemEntity, String parentId) {
         Long snapshot = seriesToSnapValue.get(entity.getEntityID());
         FileSystemProvider fileSystem = fileSystemEntity.getFileSystem(context, 0);
         Long lastUpdated = fileSystem.toTreeNode(parentId).getAttributes().getLastUpdated();
@@ -159,9 +155,9 @@ public class WidgetController {
         if (!Objects.equals(snapshot, lastUpdated)) {
             Set<TreeNode> children = findVisibleNodes(entity, parentId, fileSystem);
             items = children
-                .stream()
-                .map(WidgetFMNodeValue::new)
-                .collect(Collectors.toSet());
+                    .stream()
+                    .map(WidgetFMNodeValue::new)
+                    .collect(Collectors.toSet());
         }
         return items;
     }
@@ -169,25 +165,26 @@ public class WidgetController {
     @NotNull
     private static Set<TreeNode> findVisibleNodes(WidgetFMEntity entity, String parentId, FileSystemProvider fileSystem) {
         List<Pattern> filters = entity
-            .getFileFilters()
-            .stream()
-            .map(regex -> {
-                if (regex.startsWith("*")) {
-                    regex = "." + regex;
-                } else if (!regex.startsWith(".*")) {
-                    regex = ".*" + regex;
-                }
-                try {
-                    return Pattern.compile(regex);
-                } catch (Exception ignore) {}
-                return null;
-            }).filter(Objects::nonNull)
-            .toList();
+                .getFileFilters()
+                .stream()
+                .map(regex -> {
+                    if (regex.startsWith("*")) {
+                        regex = "." + regex;
+                    } else if (!regex.startsWith(".*")) {
+                        regex = ".*" + regex;
+                    }
+                    try {
+                        return Pattern.compile(regex);
+                    } catch (Exception ignore) {
+                    }
+                    return null;
+                }).filter(Objects::nonNull)
+                .toList();
         Set<TreeNode> allNodes = fileSystem.getChildren(parentId);
         return allNodes
-            .stream()
-            .filter(n -> filterFile(n, entity, filters))
-            .collect(Collectors.toSet());
+                .stream()
+                .filter(n -> filterFile(n, entity, filters))
+                .collect(Collectors.toSet());
     }
 
     @PostMapping("/videoSource")
@@ -350,9 +347,9 @@ public class WidgetController {
     public void updateToggleValue(@RequestBody SingleValueRequest<Boolean> request) {
         WidgetToggleSeriesEntity series = getSeriesEntity(request);
         setValue(
-            request.value ? series.getPushToggleOnValue() : series.getPushToggleOffValue(),
-            series.getSetValueDataSource(),
-            series.getSetValueDynamicParameterFields());
+                request.value ? series.getPushToggleOnValue() : series.getPushToggleOffValue(),
+                series.getSetValueDataSource(),
+                series.getSetValueDynamicParameterFields());
     }
 
     @GetMapping("/{entityID}")
@@ -363,21 +360,37 @@ public class WidgetController {
     }
 
     @GetMapping("/tab/{tabId}")
-    public List<WidgetEntityResponse> getWidgetsInTab(@PathVariable("tabId") String tabId) {
+    public List<WidgetEntityResponse> getWidgetsInTab(
+            @PathVariable("tabId") String tabId,
+            @RequestParam("w") int width,
+            @RequestParam("h") int height,
+            @RequestParam(value = "widget", required = false) String widgetEntityID) {
         List<WidgetEntity> widgets = context
-            .db()
-            .findAll(WidgetEntity.class)
-            .stream()
-            .filter(w -> w.getWidgetTabEntity().getEntityID().equals(tabId))
-            .toList();
+                .db()
+                .findAll(WidgetEntity.class)
+                .stream()
+                .filter(w -> (widgetEntityID == null || w.getEntityID().equals(widgetEntityID)) && w.getWidgetTabEntity().getEntityID().equals(tabId))
+                .toList();
+        if (!widgets.isEmpty()) {
+            ScreenLayout layout = widgets.get(0).getWidgetTabEntity().getLayoutOrDefault(width, height);
+
+            for (WidgetEntity widget : widgets) {
+                if (StringUtils.isEmpty(widget.getParent())) {
+                    widget.setXb(widget.getXb(layout.getKey()));
+                    widget.setYb(widget.getYb(layout.getKey()));
+                    widget.setBw(widget.getBw(layout.getKey()));
+                    widget.setBh(widget.getBh(layout.getKey()));
+                }
+            }
+        }
 
         List<WidgetEntityResponse> result = new ArrayList<>();
         for (WidgetEntity<?> widget : widgets) {
             updateWidgetBeforeReturnToUI(widget);
 
             UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
-            if (widget instanceof HasDynamicContextMenuActions) {
-                ((HasDynamicContextMenuActions) widget).assembleActions(uiInputBuilder);
+            if (widget instanceof HasDynamicContextMenuActions da) {
+                da.assembleActions(uiInputBuilder);
             }
             result.add(new WidgetEntityResponse(widget, uiInputBuilder.buildAll()));
         }
@@ -385,13 +398,28 @@ public class WidgetController {
         return result;
     }
 
+    @PostMapping("/{entityID}/block")
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    public void updateBlockPosition(
+            @PathVariable("entityID") String entityID, @RequestBody UpdateBlockPositionRequest position) {
+        WidgetEntity entity = context.db().getEntityRequire(entityID);
+        ScreenLayout layout = entity.getWidgetTabEntity()
+                .getLayoutOrDefault(position.getSw(), position.getSh());
+        entity.setXb(position.xb, layout.getKey());
+        entity.setYb(position.yb, layout.getKey());
+        entity.setBw(position.bw, layout.getKey());
+        entity.setBh(position.bh, layout.getKey());
+        entity.setParent(position.parent);
+        context.db().save(entity);
+    }
+
     @PostMapping("/create/{tabId}/{type}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public BaseEntity createWidget(
-        @PathVariable("tabId") String tabId,
-        @PathVariable("type") String type,
-        @RequestParam("w") int width,
-        @RequestParam("h") int height) throws Exception {
+            @PathVariable("tabId") String tabId,
+            @PathVariable("type") String type,
+            @RequestParam("w") int width,
+            @RequestParam("h") int height) throws Exception {
         log.debug("Request creating widget entity by type: <{}> in tabId <{}>", type, tabId);
         WidgetTabEntity widgetTabEntity = context.db().getEntity(tabId);
         if (widgetTabEntity == null) {
@@ -400,11 +428,11 @@ public class WidgetController {
 
         Class<? extends EntityFieldMetadata> typeClass = ContextImpl.uiFieldClasses.get(type);
         WidgetEntity<?> baseEntity = (WidgetEntity<?>) typeClass.getConstructor()
-                                                                .newInstance();
+                .newInstance();
 
         baseEntity.setWidgetTabEntity(widgetTabEntity);
         baseEntity.getWidgetTabEntity().addLayoutOptional(width, height);
-        findSuitablePosition(baseEntity);
+        findSuitablePosition(baseEntity, new AtomicBoolean());
         return context.db().save(baseEntity);
     }
 
@@ -487,6 +515,19 @@ public class WidgetController {
         context.db().save(tab);
     }
 
+    @SneakyThrows
+    @PostMapping("/insert/{widgetEntityId}")
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    public void updateTabLayout(@PathVariable("widgetEntityId") String widgetEntityID) {
+        WidgetEntity widgetEntity = context.db().getEntityRequire(widgetEntityID);
+        AtomicBoolean processed = new AtomicBoolean(true);
+        findSuitablePosition(widgetEntity, processed);
+        if (!processed.get()) {
+            throw new IllegalStateException("Unable to find free position for widget");
+        }
+        context.db().save(widgetEntity);
+    }
+
     @PostMapping("/tab/{tabId}/move")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void moveWidgetTab(@PathVariable("tabId") String tabId, @RequestParam("left") boolean left) {
@@ -565,9 +606,9 @@ public class WidgetController {
         SelectionSource selection = DataSourceUtil.getSelection(dataSource);
         BaseEntity entity = selection.getValue(context);
         ((HasSetStatusValue) entity).setStatusValue(new HasSetStatusValue.SetStatusValueRequest(
-            context,
-            dynamicParameters,
-            value));
+                context,
+                dynamicParameters,
+                value));
     }
 
     private static boolean filterFile(TreeNode n, WidgetFMEntity entity, List<Pattern> filters) {
@@ -588,8 +629,12 @@ public class WidgetController {
     /**
      * Find free space in matrix for new item
      */
-    private void findSuitablePosition(WidgetEntity<?> widget) {
-        List<WidgetEntity> widgets = context.db().findAll(WidgetEntity.class);
+    private void findSuitablePosition(WidgetEntity<?> widget, AtomicBoolean processed) {
+        List<WidgetEntity> widgets = context
+                .db()
+                .findAll(WidgetEntity.class)
+                .stream().filter(w -> w.getWidgetTabEntity().getEntityID().equals(widget.getWidgetTabEntity().getEntityID()))
+                .toList();
         if (isNotEmpty(widget.getParent())) {
             WidgetEntity layout = widgets.stream().filter(w -> w.getEntityID().equals(widget.getParent())).findAny().orElse(null);
             if (layout == null) {
@@ -600,24 +645,53 @@ public class WidgetController {
         }
 
         for (ScreenLayout sl : widget.getWidgetTabEntity().getLayout()) {
-            var hBlockCount = sl.getHb();
-            var vBlockCount = sl.getVb();
-            boolean[][] matrix = new boolean[vBlockCount][hBlockCount];
-            for (int j = 0; j < vBlockCount; j++) {
-                matrix[j] = new boolean[hBlockCount];
-            }
-            initMatrix(widgets, matrix);
-            if (!isSatisfyPosition(matrix, widget.getXb(), widget.getYb(), widget.getBw(), widget.getBh(), hBlockCount, vBlockCount)) {
-                Pair<Integer, Integer> freePosition = findMatrixFreePosition(matrix, widget.getBw(), widget.getBh(), hBlockCount, vBlockCount);
-                if (freePosition == null) {
-                    widget.setXb(-1);
-                    widget.setYb(-1);
-                } else {
-                    widget.setXb(freePosition.getKey());
-                    widget.setYb(freePosition.getValue());
-                }
+            boolean[][] matrix = initMatrix(widgets, sl);
+            AtomicBoolean slProcessed = new AtomicBoolean(false);
+            findMatrixFreePosition(widget, matrix, sl, widget.getBw(sl.getKey()), widget.getBh(sl.getKey()), slProcessed);
+            if (!slProcessed.get()) {
+                processed.set(false);
             }
 
+        }
+    }
+
+    private static void findMatrixFreePosition(WidgetEntity<?> widget, boolean[][] matrix, ScreenLayout sl,
+                                               int bw, int bh, AtomicBoolean processed) {
+        boolean satisfyPosition = isSatisfyPosition(matrix, widget.getXb(), widget.getYb(), bw, bh, sl.getHb(), sl.getVb());
+        if (!satisfyPosition) {
+            Pair<Integer, Integer> freePosition = findMatrixFreePosition(matrix, bw, bh, sl.getHb(), sl.getVb());
+            if (freePosition == null) {
+                // try decrease widget bw/bh
+                if (bw >= bh && bw > 1) {
+                    findMatrixFreePosition(widget, matrix, sl, bw - 1, bh, processed);
+                    if (processed.get()) {
+                        return;
+                    }
+                }
+                if (bh >= bw && bh > 1) {
+                    findMatrixFreePosition(widget, matrix, sl, bw, bh - 1, processed);
+                    if (processed.get()) {
+                        return;
+                    }
+                }
+
+                if (!processed.get()) {
+                    widget.setXb(-1, sl.getKey());
+                    widget.setYb(-1, sl.getKey());
+                }
+            } else {
+                widget.setBw(bw, sl.getKey());
+                widget.setBh(bh, sl.getKey());
+                widget.setXb(freePosition.getKey(), sl.getKey());
+                widget.setYb(freePosition.getValue(), sl.getKey());
+                processed.set(true);
+            }
+        } else {
+            widget.setXb(widget.getXb(), sl.getKey());
+            widget.setYb(widget.getYb(), sl.getKey());
+            widget.setBw(bw, sl.getKey());
+            widget.setBh(bh, sl.getKey());
+            processed.set(true);
         }
     }
 
@@ -638,7 +712,7 @@ public class WidgetController {
     private static boolean isSatisfyPosition(boolean[][] matrix, int xPos, int yPos, int width, int height, int hBlockCount, int vBlockCount) {
         for (int j = xPos; j < xPos + width; j++) {
             for (int i = yPos; i < yPos + height; i++) {
-                if (i >= vBlockCount || j >= hBlockCount || matrix[i][j]) {
+                if (j >= vBlockCount || i >= hBlockCount || matrix[j][i]) {
                     return false;
                 }
             }
@@ -646,13 +720,35 @@ public class WidgetController {
         return true;
     }
 
-    private static void initMatrix(List<WidgetEntity> widgets, boolean[][] matrix) {
-        for (WidgetEntity model : widgets) {
-            if (isEmpty(model.getParent())) {
-                for (int j = model.getXb(); j < model.getXb() + model.getBw(); j++) {
-                    for (int i = model.getYb(); i < model.getYb() + model.getBh(); i++) {
-                        matrix[i][j] = true;
-                    }
+    private static boolean[][] initMatrix(List<WidgetEntity> widgets, ScreenLayout sl) {
+        boolean[][] matrix = new boolean[sl.getVb()][sl.getHb()];
+        for (int j = 0; j < sl.getVb(); j++) {
+            matrix[j] = new boolean[sl.getHb()];
+        }
+
+        List<WidgetEntity> copyWidgets = new ArrayList<>(widgets);
+        for (WidgetEntity model : copyWidgets) {
+            try {
+                fillMatrixWidget(matrix, sl, model);
+            } catch (Exception ignore) {
+                // for now we ignore widget if it's unable to insert into matrix
+                copyWidgets.remove(model);
+                return initMatrix(copyWidgets, sl);
+            }
+        }
+        return matrix;
+    }
+
+    private static void fillMatrixWidget(boolean[][] matrix, ScreenLayout sl, WidgetEntity model) {
+        if (isEmpty(model.getParent())) {
+            int x = model.getXb(sl.getKey());
+            int y = model.getYb(sl.getKey());
+            if (x < 0 || y < 0) {
+                return;
+            }
+            for (int j = x; j < x + model.getBw(sl.getKey()); j++) {
+                for (int i = y; i < y + model.getBh(sl.getKey()); i++) {
+                    matrix[i][j] = true;
                 }
             }
         }
@@ -743,5 +839,23 @@ public class WidgetController {
         private int vb;
         private int sw;
         private int sh;
+    }
+
+    @Getter
+    @Setter
+    private static class UpdateBlockPositionRequest extends LayoutTabRequest {
+
+        private int xb;
+        private int yb;
+        private int bw;
+        private int bh;
+        private String parent;
+    }
+
+    @Getter
+    @Setter
+    public static class FMRequest {
+        private String cursor;
+        private List<WidgetFMPrevSnapshot> prevValues;
     }
 }

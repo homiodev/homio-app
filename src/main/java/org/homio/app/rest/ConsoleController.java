@@ -36,7 +36,11 @@ import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.OptionModel;
+import org.homio.api.service.ssh.SshBaseEntity;
+import org.homio.api.service.ssh.SshProviderService;
+import org.homio.api.service.ssh.SshProviderService.SshSession;
 import org.homio.api.setting.console.header.ConsoleHeaderSettingPlugin;
+import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.util.CommonUtils;
@@ -50,9 +54,6 @@ import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.rest.ItemController.ActionModelRequest;
 import org.homio.app.setting.system.SystemFramesSetting;
 import org.homio.app.spring.ContextCreated;
-import org.homio.app.ssh.SshBaseEntity;
-import org.homio.app.ssh.SshProviderService;
-import org.homio.app.ssh.SshProviderService.SshSession;
 import org.homio.app.utils.OptionUtil;
 import org.homio.app.utils.UIFieldUtils;
 import org.jetbrains.annotations.NotNull;
@@ -119,9 +120,21 @@ public class ConsoleController implements ContextCreated {
             Collection<? extends HasEntityIdentifier> baseEntities = tableConsolePlugin.getValue();
             Class<? extends HasEntityIdentifier> clazz = tableConsolePlugin.getEntityClass();
 
+            List<Collection<UIInputEntity>> dynamicActions = new ArrayList<>();
+            for (HasEntityIdentifier entity : baseEntities) {
+                UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
+                if (entity instanceof HasDynamicContextMenuActions da) {
+                    da.assembleActions(uiInputBuilder);
+                    dynamicActions.add(uiInputBuilder.buildAll());
+                } else {
+                    dynamicActions.add(null);
+                }
+            }
+
             return new EntityContent()
                     .setList(baseEntities)
                     .setActions(UIFieldUtils.fetchUIActionsFromClass(clazz, context))
+                    .setDynamicActions(dynamicActions)
                     .setUiFields(UIFieldUtils.fillEntityUIMetadataList(clazz, context));
         }
         return consolePlugin.getValue();
@@ -239,20 +252,42 @@ public class ConsoleController implements ContextCreated {
         }
     }
 
-    @PostMapping("/{entityID}/ssh")
+    @PostMapping("/ssh/{entityID}/tab/{tabID}")
     @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
-    public SshProviderService.SshSession openSshSession(@PathVariable("entityID") String entityID) {
-        log.info("Request to open ssh: {}", entityID);
+    public SshProviderService.SshSession openSshSession(
+        @PathVariable("entityID") String entityID,
+        @PathVariable("tabID") String tabID) {
+        log.info("Request to open ssh: {}. TabID: {}", entityID, tabID);
+
+        SshSession session = sessions
+            .values().stream()
+            .filter(s -> tabID.equals(s.getMetadata().get("tabID")))
+            .findAny().orElse(null);
+        if (session != null) {
+            return session;
+        }
+
         BaseEntity entity = context.db().getEntity(entityID);
         if (entity instanceof SshBaseEntity) {
             SshProviderService service = ((SshBaseEntity<?, ?>) entity).getService();
             SshSession sshSession = service.openSshSession((SshBaseEntity) entity);
             if (sshSession != null) {
+                sshSession.getMetadata().put("tabID", tabID);
                 sessions.put(sshSession.getToken(), sshSession);
             }
             return sshSession;
         }
         throw new IllegalArgumentException("Entity: " + entityID + " has to implement 'SshBaseEntity'");
+    }
+
+    @GetMapping("/ssh/tabs")
+    @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
+    public List<SshTab> getOpenedSshTabs() {
+        return sessions
+            .values()
+            .stream()
+            .map(s -> new SshTab(s.getMetadata().get("tabID"), s.getEntity().getName()))
+            .toList();
     }
 
     @PostMapping("/ssh/{token}/resize")
@@ -391,6 +426,7 @@ public class ConsoleController implements ContextCreated {
         Collection<?> list;
         List<EntityUIMetaData> uiFields;
         Collection<UIInputEntity> actions;
+        List<Collection<UIInputEntity>> dynamicActions;
     }
 
     @Setter
@@ -427,5 +463,13 @@ public class ConsoleController implements ContextCreated {
                 return new FrameConfiguration(targetHost);
             }
         }, true);
+    }
+
+    @Getter
+    @RequiredArgsConstructor
+    public static class SshTab {
+
+        private final String entityID;
+        private final String name;
     }
 }

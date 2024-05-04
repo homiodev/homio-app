@@ -1,42 +1,13 @@
 package org.homio.app.rest;
 
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static org.apache.commons.lang3.StringUtils.defaultString;
-import static org.homio.api.ui.field.selection.UIFieldTreeNodeSelection.LOCAL_FS;
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.homio.app.model.entity.user.UserBaseEntity.FILE_MANAGER_RESOURCE_AUTHORIZE;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import jakarta.ws.rs.BadRequestException;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.CopyOption;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import lombok.SneakyThrows;
+import lombok.*;
 import lombok.experimental.Accessors;
 import org.apache.commons.io.FileUtils;
 import org.homio.api.Context;
+import org.homio.api.audio.AudioFormat;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.fs.FileSystemProvider;
@@ -47,21 +18,35 @@ import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
 import org.homio.app.service.FileSystemService;
-import org.homio.app.service.LocalFileSystemProvider;
+import org.homio.app.service.device.LocalFileSystemProvider;
+import org.homio.hquery.Curl;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.nio.file.CopyOption;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static org.apache.commons.lang3.StringUtils.defaultString;
+import static org.homio.api.ui.field.selection.UIFieldTreeNodeSelection.LOCAL_FS;
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.homio.app.model.entity.user.UserBaseEntity.FILE_MANAGER_RESOURCE_AUTHORIZE;
 
 @RestController
 @RequestMapping("/rest/fs")
@@ -94,7 +79,7 @@ public class FileSystemController {
     @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
     public Collection<TreeNode> list(@RequestBody NodeRequest request) {
         return fileSystemService.getFileSystem(request.sourceFs, request.alias)
-                                .getChildren(request.sourceFileId);
+                .getChildren(request.sourceFileId);
     }
 
     @DeleteMapping
@@ -106,8 +91,8 @@ public class FileSystemController {
     @PostMapping("/{sourceFs}/download")
     @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
     public ResponseEntity<InputStreamResource> download(
-        @PathVariable("sourceFs") String sourceFs,
-        @RequestBody NodeRequest request) {
+            @PathVariable("sourceFs") String sourceFs,
+            @RequestBody NodeRequest request) {
         FileSystemProvider fileSystem = fileSystemService.getFileSystem(sourceFs, request.alias);
         TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileId);
         if (treeNode == null || treeNode.getId() == null) {
@@ -119,11 +104,25 @@ public class FileSystemController {
     }
 
     @SneakyThrows
+    @PostMapping("/{sourceFs}/playAudio")
+    public void playAudio(
+            @PathVariable("sourceFs") String sourceFs,
+            @RequestBody NodeRequest request) {
+        FileSystemProvider fileSystem = fileSystemService.getFileSystem(sourceFs, request.alias);
+        TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileId);
+        if (treeNode == null || treeNode.getId() == null) {
+            throw NotFoundException.fileNotFound(request.sourceFileId);
+        }
+        InputStream inputStream = fileSystem.getEntryInputStream(treeNode.getId());
+        context.ui().media().playWebAudio(inputStream, AudioFormat.MP3,null, null);
+    }
+
+    @SneakyThrows
     @GetMapping("/{jsonContent}/download")
     @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
     public ResponseEntity<InputStreamResource> download(@PathVariable("jsonContent") String jsonContent,
-        @RequestParam(value = "start", required = false) double start,
-        @RequestParam(value = "end", required = false) double end) {
+                                                        @RequestParam(value = "start", required = false) double start,
+                                                        @RequestParam(value = "end", required = false) double end) {
         byte[] content = Base64.getDecoder().decode(jsonContent.getBytes());
         NodeRequest nodeRequest = OBJECT_MAPPER.readValue(content, NodeRequest.class);
         if (end > 0) {
@@ -146,13 +145,13 @@ public class FileSystemController {
     @SneakyThrows
     private InputStream getTrimVideoInputStream(FileSystemProvider fileSystem, String sourceFileId, double start, double end) {
         TreeNode treeNode = fileSystem.toTreeNode(sourceFileId);
-        String fn = treeNode.getName() + "." + treeNode.getAttributes().getType();
+        String fn = treeNode.getName();
         Path trimFile = CommonUtils.getTmpPath().resolve(fn);
         Files.deleteIfExists(trimFile);
         if (fileSystem instanceof LocalFileSystemProvider fsl) {
             File videoFile = fsl.getFile(sourceFileId);
             context.media().fireFfmpeg("-ss " + start,
-                videoFile.getAbsolutePath(), "-to " + end + " -c:v copy -c:a copy \"" + trimFile + "\"", 600);
+                    videoFile.getAbsolutePath(), "-to " + end + " -c:v copy -c:a copy \"" + trimFile + "\"", 600);
         } else {
             Files.copy(fileSystem.getEntryInputStream(sourceFileId), trimFile, REPLACE_EXISTING);
         }
@@ -166,18 +165,18 @@ public class FileSystemController {
     @PostMapping("/{sourceFs}/preview")
     @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
     public ResponseEntity<InputStreamResource> preview(
-        @PathVariable("sourceFs") String sourceFs,
-        @RequestParam("w") int width,
-        @RequestParam("h") int height,
-        @RequestParam(value = "drawTextAsImage", required = false) boolean drawTextAsImage,
-        @RequestBody NodeRequest request) {
+            @PathVariable("sourceFs") String sourceFs,
+            @RequestParam("w") int width,
+            @RequestParam("h") int height,
+            @RequestParam(value = "drawTextAsImage", required = false) boolean drawTextAsImage,
+            @RequestBody NodeRequest request) {
         FileSystemProvider fileSystem = fileSystemService.getFileSystem(sourceFs, request.alias);
         TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileId);
         if (treeNode == null || treeNode.getId() == null) {
             throw NotFoundException.fileNotFound(request.sourceFileId);
         }
         WidgetFMNodeValue node = new WidgetFMNodeValue(treeNode);
-        String content = WidgetFMNodeValue.getThumbnail(node.getTreeNode(), width, height, drawTextAsImage);
+        String content = WidgetFMNodeValue.getThumbnail(node.treeNode(), width, height, drawTextAsImage);
 
         MediaType mediaType = findMediaType(treeNode);
         return CommonUtils.inputStreamToResource(new ByteArrayInputStream(content.getBytes()), mediaType, null);
@@ -201,9 +200,9 @@ public class FileSystemController {
     @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
     public ResponseEntity<InputStreamResource> download(@RequestBody DownloadRequest request) {
         Path zipFile = archiveSource(request.sourceFs, request.alias, "zip", request.sourceFileIds,
-            "downloadContent", null, null);
+                "downloadContent", null, null);
         return CommonUtils.inputStreamToResource(
-            Files.newInputStream(zipFile), new MediaType("application", "zip"), null);
+                Files.newInputStream(zipFile), new MediaType("application", "zip"), null);
     }
 
     @PostMapping("/create")
@@ -232,7 +231,7 @@ public class FileSystemController {
         ArchiveUtil.unzip(archive, zipFormat, targetPath, null, null, issueHandler);
         Set<String> ids = Arrays.stream(Objects.requireNonNull(targetPath.toFile().listFiles())).map(File::toString).collect(Collectors.toSet());
         TreeNode fileSystemItem = targetFs.copy(fileSystemService.getLocalFileSystem().toTreeNodes(ids), request.targetDir,
-            FileSystemProvider.UploadOption.Replace);
+                FileSystemProvider.UploadOption.Replace);
 
         if (request.removeSource) {
             sourceFs.delete(Collections.singleton(request.sourceFileId));
@@ -245,13 +244,13 @@ public class FileSystemController {
     public TreeNode archive(@RequestBody ArchiveNodeRequest request) throws Exception {
         // make archive from requested files/folders
         Path zipFile = archiveSource(request.sourceFs, request.alias, request.format,
-            request.sourceFileIds, request.targetName, request.level, request.password);
+                request.sourceFileIds, request.targetName, request.level, request.password);
 
         try {
             TreeNode zipTreeNode = TreeNode.of(zipFile.toString(), zipFile, fileSystemService.getLocalFileSystem());
 
             return fileSystemService.getFileSystem(request.targetFs, request.targetAlias)
-                                    .copy(zipTreeNode, request.targetDir, FileSystemProvider.UploadOption.Replace);
+                    .copy(zipTreeNode, request.targetDir, FileSystemProvider.UploadOption.Replace);
         } finally {
             Files.deleteIfExists(zipFile);
         }
@@ -275,24 +274,36 @@ public class FileSystemController {
         return fileSystemItem;
     }
 
+    @SneakyThrows
     @PostMapping("/upload")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public TreeNode upload(
             @RequestParam("sourceFs") String sourceFs,
             @RequestParam("sourceFileId") String sourceFileId,
-        @RequestParam("alias") int alias,
+            @RequestParam("alias") int alias,
             @RequestParam("replace") boolean replace,
-            @RequestParam("data") MultipartFile[] files) {
+            @RequestParam(value = "url", defaultValue = "") String url,
+            @RequestParam(value = "data", required = false) MultipartFile[] files) {
         FileSystemProvider fileSystem = fileSystemService.getFileSystem(sourceFs, alias);
-        Set<TreeNode> treeNodes = Stream.of(files).map(TreeNode::of).collect(Collectors.toSet());
-        return fileSystem.copy(treeNodes, sourceFileId, FileSystemProvider.UploadOption.Replace);
+        if (files != null && files.length > 0) {
+            Set<TreeNode> treeNodes = Stream.of(files).map(TreeNode::of).collect(Collectors.toSet());
+            return fileSystem.copy(treeNodes, sourceFileId, FileSystemProvider.UploadOption.Replace);
+        } else if (!url.isEmpty()) {
+            URI uri = new URI(url);
+            String name = Paths.get(uri.getPath()).getFileName().toString();
+            TreeNode treeNode = new TreeNode(false, false, name, name,
+                    (long) Curl.getFileSize(uri.toURL()), null, null, null)
+                    .setInputStream(uri.toURL().openStream());
+            return fileSystem.copy(treeNode, sourceFileId, FileSystemProvider.UploadOption.Replace);
+        }
+        throw new IllegalArgumentException("Unable to upload from unknown source");
     }
 
     @PostMapping("/rename")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public TreeNode rename(@RequestBody RenameNodeRequest request) {
         return fileSystemService.getFileSystem(request.sourceFs, request.alias)
-                                .rename(request.sourceFileId, request.newName, getUploadOption(request));
+                .rename(request.sourceFileId, request.newName, getUploadOption(request));
     }
 
     private void loadSelectedChildren(GetFSRequest request, BaseFileSystemEntity fileSystem, TreeConfiguration configuration) {
@@ -304,7 +315,8 @@ public class FileSystemController {
                     if (treeNodes != null) {
                         configuration.setChildren(treeNodes);
                     }
-                } catch (Exception ignore) {} // case when input selectedNode.id is invalid
+                } catch (Exception ignore) {
+                } // case when input selectedNode.id is invalid
             }
         }
     }
@@ -337,7 +349,7 @@ public class FileSystemController {
     }
 
     private Path archiveSource(String fs, int alias, String format, Set<String> sourceFileIds, String targetName, String level, String password)
-        throws IOException {
+            throws IOException {
         FileSystemProvider sourceFs = fileSystemService.getFileSystem(fs, alias);
 
         Collection<TreeNode> entries = sourceFs.toTreeNodes(sourceFileIds);
@@ -369,14 +381,14 @@ public class FileSystemController {
     private Collection<BaseFileSystemEntity> getRequestedFileSystems(GetFSRequest request) {
         if (request.fileSystemIds == null || request.fileSystemIds.isEmpty()) {
             return this.fileSystemService.getFileSystems()
-                                         .stream()
-                                         .filter(BaseFileSystemEntity::isShowInFileManager)
-                                         .collect(Collectors.toList());
+                    .stream()
+                    .filter(BaseFileSystemEntity::isShowInFileManager)
+                    .collect(Collectors.toList());
         } else {
             return request.fileSystemIds
-                .stream()
-                .map(fileSystemService::getFileSystemEntity)
-                .collect(Collectors.toList());
+                    .stream()
+                    .map(fileSystemService::getFileSystemEntity)
+                    .collect(Collectors.toList());
         }
     }
 

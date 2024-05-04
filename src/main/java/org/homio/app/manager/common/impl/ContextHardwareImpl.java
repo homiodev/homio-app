@@ -3,7 +3,7 @@ package org.homio.app.manager.common.impl;
 import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
 import static org.apache.commons.lang3.SystemUtils.IS_OS_MAC;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.homio.app.service.LocalBoardService.TOTAL_MEMORY;
+import static org.homio.app.service.device.LocalBoardService.TOTAL_MEMORY;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
@@ -21,6 +21,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.Context;
 import org.homio.api.ContextHardware;
+import org.homio.api.util.CommonUtils;
 import org.homio.api.util.HardwareUtils;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.hquery.ProgressBar;
@@ -48,7 +49,7 @@ public class ContextHardwareImpl implements ContextHardware {
     }
 
     public void onContextCreated() throws Exception {
-        HardwareUtils.APP_ID = context.setting().getEnv("appId", String.valueOf(System.currentTimeMillis()), true);
+        HardwareUtils.APP_ID = context.setting().getEnv("appId", CommonUtils.generateUUID(), true);
         HardwareUtils.MACHINE_IP_ADDRESS = networkHardwareRepository.getIPAddress();
         HardwareUtils.RUN_COUNT = context.setting().getEnv("runCount", 1, true);
         context.setting().setEnv("runCount", HardwareUtils.RUN_COUNT + 1);

@@ -143,7 +143,7 @@ public final class OptionUtil {
             if (baseEntity instanceof HasStatusAndMsg status) {
                 optionModel.setStatus(status);
             }
-            baseEntity.configureOptionModel(optionModel);
+            baseEntity.configureOptionModel(optionModel, context);
             String description = null;
             if (baseEntity instanceof SelectionConfiguration conf) {
                 optionModel.setIcon(conf.getSelectionIcon().getIcon());

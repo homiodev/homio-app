@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.Getter;
@@ -111,12 +112,19 @@ public class VariableController {
     // show all read/write variables
     @GetMapping("/options")
     public List<OptionModel> getWorkspaceVariableValues() {
-        return context.toOptionModels(getAllVariables());
+        return context.toOptionModels(getAllVariables(s ->
+            !s.startsWith(WorkspaceGroup.PREFIX + "broadcasts")));
+    }
+
+    @GetMapping("/broadcasts")
+    public List<OptionModel> getWorkspaceVariableBroadcastsValues() {
+        return context.toOptionModels(getAllVariables(s ->
+            s.startsWith(WorkspaceGroup.PREFIX + "broadcasts")));
     }
 
     @GetMapping("/{type}")
     public List<OptionModel> getWorkspaceVariables(@PathVariable("type") String type) {
-        return OptionModel.entityList(context.db().findAllByPrefix(type));
+        return OptionModel.entityList(context.db().findAllByPrefix(type), context);
     }
 
     @PostMapping("/source/history/info")
@@ -203,10 +211,13 @@ public class VariableController {
         return chartData;
     }
 
-    private List<WorkspaceVariable> getAllVariables() {
-        return context.db().findAll(WorkspaceVariable.class)
-                            .stream()
-                            .filter(s -> !s.getWorkspaceGroup().getEntityID().equals(WorkspaceGroup.PREFIX + "broadcasts"))
+    private List<WorkspaceVariable> getAllVariables(Predicate<String> filter) {
+        return context
+            .db()
+            .findAll(WorkspaceVariable.class)
+            .stream()
+            // filter broadcasts variables for 'real' variables
+            .filter(s -> filter.test(s.getWorkspaceGroup().getEntityID()))
                             .collect(Collectors.toList());
     }
 
@@ -238,7 +249,7 @@ public class VariableController {
         private int minutes; // show all data if -1
         private long timestamp; // may be 0 to search from last available date
         private boolean forward; // source from or to
-        private int minItems = 100; // minimum items to load if too few items in from..to range
+        private int minItems = 100; // minimum items to load if too few items in from...to range
         private int splitCount = 100; // uses for full chart snapshot loading
     }
 

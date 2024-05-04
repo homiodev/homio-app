@@ -245,7 +245,7 @@ public class ContextWidgetImpl implements ContextWidget {
 
     @Override
     public @NotNull List<OptionModel> getDashboardTabs() {
-        return OptionModel.entityList(context.db().findAll(WidgetTabEntity.class));
+        return OptionModel.entityList(context.db().findAll(WidgetTabEntity.class), context);
     }
 
     @NotNull
@@ -254,7 +254,7 @@ public class ContextWidgetImpl implements ContextWidget {
         String tab = params.getString("SELECTION.DASHBOARD_TAB");
         val includeEndpoints = widgetDefinition.getEndpoints(entity).stream()
                 .filter(pd -> params.getBoolean(pd.getEndpointEntityID()))
-                .collect(Collectors.toList());
+                .toList();
         List<WidgetDefinition.Requests> requests = widgetDefinition.getRequests();
         if (requests != null) {
             for (WidgetDefinition.Requests request : requests) {

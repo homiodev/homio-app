@@ -6,12 +6,19 @@ import static org.homio.app.model.entity.SettingEntity.getKey;
 import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;
 
 import com.pivovarit.function.ThrowingConsumer;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Writer;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -53,7 +60,7 @@ public class ContextSettingImpl implements ContextSetting {
 
     @Getter
     private static Path propertiesLocation;
-    private static Properties homioProperties;
+    private static CommentedProperties homioProperties;
 
     public static final Map<String, SettingPlugin> settingPluginsByPluginKey = new HashMap<>();
     public static final Map<Class<? extends DynamicConsoleHeaderContainerSettingPlugin>, List<SettingEntity>> dynamicHeaderSettings = new HashMap<>();
@@ -195,13 +202,17 @@ public class ContextSettingImpl implements ContextSetting {
     }
 
     @Override
-    public <T> T getEnv(@NotNull String key, @NotNull Class<T> classType, @Nullable T defaultValue, boolean store) {
+    public <T> T getEnv(@NotNull String key, @NotNull Class<T> classType, @Nullable T defaultValue, boolean store,
+        @Nullable String description) {
         String value = getHomioProperties().getProperty(key);
         if (value == null) {
             if (environment.containsProperty(key)) {
                 return environment.getProperty(key, classType);
             }
             if (store && defaultValue != null) {
+                if (StringUtils.isNotEmpty(description)) {
+                    getHomioProperties().addComment(key, description);
+                }
                 setEnv(key, defaultValue.toString());
             }
             return defaultValue;
@@ -210,9 +221,9 @@ public class ContextSettingImpl implements ContextSetting {
     }
 
     @SneakyThrows
-    public static Properties getHomioProperties() {
+    public static CommentedProperties getHomioProperties() {
         if (homioProperties == null) {
-            homioProperties = new Properties();
+            homioProperties = new CommentedProperties();
             propertiesLocation = CommonUtils.getRootPath().resolve("homio.properties");
             log.info("Uses configuration file: {}", propertiesLocation);
             try {
@@ -279,7 +290,6 @@ public class ContextSettingImpl implements ContextSetting {
     public void onContextCreated() {
         List<Class<? extends SettingPlugin>> settingClasses = classFinder.getClassesWithParent(SettingPlugin.class);
         addSettingsFromSystem(settingClasses);
-
         configureProxy();
     }
 
@@ -406,5 +416,71 @@ public class ContextSettingImpl implements ContextSetting {
         System.setProperty("https.proxyHost", ip);
         System.setProperty("http.proxyPort", port);
         System.setProperty("https.proxyPort", port);
+    }
+
+    public static class CommentedProperties extends Properties {
+
+        private final Map<String, String> comments = new LinkedHashMap<>();
+
+        public void addComment(String key, String comment) {
+            comments.put(key, comment);
+        }
+
+        @Override
+        public synchronized void load(InputStream inStream) throws IOException {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inStream, "UTF-8"));
+            String line;
+            StringBuilder buffer = new StringBuilder();
+            String currentKey = null;
+
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+
+                if (line.startsWith("#") || line.startsWith("!")) {
+                    buffer.append(line);
+                    buffer.append(System.lineSeparator());
+                } else if (line.contains("=")) {
+                    if (currentKey != null) {
+                        comments.put(currentKey, buffer.toString());
+                        buffer = new StringBuilder();
+                    }
+
+                    int index = line.indexOf('=');
+                    String key = line.substring(0, index).trim();
+                    String value = line.substring(index + 1).trim();
+                    currentKey = key;
+                    super.setProperty(key, value);
+                }
+            }
+
+            if (currentKey != null) {
+                comments.put(currentKey, buffer.toString());
+            }
+        }
+
+        @Override
+        public synchronized void store(Writer writer, String comments) throws IOException {
+            BufferedWriter bw = new BufferedWriter(writer);
+            if (comments != null) {
+                bw.write("# ");
+                bw.write(comments);
+                bw.write(System.lineSeparator());
+            }
+
+            for (Map.Entry<Object, Object> entry : entrySet()) {
+                String key = (String) entry.getKey();
+                String value = (String) entry.getValue();
+
+                if (comments != null && this.comments.containsKey(key)) {
+                    bw.write("# ");
+                    bw.write(this.comments.get(key));
+                    bw.write(System.lineSeparator());
+                }
+
+                bw.write(key + "=" + value);
+                bw.write(System.lineSeparator());
+            }
+            bw.flush();
+        }
     }
 }

@@ -33,6 +33,8 @@ import org.homio.api.model.FileModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.service.EntityService;
+import org.homio.api.service.ssh.SshBaseEntity;
+import org.homio.api.service.ssh.SshProviderService;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
@@ -53,7 +55,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     implements BaseFileSystemEntity<SshGenericFileSystem> {
 
     @Override
-    public void configureOptionModel(OptionModel optionModel) {
+    public void configureOptionModel(@NotNull OptionModel optionModel, @NotNull Context context) {
         String user = getUser();
         optionModel.setDescription((user.isEmpty() ? "" : user + "@") + getHost() + ":" + getPort());
     }
@@ -406,7 +408,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         return getJsonDataHashCode("host", "port", "user", "pwd", "key_pwd", "prv_key", "ct");
     }
 
-    protected enum PublicKeyAuthSign {
+    public enum PublicKeyAuthSign {
         SHA1, SHA256, SHA512
     }
 
@@ -449,18 +451,26 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         }
 
         @Override
-        public SshSession<SshGenericEntity> openSshSession(SshGenericEntity entity) {
+        public SshSession<SshGenericEntity> openSshSession(@NotNull SshGenericEntity entity) {
             return sshServerEndpoint.openSession(entity);
         }
 
         @Override
-        public void resizeSshConsole(SshSession sshSession, int cols) {
+        public void execute(@NotNull SshSession sshSession, @NotNull String command) {
+            sshServerEndpoint.execute(sshSession, command);
+        }
+
+        @Override
+        public void resizeSshConsole(@NotNull SshSession sshSession, int cols) {
             sshServerEndpoint.resizeSshConsole(sshSession, cols);
         }
 
         @Override
-        public void closeSshSession(SshSession<SshGenericEntity> sshSession) {
-            sshServerEndpoint.closeSession(sshSession);
+        public void closeSshSession(@Nullable SshSession<SshGenericEntity> session) {
+            if (session == null) {
+                return;
+            }
+            sshServerEndpoint.closeSession(session);
         }
     }
 }

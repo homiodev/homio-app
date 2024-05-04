@@ -1,33 +1,5 @@
-package org.homio.app.service;
+package org.homio.app.service.device;
 
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static org.apache.commons.lang3.StringUtils.trimToEmpty;
-import static org.homio.api.fs.BaseCachedFileSystemProvider.fixPath;
-import static org.homio.api.util.CommonUtils.TIKA;
-
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.AccessDeniedException;
-import java.nio.file.CopyOption;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
@@ -38,10 +10,28 @@ import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.ui.UI.Color;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.LocalBoardEntity;
+import org.homio.hquery.Curl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONObject;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.*;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static org.apache.commons.lang3.StringUtils.trimToEmpty;
+import static org.homio.api.fs.BaseCachedFileSystemProvider.fixPath;
+import static org.homio.api.util.CommonUtils.TIKA;
+import static org.homio.hquery.Curl.ONE_MB;
 
 @Getter
 public class LocalFileSystemProvider implements FileSystemProvider {
@@ -315,7 +305,9 @@ public class LocalFileSystemProvider implements FileSystemProvider {
         List<Path> result = new ArrayList<>();
         Path targetPath = buildPath(targetId);
         copyEntries(entries, targetPath, options, result);
-        result.add(targetPath);
+        if (!targetId.isEmpty()) {
+            result.add(targetPath);
+        }
         return buildRoot(result);
     }
 
@@ -338,7 +330,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
             Path pathItemId = items.get(i);
             String pathItemIdStr = fixPath(pathItemId);
             TreeNode foundedObject =
-                currentChildren.stream().filter(c -> Objects.equals(c.getId(), pathItemIdStr)).findAny().orElseThrow(() ->
+                    currentChildren.stream().filter(c -> Objects.equals(c.getId(), pathItemIdStr)).findAny().orElseThrow(() ->
                             new IllegalStateException("Unable find object: " + pathItemIdStr));
             currentChildren = getChildren(pathItemIdStr);
             foundedObject.addChildren(currentChildren);
@@ -376,9 +368,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
         if (entries.size() == 1 && !entries.iterator().next().getAttributes().isDir()) {
             TreeNode entry = entries.iterator().next();
             Path entryPath = hasFileInPathname ? targetPath : targetPath.resolve(entry.getName());
-            try (InputStream stream = entry.getInputStream()) {
-                Files.copy(stream, entryPath, options);
-            }
+            copyNode(options, entry, entryPath);
             result.add(entryPath);
             return;
         }
@@ -387,12 +377,27 @@ public class LocalFileSystemProvider implements FileSystemProvider {
             result.add(entryPath);
 
             if (!entry.getAttributes().isDir()) {
-                try (InputStream stream = entry.getInputStream()) {
-                    Files.copy(stream, entryPath, options);
-                }
+                copyNode(options, entry, entryPath);
             } else {
                 Files.createDirectories(entryPath);
                 copyEntries(entry.getFileSystem().getChildren(entry), entryPath, options, result);
+            }
+        }
+    }
+
+    private void copyNode(CopyOption[] options, TreeNode entry, Path entryPath) throws IOException {
+        Long size = entry.getAttributes().getSize();
+        if (size != null && size / ONE_MB >= 2) {
+            if(options[0] == StandardCopyOption.REPLACE_EXISTING) {
+                Files.delete(entryPath);
+            }
+            entity.context().ui().progress().run("copy-" + entry.getId(), true, progressBar ->
+                            Curl.downloadWithProgress(entry.getInputStream(), entry.getName(), entryPath, progressBar, size),
+                    ex -> {
+                    });
+        } else {
+            try (InputStream stream = entry.getInputStream()) {
+                Files.copy(stream, entryPath, options);
             }
         }
     }
@@ -510,6 +515,13 @@ public class LocalFileSystemProvider implements FileSystemProvider {
                 pathCursor = pathCursor.resolve(pathItem);
                 cursor = cursor.addChild(buildTreeNode(pathCursor, pathCursor.toFile()));
             }
+        }
+        try {
+            FileStore fileStore = Files.getFileStore(root);
+            long totalSpace = fileStore.getTotalSpace();
+            long freeSpace = fileStore.getUsableSpace();
+            rootPath.getAttributes().setMeta(new JSONObject().put("totalSize", totalSpace).put("freeSize", freeSpace));
+        } catch (Exception ignore) {
         }
         return rootPath;
     }

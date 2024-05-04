@@ -10,6 +10,7 @@ import com.pivovarit.function.ThrowingConsumer;
 import com.pivovarit.function.ThrowingFunction;
 import com.pivovarit.function.ThrowingRunnable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -61,6 +62,7 @@ import org.homio.app.json.BgpProcessResponse;
 import org.homio.app.manager.bgp.InternetAvailabilityBgpService;
 import org.homio.app.manager.bgp.WatchdogBgpService;
 import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.utils.CollectionUtils.LastBytesBuffer;
 import org.homio.hquery.ProgressBar;
 import org.homio.hquery.StreamGobbler;
 import org.jetbrains.annotations.NotNull;
@@ -442,7 +444,6 @@ public class ContextBGPImpl implements ContextBGP {
     @Override
     public @NotNull ProcessBuilder processBuilder(@NotNull String name) {
         ProcessContextImpl processContext = new ProcessContextImpl();
-        processContext.name = name;
         return new ProcessBuilder() {
 
             @Override
@@ -485,7 +486,7 @@ public class ContextBGPImpl implements ContextBGP {
             public @NotNull ProcessContext execute(@NotNull String command) {
                 processContext.threadContext = builder(name)
                         .onError(processContext::onError)
-                        .execute(() -> processContext.run(command));
+                        .execute(() -> processContext.run(command, name));
                 return processContext;
             }
         };
@@ -785,6 +786,9 @@ public class ContextBGPImpl implements ContextBGP {
         private Map<String, ThrowingRunnable<Exception>> simpleWorkUnitListeners;
         private Consumer<Exception> errorListener;
 
+        private LastBytesBuffer info;
+        private StreamGobbler streamGobbler;
+
         @Override
         public String getTimeToNextSchedule() {
             if (scheduledFuture == null || (period == null && delay == null)) {
@@ -866,6 +870,35 @@ public class ContextBGPImpl implements ContextBGP {
             }
         }
 
+        // not support batch processes now
+        public void rename(@NotNull String newName) {
+            this.name = newName;
+            if (schedulers.containsKey(newName)) {
+                throw new IllegalArgumentException("Process with name: '" + newName + "' already exists");
+            }
+            schedulers.put(newName, this);
+            schedulers.remove(name);
+        }
+
+        @Override
+        public void writeStreamInfo(byte[] content) {
+            getInfoBuffer().append(content);
+        }
+
+        @Override
+        public void attachInputStream(@NotNull InputStream inputStream, @NotNull InputStream errorStream) {
+            this.streamGobbler = new StreamGobbler(getName(),
+                s -> getInfoBuffer().append(s.getBytes()),
+                s -> getInfoBuffer().append(s.getBytes()));
+        }
+
+        public synchronized LastBytesBuffer getInfoBuffer() {
+            if (info == null) {
+                info = new LastBytesBuffer(10_000);
+            }
+            return info;
+        }
+
         private void cancelProcessInternal(boolean mayInterruptIfRunning) {
             if (scheduledFuture != null) {
                 if (scheduledFuture.isCancelled() || scheduledFuture.isDone() || scheduledFuture.cancel(mayInterruptIfRunning)) {
@@ -876,6 +909,9 @@ public class ContextBGPImpl implements ContextBGP {
 
         private void processFinished() {
             stopped = true;
+            if (streamGobbler != null) {
+                streamGobbler.stopStream(100, 100);
+            }
             if (!showOnUI || hideOnUIAfterCancel) {
                 ContextBGPImpl.this.schedulers.remove(name);
             }
@@ -901,8 +937,12 @@ public class ContextBGPImpl implements ContextBGP {
         public Consumer<String> errorConsumer;
         public @Nullable Logger logger;
         public @Nullable HasStatusAndMsg entity;
-        private String name;
         private StreamGobbler streamGobbler;
+
+        @Override
+        public @NotNull String getName() {
+            return threadContext.getName();
+        }
 
         @Override
         public boolean isStopped() {
@@ -918,7 +958,7 @@ public class ContextBGPImpl implements ContextBGP {
         private void cancelProcess(boolean sendSignal, boolean shutdownHook) {
             if (process != null) {
                 if (sendSignal) {
-                    stopProcess(process, name);
+                    stopProcess(process, getName());
                 }
 
                 if (streamGobbler != null && !shutdownHook) {
@@ -928,7 +968,7 @@ public class ContextBGPImpl implements ContextBGP {
             }
         }
 
-        public void run(@NotNull String command) throws Exception {
+        public void run(@NotNull String command, @NotNull String name) throws Exception {
             getLogger().info("[{}]: Starting process command: '{}'", name, command);
             process = Runtime.getRuntime().exec(command);
             executeOnExitImpl("Process: " + name, () -> cancelProcess(true, true));
@@ -950,9 +990,7 @@ public class ContextBGPImpl implements ContextBGP {
             if (errorConsumer != null || inputConsumer != null || logger != null) {
                 if (errorConsumer == null) {
                     if (logger != null) {
-                        errorConsumer = msg -> {
-                            logger.error("[{}]: {}", name, msg);
-                        };
+                        errorConsumer = msg -> logger.error("[{}]: {}", name, msg);
                     } else {
                         errorConsumer = msg -> {
                         };
@@ -960,9 +998,7 @@ public class ContextBGPImpl implements ContextBGP {
                 }
                 if (inputConsumer == null) {
                     if (logger != null) {
-                        inputConsumer = msg -> {
-                            logger.info("[{}]: {}", name, msg);
-                        };
+                        inputConsumer = msg -> logger.info("[{}]: {}", name, msg);
                     } else {
                         inputConsumer = msg -> {
                         };
@@ -989,19 +1025,19 @@ public class ContextBGPImpl implements ContextBGP {
 
         private void executeFinishHandler(Exception ex, int exitCode) {
             if (ex != null) {
-                getLogger().error("[{}]: Process finished with status: '{}' and error: '{}'", name, exitCode, CommonUtils.getErrorMessage(ex));
+                getLogger().error("[{}]: Process finished with status: '{}' and error: '{}'", getName(), exitCode, CommonUtils.getErrorMessage(ex));
                 if (entity != null) {
                     entity.setStatusError(ex);
                 }
             } else {
-                getLogger().info("[{}]: Process finished with status: {}", name, exitCode);
+                getLogger().info("[{}]: Process finished with status: {}", getName(), exitCode);
             }
 
             if (finishHandler != null) {
                 try {
                     finishHandler.accept(ex, exitCode);
                 } catch (Exception fex) {
-                    getLogger().error("[{}]: Error occurred during finish process", name, fex);
+                    getLogger().error("[{}]: Error occurred during finish process", getName(), fex);
                 }
             }
             if (streamGobbler != null) {

@@ -10,7 +10,7 @@ import org.apache.catalina.filters.RequestFilter;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 import org.homio.app.auth.CacheAuthenticationProvider;
-import org.homio.app.auth.JwtTokenFilter;
+import org.homio.app.auth.AccessFilter;
 import org.homio.app.auth.JwtTokenProvider;
 import org.homio.app.auth.UserEntityDetailsService;
 import org.homio.app.manager.common.impl.ContextSettingImpl;
@@ -93,7 +93,8 @@ public class SecurityConfiguration {
         http.exceptionHandling(exception -> exception.accessDeniedPage("/login"));
 
         // Apply JWT
-        JwtTokenFilter customFilter = new JwtTokenFilter(jwtTokenProvider);
+        AccessFilter customFilter = new AccessFilter(jwtTokenProvider);
+
         http.addFilterBefore(customFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

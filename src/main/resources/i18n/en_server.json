@@ -1,9 +1,18 @@
 {
+  "MOUNT": {
+    "SUCCESS": "Mount device to {{VALUE}} successfully",
+    "SUCCESS_P": "Mount device to {{VALUE}} permanent successfully"
+  },
+  "field": {
+    "GROUP_NAME": "Group name",
+    "BROADCAST_NAME": "Variable name"
+  },
   "OPEN_WEATHER_VAR_NAME": "OpenWeather var of {{VALUE}}",
   "INSTALL_ERROR": "Error during installation",
   "BOARD_INFO": "Board info",
   "NO_BOARD_SELECTED": "No selected board",
   "TITLE": {
+    "TMATE_DISABLED": "Tmate: [disabled]. Only one running instance allowed",
     "DEVICES_STAT": "Online {{ONLINE}} of {{TOTAL}} devices"
   },
   "OPTION_DEFAULT": " (Default)",

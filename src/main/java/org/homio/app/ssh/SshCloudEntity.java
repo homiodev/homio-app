@@ -50,7 +50,7 @@ public class SshCloudEntity extends IdentityEntity implements
         SshCloudEntity entity = context.db().getEntity(SshCloudEntity.class, PRIMARY_DEVICE);
         if (entity == null) {
             entity = new SshCloudEntity()
-                    .setHostname("homio.org")
+                    .setHostname("ssh.homio.org")
                     .setProvider(StringUtils.uncapitalize(SshTunnelCloudProviderService.class.getSimpleName()))
                     .setSyncUrl("https://homio.org/server/sync")
                     .setPort(2222)
@@ -58,7 +58,6 @@ public class SshCloudEntity extends IdentityEntity implements
             entity.setEntityID(PRIMARY_DEVICE);
             entity.setName("Homio cloud");
             entity.setJsonData("dis_del", true);
-            entity.setJsonData("dis_edit", true);
             context.db().save(entity);
         }
         return entity;

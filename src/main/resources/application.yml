@@ -1,4 +1,5 @@
 spring:
+  data.jpa.repositories.bootstrap-mode: lazy
   servlet:
     multipart:
       max-file-size: 100MB

@@ -10,6 +10,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.homio.api.Context;
+import org.homio.app.manager.common.ContextImpl;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
@@ -18,7 +20,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 @Log4j2
 @RequiredArgsConstructor
-public class JwtTokenFilter extends OncePerRequestFilter {
+public class AccessFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
 
@@ -55,6 +57,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
                     jwtTokenProvider.revokeToken(token);
                 }
             }
+            ContextImpl.REQUEST.set(request);
             chain.doFilter(request, response);
         } catch (ExpiredJwtException ex) {
             SecurityContextHolder.clearContext();

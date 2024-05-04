@@ -12,6 +12,7 @@ import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.fs.FileSystemProvider;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.LocalBoardEntity;
+import org.homio.app.service.device.LocalFileSystemProvider;
 import org.homio.app.setting.console.ConsoleFMClearCacheButtonSetting;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;

@@ -42,14 +42,13 @@ public class WebAudioAudioSink implements AudioSink {
         }
         try (AudioStream stream = audioStream) {
             log.debug("Received audio stream of format {}", audioStream.getFormat());
-            if (audioStream instanceof URLAudioStream) {
+            if (stream instanceof URLAudioStream urlAudioStream) {
                 // it is an external URL, so we can directly pass this on.
-                URLAudioStream urlAudioStream = (URLAudioStream) audioStream;
                 ((ContextUIImpl) context.ui()).sendAudio(urlAudioStream.getUrl());
-            } else if (audioStream instanceof FixedLengthAudioStream) {
+            } else if (stream instanceof FixedLengthAudioStream fixedLengthAudioStream) {
                 // we need to serve it for a while and make it available to multiple clients, hence only
                 // FixedLengthAudioStreams are supported.
-                String url = audioService.createAudioUrl((FixedLengthAudioStream) audioStream, 60);
+                String url = audioService.createAudioUrl(fixedLengthAudioStream, 60);
                 ((ContextUIImpl) context.ui()).sendAudio(url);
             } else {
                 throw new IllegalArgumentException(

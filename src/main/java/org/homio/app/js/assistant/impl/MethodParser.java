@@ -33,7 +33,7 @@ final class MethodParser {
                 Stream.of(clazz.getMethods());
 
         stream.forEach(method -> {
-            if (!method.getDeclaringClass().getName().startsWith("org.homio.smart.") &&
+            if (!method.getDeclaringClass().getName().startsWith("org.homio.") &&
                     !method.getDeclaringClass().getName().equals("java.lang.Object")
                     && !method.getDeclaringClass().getName().equals("java.lang.Enum")) {
                 if (methodFitParser.match(method, methodName)) {
