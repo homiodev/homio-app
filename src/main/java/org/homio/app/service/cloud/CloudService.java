@@ -1,7 +1,5 @@
 package org.homio.app.service.cloud;
 
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
@@ -17,6 +15,8 @@ import org.homio.app.ssh.SshCloudEntity;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
+
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 @Log4j2
 @Component
@@ -69,7 +69,7 @@ public class CloudService implements ContextCreated {
                 if (currentEntity != null
                         && currentEntity.isPrimary()
                         && currentEntity.getStatus() == Status.ERROR
-                    && currentEntity.isRestartOnFailure()) {
+                        && currentEntity.isRestartOnFailure()) {
                     return "Error status of: " + currentEntity.getTitle();
                 }
                 return null;
@@ -120,14 +120,11 @@ public class CloudService implements ContextCreated {
                 log.info("Starting cloud connection: '{}'", currentEntity);
                 currentEntity.setStatus(Status.INITIALIZE);
                 cloudProvider.updateNotificationBlock();
-                cloudProvider.start();
-                cloudProvider.updateNotificationBlock();
+                cloudProvider.start(() -> cloudProvider.updateNotificationBlock());
             } catch (Exception ex) {
-                String message = CommonUtils.getErrorMessage(ex);
                 currentEntity.setStatusError(ex);
                 log.error("Unable to start cloud connection: '{}'. Msg: {}", currentEntity, CommonUtils.getErrorMessage(ex));
                 cloudProvider.updateNotificationBlock(ex);
-                // context.ui().sendErrorMessage(Lang.getServerMessage("ERROR.CLOUD", message), ex);
             }
         });
     }
