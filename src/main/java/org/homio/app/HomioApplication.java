@@ -1,14 +1,5 @@
 package org.homio.app;
 
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.homio.api.util.CommonUtils.getErrorMessage;
-
-import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Properties;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
@@ -29,10 +20,23 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.NestedExceptionUtils;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Properties;
+import java.util.jar.Attributes;
+import java.util.jar.Manifest;
+
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.homio.api.util.CommonUtils.getErrorMessage;
+
 @EnableHQuery(scanBaseClassesPackage = "org.homio")
 @SpringBootApplication(exclude = {
-    ErrorMvcAutoConfiguration.class,
-    MongoAutoConfiguration.class
+        ErrorMvcAutoConfiguration.class,
+        MongoAutoConfiguration.class
 })
 public class HomioApplication implements WebMvcConfigurer {
 
@@ -42,19 +46,25 @@ public class HomioApplication implements WebMvcConfigurer {
 
     @SneakyThrows
     public static void main(String[] args) throws IOException {
+        String version = getAppVersion();
+        if (args.length == 1 && args[0].equals("--version")) {
+            System.out.println(version);
+            return;
+        }
+        System.out.println("Starting Homio app v" + version);
         // set primary class loader
         Thread.currentThread().setContextClassLoader(HomioClassLoader.INSTANCE);
         // set root path before init log4j2
         setRootPath();
-        System.setProperty("server.version", defaultIfEmpty(HomioApplication.class.getPackage().getImplementationVersion(), "0.0"));
+        System.setProperty("server.version", version);
         Logger log = LogManager.getLogger(HomioApplication.class);
         setDatabaseProperties(log);
         redirectConsoleOutput(log);
 
         try {
             ConfigurableApplicationContext context = new SpringApplicationBuilder(AppConfig.class)
-                .listeners(new LogService())
-                .run(args);
+                    .listeners(new LogService())
+                    .run(args);
             if (!context.isRunning()) {
                 log.error("Exist Homio due unable to start context");
                 ContextImpl.exitApplication(context, 7);
@@ -69,6 +79,17 @@ public class HomioApplication implements WebMvcConfigurer {
             log.error("Unable to start Homio application: {}", getErrorMessage(cause));
             throw ex;
         }
+    }
+
+    private static String getAppVersion() throws IOException {
+        try (InputStream inputStream = HomioApplication.class.getResourceAsStream("/META-INF/MANIFEST.MF")) {
+            if (inputStream != null) {
+                Manifest manifest = new Manifest(inputStream);
+                Attributes attributes = manifest.getMainAttributes();
+                return attributes.getValue("Implementation-Version");
+            }
+        }
+        return "0.0.0";
     }
 
     private static void redirectConsoleOutput(Logger log) {
@@ -93,7 +114,7 @@ public class HomioApplication implements WebMvcConfigurer {
         Path rootPath;
         if (StringUtils.isEmpty(sysRootPath)) {
             rootPath = (SystemUtils.IS_OS_WINDOWS ? SystemUtils.getUserHome().toPath().resolve("homio") :
-                Paths.get("/opt/homio"));
+                    Paths.get("/opt/homio"));
             if (!Files.exists(rootPath)) {
                 ApplicationHome applicationHome = new ApplicationHome();
                 rootPath = applicationHome.getDir().toPath();
@@ -132,7 +153,7 @@ public class HomioApplication implements WebMvcConfigurer {
         }
 
         log.info("Use database of type '{}'. Url: {}. Auth: '{}'/'{}'", type,
-            defaultIfEmpty(url, defaultURL), user, pwd);
+                defaultIfEmpty(url, defaultURL), user, pwd);
 
         setProperty("databaseType", "dbType", defaultIfEmpty(type, "sqlite"));
         setProperty("spring.datasource.url", "dbUrl", defaultIfEmpty(url, defaultURL));

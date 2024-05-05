@@ -514,7 +514,7 @@ public class ContextImpl implements Context {
                 builder.setUpdatable(
                         (progressBar, version) -> appGitHub.updateProject("homio", progressBar, false, projectUpdate -> {
                             Path jarLocation = Paths.get(setting().getEnvRequire("appPath", String.class, CommonUtils.getRootPath().toString(), true));
-                            Path archiveAppPath = jarLocation.resolve("homio-app.jar.gz");
+                            Path archiveAppPath = jarLocation.resolve("homio-app.zip");
                             Files.deleteIfExists(archiveAppPath);
                             try {
                                 projectUpdate.downloadReleaseFile(version, archiveAppPath.getFileName().toString(), archiveAppPath);

@@ -162,14 +162,15 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
         setJsonData("cpu_interval", value);
     }
 
-    public static void ensureDeviceExists(Context context) {
+    public static LocalBoardEntity ensureDeviceExists(Context context) {
         LocalBoardEntity entity = context.db().getEntity(LocalBoardEntity.class, PRIMARY_DEVICE);
         if (entity == null) {
             log.info("Save default compute board device");
             entity = new LocalBoardEntity();
             entity.setEntityID(PRIMARY_DEVICE);
-            context.db().save(entity);
+            return context.db().save(entity);
         }
+        return entity;
     }
 
     @Override

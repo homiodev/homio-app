@@ -8,14 +8,16 @@ import org.homio.api.ContextUI;
 import org.homio.api.model.Icon;
 import org.homio.api.ui.field.action.ActionInputParameter;
 import org.homio.api.util.Lang;
+import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.app.setting.system.SystemAutoMountUsbSetting;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.*;
+
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 @Log4j2
 // BAD CODE
@@ -117,48 +119,53 @@ public class LocalBoardUsbListener {
     }
 
     @SneakyThrows
-    private void mountUsb(String path, boolean save, String icon, String color, DiskInfo usbDevice) {
-        Files.createDirectories(Paths.get(path));
-        context.hardware().execute("mount -o iocharset=utf8 " + usbDevice.getSourcePath() + " " + path);
-        usbDevice.mount = path;
+    private void mountUsb(String mountTo, boolean save, String icon, String color, DiskInfo usbDevice) {
+        Files.createDirectories(Paths.get(mountTo));
+        context.hardware().execute("mount -o iocharset=utf8 " + usbDevice.getSourcePath() + " " + mountTo);
+        usbDevice.mount = mountTo;
         String text = "MOUNT.SUCCESS";
         if (save) {
-            Path fstab = Paths.get("/etc/fstab");
-            List<String> lines = Files.readAllLines(fstab);
-            String existed = lines.stream().filter(l -> l.contains(usbDevice.uuid)).findAny().orElse(null);
-            if (existed != null) {
-                return;
-            }
-            lines.add("#INFO:%s~~~%s".formatted(icon, color));
-            lines.add("UUID=%s %s %s defaults,iocharset=utf8 0 0".formatted(usbDevice.uuid, path, usbDevice.type));
-            Files.write(fstab, lines);
+            LocalBoardEntity entity = LocalBoardEntity.ensureDeviceExists(context);
+            List<String> usbList = entity.getJsonDataList("usb");
+            usbList.add(OBJECT_MAPPER.writeValueAsString(new UsbEntity(icon, color, usbDevice.getUuid(), mountTo)));
+            entity.setJsonDataList("usb", usbList);
+            context.db().save(entity);
             text += "_P";
         }
-        context.ui().toastr().success(Lang.getServerMessage(text, path));
+        context.ui().toastr().success(Lang.getServerMessage(text, mountTo));
     }
 
     private void findAndFillIconColor(DiskInfo usbDevice) {
         try {
-            List<String> lines = Files.readAllLines(Paths.get("/etc/fstab"));
-            for (int i = 0; i < lines.size(); i++) {
-                String line = lines.get(i);
-                if (line.startsWith("UUID=" + usbDevice.uuid)) {
-                    if (i > 0 && lines.get(i - 1).startsWith("#INFO:")) {
-                        String[] comment = lines.get(i - 1).substring("#INFO:".length()).split("~~~");
-                        usbDevice.icon = comment[0];
-                        usbDevice.color = comment[1];
-                    }
-                    return;
+            UsbEntity usbEntity = getSavedUsbInfo().get(usbDevice.uuid);
+            if (usbEntity != null) {
+                usbDevice.icon = usbEntity.icon;
+                usbDevice.color = usbEntity.color;
+                try {
+                    context.hardware().execute("mount -o iocharset=utf8 " + usbDevice.getSourcePath() + " " + usbEntity.mountTo);
+                    usbDevice.mount = usbEntity.mountTo;
+                } catch (Exception ex) {
+                    log.warn("Unable to mount device: {}", usbDevice, ex);
                 }
             }
-        } catch (Exception ex) {
-            log.error("Unable to read /etc/fstab", ex);
         } finally {
             if (usbDevice.icon == null) {
                 usbDevice.icon = "fab fa-usb";
                 usbDevice.color = "#215A6A";
             }
         }
+    }
+
+    @SneakyThrows
+    private @NotNull Map<String, UsbEntity> getSavedUsbInfo() {
+        LocalBoardEntity entity = LocalBoardEntity.ensureDeviceExists(context);
+        List<String> usbList = entity.getJsonDataList("usb");
+        Map<String, UsbEntity> usbEntities = new HashMap<>();
+        for (String usbInfo : usbList) {
+            UsbEntity usbEntity = OBJECT_MAPPER.readValue(usbInfo, UsbEntity.class);
+            usbEntities.put(usbEntity.uuid, usbEntity);
+        }
+        return usbEntities;
     }
 
     @Getter
@@ -263,4 +270,13 @@ public class LocalBoardUsbListener {
     }
 
     private static final String CHECK_USB = "sudo fdisk --list && printf \"\n--------\n\" &&  df -h";
+
+    @NoArgsConstructor
+    @AllArgsConstructor
+    private static class UsbEntity {
+        private String icon;
+        private String color;
+        private String uuid;
+        private String mountTo;
+    }
 }
