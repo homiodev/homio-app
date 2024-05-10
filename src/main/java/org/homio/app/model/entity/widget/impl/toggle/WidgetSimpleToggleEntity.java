@@ -14,6 +14,8 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Set;
+
 @Entity
 public class WidgetSimpleToggleEntity extends WidgetEntity<WidgetSimpleToggleEntity>
         implements HasBackground, HasSourceServerUpdates, HasSingleValueDataSource, HasToggle, HasAlign, HasPadding {
@@ -36,6 +38,11 @@ public class WidgetSimpleToggleEntity extends WidgetEntity<WidgetSimpleToggleEnt
     @Override
     public String getDefaultName() {
         return null;
+    }
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+
     }
 
     // @UIField(order = 32)

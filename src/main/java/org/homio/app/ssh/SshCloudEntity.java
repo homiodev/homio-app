@@ -40,6 +40,8 @@ import org.homio.app.service.cloud.SshTunnelCloudProviderService;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
+import java.util.Set;
+
 @Log4j2
 @Entity
 @UISidebarChildren(icon = "fas fa-cloud", color = "#644DAB")
@@ -61,17 +63,6 @@ public class SshCloudEntity extends IdentityEntity implements
             context.db().save(entity);
         }
         return entity;
-    }
-
-    @Override
-    public String getDescriptionImpl() {
-        if (getUser().isEmpty()) {
-            return "W.ERROR.USER_REQUIRED";
-        }
-        if (getHostname().isEmpty()) {
-            return "W.ERROR.HOST_REQUIRED";
-        }
-        return super.getDescriptionImpl();
     }
 
     @UIField(order = 1, hideInEdit = true, disableEdit = true)
@@ -198,6 +189,19 @@ public class SshCloudEntity extends IdentityEntity implements
     @Override
     public String getDefaultName() {
         return "Cloud SSH";
+    }
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+        if(getUser().isEmpty()) {
+            fields.add("user");
+        }
+        if(getHostname().isEmpty()) {
+            fields.add("hostname");
+        }
+        if(getProvider().isEmpty()) {
+            fields.add("provider");
+        }
     }
 
     @Override

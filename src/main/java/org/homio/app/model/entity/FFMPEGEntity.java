@@ -11,11 +11,7 @@ import jakarta.persistence.Entity;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -109,6 +105,11 @@ public class FFMPEGEntity extends MediaEntity implements
     @Override
     public String getDefaultName() {
         return "Ffmpeg";
+    }
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+
     }
 
     @Override

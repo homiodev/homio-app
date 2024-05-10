@@ -46,12 +46,12 @@ public class HomioApplication implements WebMvcConfigurer {
 
     @SneakyThrows
     public static void main(String[] args) throws IOException {
-        String version = getAppVersion();
+        String version = "v" + getAppVersion();
         if (args.length == 1 && args[0].equals("--version")) {
             System.out.println(version);
             return;
         }
-        System.out.println("Starting Homio app v" + version);
+        System.out.println("Starting Homio app " + version);
         // set primary class loader
         Thread.currentThread().setContextClassLoader(HomioClassLoader.INSTANCE);
         // set root path before init log4j2

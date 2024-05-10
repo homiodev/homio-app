@@ -1,13 +1,7 @@
 package org.homio.app.model.entity.user;
 
-import static org.homio.api.util.Constants.ADMIN_ROLE;
-import static org.homio.api.util.Constants.GUEST_ROLE;
-import static org.homio.api.util.Constants.PRIVILEGED_USER_ROLE;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import java.util.HashSet;
-import java.util.Set;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,6 +23,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import static org.homio.api.util.Constants.*;
 
 @Entity
 public abstract class UserBaseEntity extends IdentityEntity
@@ -208,6 +207,16 @@ public abstract class UserBaseEntity extends IdentityEntity
     private void assertCorrectPassword(Context context, JSONObject json) {
         if (this.getUserType() == UserType.ADMIN && !matchPassword(json.getString("currentPassword"), context.getBean(PasswordEncoder.class))) {
             throw new IllegalArgumentException("W.ERROR.PASSWORD_NOT_MATCH");
+        }
+    }
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+        if (getEmail().isEmpty()) {
+            fields.add("email");
+        }
+        if (getPassword().isEmpty()) {
+            fields.add("password");
         }
     }
 }

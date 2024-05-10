@@ -3,6 +3,8 @@ package org.homio.app.model.entity.widget.impl.color;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 import jakarta.persistence.Entity;
+
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
@@ -67,6 +69,11 @@ public class WidgetColorEntity extends WidgetEntity<WidgetColorEntity>
     @Override
     public String getDefaultName() {
         return null;
+    }
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+
     }
 
     @UIField(order = 10)

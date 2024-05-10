@@ -151,6 +151,11 @@ public class SettingEntity extends BaseEntity {
     }
 
     @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+
+    }
+
+    @Override
     public @NotNull String getEntityPrefix() {
         return PREFIX;
     }

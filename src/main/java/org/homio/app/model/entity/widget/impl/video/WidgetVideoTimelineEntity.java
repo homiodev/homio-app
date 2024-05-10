@@ -3,6 +3,8 @@ package org.homio.app.model.entity.widget.impl.video;
 import jakarta.persistence.Entity;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+
 import org.homio.addon.camera.entity.CameraPlaybackStorage;
 import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.api.model.OptionModel;
@@ -61,6 +63,13 @@ public class WidgetVideoTimelineEntity extends WidgetEntity<WidgetVideoTimelineE
     @Override
     public String getDefaultName() {
         return null;
+    }
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+        if(getDataSource().isEmpty()) {
+            fields.add("dataSource");
+        }
     }
 
     @Override

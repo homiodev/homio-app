@@ -238,6 +238,11 @@ public class Go2RTCEntity extends MediaEntity implements HasEntityLog,
         return ActionResponseModel.showError("W.ERROR.NO_HANDLER");
     }
 
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+
+    }
+
     @UIContextMenuAction(value = "GET_LIST",
                          icon = "fab fa-quinscape",
                          iconColor = "#899343")

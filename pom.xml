@@ -11,7 +11,7 @@
   </parent>
 
   <properties>
-    <graalvm.version>23.0.1</graalvm.version>
+    <graalvm.version>24.0.1</graalvm.version>
     <homio-api.version>1.3.2</homio-api.version>
     <homio-primary-addons.version>1.3.2</homio-primary-addons.version>
     <start-class>org.homio.app.HomioApplication</start-class>
@@ -205,10 +205,6 @@
       <version>1.0.0</version>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-all</artifactId>
-    </dependency>
-    <dependency>
       <artifactId>commons-io</artifactId>
       <groupId>commons-io</groupId>
     </dependency>
@@ -315,8 +311,16 @@
     </dependency>
 
     <dependency>
-      <artifactId>spring-boot-starter-data-jpa</artifactId>
+      <groupId>org.springframework.data</groupId>
+      <artifactId>spring-data-jpa</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jdbc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.hibernate.orm</groupId>
+      <artifactId>hibernate-core</artifactId>
     </dependency>
 
     <dependency>
@@ -491,10 +495,6 @@
     <dependency>
       <artifactId>swagger-annotations</artifactId>
       <groupId>io.swagger</groupId>
-    </dependency>
-    <dependency>
-      <artifactId>grpc-all</artifactId>
-      <groupId>io.grpc</groupId>
     </dependency>
     <dependency>
       <groupId>org.jvnet.winp</groupId>

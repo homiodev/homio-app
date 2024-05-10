@@ -3,6 +3,8 @@ package org.homio.app.model.entity.widget.impl.video;
 import jakarta.persistence.Entity;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.video.HasVideoSources;
@@ -17,6 +19,7 @@ import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
+import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
 @Entity
@@ -109,6 +112,13 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
             String videoEntityID = DataSourceUtil.getSelection(entity.getValueDataSource()).getEntityID();
             list.add(OptionModel.of("$DEVICE_URL/rest/media/video/%s/snapshot.jpg".formatted(videoEntityID), "snapshot.jpg"));
             return list;
+        }
+    }
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+        if(getValueDataSource().isEmpty()) {
+            fields.add("valueDataSource");
         }
     }
 }

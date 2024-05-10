@@ -1,13 +1,6 @@
 package org.homio.app.ssh;
 
 import jakarta.persistence.Entity;
-import java.net.URI;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
@@ -23,6 +16,14 @@ import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.net.URI;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Entity
 @UISidebarChildren(icon = "fas fa-draw-polygon", color = "#CC0092")
@@ -146,7 +147,7 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
         @Override
         public SshSession openSshSession(@NotNull SshRawWebSocketEntity sshEntity) {
             return new SshSession(String.valueOf(entity.getRawWebSocketAddress().hashCode()),
-                entity.getRawWebSocketAddress(), sshEntity);
+                    entity.getRawWebSocketAddress(), sshEntity);
         }
 
         @Override
@@ -157,6 +158,13 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
         @Override
         public void closeSshSession(@Nullable SshSession<SshRawWebSocketEntity> sshSession) {
             // no need to close session due it's raw ws address
+        }
+    }
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+        if (getRawWebSocketAddress().isEmpty()) {
+            fields.add("rawWebSocketAddress");
         }
     }
 }

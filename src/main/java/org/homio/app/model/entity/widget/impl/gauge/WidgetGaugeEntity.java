@@ -9,6 +9,8 @@ import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.attributes.*;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Set;
+
 @Entity
 public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
         implements HasSingleValueDataSource,
@@ -207,6 +209,11 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
     @Override
     public String getDefaultName() {
         return null;
+    }
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+
     }
 
     @Override

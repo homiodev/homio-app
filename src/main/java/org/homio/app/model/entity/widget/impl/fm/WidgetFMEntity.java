@@ -2,6 +2,8 @@ package org.homio.app.model.entity.widget.impl.fm;
 
 import jakarta.persistence.Entity;
 import java.util.List;
+import java.util.Set;
+
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldColorPicker;
@@ -48,6 +50,13 @@ public class WidgetFMEntity extends WidgetEntity<WidgetFMEntity>
     @Override
     public String getDefaultName() {
         return null;
+    }
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+        if(getValueDataSource().isEmpty()) {
+            fields.add("valueDataSource");
+        }
     }
 
     @UIField(order = 24)

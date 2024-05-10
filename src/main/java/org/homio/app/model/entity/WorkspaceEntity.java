@@ -16,6 +16,8 @@ import org.homio.api.ui.field.selection.SelectionConfiguration;
 import org.homio.app.workspace.WorkspaceService;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Set;
+
 @Getter
 @Setter
 @Entity
@@ -68,6 +70,11 @@ public final class WorkspaceEntity extends BaseEntity implements
         int result = content != null ? content.hashCode() : 0;
         result = 31 * result + jsonData.toString().hashCode();
         return result;
+    }
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+
     }
 
     @Override

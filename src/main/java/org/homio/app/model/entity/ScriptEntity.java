@@ -156,6 +156,11 @@ public class ScriptEntity extends BaseEntity implements HasJsonData {
         return 0;
     }
 
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+
+    }
+
     @SneakyThrows
     private String detectReplaceableValues(
             JSONObject params, Compilable engine, String formattedJavaScript) {

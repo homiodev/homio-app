@@ -8,6 +8,8 @@ import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.attributes.HasBackground;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Set;
+
 @Entity
 public class WidgetTextEntity extends WidgetEntity<WidgetTextEntity> implements HasBackground {
 
@@ -24,6 +26,11 @@ public class WidgetTextEntity extends WidgetEntity<WidgetTextEntity> implements 
     @Override
     public String getDefaultName() {
         return null;
+    }
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+
     }
 
     @UIField(order = 1)

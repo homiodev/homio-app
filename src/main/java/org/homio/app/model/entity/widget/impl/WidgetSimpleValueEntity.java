@@ -16,6 +16,8 @@ import org.homio.app.model.entity.widget.attributes.HasValueConverter;
 import org.homio.app.model.entity.widget.attributes.HasValueTemplate;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Set;
+
 @Entity
 public class WidgetSimpleValueEntity extends WidgetEntity<WidgetSimpleValueEntity>
         implements
@@ -47,6 +49,11 @@ public class WidgetSimpleValueEntity extends WidgetEntity<WidgetSimpleValueEntit
     @Override
     public String getDefaultName() {
         return null;
+    }
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+
     }
 
     @Override

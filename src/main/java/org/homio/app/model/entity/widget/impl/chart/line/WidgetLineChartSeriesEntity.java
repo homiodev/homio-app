@@ -9,6 +9,9 @@ import org.homio.api.ui.field.selection.UIFieldBeanSelection;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Set;
 
 @Entity
 public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineChartEntity>
@@ -35,5 +38,12 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
     @Override
     protected String getSeriesPrefix() {
         return "line";
+    }
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+        if(getChartDataSource().isEmpty()) {
+            fields.add("chartDataSource");
+        }
     }
 }

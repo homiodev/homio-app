@@ -120,6 +120,11 @@ public final class WidgetTabEntity extends BaseEntity implements
     }
 
     @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+
+    }
+
+    @Override
     public String getDefaultName() {
         return null;
     }

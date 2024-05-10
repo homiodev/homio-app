@@ -13,6 +13,8 @@ import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.setting.dashboard.WidgetBorderColorMenuSetting;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Set;
+
 @Entity
 public class WidgetLayoutEntity extends WidgetEntity<WidgetLayoutEntity>
         implements HasLayout, HasBackground {
@@ -37,6 +39,11 @@ public class WidgetLayoutEntity extends WidgetEntity<WidgetLayoutEntity>
     @Override
     public String getDefaultName() {
         return null;
+    }
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+
     }
 
     @UIField(order = 24)

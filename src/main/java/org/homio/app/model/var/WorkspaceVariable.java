@@ -1,26 +1,8 @@
 package org.homio.app.model.var;
 
-import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.defaultString;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.type.TypeReference;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
-import java.util.function.Consumer;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -58,6 +40,17 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Consumer;
+
+import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.defaultString;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+
 @Entity
 @Setter
 @Getter
@@ -74,8 +67,8 @@ public class WorkspaceVariable extends BaseEntity
         HasTimeValueSeries,
         HasGetStatusValue,
         HasSetStatusValue,
-    SelectionConfiguration,
-    Variable {
+        SelectionConfiguration,
+        Variable {
 
     public static final String PREFIX = "var_";
 
@@ -244,7 +237,7 @@ public class WorkspaceVariable extends BaseEntity
     @Override
     public @NotNull List<Object[]> getTimeValueSeries(PeriodRequest request) {
         return ((ContextVarImpl) request.context().var())
-            .getTimeSeries(getEntityID(), request);
+                .getTimeSeries(getEntityID(), request);
     }
 
     @Override
@@ -255,7 +248,7 @@ public class WorkspaceVariable extends BaseEntity
     @Override
     public SourceHistory getSourceHistory(GetStatusValueRequest request) {
         SourceHistory sourceHistory = ((ContextVarImpl) request.context().var())
-            .getSourceHistory(getEntityID())
+                .getSourceHistory(getEntityID())
                 .setIcon(new Icon(icon, iconColor))
                 .setName(getName())
                 .setDescription(getDescription());
@@ -265,7 +258,7 @@ public class WorkspaceVariable extends BaseEntity
                 "Quota:" + quota,
                 "Type:" + restriction.name().toLowerCase(),
                 "Locked:" + locked,
-            "Listeners:" + context().event().getEventCount(getEntityID()),
+                "Listeners:" + context().event().getEventCount(getEntityID()),
                 "Writable:" + !readOnly)));
         if (unit != null) {
             sourceHistory.getAttributes().add("Unit: " + unit);
@@ -291,7 +284,7 @@ public class WorkspaceVariable extends BaseEntity
     @Override
     public void setStatusValue(SetStatusValueRequest request) {
         ((ContextVarImpl) request.context().var())
-            .set(getEntityID(), request.getValue(), true);
+                .set(getEntityID(), request.getValue(), true);
     }
 
     @Override
@@ -331,7 +324,7 @@ public class WorkspaceVariable extends BaseEntity
 
     private static String formatVariableValue(Object value) {
         return value instanceof Double ? format("%.2f", (Double) value) :
-            value instanceof Float ? format("%.2f", (Float) value) : value.toString();
+                value instanceof Float ? format("%.2f", (Float) value) : value.toString();
     }
 
     @Override
@@ -356,14 +349,14 @@ public class WorkspaceVariable extends BaseEntity
     }
 
     public boolean tryUpdateVariable(
-        @Nullable String variableId,
-        @NotNull String variableName,
-        @NotNull Consumer<WorkspaceVariable> builder,
-        @NotNull VariableType variableType) {
+            @Nullable String variableId,
+            @NotNull String variableName,
+            @NotNull Consumer<WorkspaceVariable> builder,
+            @NotNull VariableType variableType) {
         long entityHashCode = getEntityHashCode();
         this.setName(variableName);
         this.restriction = variableType;
-        if(variableId != null) {
+        if (variableId != null) {
             this.setEntityID(variableId);
         }
         builder.accept(this);
@@ -383,6 +376,13 @@ public class WorkspaceVariable extends BaseEntity
         result = 31 * result + (unit != null ? unit.hashCode() : 0);
         result = 31 * result + jsonData.toString().hashCode();
         return result;
+    }
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+        if (StringUtils.isEmpty(getName())) {
+            fields.add("name");
+        }
     }
 
     @SneakyThrows

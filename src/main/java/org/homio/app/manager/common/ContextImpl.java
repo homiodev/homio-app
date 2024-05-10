@@ -518,7 +518,7 @@ public class ContextImpl implements Context {
                             Files.deleteIfExists(archiveAppPath);
                             try {
                                 projectUpdate.downloadReleaseFile(version, archiveAppPath.getFileName().toString(), archiveAppPath);
-                                ui().dialog().reloadWindow("Finish update", 60);
+                                ui().dialog().reloadWindow("Finish update", 200);
                                 log.info("Exit app to restart it after update");
                             } catch (Exception ex) {
                                 log.error("Unable to download homio app", ex);

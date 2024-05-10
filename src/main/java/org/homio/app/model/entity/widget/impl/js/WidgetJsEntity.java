@@ -13,6 +13,8 @@ import org.homio.app.model.entity.widget.WidgetEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Set;
+
 @Entity
 @Getter
 @Setter
@@ -87,5 +89,10 @@ public class WidgetJsEntity extends WidgetEntity<WidgetJsEntity> implements HasJ
     @Override
     public @Nullable String getDefaultName() {
         return "JS";
+    }
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+
     }
 }
