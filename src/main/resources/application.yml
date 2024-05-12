@@ -16,12 +16,14 @@ spring:
       ddl-auto: none
     show-sql: true
 server:
-  port: 9911
-  ssl:
-    enabled: true
-    keyStoreType: PKCS12
-    key-store: classpath:keystore.p12
-    key-store-password: password
+  port: 9111
   compression:
     enabled: true
     min-response-size: 512B
+
+ssl:
+  client-auth: true
+  keystore-path: identity.jks
+  keystore-password: secret
+  truststore-path: truststore.jks
+  truststore-password: secret
