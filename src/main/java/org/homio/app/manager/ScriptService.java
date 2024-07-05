@@ -3,8 +3,6 @@ package org.homio.app.manager;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
 import java.io.PrintStream;
 import java.io.StringReader;
 import java.time.Duration;
@@ -24,6 +22,9 @@ import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
@@ -73,12 +74,12 @@ public class ScriptService implements ContextCreated {
         }
     }
 
-    @ApiOperation("Execute java script")
+    @Operation(description = "Execute java script")
     public @NotNull State executeJavaScriptOnce(
-            @ApiParam(name = "scriptEntity") ScriptEntity scriptEntity,
-            @ApiParam(name = "logPrintStream") PrintStream logPrintStream,
-            @ApiParam(name = "forceBackground") boolean forceBackground,
-            @ApiParam(name = "context") State context)
+            @Parameter(name = "scriptEntity") ScriptEntity scriptEntity,
+            @Parameter(name = "logPrintStream") PrintStream logPrintStream,
+            @Parameter(name = "forceBackground") boolean forceBackground,
+            @Parameter(name = "context") State context)
             throws Exception {
         return startThread(scriptEntity, false, logPrintStream, forceBackground, context);
     }

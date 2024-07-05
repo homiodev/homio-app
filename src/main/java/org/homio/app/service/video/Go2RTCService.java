@@ -1,12 +1,26 @@
 package org.homio.app.service.video;
 
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.homio.api.util.JsonUtils.YAML_OBJECT_MAPPER;
-import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION;
-import static org.homio.app.model.entity.Go2RTCEntity.go2rtcGitHub;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import lombok.Getter;
+import lombok.SneakyThrows;
+import org.homio.api.Context;
+import org.homio.api.ContextBGP;
+import org.homio.api.ContextBGP.ProcessContext;
+import org.homio.api.ContextMedia.FFMPEGFormat;
+import org.homio.api.console.ConsolePluginFrame.FrameConfiguration;
+import org.homio.api.exception.ServerException;
+import org.homio.api.model.*;
+import org.homio.api.service.EntityService.ServiceInstance;
+import org.homio.api.util.CommonUtils;
+import org.homio.api.util.Lang;
+import org.homio.app.console.Go2RTCConsolePlugin;
+import org.homio.app.model.entity.Go2RTCEntity;
+import org.homio.hquery.Curl;
+import org.homio.hquery.ProgressBar;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -22,32 +36,14 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
-import lombok.Getter;
-import lombok.SneakyThrows;
-import org.homio.api.Context;
-import org.homio.api.ContextBGP;
-import org.homio.api.ContextBGP.ProcessContext;
-import org.homio.api.ContextMedia.FFMPEGFormat;
-import org.homio.api.console.ConsolePluginFrame.FrameConfiguration;
-import org.homio.api.exception.ServerException;
-import org.homio.api.model.ActionResponseModel;
-import org.homio.api.model.HasEntityIdentifier;
-import org.homio.api.model.Icon;
-import org.homio.api.model.OptionModel;
-import org.homio.api.model.Status;
-import org.homio.api.model.UpdatableValue;
-import org.homio.api.service.EntityService.ServiceInstance;
-import org.homio.api.util.CommonUtils;
-import org.homio.api.util.Lang;
-import org.homio.app.console.Go2RTCConsolePlugin;
-import org.homio.app.model.entity.Go2RTCEntity;
-import org.homio.hquery.Curl;
-import org.homio.hquery.ProgressBar;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.homio.api.util.JsonUtils.YAML_OBJECT_MAPPER;
+import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION;
+import static org.homio.app.model.entity.Go2RTCEntity.go2rtcGitHub;
 
 public class Go2RTCService extends ServiceInstance<Go2RTCEntity>
-    implements HasEntityIdentifier {
+        implements HasEntityIdentifier {
 
     private final Map<String, String> successRegistered = new ConcurrentHashMap<>();
     private final Map<String, String> pendingRegistrations = new ConcurrentHashMap<>();
@@ -76,11 +72,11 @@ public class Go2RTCService extends ServiceInstance<Go2RTCEntity>
                 pathData = UpdatableValue.wrap(Curl.get(apiURL + "/streams", JsonNode.class), "paths");
             }
             return pathData.getFreshValue(Duration.ofSeconds(60), () ->
-                Curl.sendAsync(Curl.createGetRequest(apiURL + "/streams"), JsonNode.class, (data, code) -> {
-                    if (code == 200) {
-                        pathData.update(data);
-                    }
-                }));
+                    Curl.sendAsync(Curl.createGetRequest(apiURL + "/streams"), JsonNode.class, (data, code) -> {
+                        if (code == 200) {
+                            pathData.update(data);
+                        }
+                    }));
         } catch (Exception ignore) {
             return OBJECT_MAPPER.createObjectNode();
         }
@@ -117,9 +113,13 @@ public class Go2RTCService extends ServiceInstance<Go2RTCEntity>
 
     @Override
     public String isRequireRestartService() {
-        if (!entity.getStatus().isOnline()) {return "Status: " + entity.getStatus();}
+        if (!entity.getStatus().isOnline()) {
+            return "Status: " + entity.getStatus();
+        }
         int status = getApiStatus();
-        if (status != 200) {return "API status[%s]".formatted(status);}
+        if (status != 200) {
+            return "API status[%s]".formatted(status);
+        }
         return null;
     }
 
@@ -156,12 +156,12 @@ public class Go2RTCService extends ServiceInstance<Go2RTCEntity>
                 projectUpdate.getGitHubProject().deleteProject();
             } catch (Exception ex) {
                 context().ui().toastr().error(
-                    Lang.getServerMessage("W.ERROR.DELETE_PROJECT",
-                        projectUpdate.getGitHubProject().getLocalProjectPath().toString()));
+                        Lang.getServerMessage("W.ERROR.DELETE_PROJECT",
+                                projectUpdate.getGitHubProject().getLocalProjectPath().toString()));
                 throw ex;
             }
             go2rtcGitHub.downloadReleaseAndInstall(context, version, (progress, message, error) ->
-                progressBar.progress(progress, message));
+                    progressBar.progress(progress, message));
             resetConfiguration();
             // fire restart service
             initialize();
@@ -173,11 +173,11 @@ public class Go2RTCService extends ServiceInstance<Go2RTCEntity>
         if (getApiListStreams().containsKey(path)) {
             OptionModel webrtc = videoSources.get("webrtc");
             webrtc.addChild(OptionModel.of("go2rtc/video.webrtc", "Go2RTC WebRTC")
-                                       .setIcon(new Icon("fab fa-stumbleupon-circle", "#22725A")));
+                    .setIcon(new Icon("fab fa-stumbleupon-circle", "#22725A")));
 
             OptionModel hls = videoSources.get("hls");
             hls.addChild(OptionModel.of("go2rtc/index.m3u8", "Go2RTC HLS")
-                                    .setIcon(FFMPEGFormat.HLS.getIconModel()));
+                    .setIcon(FFMPEGFormat.HLS.getIconModel()));
         }
     }
 
@@ -210,24 +210,23 @@ public class Go2RTCService extends ServiceInstance<Go2RTCEntity>
             go2rtcGitHub.installLatestRelease(context);
         }
 
-        String processStr = go2rtcGitHub.getLocalProjectPath().resolve("go2rtc")
-            + " -config " + configurationPath;
-
         AtomicReference<String> errorRef = new AtomicReference<>();
         this.processContext = context
-            .bgp().processBuilder(entity, log)
-            .onStarted(this::setStatusOnline)
-            .onFinished((ex, responseCode) -> {
-                if (ex == null) {
-                    if (errorRef.get() != null) {
-                        ex = new ServerException(errorRef.get());
-                    } else if (responseCode != 0) {
-                        ex = new ServerException("Exit with code: " + responseCode);
+                .bgp().processBuilder(entity, log)
+                .onStarted(this::setStatusOnline)
+                .onFinished((ex, responseCode) -> {
+                    if (ex == null) {
+                        if (errorRef.get() != null) {
+                            ex = new ServerException(errorRef.get());
+                        } else if (responseCode != 0) {
+                            ex = new ServerException("Exit with code: " + responseCode);
+                        }
                     }
-                }
-                dispose(ex);
-            })
-            .execute(processStr);
+                    dispose(ex);
+                })
+                .execute(
+                        go2rtcGitHub.getLocalProjectPath().resolve("go2rtc").toString(),
+                        " -config " + configurationPath);
     }
 
     private void setStatusOnline() {
@@ -238,7 +237,7 @@ public class Go2RTCService extends ServiceInstance<Go2RTCEntity>
 
         });
         context.ui().console().registerPlugin("go2rtc",
-            new Go2RTCConsolePlugin(context, new FrameConfiguration(proxyHost)));
+                new Go2RTCConsolePlugin(context, new FrameConfiguration(proxyHost)));
     }
 
     private synchronized void scheduleRegisterSources() {
@@ -329,10 +328,10 @@ public class Go2RTCService extends ServiceInstance<Go2RTCEntity>
 
     private String buildDefaultConfiguration() {
         return DEFAULT_CONFIG.formatted(
-            entity.getApiPort(),
-            FFMPEG_LOCATION,
-            entity.getRtspPort(),
-            entity.getWebRtcPort());
+                entity.getApiPort(),
+                FFMPEG_LOCATION,
+                entity.getRtspPort(),
+                entity.getWebRtcPort());
     }
 
     @SneakyThrows
@@ -350,47 +349,47 @@ public class Go2RTCService extends ServiceInstance<Go2RTCEntity>
     }
 
     private static final String DEFAULT_CONFIG = """
-        api:
-          listen: ":%s"
-          base_path: ""
-          static_dir: ""
-          origin: ""
-                
-        ffmpeg:
-          bin: %s
-          global: -hide_banner
-          file: -re -stream_loop -1 -i {input}
-          http: -fflags nobuffer -flags low_delay -i {input}
-          rtsp: -fflags nobuffer -flags low_delay -timeout 5000000 -user_agent go2rtc/ffmpeg -rtsp_transport tcp -i {input}
-          output: -user_agent ffmpeg/go2rtc -rtsp_transport tcp -f rtsp {output}
-          # ... different presets for codecs
-                
-        hass:
-          config: ""
-                
-        log:
-          format: ""
-          level: info
-                
-        ngrok:
-          command: ""
-                
-        rtsp:
-          listen: ":%s"
-          username: ""
-          password: ""
-                
-        srtp:
-          listen: ":8443"
-                
-        streams: {}
-                
-        webrtc:
-          listen: ":%s"
-          candidates: []
-          ice_servers:
-            - urls: [ "stun:stun.l.google.com:19302" ]
+            api:
+              listen: ":%s"
+              base_path: ""
+              static_dir: ""
+              origin: ""
+                    
+            ffmpeg:
+              bin: %s
+              global: -hide_banner
+              file: -re -stream_loop -1 -i {input}
+              http: -fflags nobuffer -flags low_delay -i {input}
+              rtsp: -fflags nobuffer -flags low_delay -timeout 5000000 -user_agent go2rtc/ffmpeg -rtsp_transport tcp -i {input}
+              output: -user_agent ffmpeg/go2rtc -rtsp_transport tcp -f rtsp {output}
+              # ... different presets for codecs
+                    
+            hass:
+              config: ""
+                    
+            log:
+              format: ""
+              level: info
+                    
+            ngrok:
+              command: ""
+                    
+            rtsp:
+              listen: ":%s"
               username: ""
-              credential: ""
-        """;
+              password: ""
+                    
+            srtp:
+              listen: ":8443"
+                    
+            streams: {}
+                    
+            webrtc:
+              listen: ":%s"
+              candidates: []
+              ice_servers:
+                - urls: [ "stun:stun.l.google.com:19302" ]
+                  username: ""
+                  credential: ""
+            """;
 }

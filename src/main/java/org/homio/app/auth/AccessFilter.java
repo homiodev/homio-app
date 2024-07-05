@@ -28,7 +28,11 @@ public class AccessFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain chain)
             throws ServletException, IOException {
         log.debug("Request: {}. Host: {}", request.getRequestURI(), request.getHeader("Host"));
-        if(request.getRequestURI().startsWith("/rest/route/proxy")) {
+        if(request.getRequestURI().startsWith("/rest/route/proxy")
+                || request.getRequestURI().endsWith(".css")
+                || request.getRequestURI().endsWith(".js")
+                || request.getRequestURI().endsWith(".png")
+                || request.getRequestURI().endsWith(".html")) {
             chain.doFilter(request, response);
             return;
         }

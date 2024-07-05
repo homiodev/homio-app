@@ -1,7 +1,6 @@
 package org.homio.app.js.assistant.impl;
 
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.exception.ServerException;
@@ -35,7 +34,7 @@ public class CodeParser {
         }
     }
 
-    public Set<Completion> addCompetitionFromManagerOrClass(String line, Stack<Param> stack, ParserContext context,
+    public Set<Completion> addCompetitionFromManagerOrClass(String line, Stack<InternalParam> stack, ParserContext context,
                                                             String allScript) throws NoSuchMethodException {
         Set<Completion> completions = new HashSet<>();
         List<String> items = splitSpecial(line); // list of items split by '.'
@@ -103,7 +102,7 @@ public class CodeParser {
         return Collections.emptySet();
     }
 
-    private Set<Completion> addCompetitionFrom(String from, Class fromClass, String line, Stack<Param> stack,
+    private Set<Completion> addCompetitionFrom(String from, Class fromClass, String line, Stack<InternalParam> stack,
                                                ParserContext context) throws NoSuchMethodException {
         line = line.trim();
         Set<Completion> list = new HashSet<>();
@@ -114,19 +113,19 @@ public class CodeParser {
         if (line.equals("new")) {
             createClassAndAddToCompletion(fromClass, list);
         } else if (firstItem.endsWith(from) && StringUtils.isNotEmpty(from)) {
-            stack.add(new Param(from, fromClass));
+            stack.add(new InternalParam(from, fromClass));
             addCompetitionFromManager2(1, items, list, fromClass, stack, context);
         } else if (from.startsWith(firstItem) && StringUtils.isNotEmpty(from)) {
             list.add(new Completion(from, fromClass.getSimpleName(), fromClass, "", CompletionItemKind.Method));
         } else { // check for Class
             if (fromClass.getSimpleName().equals(from)) {
-                stack.add(new Param(from, fromClass));
+                stack.add(new InternalParam(from, fromClass));
                 addCompetitionFromStatic(StringUtils.isEmpty(from) ? 0 : 1, items, list, fromClass, stack);
             } else {
                 List<Class<?>> classesWithParent = classFinder.getClassesWithParentSpecific(Object.class, firstItem, null);
                 if (classesWithParent.size() == 1) {
                     fromClass = classesWithParent.get(0);
-                    stack.add(new Param(from, fromClass));
+                    stack.add(new InternalParam(from, fromClass));
                     addCompetitionFromStatic(StringUtils.isEmpty(from) ? 0 : 1, items, list, fromClass, stack);
                 }
             }
@@ -144,7 +143,7 @@ public class CodeParser {
             String funcParameters = allScript.substring(allScript.indexOf("(", funcIndex) + 1, endFunc);
             if (funcParameters.contains(supposeParameter)) {
                 String lineToParse = allScript.substring(allScript.lastIndexOf("context.", funcIndex), funcIndex);
-                Stack<CodeParser.Param> stack2 = new Stack<>();
+                Stack<InternalParam> stack2 = new Stack<>();
                 ParserContext context2 = ParserContext.noneContext();
                 addCompetitionFromManagerOrClass(lineToParse.trim(), stack2, context2, allScript);
                 return addCompetitionFrom(supposeParameter, stack2.peek().retType, line, new Stack<>(), context2);
@@ -179,7 +178,7 @@ public class CodeParser {
         }
     }
 
-    private void addCompletionsAtEndFunc(String finalNext, Class clazz, Set<Completion> list, Stack<Param> stack,
+    private void addCompletionsAtEndFunc(String finalNext, Class clazz, Set<Completion> list, Stack<InternalParam> stack,
                                          ParserContext context) throws NoSuchMethodException {
         if (clazz != null) {
             if (!finalNext.contains("(")) {
@@ -233,8 +232,8 @@ public class CodeParser {
             } else {
                 retValue = method.getReturnType().getSimpleName();
             }
-            ApiOperation apiOperation = method.getDeclaredAnnotation(ApiOperation.class);
-            String help = apiOperation == null ? "" : apiOperation.value();
+            Operation apiOperation = method.getDeclaredAnnotation(Operation.class);
+            String help = apiOperation == null ? "" : apiOperation.description();
 
             return new Completion(method.getName() + parameters, retValue, method.getReturnType(), help,
                     CompletionItemKind.Method);
@@ -252,7 +251,7 @@ public class CodeParser {
         for (Parameter parameter : method.getParameters()) {
             String name = parameter.getName();
             if (apiParams.length > apiParamIndex) {
-                name = ((ApiParam) apiParams[apiParamIndex++]).value();
+                name = ((io.swagger.v3.oas.annotations.Parameter) apiParams[apiParamIndex++]).name();
             }
             collect.add(parameter.getType().getSimpleName() + (asComments ? ":" : " ") + name);
         }
@@ -297,7 +296,7 @@ public class CodeParser {
         return methods;
     }
 
-    private void addCompetitionFromManager2(int i, List<String> items, Set<Completion> list, Class clazz, Stack<Param> stack,
+    private void addCompetitionFromManager2(int i, List<String> items, Set<Completion> list, Class clazz, Stack<InternalParam> stack,
                                             ParserContext context) throws NoSuchMethodException {
         if (items.size() == i + 1) {
             addCompletionsAtEndFunc(items.get(i), clazz, list, stack, context);
@@ -305,7 +304,7 @@ public class CodeParser {
         } else {
             Method methodOptional = MethodParser.getFitMethod(items.get(i), clazz);
             if (methodOptional != null) {
-                stack.add(new Param(methodOptional, clazz));
+                stack.add(new InternalParam(methodOptional, clazz));
                 if (items.get(i).matches(".*\\(.*\\)")) {
                     addCompetitionFromManager2(i + 1, items, list, methodOptional.getReturnType(), stack, context);
                 } else if (items.get(i).matches(".*\\(.*")) { // we have opened brackets so try look at method parameters
@@ -323,14 +322,14 @@ public class CodeParser {
         }
     }
 
-    private void addCompetitionFromStatic(int i, List<String> items, Set<Completion> list, Class clazz, Stack<Param> stack) {
+    private void addCompetitionFromStatic(int i, List<String> items, Set<Completion> list, Class clazz, Stack<InternalParam> stack) {
         if (items.size() == i + 1) {
             addStaticCompletions(items.get(i), clazz, list);
             addStaticCompletions(items.get(i), clazz.getSuperclass(), list);
         } else {
             Method methodOptional = MethodParser.getFitStaticMethod(items.get(i), clazz);
             if (methodOptional != null) {
-                stack.add(new Param(methodOptional, clazz));
+                stack.add(new InternalParam(methodOptional, clazz));
                 addCompetitionFromStatic(i + 1, items, list, methodOptional.getReturnType(), stack);
             }
         }
@@ -361,18 +360,18 @@ public class CodeParser {
         protected abstract boolean match(String firstItem, String line, String allScript);
     }
 
-    public static class Param {
+    public static class InternalParam {
 
         public String method;
         Class retType;
         boolean isList;
 
-        Param(String method, Class retType) {
+        InternalParam(String method, Class retType) {
             this.method = method;
             this.retType = retType;
         }
 
-        Param(Method method, Class clazz) {
+        InternalParam(Method method, Class clazz) {
             this.isList = Collection.class.isAssignableFrom(method.getReturnType());
             this.method = method.getName();
             if (isList) {

@@ -1,27 +1,7 @@
 package org.homio.app.service.video;
 
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.homio.api.util.JsonUtils.YAML_OBJECT_MAPPER;
-import static org.homio.app.model.entity.MediaMTXEntity.mediamtxGitHub;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.http.HttpRequest;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
-import java.time.Duration;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -33,20 +13,35 @@ import org.homio.api.ContextBGP;
 import org.homio.api.ContextBGP.ProcessContext;
 import org.homio.api.ContextMedia.FFMPEGFormat;
 import org.homio.api.exception.ServerException;
-import org.homio.api.model.ActionResponseModel;
-import org.homio.api.model.HasEntityIdentifier;
-import org.homio.api.model.Icon;
-import org.homio.api.model.OptionModel;
-import org.homio.api.model.Status;
-import org.homio.api.model.UpdatableValue;
+import org.homio.api.model.*;
 import org.homio.api.service.EntityService.ServiceInstance;
 import org.homio.api.util.CommonUtils;
+import org.homio.api.util.JsonUtils;
 import org.homio.api.util.Lang;
 import org.homio.app.model.entity.MediaMTXEntity;
 import org.homio.hquery.Curl;
 import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.http.HttpRequest;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.Duration;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.homio.api.util.JsonUtils.YAML_OBJECT_MAPPER;
+import static org.homio.app.model.entity.MediaMTXEntity.mediamtxGitHub;
 
 public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     implements HasEntityIdentifier {
@@ -114,7 +109,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     @SneakyThrows
     public void updateConfiguration(String mc) {
         configuration = YAML_OBJECT_MAPPER.readValue(mc, ObjectNode.class);
-        saveConfiguration();
+        JsonUtils.saveToFile(configuration, configurationPath);
         initialize();
     }
 
@@ -248,8 +243,6 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         }
         syncConfiguration();
 
-        String processStr = executable + " " + configurationPath;
-
         AtomicReference<String> errorRef = new AtomicReference<>();
         this.processContext = context
             .bgp().processBuilder(getEntityID())
@@ -260,8 +253,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
                 if (ex == null) {
                     if (errorRef.get() != null) {
                         ex = new ServerException(errorRef.get());
-                    } else if (responseCode != 0) {
-                        ex = new ServerException("Exit with code: " + responseCode);
+                    } else if (responseCode != 0) {ex = new ServerException("Exit with code: " + responseCode);
                     }
                 }
                 dispose(ex);
@@ -278,7 +270,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
                 }
                 log.log(level, "[{}]: MediaMTX: {}", entityID, msg);
             })
-            .execute(processStr);
+            .execute(executable.toString(), configurationPath.toString());
     }
 
     private synchronized void scheduleRegisterSources() {
@@ -325,9 +317,9 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         updated |= checkPort(entity.getHlsPort(), "hlsAddress");
 
         if (updated) {
-            saveConfiguration();
+            JsonUtils.saveToFile(configuration, configurationPath);
         }
-        apiURL = "http://" + configuration.get("apiAddress").asText();
+        apiURL = "http://localhost" + configuration.get("apiAddress").asText();
     }
 
     private boolean checkPort(int port, String key) {
@@ -338,13 +330,6 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
             return true;
         }
         return false;
-    }
-
-    @SneakyThrows
-    private void saveConfiguration() {
-        try (OutputStream outputStream = Files.newOutputStream(configurationPath, StandardOpenOption.TRUNCATE_EXISTING)) {
-            YAML_OBJECT_MAPPER.writeValue(outputStream, configuration);
-        }
     }
 
     @Override

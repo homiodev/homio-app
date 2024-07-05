@@ -124,6 +124,10 @@
       <artifactId>protobuf-java</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.apache.httpcomponents.client5</groupId>
+      <artifactId>httpclient5</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.cloud</groupId>
       <artifactId>spring-cloud-gateway-mvc</artifactId>
       <version>4.0.7</version>
@@ -499,8 +503,8 @@
       <groupId>com.fazecast</groupId>
     </dependency>
     <dependency>
+      <groupId>io.swagger.core.v3</groupId>
       <artifactId>swagger-annotations</artifactId>
-      <groupId>io.swagger</groupId>
     </dependency>
     <dependency>
       <groupId>org.jvnet.winp</groupId>

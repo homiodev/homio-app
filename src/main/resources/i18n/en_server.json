@@ -1,4 +1,5 @@
 {
+  "IBKR_DESCRIPTION": "Use <a href=\"{{VALUE}}\" target=\"_blank\">IBKR login</a> to authenticate to ibkr gateway",
   "MOUNT": {
     "SUCCESS": "Mount device to {{VALUE}} successfully",
     "SUCCESS_P": "Mount device to {{VALUE}} permanent successfully"

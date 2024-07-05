@@ -202,17 +202,12 @@ public class SystemAddonLibraryManagerSetting
             if (versions != null) {
                 List<String> strVersions = versions.stream().map(Object::toString).collect(Collectors.toList());
                 String lastReleaseVersion = strVersions.get(strVersions.size() - 1);
-                // String jarFile = addonRepo.getRepo() + ".jar";
-                // Model pomModel = addonRepo.getPomModel();
                 String key = name.startsWith("addon-") ? name : "addon-" + name;
                 PackageModel entity = new PackageModel()
                     .setName(key)
                     .setTitle((String) addonConfig.get("name"))
                     .setDescription((String) addonConfig.get("description"));
                 entity.setJarUrl(format("https://github.com/%s/releases/download/%s/%s.jar", repository, "%s", addonRepo.getRepo()));
-                /*entity.setAuthor(pomModel.getDevelopers().stream()
-                                         .map(Contributor::getName)
-                                         .collect(Collectors.joining(", ")));*/
                 entity.setWebsite("https://github.com/" + repository);
                 entity.setCategory((String) addonConfig.get("category"));
                 entity.setVersion(lastReleaseVersion);

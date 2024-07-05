@@ -15,6 +15,8 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class FileManagerConsolePlugin implements ConsolePlugin<Object> {
 
+    public static final String NAME = "fm";
+
     private final @Accessors(fluent = true) Context context;
 
     @Override
@@ -34,7 +36,7 @@ public class FileManagerConsolePlugin implements ConsolePlugin<Object> {
 
     @Override
     public @NotNull String getName() {
-        return "fm";
+        return NAME;
     }
 
     @Override

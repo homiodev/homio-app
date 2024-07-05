@@ -30,6 +30,8 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import lombok.extern.log4j.Log4j2;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.device.DeviceBaseEntity;
@@ -74,6 +76,7 @@ import org.springframework.format.FormatterRegistry;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.orm.jpa.persistenceunit.PersistenceUnitManager;
@@ -333,7 +336,11 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
     public ProxyExchangeArgumentResolver proxyExchangeArgumentResolver(Optional<RestTemplateBuilder> optional,
         ProxyProperties proxy) {
         RestTemplateBuilder builder = optional.orElse(new RestTemplateBuilder());
-        RestTemplate template = builder.build();
+        CloseableHttpClient httpClient = HttpClientBuilder.create().disableRedirectHandling().build();
+        var requestFactory = new HttpComponentsClientHttpRequestFactory(httpClient);
+        RestTemplate template = builder
+                .requestFactory(() -> requestFactory)
+                .build();
         template.setErrorHandler(new DefaultResponseErrorHandler() {
             @Override
             public void handleError(ClientHttpResponse response) throws IOException {
@@ -347,7 +354,7 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
 
             @Override
             public byte[] readInternal(Class<? extends byte[]> clazz, HttpInputMessage message) throws IOException {
-                // avoid read content-length. sometime it's not match!
+                // avoid read content-length. sometimes it's not match!
                 return message.getBody().readAllBytes();
             }
         });

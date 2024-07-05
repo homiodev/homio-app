@@ -80,7 +80,7 @@ public class ContextAddonImpl {
         Collections.sort(addonEntrypoints);
         log.info("Found addons: \r\n---{}",
             addonEntrypoints.stream().map(AddonEntrypoint::getAddonID)
-                            .collect(Collectors.joining("---\r\n")));
+                            .collect(Collectors.joining("\r\n", "---", "---")));
         for (AddonEntrypoint entrypoint : addonEntrypoints) {
             //this.addons.put("addon-" + entrypoint.getAddonID(), new InternalAddonContext(entrypoint, null));
             fireAddonEntrypoint(entrypoint);

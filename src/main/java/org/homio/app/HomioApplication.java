@@ -82,14 +82,15 @@ public class HomioApplication implements WebMvcConfigurer {
     }
 
     private static String getAppVersion() throws IOException {
+        String version = null;
         try (InputStream inputStream = HomioApplication.class.getResourceAsStream("/META-INF/MANIFEST.MF")) {
             if (inputStream != null) {
                 Manifest manifest = new Manifest(inputStream);
                 Attributes attributes = manifest.getMainAttributes();
-                return attributes.getValue("Implementation-Version");
+                version = attributes.getValue("Implementation-Version");
             }
         }
-        return "0.0.0";
+        return StringUtils.defaultIfEmpty(version, "0.0.0");
     }
 
     private static void redirectConsoleOutput(Logger log) {

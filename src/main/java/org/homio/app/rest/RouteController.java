@@ -1,24 +1,6 @@
 package org.homio.app.rest;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
-
 import jakarta.servlet.http.HttpServletRequest;
-import java.lang.reflect.InvocationTargetException;
-import java.net.URI;
-import java.net.URLDecoder;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -35,22 +17,29 @@ import org.homio.app.manager.common.impl.ContextServiceImpl;
 import org.homio.app.manager.common.impl.ContextServiceImpl.RouteProxyImpl;
 import org.homio.app.manager.common.impl.ContextUIImpl;
 import org.homio.app.model.entity.SettingEntity;
-import org.homio.app.notification.HeaderButtonSelection;
 import org.homio.app.rest.ConsoleController.ConsoleTab;
 import org.jetbrains.annotations.NotNull;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.DataNode;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.springframework.cloud.gateway.mvc.ProxyExchange;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
+
+import java.lang.reflect.InvocationTargetException;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
 
 @RestController
 @RequestMapping("/rest/route")
@@ -66,8 +55,8 @@ public class RouteController {
             ClassFinder classFinder,
             AddonService addonService,
             SettingController settingController,
-        ConsoleController consoleController,
-        Context context) {
+            ConsoleController consoleController,
+            Context context) {
         this.uiSidebarMenuClasses = classFinder.getClassesWithAnnotation(UISidebarMenu.class);
         this.addonService = addonService;
         this.settingController = settingController;
@@ -109,10 +98,10 @@ public class RouteController {
 
     @SneakyThrows
     private ResponseEntity<?> proxyUrl(
-        @NotNull ProxyExchange<byte[]> proxy,
-        @NotNull HttpServletRequest request,
-        @NotNull String entityID,
-        @NotNull Function<ProxyExchange<byte[]>, ResponseEntity<byte[]>> handler) {
+            @NotNull ProxyExchange<byte[]> proxy,
+            @NotNull HttpServletRequest request,
+            @NotNull String entityID,
+            @NotNull Function<ProxyExchange<byte[]>, ResponseEntity<byte[]>> handler) {
         RouteProxyImpl routeProxy = ((ContextServiceImpl) context.service()).getProxy().get(entityID);
         if (routeProxy == null) {
             throw new ServerException("No proxy found for entity: " + entityID);
@@ -128,10 +117,19 @@ public class RouteController {
         modifyHeaders(request, proxyExchange, uri, routeProxy);
 
         ResponseEntity<byte[]> response = handler.apply(proxyExchange);
-        if(response.getStatusCode().isError()) {
-            System.out.println("error");
-            handler.apply(proxyExchange);
+        String redirectURI = "";
+        if (response.getStatusCode().is3xxRedirection()) {
+            URI locationURI = response.getHeaders().getLocation();
+            uri = new URI(uri.getScheme(), uri.getAuthority(), locationURI.getPath(), locationURI.getQuery(), locationURI.getFragment());
+            proxyExchange = proxy.uri(uri);
+            proxyExchange.sensitive("");
+            modifyHeaders(request, proxyExchange, uri, routeProxy);
+            response = handler.apply(proxyExchange);
+            if (request.getRequestURI().endsWith("proxy_index.html")) {
+                redirectURI = uri.getPath();
+            }
         }
+
         HttpHeaders responseHeaders = new HttpHeaders();
         responseHeaders.addAll(response.getHeaders());
         byte[] body = response.getBody();
@@ -144,48 +142,74 @@ public class RouteController {
         }
 
         if (body != null && request.getRequestURI().endsWith(".html")) {
-            body = modifyResponseBody(body);
+            String url = request.getRequestURL().toString();
+            String baseUrl = url.substring(0, url.lastIndexOf('/'));
+            body = modifyResponseBody(body, baseUrl, redirectURI);
         }
 
         responseHeaders.add(ACCESS_CONTROL_EXPOSE_HEADERS, "*");
         return ResponseEntity.status(response.getStatusCode())
-                             .headers(responseHeaders)
-                             .body(body);
+                .headers(responseHeaders)
+                .body(body);
     }
 
-    private static byte[] modifyResponseBody(byte[] body) {
+    @SneakyThrows
+    private static byte[] modifyResponseBody(byte[] body, String baseUrl, String redirectURI) {
         Document doc = Jsoup.parse(new String(body));
+        doc.head().prependElement("base")
+                .attr("href", baseUrl + "/");
+        String path = new URI(baseUrl).getPath();
+        for (Element el : doc.head().children()) {
+            switch (el.tagName()) {
+                case "link":
+                    String href = el.attr("href");
+                    if (href.startsWith("/")) {
+                        el.attr("href", path + href);
+                    }
+                    break;
+                case "script":
+                    String src = el.attr("src");
+                    if(!src.isEmpty()) {
+                        if (src.startsWith("/")) {
+                            el.attr("src", path + src);
+                        } else {
+                            el.attr("src", path + redirectURI + "/" + src);
+                        }
+                    }
+                    break;
+            }
+        }
         doc.head().appendElement("script")
-           .attr("type", "text/javascript")
-           .appendChild(new DataNode("""
-                  
-               $(document).ajaxSend(function(event, jqXHR, ajaxOptions) {
-                  ajaxOptions.url = ajaxOptions.url.startsWith('/') ? ajaxOptions.url.substr(1) : ajaxOptions.url;
-               });
-               $.ajaxSetup({
-                   beforeSend: function(xhr, settings) {
-                       settings.url = settings.url.startsWith('/') ? settings.url.substr(1) : settings.url;
-                   }
-               });
-                                  
-               window.addEventListener('message', function(event) {
-                 if (event.data === 'back') {
-                   window.history.back();
-                 }
-                 if (event.data === 'forward') {
-                   window.history.forward();
-                 }
-                 if (event.data === 'reload') {
-                   window.location.reload();
-                 }
-               });
-               """));
-        body = doc.toString().getBytes();
-        return body;
+                .attr("type", "text/javascript")
+                .appendChild(new DataNode("""
+                        $(document).ajaxSend(function(event, jqXHR, ajaxOptions) {
+                           ajaxOptions.url = ajaxOptions.url.startsWith('/') ? ajaxOptions.url.substr(1) : ajaxOptions.url;
+                        });
+                        $.ajaxSetup({
+                            beforeSend: function(xhr, settings) {
+                                settings.url = settings.url.startsWith('/') ? settings.url.substr(1) : settings.url;
+                            }
+                        });
+                                       
+                        window.addEventListener('message', function(event) {
+                          if (event.data === 'back') {
+                            window.history.back();
+                          }
+                          if (event.data === 'forward') {
+                            window.history.forward();
+                          }
+                          if (event.data === 'reload') {
+                            window.location.reload();
+                          }
+                        });
+                        """));
+        String txtBody = doc.toString();
+        txtBody = txtBody.replaceAll("<img src=\"/", "<img src=\"" + path + "/");
+        return txtBody.getBytes();
     }
 
     private static void modifyRequestBody(@NotNull ProxyExchange<byte[]> proxy, @NotNull HttpServletRequest request)
-        throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
         String contentType = request.getHeader("Content-Type");
         // somehow if request url is i.e.: data=blabla=2 it converts second '=' to %3X
         if (contentType != null && contentType.startsWith("application/x-www-form-urlencoded")) {
@@ -201,7 +225,7 @@ public class RouteController {
             String headerName = names.nextElement();
             proxyExchange.header(headerName, request.getHeader(headerName));
         }
-        proxyExchange.header("Host", uri.getHost());
+        proxyExchange.header("Host", uri.getHost() + ":" + uri.getPort());
         proxyExchange.header("Origin", routeProxy.getUrl());
         proxyExchange.header("Referer", routeProxy.getUrl());
     }

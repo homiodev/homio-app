@@ -24,6 +24,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.fs.Scratch3FSBlocks;
 import org.homio.addon.hardware.Scratch3HardwareBlocks;
 import org.homio.addon.http.Scratch3NetworkBlocks;
+import org.homio.addon.ibkr.Scratch3IBKRBlocks;
 import org.homio.addon.media.Scratch3AudioBlocks;
 import org.homio.addon.media.Scratch3ImageEditBlocks;
 import org.homio.addon.ui.Scratch3UIBlocks;
@@ -68,6 +69,7 @@ public class WorkspaceService implements ContextRefreshed {
 
     private static final List<Class<?>> inlineScratches =
             Arrays.asList(
+                    Scratch3IBKRBlocks.class,
                     Scratch3AudioBlocks.class,
                     Scratch3NetworkBlocks.class,
                     Scratch3HardwareBlocks.class,

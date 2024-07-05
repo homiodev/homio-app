@@ -1,6 +1,9 @@
 {
   "COMM_SUCCESS": "Communicator restarted successfully",
   "W": {
+    "CONFIRM": {
+      "RESTART_IBKR": "Are you sure restart ibkr service?"
+    },
     "ERROR": {
       "NOT_FOUND": "Communicator not found",
       "ALREADY_RUN": "Communicator already run",

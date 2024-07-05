@@ -9,6 +9,7 @@ import com.pivovarit.function.ThrowingBiFunction;
 import com.pivovarit.function.ThrowingConsumer;
 import com.pivovarit.function.ThrowingFunction;
 import com.pivovarit.function.ThrowingRunnable;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
@@ -44,6 +45,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -113,20 +115,20 @@ public class ContextBGPImpl implements ContextBGP {
         builder("send-bgp-to-ui")
                 .interval(Duration.ofSeconds(1))
                 .cancelOnError(false)
-            .execute(() -> this.context.ui().sendDynamicUpdate("bgp", getProcesses()));
+                .execute(() -> this.context.ui().sendDynamicUpdate("bgp", getProcesses()));
 
         builder("low-priority-requests")
-            .interval(Duration.ofSeconds(60))
-            .cancelOnError(false)
-            .execute(() -> {
-                for (Entry<String, ThrowingRunnable<Exception>> entry : lowPriorityRequests.entrySet()) {
-                    try {
-                        entry.getValue().run();
-                    } catch (Exception ex) {
-                        log.warn("Unable to run low priority request: {}. {}", entry.getKey(), CommonUtils.getErrorMessage(ex));
+                .interval(Duration.ofSeconds(60))
+                .cancelOnError(false)
+                .execute(() -> {
+                    for (Entry<String, ThrowingRunnable<Exception>> entry : lowPriorityRequests.entrySet()) {
+                        try {
+                            entry.getValue().run();
+                        } catch (Exception ex) {
+                            log.warn("Unable to run low priority request: {}. {}", entry.getKey(), CommonUtils.getErrorMessage(ex));
+                        }
                     }
-                }
-            });
+                });
     }
 
     public BgpProcessResponse getProcesses() {
@@ -263,7 +265,7 @@ public class ContextBGPImpl implements ContextBGP {
     @Override
     public synchronized void ping(@NotNull String discriminator, @NotNull String ipAddress, @NotNull Consumer<Boolean> availableStatus) {
         pingMap.computeIfAbsent(discriminator, s -> new ConcurrentHashMap<>())
-               .put(ipAddress, availableStatus);
+                .put(ipAddress, availableStatus);
         if (pingProcess == null) {
             pingProcess = createPingService();
         }
@@ -482,11 +484,18 @@ public class ContextBGPImpl implements ContextBGP {
                 return this;
             }
 
+            @NotNull
             @Override
-            public @NotNull ProcessContext execute(@NotNull String command) {
+            public ProcessBuilder workingDir(@NotNull Path dir) {
+                processContext.workingDir = dir;
+                return this;
+            }
+
+            @Override
+            public @NotNull ProcessContext execute(@NotNull String... command) {
                 processContext.threadContext = builder(name)
                         .onError(processContext::onError)
-                        .execute(() -> processContext.run(command, name));
+                        .execute(() -> processContext.run(name, command));
                 return processContext;
             }
         };
@@ -888,8 +897,8 @@ public class ContextBGPImpl implements ContextBGP {
         @Override
         public void attachInputStream(@NotNull InputStream inputStream, @NotNull InputStream errorStream) {
             this.streamGobbler = new StreamGobbler(getName(),
-                s -> getInfoBuffer().append(s.getBytes()),
-                s -> getInfoBuffer().append(s.getBytes()));
+                    s -> getInfoBuffer().append(s.getBytes()),
+                    s -> getInfoBuffer().append(s.getBytes()));
         }
 
         public synchronized LastBytesBuffer getInfoBuffer() {
@@ -937,6 +946,7 @@ public class ContextBGPImpl implements ContextBGP {
         public Consumer<String> errorConsumer;
         public @Nullable Logger logger;
         public @Nullable HasStatusAndMsg entity;
+        public Path workingDir;
         private StreamGobbler streamGobbler;
 
         @Override
@@ -968,9 +978,13 @@ public class ContextBGPImpl implements ContextBGP {
             }
         }
 
-        public void run(@NotNull String command, @NotNull String name) throws Exception {
+        public void run(@NotNull String name, @NotNull String[] command) throws Exception {
             getLogger().info("[{}]: Starting process command: '{}'", name, command);
-            process = Runtime.getRuntime().exec(command);
+            if (workingDir != null) {
+                process = Runtime.getRuntime().exec(command, null, workingDir.toFile());
+            } else {
+                process = Runtime.getRuntime().exec(command);
+            }
             executeOnExitImpl("Process: " + name, () -> cancelProcess(true, true));
             if (entity != null) {
                 entity.setStatusOnline();
@@ -1049,32 +1063,33 @@ public class ContextBGPImpl implements ContextBGP {
     private static void sleep(int timeout) {
         try {
             Thread.sleep(timeout);
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
     }
 
     private ThreadContext<Void> createPingService() {
         return context
-            .bgp()
-            .builder("ping")
-            .interval(Duration.ofSeconds(60))
-            .cancelOnError(false)
-            .execute(() -> {
-                Map<String, List<Consumer<Boolean>>> pingers =
-                    pingMap.values().stream()
-                           .flatMap(value -> value.entrySet().stream())
-                           .collect(Collectors.groupingBy(
-                               Entry::getKey,
-                               Collectors.mapping(Entry::getValue, Collectors.toList())
-                           ));
-                pingers.entrySet().stream().parallel().forEach(ping -> {
-                    AtomicBoolean isReachable = new AtomicBoolean(false);
-                    try {
-                        InetAddress address = InetAddress.getByName(ping.getKey());
-                        isReachable.set(address.isReachable(5000));
-                    } catch (IOException ignore) {
-                    }
-                    ping.getValue().forEach(booleanConsumer -> booleanConsumer.accept(isReachable.get()));
+                .bgp()
+                .builder("ping")
+                .interval(Duration.ofSeconds(60))
+                .cancelOnError(false)
+                .execute(() -> {
+                    Map<String, List<Consumer<Boolean>>> pingers =
+                            pingMap.values().stream()
+                                    .flatMap(value -> value.entrySet().stream())
+                                    .collect(Collectors.groupingBy(
+                                            Entry::getKey,
+                                            Collectors.mapping(Entry::getValue, Collectors.toList())
+                                    ));
+                    pingers.entrySet().stream().parallel().forEach(ping -> {
+                        AtomicBoolean isReachable = new AtomicBoolean(false);
+                        try {
+                            InetAddress address = InetAddress.getByName(ping.getKey());
+                            isReachable.set(address.isReachable(5000));
+                        } catch (IOException ignore) {
+                        }
+                        ping.getValue().forEach(booleanConsumer -> booleanConsumer.accept(isReachable.get()));
+                    });
                 });
-            });
     }
 }

@@ -1,18 +1,7 @@
 package org.homio.app.manager.common.impl;
 
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
-
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
@@ -32,6 +21,18 @@ import org.springframework.web.socket.server.HandshakeInterceptor;
 import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
 import org.springframework.web.socket.server.support.WebSocketHandlerMapping;
 import org.springframework.web.socket.server.support.WebSocketHttpRequestHandler;
+
+import java.net.URI;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+import java.util.function.Function;
+
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
 
 @Log4j2
 public class ContextServiceImpl implements ContextService {
@@ -133,13 +134,17 @@ public class ContextServiceImpl implements ContextService {
     }
 
     @Getter
-    @RequiredArgsConstructor
     public static class RouteProxyImpl {
 
         private final @NotNull String entityID;
-        private final @NotNull String url;
+        private @NotNull String url;
         private Function<HttpServletRequest, ProxyUrl> urlBuilder;
         private Function<ProxyUrl, Map<String, String>> responseHeaderBuilder;
+
+        public RouteProxyImpl(@NotNull String entityID, @NotNull String url) {
+            this.entityID = entityID;
+            this.url = url;
+        }
 
         public @NotNull ProxyUrl buildUrl(HttpServletRequest request) {
             String subRequest = request.getRequestURI().substring(("/rest/route/proxy/" + entityID).length());
@@ -157,6 +162,10 @@ public class ContextServiceImpl implements ContextService {
                 return responseHeaderBuilder.apply(proxyUrl);
             }
             return null;
+        }
+
+        public void modifyUrl(URI uri) {
+            url = uri.getScheme() + "://" + uri.getHost() + ":" + uri.getPort() + uri.getPath();
         }
     }
 }

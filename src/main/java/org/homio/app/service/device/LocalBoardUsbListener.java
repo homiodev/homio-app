@@ -2,12 +2,14 @@ package org.homio.app.service.device;
 
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.Context;
 import org.homio.api.ContextUI;
 import org.homio.api.model.Icon;
 import org.homio.api.ui.field.action.ActionInputParameter;
 import org.homio.api.util.Lang;
+import org.homio.app.console.FileManagerConsolePlugin;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.app.setting.system.SystemAutoMountUsbSetting;
 import org.jetbrains.annotations.NotNull;
@@ -34,7 +36,9 @@ public class LocalBoardUsbListener {
                     .delay(Duration.ofSeconds(30))
                     .interval(Duration.ofSeconds(30))
                     .execute(() -> {
-                        List<String> infoList = context.hardware().executeNoErrorThrowList(CHECK_USB, 10, null);
+                        List<String> infoList = context.hardware().executeNoErrorThrowList(
+                                CHECK_USB, 10, (progress, message, error) -> {
+                                });
                         List<DiskInfo> fetchedUsbDevices = fetchDevices(infoList).stream().filter(d -> !d.devices.isEmpty()).toList();
 
                         for (DiskInfo usbDevice : fetchedUsbDevices) {
@@ -58,8 +62,13 @@ public class LocalBoardUsbListener {
                         for (Iterator<DiskInfo> iterator = usbDevices.iterator(); iterator.hasNext(); ) {
                             DiskInfo usbDevice = iterator.next();
                             if (!fetchedUsbDevices.contains(usbDevice)) {
+                                if (StringUtils.isNotEmpty(usbDevice.mount)) {
+                                    context.hardware().executeNoErrorThrow("umount " + usbDevice.mount, 60, null);
+                                }
                                 iterator.remove();
                                 context.ui().toastr().warn("Usb device was removed: " + usbDevice.devicePath);
+                                context.ui().dialog().removeDialogRequest("mount_usb_" + usbDevice.uuid);
+                                context.ui().console().refreshPluginContent(FileManagerConsolePlugin.NAME);
                             }
                         }
                     });
@@ -88,6 +97,7 @@ public class LocalBoardUsbListener {
             mountUsb(mountTo, true, "fab fa-usb", "#5571E0", usbDevice);
             return;
         }
+
         context.ui().dialog().sendDialogRequest("mount_usb_" + usbDevice.uuid, "TITLE.MOUNT_USB",
                 (responseType, pressedButton, parameters) -> {
                     if (responseType == ContextUI.DialogResponseType.Accepted) {
@@ -121,18 +131,16 @@ public class LocalBoardUsbListener {
     @SneakyThrows
     private void mountUsb(String mountTo, boolean save, String icon, String color, DiskInfo usbDevice) {
         Files.createDirectories(Paths.get(mountTo));
-        context.hardware().execute("mount -o iocharset=utf8 " + usbDevice.getSourcePath() + " " + mountTo);
-        usbDevice.mount = mountTo;
-        String text = "MOUNT.SUCCESS";
+        mountUsbDevice(usbDevice, mountTo);
+        String text = "MOUNT.SUCCESS" + (save ? "_P" : "");
+        context.ui().toastr().success(Lang.getServerMessage(text, mountTo));
+
         if (save) {
             LocalBoardEntity entity = LocalBoardEntity.ensureDeviceExists(context);
             List<String> usbList = entity.getJsonDataList("usb");
             usbList.add(OBJECT_MAPPER.writeValueAsString(new UsbEntity(icon, color, usbDevice.getUuid(), mountTo)));
-            entity.setJsonDataList("usb", usbList);
-            context.db().save(entity);
-            text += "_P";
+            context.db().updateDelayed(entity, e -> e.setJsonDataList("usb", usbList));
         }
-        context.ui().toastr().success(Lang.getServerMessage(text, mountTo));
     }
 
     private void findAndFillIconColor(DiskInfo usbDevice) {
@@ -141,18 +149,23 @@ public class LocalBoardUsbListener {
             if (usbEntity != null) {
                 usbDevice.icon = usbEntity.icon;
                 usbDevice.color = usbEntity.color;
-                try {
-                    context.hardware().execute("mount -o iocharset=utf8 " + usbDevice.getSourcePath() + " " + usbEntity.mountTo);
-                    usbDevice.mount = usbEntity.mountTo;
-                } catch (Exception ex) {
-                    log.warn("Unable to mount device: {}", usbDevice, ex);
-                }
+                mountUsbDevice(usbDevice, usbEntity.mountTo);
             }
         } finally {
             if (usbDevice.icon == null) {
                 usbDevice.icon = "fab fa-usb";
                 usbDevice.color = "#215A6A";
             }
+        }
+    }
+
+    private void mountUsbDevice(DiskInfo usbDevice, String mountTo) {
+        try {
+            context.hardware().execute("mount -o iocharset=utf8 " + usbDevice.getSourcePath() + " " + mountTo);
+            usbDevice.mount = mountTo;
+            context.ui().console().refreshPluginContent(FileManagerConsolePlugin.NAME);
+        } catch (Exception ex) {
+            log.warn("Unable to mount device: {}", usbDevice, ex);
         }
     }
 
@@ -271,9 +284,11 @@ public class LocalBoardUsbListener {
 
     private static final String CHECK_USB = "sudo fdisk --list && printf \"\n--------\n\" &&  df -h";
 
+    @Getter
+    @Setter
     @NoArgsConstructor
     @AllArgsConstructor
-    private static class UsbEntity {
+    public static class UsbEntity {
         private String icon;
         private String color;
         private String uuid;
