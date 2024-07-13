@@ -1,38 +1,11 @@
 package org.homio.app.rest;
 
-import static java.lang.String.format;
-import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
-import static org.homio.api.util.CommonUtils.getErrorMessage;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION;
-import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
-import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
-import static org.springframework.http.HttpHeaders.ETAG;
-import static org.springframework.http.HttpHeaders.LAST_MODIFIED;
-
 import dev.failsafe.ExecutionContext;
 import dev.failsafe.Failsafe;
 import dev.failsafe.Fallback;
 import dev.failsafe.RetryPolicy;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Collection;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -74,22 +47,28 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpRange;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.MediaTypeFactory;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.*;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static java.lang.String.format;
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
+import static org.homio.api.util.CommonUtils.getErrorMessage;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION;
+import static org.springframework.http.HttpHeaders.*;
 
 @Log4j2
 @RestController
@@ -105,12 +84,12 @@ public class MediaController implements ContextCreated {
 
     @Override
     public void onContextCreated(ContextImpl context) throws Exception {
-        go2rtcWebRtcPort = Go2RTCEntity.ensureEntityExists(context).getWebRtcPort();
-        MediaMTXEntity mtx = MediaMTXEntity.ensureEntityExists(context);
+        go2rtcWebRtcPort = Go2RTCEntity.getEntity(context).getWebRtcPort();
+        MediaMTXEntity mtx = MediaMTXEntity.getEntity(context);
         mtxWebRtcPort = mtx.getWebRtcPort();
         mtxHlsPort = mtx.getHlsPort();
         context.event().addEntityUpdateListener(Go2RTCEntity.class, "media", upd ->
-            go2rtcWebRtcPort = upd.getWebRtcPort());
+                go2rtcWebRtcPort = upd.getWebRtcPort());
         context.event().addEntityUpdateListener(MediaMTXEntity.class, "media", upd -> {
             mtxWebRtcPort = upd.getWebRtcPort();
             mtxHlsPort = upd.getHlsPort();
@@ -123,7 +102,7 @@ public class MediaController implements ContextCreated {
         byte[] content = Base64.getDecoder().decode(jsonContent.getBytes());
         NodeRequest nodeRequest = OBJECT_MAPPER.readValue(content, NodeRequest.class);
         FileSystemProvider fileSystem = fileSystemService.getFileSystem(nodeRequest.sourceFs, nodeRequest.alias);
-        Resource resource =  fileSystem.getEntryResource(nodeRequest.getSourceFileId());
+        Resource resource = fileSystem.getEntryResource(nodeRequest.getSourceFileId());
         String videoType = HardwareUtils.getVideoType(fileSystem.toTreeNode(nodeRequest.getSourceFileId()).getName());
         MediaType type = MediaType.parseMediaType(videoType);
         return resourceRegion(resource, resource.contentLength(), headers, type);
@@ -154,13 +133,13 @@ public class MediaController implements ContextCreated {
 
     @GetMapping("/{entityID}/mediamtx/{filename}.m3u8")
     public ResponseEntity<?> getMediaMtxHls(@PathVariable("entityID") String entityID,
-        @PathVariable("filename") String filename, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
+                                            @PathVariable("filename") String filename, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
         return proxyUrl(proxy, mtxHlsPort, entityID, filename + ".m3u8", request.getQueryString(), ProxyExchange::get);
     }
 
     @GetMapping("/{entityID}/mediamtx/{filename}.mp4")
     public ResponseEntity<?> getMediaMtxHlsMp4(@PathVariable("entityID") String entityID,
-        @PathVariable("filename") String filename, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
+                                               @PathVariable("filename") String filename, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
         return proxyUrl(proxy, mtxHlsPort, entityID, filename + ".mp4", request.getQueryString(), ProxyExchange::get);
     }
 
@@ -173,46 +152,46 @@ public class MediaController implements ContextCreated {
     private final FileSystemController fileSystemController;
 
     private final RetryPolicy<Path> PLAYBACK_THUMBNAIL_RETRY_POLICY =
-        RetryPolicy.<Path>builder()
-                   .handle(Exception.class)
-                   .withDelay(Duration.ofSeconds(3))
-                   .withMaxRetries(3)
-                   .build();
+            RetryPolicy.<Path>builder()
+                    .handle(Exception.class)
+                    .withDelay(Duration.ofSeconds(3))
+                    .withMaxRetries(3)
+                    .build();
     private final RetryPolicy<DownloadFile> PLAYBACK_DOWNLOAD_FILE_RETRY_POLICY =
-        RetryPolicy.<DownloadFile>builder()
-                   .handle(Exception.class)
-                   .withDelay(Duration.ofSeconds(5))
-                   .withMaxRetries(3)
-                   .build();
+            RetryPolicy.<DownloadFile>builder()
+                    .handle(Exception.class)
+                    .withDelay(Duration.ofSeconds(5))
+                    .withMaxRetries(3)
+                    .build();
 
     @GetMapping("/video/playback/days/{entityID}/{from}/{to}")
     public LinkedHashMap<Long, Boolean> getAvailableDaysPlaybacks(
-        @PathVariable("entityID") String entityID,
-        @PathVariable(value = "from") @DateTimeFormat(pattern = "yyyyMMdd") Date from,
-        @PathVariable(value = "to") @DateTimeFormat(pattern = "yyyyMMdd") Date to)
-        throws Exception {
+            @PathVariable("entityID") String entityID,
+            @PathVariable(value = "from") @DateTimeFormat(pattern = "yyyyMMdd") Date from,
+            @PathVariable(value = "to") @DateTimeFormat(pattern = "yyyyMMdd") Date to)
+            throws Exception {
         CameraPlaybackStorage entity = context.db().getEntityRequire(entityID);
         return entity.getAvailableDaysPlaybacks(context, "main", from, to);
     }
 
     @GetMapping("/video/playback/files/{entityID}/{date}")
     public List<CameraPlaybackStorage.PlaybackFile> getPlaybackFiles(
-        @PathVariable("entityID") String entityID,
-        @PathVariable(value = "date") @DateTimeFormat(pattern = "yyyyMMdd") Date date)
-        throws Exception {
+            @PathVariable("entityID") String entityID,
+            @PathVariable(value = "date") @DateTimeFormat(pattern = "yyyyMMdd") Date date)
+            throws Exception {
         CameraPlaybackStorage entity = context.db().getEntityRequire(entityID);
         return entity.getPlaybackFiles(context, "main", date, new Date(date.getTime() + TimeUnit.DAYS.toMillis(1) - 1));
     }
 
     @PostMapping("/video/playback/{entityID}/thumbnails/base64")
     public ResponseEntity<List<String>> getPlaybackThumbnailsBase64(
-        @PathVariable("entityID") String entityID,
-        @RequestBody ThumbnailRequest thumbnailRequest,
-        @RequestParam(value = "size", defaultValue = "800x600") String size)
-        throws Exception {
+            @PathVariable("entityID") String entityID,
+            @RequestBody ThumbnailRequest thumbnailRequest,
+            @RequestParam(value = "size", defaultValue = "800x600") String size)
+            throws Exception {
         Map<String, Path> filePathList = thumbnailRequest.fileIds
-            .stream()
-            .collect(Collectors.toMap(id -> id, id -> getPlaybackThumbnailPath(entityID, id, size)));
+                .stream()
+                .collect(Collectors.toMap(id -> id, id -> getPlaybackThumbnailPath(entityID, id, size)));
 
         Thread.sleep(500); // wait till ffmpeg close all file handlers
         List<String> result = new ArrayList<>();
@@ -229,22 +208,22 @@ public class MediaController implements ContextCreated {
     }
 
     @GetMapping(value = "/video/playback/{entityID}/{fileId}/thumbnail/jpg",
-                produces = MediaType.IMAGE_JPEG_VALUE)
+            produces = MediaType.IMAGE_JPEG_VALUE)
     public ResponseEntity<byte[]> getPlaybackThumbnailJpg(
-        @PathVariable("entityID") String entityID,
-        @PathVariable("fileId") String fileId,
-        @RequestParam(value = "size", defaultValue = "800x600") String size)
-        throws Exception {
+            @PathVariable("entityID") String entityID,
+            @PathVariable("fileId") String fileId,
+            @RequestParam(value = "size", defaultValue = "800x600") String size)
+            throws Exception {
         Path path = getPlaybackThumbnailPath(entityID, fileId, size);
         return new ResponseEntity<>(path == null ? new byte[0] : Files.readAllBytes(path), HttpStatus.OK);
     }
 
     @GetMapping("/video/playback/{entityID}/{fileId}/download")
     public ResponseEntity<ResourceRegion> downloadPlaybackFile(
-        @PathVariable("entityID") String entityID,
-        @PathVariable("fileId") String fileId,
-        @RequestHeader HttpHeaders headers)
-        throws IOException {
+            @PathVariable("entityID") String entityID,
+            @PathVariable("fileId") String fileId,
+            @RequestHeader HttpHeaders headers)
+            throws IOException {
         CameraPlaybackStorage entity = context.db().getEntityRequire(entityID);
         String ext = StringUtils.defaultIfEmpty(FilenameUtils.getExtension(fileId), "mp4");
         Path path = CommonUtils.getMediaPath().resolve("camera").resolve(entityID).resolve("playback").resolve(fileId + "." + ext);
@@ -255,18 +234,18 @@ public class MediaController implements ContextCreated {
             downloadFile = new DownloadFile(new UrlResource(path.toUri()), Files.size(path), fileId, null);
         } else {
             downloadFile = Failsafe.with(PLAYBACK_DOWNLOAD_FILE_RETRY_POLICY)
-                                   .onFailure(event ->
-                                       log.error("Unable to download playback file: <{}>. <{}>. Msg: <{}>", entity.getTitle(), fileId,
-                                           getErrorMessage(event.getException())))
-                                   .get(executionContext -> {
-                                       log.info("Reply <{}>. Download playback video file <{}>. <{}>",
-                                           executionContext.getAttemptCount(), entity.getTitle(), fileId);
-                                       return entity.downloadPlaybackFile(context, "main", fileId, path);
-                                   });
+                    .onFailure(event ->
+                            log.error("Unable to download playback file: <{}>. <{}>. Msg: <{}>", entity.getTitle(), fileId,
+                                    getErrorMessage(event.getException())))
+                    .get(executionContext -> {
+                        log.info("Reply <{}>. Download playback video file <{}>. <{}>",
+                                executionContext.getAttemptCount(), entity.getTitle(), fileId);
+                        return entity.downloadPlaybackFile(context, "main", fileId, path);
+                    });
         }
 
         MediaType mediaType = MediaTypeFactory.getMediaType(downloadFile.stream())
-                                              .orElse(MediaType.APPLICATION_OCTET_STREAM);
+                .orElse(MediaType.APPLICATION_OCTET_STREAM);
         return resourceRegion(downloadFile.stream(), downloadFile.size(), headers, mediaType);
     }
 
@@ -279,9 +258,9 @@ public class MediaController implements ContextCreated {
     @SneakyThrows
     @GetMapping("/image/{entityID}")
     public ResponseEntity<InputStreamResource> getImage(
-        WebRequest webRequest,
-        @PathVariable String entityID,
-        @RequestParam(value = "fs", required = false) String fs) {
+            WebRequest webRequest,
+            @PathVariable String entityID,
+            @RequestParam(value = "fs", required = false) String fs) {
         String eTag = String.valueOf((entityID + StringUtils.trimToEmpty(fs)).hashCode());
         if (webRequest.checkNotModified(eTag)) {
             return null;
@@ -312,9 +291,9 @@ public class MediaController implements ContextCreated {
     @SneakyThrows
     @GetMapping("/image/{addonID}/{imageID:.+}")
     public ResponseEntity<InputStreamResource> getAddonImage(
-        WebRequest webRequest,
-        @PathVariable("addonID") String addonID,
-        @PathVariable String imageID) {
+            WebRequest webRequest,
+            @PathVariable("addonID") String addonID,
+            @PathVariable String imageID) {
         String eTag = String.valueOf((addonID + imageID).hashCode());
         if (webRequest.checkNotModified(eTag)) {
             return null;
@@ -326,11 +305,11 @@ public class MediaController implements ContextCreated {
     public Collection<OptionModel> audioSource() {
         Collection<OptionModel> optionModels = new ArrayList<>();
         for (SelfContainedAudioSourceContainer audioSourceContainer :
-            audioService.getAudioSourceContainers()) {
+                audioService.getAudioSourceContainers()) {
             String label = audioSourceContainer.getLabel();
             if (label == null) {
                 throw new IllegalStateException(
-                    "SelfContainedAudioSource must return not null label");
+                        "SelfContainedAudioSource must return not null label");
             }
             OptionModel optionModel = OptionModel.key(label);
             for (OptionModel source : audioSourceContainer.getAudioSource()) {
@@ -370,7 +349,7 @@ public class MediaController implements ContextCreated {
     private Path getPlaybackThumbnailPath(String entityID, String fileId, String size) {
         CameraPlaybackStorage entity = context.db().getEntityRequire(entityID);
         Path path = CommonUtils.getMediaPath().resolve("camera").resolve(entityID).resolve("playback")
-                               .resolve(fileId + "_" + size.replaceAll(":", "x") + ".jpg");
+                .resolve(fileId + "_" + size.replaceAll(":", "x") + ".jpg");
         if (Files.exists(path) && Files.size(path) > 0) {
             return path;
         }
@@ -382,19 +361,19 @@ public class MediaController implements ContextCreated {
 
         Fallback<Path> fallback = Fallback.of((Path) null);
         return Failsafe.with(PLAYBACK_THUMBNAIL_RETRY_POLICY, fallback)
-                       .onFailure(event ->
-                           log.error("Unable to get playback img: <{}>. Msg: <{}>", entity.getTitle(), getErrorMessage(event.getException())))
-                       .get(context -> {
-                           fireFFmpeg(fileId, size, entity, path, uriStr, context);
-                           return path;
-                       });
+                .onFailure(event ->
+                        log.error("Unable to get playback img: <{}>. Msg: <{}>", entity.getTitle(), getErrorMessage(event.getException())))
+                .get(context -> {
+                    fireFFmpeg(fileId, size, entity, path, uriStr, context);
+                    return path;
+                });
     }
 
     private void fireFFmpeg(String fileId, String size, CameraPlaybackStorage entity, Path path, String uriStr, ExecutionContext<Path> context) {
         log.info("Reply <{}>. playback img <{}>. <{}>", context.getAttemptCount(), entity.getTitle(), fileId);
         ffmpegHardwareRepository.fireFfmpeg(
-            FFMPEG_LOCATION, "-y", "\"" + uriStr + "\"", format("-frames:v 1 -vf scale=%s -q:v 3 %s", size, path), // q:v - jpg quality
-            60);
+                FFMPEG_LOCATION, "-y", "\"" + uriStr + "\"", format("-frames:v 1 -vf scale=%s -q:v 3 %s", size, path), // q:v - jpg quality
+                60);
     }
 
     private ResponseEntity<ResourceRegion> resourceRegion(Resource resource, long contentLength, HttpHeaders headers, MediaType mediaType) {
@@ -411,11 +390,11 @@ public class MediaController implements ContextCreated {
         }
 
         return ResponseEntity
-            .status(status)
-            .header("Accept-Ranges", "bytes")
-            .contentType(mediaType)
-            .contentLength(contentLength)
-            .body(region);
+                .status(status)
+                .header("Accept-Ranges", "bytes")
+                .contentType(mediaType)
+                .contentLength(contentLength)
+                .body(region);
     }
 
     private ResponseEntity<InputStreamResource> toResponse(ImageResponse response, String eTag) {
@@ -435,7 +414,7 @@ public class MediaController implements ContextCreated {
     }
 
     private ResponseEntity<?> proxyUrl(ProxyExchange<byte[]> proxy, int port, String entityID, String path,
-        String queryString, Function<ProxyExchange<byte[]>, ResponseEntity<byte[]>> handler) {
+                                       String queryString, Function<ProxyExchange<byte[]>, ResponseEntity<byte[]>> handler) {
         if (queryString != null) {
             path += "?" + queryString;
         }
@@ -444,8 +423,8 @@ public class MediaController implements ContextCreated {
 
         responseHeaders.add(ACCESS_CONTROL_EXPOSE_HEADERS, "*");
         return ResponseEntity.status(response.getStatusCode())
-                             .headers(responseHeaders)
-                             .body(response.getBody());
+                .headers(responseHeaders)
+                .body(response.getBody());
     }
 
     @SneakyThrows
@@ -453,7 +432,7 @@ public class MediaController implements ContextCreated {
         BaseCameraEntity<?, ?> entity = context.db().getEntityRequire(entityID);
         if (!entity.getStatus().isOnline()) {
             throw new ServerException("Unable to run execute request. Video entity: %s has wrong status: %s".formatted(entity.getTitle(), entity.getStatus()))
-                .setStatus(HttpStatus.PRECONDITION_FAILED);
+                    .setStatus(HttpStatus.PRECONDITION_FAILED);
         }
         return entity;
     }

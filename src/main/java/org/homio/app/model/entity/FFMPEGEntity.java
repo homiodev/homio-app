@@ -1,24 +1,14 @@
 package org.homio.app.model.entity;
 
-import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
-import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
-import static org.homio.api.util.CommonUtils.STATIC_FILES;
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
 import org.homio.api.ContextHardware;
 import org.homio.api.ContextHardware.ProcessStat;
+import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContractStub;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.log.HasEntitySourceLog;
@@ -43,14 +33,27 @@ import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
+import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
+import static org.homio.api.util.CommonUtils.STATIC_FILES;
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION;
+
 @Log4j2
 @Entity
+@CreateSingleEntity(disableEdit = true)
 @UISidebarChildren(icon = "fas fa-podcast", color = "#2DA844", allowCreateItem = false)
 public class FFMPEGEntity extends MediaEntity implements
-    HasEntityLog,
-    HasEntitySourceLog,
-    HasFirmwareVersion,
-    DeviceEndpointsBehaviourContractStub {
+        HasEntityLog,
+        HasEntitySourceLog,
+        HasFirmwareVersion,
+        DeviceEndpointsBehaviourContractStub {
 
     private static FfmpegInstaller FFMPEG_INSTALLER;
 
@@ -63,23 +66,15 @@ public class FFMPEGEntity extends MediaEntity implements
                      });*/
         FFMPEGEntity.getFfmpegInstaller(context).installLatestAsync();
 
-        FFMPEGEntity entity = context.db().getEntity(FFMPEGEntity.class, PRIMARY_DEVICE);
-        if (entity == null) {
-            entity = new FFMPEGEntity();
-            entity.setEntityID(PRIMARY_DEVICE);
-            entity.setJsonData("dis_del", true);
-            entity.setJsonData("dis_edit", true);
-            entity = context.db().save(entity);
-        }
-        FFMPEGImpl.entity = entity;
+        FFMPEGImpl.entity = context.db().getEntity(FFMPEGEntity.class, PRIMARY_DEVICE);
 
         context.bgp().registerThreadsPuller("ffmpeg", threadPuller -> {
             for (Map.Entry<String, FFMPEGImpl> threadEntry : FFMPEGImpl.ffmpegMap.entrySet()) {
                 FFMPEGImpl ffmpeg = threadEntry.getValue();
                 if (ffmpeg.getIsAlive()) {
                     threadPuller.addThread(threadEntry.getKey(), ffmpeg.getDescription(), ffmpeg.getCreationDate(),
-                        "running", null,
-                        "Command: " + ffmpeg.getCmd()
+                            "running", null,
+                            "Command: " + ffmpeg.getCmd()
                     );
                 }
             }
@@ -166,13 +161,6 @@ public class FFMPEGEntity extends MediaEntity implements
     }
 
     @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public @Nullable String getPlace() {
-        return super.getPlace();
-    }
-
-    @Override
     public void assembleActions(UIInputBuilder uiInputBuilder) {
 
     }
@@ -200,12 +188,12 @@ public class FFMPEGEntity extends MediaEntity implements
         @SneakyThrows
         public FfmpegInstanceEndpoint(FFMPEGImpl ffmpeg, FFMPEGEntity entity) {
             super(new Icon(ffmpeg.getFormat().getIcon(), ffmpeg.getFormat().getColor()),
-                "FFMPEG",
-                entity.context(),
-                entity,
-                ffmpeg.getDescription(),
-                false,
-                EndpointType.string);
+                    "FFMPEG",
+                    entity.context(),
+                    entity,
+                    ffmpeg.getDescription(),
+                    false,
+                    EndpointType.string);
             this.description = ffmpeg.getCmd();
             if (ffmpeg.getIsAlive()) {
                 ProcessStat stat = ffmpeg.getProcessStat(this::updateUI);
@@ -217,7 +205,7 @@ public class FFMPEGEntity extends MediaEntity implements
 
         public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
             String html = Arrays.stream(getValue().toString().split(" "))
-                                .collect(Collectors.joining("</div><div>", "<div>", "</div>"));
+                    .collect(Collectors.joining("</div><div>", "<div>", "</div>"));
             uiInputBuilder.addInfo("<div class=\"dfc fs14\">%s</div>".formatted(html), InfoType.HTML);
         }
     }
@@ -253,7 +241,8 @@ public class FFMPEGEntity extends MediaEntity implements
                 } else {
                     version = hardware.execute("ffmpeg -version", 60, null);
                 }
-            } catch (Exception ignore) {}
+            } catch (Exception ignore) {
+            }
 
             if (version != null && version.startsWith("ffmpeg version")) {
                 version = version.substring("ffmpeg version".length()).trim().split(" ")[0].trim();
@@ -280,10 +269,10 @@ public class FFMPEGEntity extends MediaEntity implements
                     throw new IllegalStateException("Unable to find ffmpeg download url");
                 }
                 ArchiveUtil.downloadAndExtract(url, "ffmpeg.7z",
-                    (progress, message, error) -> {
-                        progressBar.progress(progress, message);
-                        log.info("FFMPEG: {}", message);
-                    });
+                        (progress, message, error) -> {
+                            progressBar.progress(progress, message);
+                            log.info("FFMPEG: {}", message);
+                        });
             }
         }
     }

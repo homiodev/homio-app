@@ -37,8 +37,10 @@ import org.homio.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.impl.color.WidgetColorEntity;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplayEntity;
+import org.homio.app.model.entity.widget.impl.extra.WidgetCustomEntity;
 import org.homio.app.model.entity.widget.impl.fm.WidgetFMEntity;
 import org.homio.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
+import org.homio.app.model.entity.widget.impl.extra.WidgetJsEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
@@ -427,8 +429,16 @@ public class WidgetController {
         }
 
         Class<? extends EntityFieldMetadata> typeClass = ContextImpl.uiFieldClasses.get(type);
-        WidgetEntity<?> baseEntity = (WidgetEntity<?>) typeClass.getConstructor()
-                .newInstance();
+
+        WidgetEntity<?> baseEntity;
+        if(typeClass == null) {
+            baseEntity = new WidgetCustomEntity().setCode("test");
+            baseEntity.setBw(3).setBh(3);
+            // baseEntity.setWidgetTabEntity(widgetTabEntity)/*.setFieldFetchType(template.getName())*/;
+        } else {
+            baseEntity = (WidgetEntity<?>) typeClass.getConstructor()
+                    .newInstance();
+        }
 
         baseEntity.setWidgetTabEntity(widgetTabEntity);
         baseEntity.getWidgetTabEntity().addLayoutOptional(width, height);
@@ -441,7 +451,41 @@ public class WidgetController {
     public BaseEntity createExtraWidget(
             @PathVariable("tabId") String tabId,
             @PathVariable("type") String type) {
-        throw new ServerException("Not implemented yet");
+        log.debug("Request creating extra widget entity by type: <{}> in tabId <{}>", type, tabId);
+        WidgetTabEntity widgetTabEntity = context.db().getEntity(tabId);
+        if (widgetTabEntity == null) {
+            throw new NotFoundException("ERROR.TAB_NOT_FOUND", tabId);
+        }
+
+       /* Collection<WidgetBaseTemplate> widgets = context.getBeansOfType(WidgetBaseTemplate.class);
+
+        List<WidgetBaseTemplate> templates = widgets.stream().filter(w -> w.getName().equals(type)).toList();
+        if (templates.isEmpty()) {
+            throw new ServerException("Unable to find widget template by name: " + type);
+        }
+        if (templates.size() > 1) {
+            throw new ServerException("Found multiple widget templates by name: " + type);
+        }
+
+        WidgetBaseTemplate template = templates.get(0);
+        String js = template.toJavaScript();
+        String params = "";
+        boolean paramReadOnly = false;
+        if (js == null) {
+            if (template instanceof WidgetJSBaseTemplate widgetJSBaseTemplate) {
+                JavaScriptBuilderImpl javaScriptBuilder = new JavaScriptBuilderImpl(template.getClass());
+                widgetJSBaseTemplate.createWidget(javaScriptBuilder);
+                js = javaScriptBuilder.build();
+                paramReadOnly = javaScriptBuilder.isJsonReadOnly();
+                params = javaScriptBuilder.getJsonParams().toString();
+            }
+        }*/
+
+        WidgetJsEntity widgetJsEntity = new WidgetJsEntity()
+                .setJavaScript("test");
+
+        widgetJsEntity.setWidgetTabEntity(widgetTabEntity)/*.setFieldFetchType(template.getName())*/;
+        return context.db().save(widgetJsEntity);
         /*log.debug("Request creating extra widget entity by type: <{}> in tabId <{}>", type, tabId);
         WidgetTabEntity widgetTabEntity = context.db().getEntity(tabId);
         if (widgetTabEntity == null) {

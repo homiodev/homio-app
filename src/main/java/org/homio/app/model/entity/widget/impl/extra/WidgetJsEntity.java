@@ -1,4 +1,4 @@
-package org.homio.app.model.entity.widget.impl.js;
+package org.homio.app.model.entity.widget.impl.extra;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Transient;

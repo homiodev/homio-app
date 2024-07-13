@@ -8,6 +8,7 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
+import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.types.MicroControllerBaseEntity;
 import org.homio.api.fs.TreeConfiguration;
@@ -46,6 +47,7 @@ import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 @Entity
 @Log4j2
+@CreateSingleEntity
 @UISidebarChildren(icon = "", color = "", allowCreateItem = false)
 public class LocalBoardEntity extends MicroControllerBaseEntity
         implements EntityService<LocalBoardService>,
@@ -167,15 +169,8 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
         setJsonData("cpu_interval", value);
     }
 
-    public static LocalBoardEntity ensureDeviceExists(Context context) {
-        LocalBoardEntity entity = context.db().getEntity(LocalBoardEntity.class, PRIMARY_DEVICE);
-        if (entity == null) {
-            log.info("Save default compute board device");
-            entity = new LocalBoardEntity();
-            entity.setEntityID(PRIMARY_DEVICE);
-            return context.db().save(entity);
-        }
-        return entity;
+    public static LocalBoardEntity getEntity(Context context) {
+        return context.db().getEntity(LocalBoardEntity.class, PRIMARY_DEVICE);
     }
 
     @Override

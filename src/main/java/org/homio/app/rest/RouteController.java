@@ -130,16 +130,9 @@ public class RouteController {
             }
         }
 
-        HttpHeaders responseHeaders = new HttpHeaders();
-        responseHeaders.addAll(response.getHeaders());
         byte[] body = response.getBody();
-
         Map<String, String> applyHeader = routeProxy.applyResponseHeaders(proxyUrl);
-        if (applyHeader != null) {
-            for (Entry<String, String> entry : applyHeader.entrySet()) {
-                responseHeaders.add(entry.getKey(), entry.getValue());
-            }
-        }
+        HttpHeaders responseHeaders = buildResponseHeader(response, applyHeader);
 
         if (body != null && request.getRequestURI().endsWith(".html")) {
             String url = request.getRequestURL().toString();
@@ -151,6 +144,26 @@ public class RouteController {
         return ResponseEntity.status(response.getStatusCode())
                 .headers(responseHeaders)
                 .body(body);
+    }
+
+    private static @NotNull HttpHeaders buildResponseHeader(
+            ResponseEntity<byte[]> response,
+            Map<String, String> applyHeader) {
+        HttpHeaders responseHeaders = new HttpHeaders();
+        for (Entry<String, List<String>> rh : response.getHeaders().entrySet()) {
+            if (!rh.getKey().equalsIgnoreCase("X-Frame-Options")) {
+                responseHeaders.addAll(rh.getKey(), rh.getValue());
+            }
+        }
+
+        if (applyHeader != null) {
+            for (Entry<String, String> entry : applyHeader.entrySet()) {
+                if (!entry.getKey().equalsIgnoreCase("X-Frame-Options")) {
+                    responseHeaders.add(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+        return responseHeaders;
     }
 
     @SneakyThrows
@@ -169,7 +182,7 @@ public class RouteController {
                     break;
                 case "script":
                     String src = el.attr("src");
-                    if(!src.isEmpty()) {
+                    if (!src.isEmpty()) {
                         if (src.startsWith("/")) {
                             el.attr("src", path + src);
                         } else {
@@ -190,7 +203,7 @@ public class RouteController {
                                 settings.url = settings.url.startsWith('/') ? settings.url.substr(1) : settings.url;
                             }
                         });
-                                       
+                                                
                         window.addEventListener('message', function(event) {
                           if (event.data === 'back') {
                             window.history.back();

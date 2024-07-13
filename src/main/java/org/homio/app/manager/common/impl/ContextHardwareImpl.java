@@ -1,17 +1,6 @@
 package org.homio.app.manager.common.impl;
 
-import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
-import static org.apache.commons.lang3.SystemUtils.IS_OS_MAC;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.homio.app.service.device.LocalBoardService.TOTAL_MEMORY;
-
 import com.fasterxml.jackson.databind.JsonNode;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.function.Function;
-import java.util.function.Predicate;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -30,18 +19,31 @@ import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.function.Function;
+import java.util.function.Predicate;
+
+import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
+import static org.apache.commons.lang3.SystemUtils.IS_OS_MAC;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.homio.app.service.device.LocalBoardService.TOTAL_MEMORY;
+
 @Log4j2
 @RequiredArgsConstructor
 public class ContextHardwareImpl implements ContextHardware {
 
-    private final @Getter @Accessors(fluent = true) ContextImpl context;
+    private final @Getter
+    @Accessors(fluent = true) ContextImpl context;
     private final NetworkHardwareRepository networkHardwareRepository;
     private final MachineHardwareRepository hardwareRepository;
 
     public ContextHardwareImpl(
-        ContextImpl context,
-        MachineHardwareRepository machineHardwareRepository,
-        NetworkHardwareRepository networkHardwareRepository) {
+            ContextImpl context,
+            MachineHardwareRepository machineHardwareRepository,
+            NetworkHardwareRepository networkHardwareRepository) {
 
         this.context = context;
         this.networkHardwareRepository = networkHardwareRepository;
@@ -104,6 +106,12 @@ public class ContextHardwareImpl implements ContextHardware {
     }
 
     @Override
+    public @NotNull ContextHardware uninstallSoftware(@NotNull String soft, int maxSecondsTimeout, @Nullable ProgressBar progressBar) {
+        hardwareRepository.uninstallSoftware(soft, maxSecondsTimeout, progressBar);
+        return this;
+    }
+
+    @Override
     public @NotNull ContextHardware enableSystemCtl(@NotNull String soft) {
         hardwareRepository.enableSystemCtl(soft);
         return this;
@@ -147,9 +155,9 @@ public class ContextHardwareImpl implements ContextHardware {
         } else {
             String[] result = execute("ps -p " + pid + " -o %cpu,%mem,rss --no-headers").trim().split(" ");
             return new ProcessStatImpl(
-                Double.parseDouble(result[0].trim()),
-                Double.parseDouble(result[1].trim()),
-                Long.parseLong(result[2].trim()));
+                    Double.parseDouble(result[0].trim()),
+                    Double.parseDouble(result[1].trim()),
+                    Long.parseLong(result[2].trim()));
         }
     }
 
@@ -174,16 +182,16 @@ public class ContextHardwareImpl implements ContextHardware {
             }
         }
         throw new IllegalStateException("Unable to find release asset for current architecture: " + architecture.name()
-            + ". Available assets:\n\t" + String.join("\n\t", assetNames.keySet()));
+                + ". Available assets:\n\t" + String.join("\n\t", assetNames.keySet()));
     }
 
     private static JsonNode getFoundAsset(Map<String, JsonNode> assetNames, Function<String, Boolean> filter) {
         return assetNames.entrySet()
-                         .stream()
-                         .filter(s -> filter.apply(s.getKey()))
-                         .findAny()
-                         .map(Entry::getValue)
-                         .orElse(null);
+                .stream()
+                .filter(s -> filter.apply(s.getKey()))
+                .findAny()
+                .map(Entry::getValue)
+                .orElse(null);
     }
 
     @Getter

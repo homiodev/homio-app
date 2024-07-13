@@ -1,40 +1,16 @@
 package org.homio.app.manager.common;
 
 import jakarta.persistence.EntityManagerFactory;
-import java.lang.annotation.Annotation;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.addon.mqtt.entity.MQTTClientEntity;
-import org.homio.addon.telegram.TelegramEntity;
-import org.homio.api.Context;
-import org.homio.api.ContextHardware;
-import org.homio.api.ContextMedia;
-import org.homio.api.ContextNetwork;
+import org.homio.api.*;
 import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.entity.EntityFieldMetadata;
+import org.homio.api.entity.HasJsonData;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.Icon;
@@ -52,30 +28,9 @@ import org.homio.app.audio.AudioService;
 import org.homio.app.auth.JwtTokenProvider;
 import org.homio.app.builder.widget.ContextWidgetImpl;
 import org.homio.app.config.TransactionManagerContext;
-import org.homio.app.manager.AddonService;
-import org.homio.app.manager.CacheService;
-import org.homio.app.manager.LoggerService;
-import org.homio.app.manager.PortService;
-import org.homio.app.manager.ScriptService;
-import org.homio.app.manager.WidgetService;
-import org.homio.app.manager.common.impl.ContextAddonImpl;
-import org.homio.app.manager.common.impl.ContextBGPImpl;
-import org.homio.app.manager.common.impl.ContextEventImpl;
-import org.homio.app.manager.common.impl.ContextHardwareImpl;
-import org.homio.app.manager.common.impl.ContextInstallImpl;
-import org.homio.app.manager.common.impl.ContextMediaImpl;
-import org.homio.app.manager.common.impl.ContextNetworkImpl;
-import org.homio.app.manager.common.impl.ContextServiceImpl;
-import org.homio.app.manager.common.impl.ContextSettingImpl;
-import org.homio.app.manager.common.impl.ContextStorageImpl;
-import org.homio.app.manager.common.impl.ContextUIImpl;
-import org.homio.app.manager.common.impl.ContextVarImpl;
-import org.homio.app.manager.common.impl.ContextWorkspaceImpl;
+import org.homio.app.manager.*;
+import org.homio.app.manager.common.impl.*;
 import org.homio.app.model.entity.FFMPEGEntity;
-import org.homio.app.model.entity.Go2RTCEntity;
-import org.homio.app.model.entity.LocalBoardEntity;
-import org.homio.app.model.entity.MediaMTXEntity;
-import org.homio.app.model.entity.user.UserAdminEntity;
 import org.homio.app.repository.AbstractRepository;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.repository.VariableBackupRepository;
@@ -110,8 +65,21 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.stereotype.Component;
+
+import java.lang.annotation.Annotation;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 @SuppressWarnings("rawtypes")
 @Log4j2
@@ -158,7 +126,7 @@ public class ContextImpl implements Context {
     private final ContextBGPImpl contextBGP;
     private final ContextSettingImpl contextSetting;
     private final GitHubProject appGitHub = GitHubProject.of("homiodev", "homio-app", CommonUtils.getInstallPath().resolve("homio"))
-                                                         .setInstalledVersionResolver((context, gitHubProject) -> setting().getApplicationVersion());
+            .setInstalledVersionResolver((context, gitHubProject) -> setting().getApplicationVersion());
     private final ContextVarImpl contextVar;
     private final ContextHardwareImpl contextHardware;
     private final ContextWidgetImpl contextWidget;
@@ -217,17 +185,17 @@ public class ContextImpl implements Context {
         this.contextService = new ContextServiceImpl(this);
         this.contextWorkspace = new ContextWorkspaceImpl(this);
         this.contextStorage = new ContextStorageImpl(this,
-            transactionManagerContext,
-            allDeviceRepository,
-            entityManager,
-            cacheService,
-            widgetRepository,
-            widgetSeriesRepository);
+                transactionManagerContext,
+                allDeviceRepository,
+                entityManager,
+                cacheService,
+                widgetRepository,
+                widgetSeriesRepository);
         this.contextNetwork = new ContextNetworkImpl(this, mhr, nhr);
         this.addon = new ContextAddonImpl(this, cacheService);
 
         this.contextBGP.builder("flush-delayed-updates").intervalWithDelay(Duration.ofSeconds(30))
-                       .execute(cacheService::flushDelayedUpdates);
+                .execute(cacheService::flushDelayedUpdates);
     }
 
     @SneakyThrows
@@ -241,16 +209,12 @@ public class ContextImpl implements Context {
         rebuildRepositoryByPrefixMap();
         registerAllFieldSubTypes();
 
+        createSingleMandatoryEntities();
+
         contextEvent.onContextCreated();
 
-        UserAdminEntity.ensureUserExists(this);
-        MQTTClientEntity.ensureEntityExists(this);
-        LocalBoardEntity.ensureDeviceExists(this);
         SshTmateEntity.ensureEntityExists(this);
-        MediaMTXEntity.ensureEntityExists(this);
-        Go2RTCEntity.ensureEntityExists(this);
         FFMPEGEntity.ensureEntityExists(this);
-        TelegramEntity.ensureEntityExists(this);
 
         contextSetting.onContextCreated();
         contextVar.onContextCreated();
@@ -288,6 +252,25 @@ public class ContextImpl implements Context {
         setting().listenValue(ScanMediaSetting.class, "scan-video-sources", () ->
                 ui().handleResponse(new BeansItemsDiscovery(VideoStreamScanner.class).handleAction(this, null)));
         INSTANCE = this;
+    }
+
+    private void createSingleMandatoryEntities() {
+        List<Class<?>> createSingleItems = classFinder.getClassesWithAnnotation(CreateSingleEntity.class);
+        for (Class<?> createSingleItem : createSingleItems) {
+            CreateSingleEntity createSingleEntity = createSingleItem.getDeclaredAnnotation(CreateSingleEntity.class);
+            Class<BaseEntity> baseEntityClass = (Class<BaseEntity>) createSingleItem;
+            BaseEntity entity = db().getEntity(baseEntityClass, PRIMARY_DEVICE);
+            if (entity == null) {
+                entity = (BaseEntity) CommonUtils.newInstance(createSingleItem);
+                entity.setEntityID(PRIMARY_DEVICE);
+                entity.setName(createSingleEntity.name());
+                if (entity instanceof HasJsonData jsonData) {
+                    jsonData.setJsonData("dis_del", createSingleEntity.disableDelete());
+                    jsonData.setJsonData("dis_edit", createSingleEntity.disableEdit());
+                }
+                db().save(entity);
+            }
+        }
     }
 
     public void registerAllFieldSubTypes() {
@@ -528,7 +511,7 @@ public class ContextImpl implements Context {
                             exitApplication(applicationContext, 221);
                             return null;
                         }, null),
-                    appGitHub.getReleasesSince(installedVersion, false));
+                        appGitHub.getReleasesSince(installedVersion, false));
             }
             builder.fireOnFetch(() -> {
                 long runDuration = TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - START_TIME);

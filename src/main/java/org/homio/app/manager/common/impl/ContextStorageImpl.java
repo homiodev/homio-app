@@ -1,16 +1,5 @@
 package org.homio.app.manager.common.impl;
 
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
-import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
@@ -25,6 +14,7 @@ import org.homio.api.ContextSetting.MemSetterHandler;
 import org.homio.api.ContextStorage;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
+import org.homio.api.entity.HasPlace;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.model.HasEntityIdentifier;
@@ -54,11 +44,18 @@ import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.cglib.proxy.MethodInterceptor;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.lang.reflect.Modifier;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
+
 @Log4j2
 @RequiredArgsConstructor
 public class ContextStorageImpl implements ContextStorage {
 
-    private final @Getter @Accessors(fluent = true) ContextImpl context;
+    private final @Getter
+    @Accessors(fluent = true) ContextImpl context;
     private final TransactionManagerContext transactionManagerContext;
     private final AllDeviceRepository allDeviceRepository;
     private final EntityManager entityManager;
@@ -246,14 +243,14 @@ public class ContextStorageImpl implements ContextStorage {
     }
 
     private <T extends HasEntityIdentifier> void runUpdateNotifyListeners(@Nullable T updatedEntity, T oldEntity,
-        ContextEventImpl.EntityListener... entityListeners) {
+                                                                          ContextEventImpl.EntityListener... entityListeners) {
         if (updatedEntity != null || oldEntity != null) {
             context.bgp().builder("entity-" + (updatedEntity == null ? oldEntity : updatedEntity).getEntityID() + "-updated").hideOnUI(true)
-                   .execute(() -> {
-                       for (ContextEventImpl.EntityListener entityListener : entityListeners) {
-                           entityListener.notify(updatedEntity, oldEntity);
-                       }
-                   });
+                    .execute(() -> {
+                        for (ContextEventImpl.EntityListener entityListener : entityListeners) {
+                            entityListener.notify(updatedEntity, oldEntity);
+                        }
+                    });
         }
     }
 
@@ -303,7 +300,10 @@ public class ContextStorageImpl implements ContextStorage {
             DeviceBaseEntity newDeviceData = (DeviceBaseEntity) newEntity;
             newDeviceData.setIeeeAddress(deviceEntity.getIeeeAddress());
             newDeviceData.setImageIdentifier(deviceEntity.getImageIdentifier());
-            newDeviceData.setPlace(deviceEntity.getPlace());
+        }
+        if (entity instanceof HasPlace placeEntity) {
+            HasPlace newDeviceData = (HasPlace) newEntity;
+            newDeviceData.setPlace(placeEntity.getPlace());
         }
         return newEntity;
     }
@@ -318,8 +318,8 @@ public class ContextStorageImpl implements ContextStorage {
     public List<DeviceBaseEntity> getDeviceEntity(@NotNull String ieeeAddress, @Nullable String typePrefix) {
         List<DeviceBaseEntity> entities = findAll(DeviceBaseEntity.class);
         Stream<DeviceBaseEntity> stream = entities
-            .stream()
-            .filter(e -> ieeeAddress.equals(e.getIeeeAddress()) || e.getEntityID().equals(ieeeAddress));
+                .stream()
+                .filter(e -> ieeeAddress.equals(e.getIeeeAddress()) || e.getEntityID().equals(ieeeAddress));
         if (typePrefix != null) {
             stream = stream.filter(e -> e.getEntityID().startsWith(DeviceBaseEntity.PREFIX + typePrefix));
         }
@@ -362,6 +362,10 @@ public class ContextStorageImpl implements ContextStorage {
                         .log(level, "[{}]: Set {} '{}' status: {}. Msg: {}", entity.getEntityID(), entity, title, status, message);
             }
         }
+
+        if (entity instanceof BaseEntity) {
+            runUpdateNotifyListeners(entity, null, context.event().getEntityUpdateListeners());
+        }
     }
 
     private <T extends BaseEntity> List<T> findAllByRepository(Class<BaseEntity> clazz) {
@@ -385,14 +389,14 @@ public class ContextStorageImpl implements ContextStorage {
             result.addAll(repository.listAll());
         } else {
             result.addAll(entityManager.getEntityIDsByEntityClassFullName(clazz, repository).stream().map(entityID ->
-                entityManager.<T>getEntityWithFetchLazy(entityID)).filter(Objects::nonNull).toList());
+                    entityManager.<T>getEntityWithFetchLazy(entityID)).filter(Objects::nonNull).toList());
         }
         if (clazz.equals(DeviceBaseEntity.class)) {
             List<T> memoryDevices = new ArrayList<>();
             for (T t : result) {
                 if (t instanceof Z2MLocalCoordinatorEntity coordinator) {
                     memoryDevices.addAll(coordinator.getService().getDeviceHandlers().values().stream()
-                                             .map(z2MDeviceService -> (T) z2MDeviceService.getDeviceEntity()).toList());
+                            .map(z2MDeviceService -> (T) z2MDeviceService.getDeviceEntity()).toList());
                 }
             }
             result.addAll(memoryDevices);

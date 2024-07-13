@@ -136,7 +136,7 @@ public class LocalBoardUsbListener {
         context.ui().toastr().success(Lang.getServerMessage(text, mountTo));
 
         if (save) {
-            LocalBoardEntity entity = LocalBoardEntity.ensureDeviceExists(context);
+            LocalBoardEntity entity = LocalBoardEntity.getEntity(context);
             List<String> usbList = entity.getJsonDataList("usb");
             usbList.add(OBJECT_MAPPER.writeValueAsString(new UsbEntity(icon, color, usbDevice.getUuid(), mountTo)));
             context.db().updateDelayed(entity, e -> e.setJsonDataList("usb", usbList));
@@ -171,7 +171,7 @@ public class LocalBoardUsbListener {
 
     @SneakyThrows
     private @NotNull Map<String, UsbEntity> getSavedUsbInfo() {
-        LocalBoardEntity entity = LocalBoardEntity.ensureDeviceExists(context);
+        LocalBoardEntity entity = LocalBoardEntity.getEntity(context);
         List<String> usbList = entity.getJsonDataList("usb");
         Map<String, UsbEntity> usbEntities = new HashMap<>();
         for (String usbInfo : usbList) {

@@ -12,35 +12,53 @@ import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.action.UIContextMenuAction;
-import org.homio.api.util.Lang;
+import org.homio.api.util.SecureString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
-
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 @Entity
 @UISidebarChildren(icon = "fas fa-square-rss", color = "#308BB3", allowCreateItem = false)
 public class IbkrEntity extends MiscEntity implements EntityService<IbkrService>,
         HasStatusAndMsg {
 
-    public static @NotNull IbkrEntity ensureEntity(Context context) {
-        IbkrEntity entity = context.db().getEntity(IbkrEntity.class, PRIMARY_DEVICE);
-        if (entity == null) {
-            entity = new IbkrEntity();
-            entity.setEntityID(PRIMARY_DEVICE);
-            entity.setJsonData("dis_del", true);
-            entity = context.db().save(entity);
-        }
-        return entity;
+    @UIField(order = 1, inlineEditWhenEmpty = true)
+    @UIFieldGroup(order = 15, value = "SECURITY", borderColor = "#23ADAB")
+    public String getUser() {
+        return getJsonData("user", "");
+    }
+
+    public void setUser(String value) {
+        setJsonData("user", value);
+    }
+
+    @UIField(order = 1, disableEdit = true)
+    @UIFieldGroup(order = 50, value = "INFO", borderColor = "#9C27B0")
+    public String getAccountId() {
+        return getJsonData("aid");
+    }
+
+    @UIField(order = 2, disableEdit = true)
+    @UIFieldGroup("INFO")
+    public String getCurrency() {
+        return getJsonData("ccy");
+    }
+
+    @UIField(order = 2)
+    @UIFieldGroup("SECURITY")
+    public SecureString getPassword() {
+        return getJsonSecure("pwd");
+    }
+
+    public void setPassword(String value) {
+        setJsonDataSecure("pwd", value);
     }
 
     @UIField(order = 1, inlineEdit = true)
     @UIFieldGroup("GENERAL")
     public boolean isStart() {
-        return getJsonData("start", true);
+        return getJsonData("start", false);
     }
 
     public void setStart(boolean start) {
@@ -55,18 +73,6 @@ public class IbkrEntity extends MiscEntity implements EntityService<IbkrService>
 
     public void setPort(int value) {
         setJsonData("port", value);
-    }
-
-    @Override
-    public String getDescriptionImpl() {
-        AtomicReference<String> value = new AtomicReference<>("");
-        optService().ifPresent(service -> {
-            String proxyHost = service.getProxyHost();
-            proxyHost = proxyHost.substring("$DEVICE_URL/".length());
-            proxyHost  = "http://192.168.1.63:9111/" + proxyHost;
-            value.set(Lang.getServerMessage("IBKR_DESCRIPTION", proxyHost));
-        });
-        return value.get();
     }
 
     @Override

@@ -1,20 +1,13 @@
 package org.homio.app.model.entity;
 
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.Entity;
-import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
+import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContractStub;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.MediaEntity;
@@ -43,28 +36,31 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 
+import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+
 @Entity
+@CreateSingleEntity
 @UISidebarChildren(icon = "fas fa-square-rss", color = "#308BB3", allowCreateItem = false)
 public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
-    HasGitHubFirmwareVersion, EntityService<MediaMTXService>,
-    DeviceEndpointsBehaviourContractStub {
+        HasGitHubFirmwareVersion, EntityService<MediaMTXService>,
+        DeviceEndpointsBehaviourContractStub {
 
     public static final GitHubProject mediamtxGitHub =
-        GitHubProject.of("bluenviron", "mediamtx")
-                     .setInstalledVersionResolver((context, gitHubProject) -> {
-                         Path executable = CommonUtils.getInstallPath().resolve("mediamtx").resolve("mediamtx");
-                         return context.hardware().execute(executable + " --version");
-                     });
+            GitHubProject.of("bluenviron", "mediamtx")
+                    .setInstalledVersionResolver((context, gitHubProject) -> {
+                        Path executable = CommonUtils.getInstallPath().resolve("mediamtx").resolve("mediamtx");
+                        return context.hardware().execute(executable + " --version");
+                    });
 
-    public static MediaMTXEntity ensureEntityExists(Context context) {
-        MediaMTXEntity entity = context.db().getEntity(MediaMTXEntity.class, PRIMARY_DEVICE);
-        if (entity == null) {
-            entity = new MediaMTXEntity();
-            entity.setEntityID(PRIMARY_DEVICE);
-            entity.setJsonData("dis_del", true);
-            context.db().save(entity);
-        }
-        return entity;
+    public static MediaMTXEntity getEntity(Context context) {
+        return context.db().getEntity(MediaMTXEntity.class, PRIMARY_DEVICE);
     }
 
     @Override
@@ -214,40 +210,33 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     }
 
     @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public @Nullable String getPlace() {
-        return super.getPlace();
-    }
-
-    @Override
     public void assembleActions(UIInputBuilder uiInputBuilder) {
 
     }
 
     @UIContextMenuAction(value = "GET_LIST",
-                         icon = "fab fa-quinscape",
-                         iconColor = "#899343")
+            icon = "fab fa-quinscape",
+            iconColor = "#899343")
     public ActionResponseModel apiGetList() {
         return ActionResponseModel.showJson("GET_LIST", getService().getApiList());
     }
 
     @SneakyThrows
     @UIContextMenuAction(value = "EDIT_CONFIG",
-                         icon = "fas fa-keyboard",
-                         iconColor = "#899343")
+            icon = "fas fa-keyboard",
+            iconColor = "#899343")
     public ActionResponseModel editConfig() {
         String content = Files.readString(getService().getConfigurationPath());
         return ActionResponseModel.showFile(new FileModel("mediamtx.yml", content, FileContentType.yaml)
-            .setSaveHandler(mc -> getService().updateConfiguration(mc)));
+                .setSaveHandler(mc -> getService().updateConfiguration(mc)));
     }
 
     @SneakyThrows
     @UIContextMenuAction(value = "RESET_CONFIG",
-                         confirmMessage = "RESET_CONFIG",
-                         confirmMessageDialogColor = Color.ERROR_DIALOG,
-                         icon = "fas fa-clock-rotate-left",
-                         iconColor = "#91293E")
+            confirmMessage = "RESET_CONFIG",
+            confirmMessageDialogColor = Color.ERROR_DIALOG,
+            icon = "fas fa-clock-rotate-left",
+            iconColor = "#91293E")
     public ActionResponseModel resetConfiguration() {
         getService().resetConfiguration();
         return ActionResponseModel.success();
@@ -256,8 +245,8 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     @Override
     @SneakyThrows
     public @NotNull ActionResponseModel handleTextFieldAction(
-        @NotNull String field,
-        @NotNull JSONObject metadata) {
+            @NotNull String field,
+            @NotNull JSONObject metadata) {
         if (metadata.optString("key", "").equals("config")) {
             return editConfig();
         }
@@ -299,7 +288,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
 
         public StreamEndpoint(JsonNode node, MediaMTXEntity entity) {
             super(createIcon(node.get("source").get("type").asText()), "MTX",
-                entity.context(), entity, node.get("name").asText(), false, EndpointType.trigger);
+                    entity.context(), entity, node.get("name").asText(), false, EndpointType.trigger);
             this.node = node;
 
             boolean ready = node.get("ready").asBoolean();
@@ -313,8 +302,8 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
         @Override
         public UIInputBuilder createTriggerActionBuilder(@NotNull UIInputBuilder uiInputBuilder) {
             uiInputBuilder.addButton(getEntityID(), null, (context, params) ->
-                              ActionResponseModel.showJson("TITLE.NODE_INFO", node))
-                          .setText(getValue().toString());
+                            ActionResponseModel.showJson("TITLE.NODE_INFO", node))
+                    .setText(getValue().toString());
             return uiInputBuilder;
         }
 

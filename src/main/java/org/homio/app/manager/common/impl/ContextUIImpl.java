@@ -9,7 +9,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.homio.api.ContextNetwork;
 import org.homio.api.ContextUI;
 import org.homio.api.audio.AudioFormat;
 import org.homio.api.audio.stream.ByteArrayAudioStream;
@@ -58,7 +57,6 @@ import org.json.JSONObject;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.io.InputStream;
-import java.net.URL;
 import java.time.Duration;
 import java.util.*;
 import java.util.Map.Entry;
@@ -85,7 +83,6 @@ public class ContextUIImpl implements ContextUI {
     private static final @NotNull Object EMPTY = new Object();
     private final @NotNull Map<DynamicUpdateRequest, DynamicUpdateContext> dynamicUpdateRegisters = new ConcurrentHashMap<>();
     private final @NotNull Map<String, DialogModel> dialogRequest = new ConcurrentHashMap<>();
-    private final @NotNull Map<String, DialogModel> frameRequest = new ConcurrentHashMap<>();
     private final @NotNull Map<String, NotificationBlock> blockNotifications = new ConcurrentHashMap<>();
     private final @NotNull Map<String, HeaderButtonNotification> headerButtonNotifications = new ConcurrentHashMap<>();
     private final @NotNull Map<String, HeaderButtonSelection> headerMenuButtons = new ConcurrentHashMap<>();
@@ -469,7 +466,6 @@ public class ContextUIImpl implements ContextUI {
         notificationResponse.headerMenuButtons = headerMenuButtons.values();
 
         notificationResponse.dialogs = dialogRequest.values();
-        notificationResponse.frameDialogs = frameRequest.values();
         UserEntity user = context.getUser();
         notificationResponse.notifications = blockNotifications.values();
         if (user != null) {
@@ -640,7 +636,6 @@ public class ContextUIImpl implements ContextUI {
     public static class NotificationResponse {
 
         private Collection<HeaderButtonSelection> headerMenuButtons;
-        private Collection<DialogModel> frameDialogs;
         private Collection<HeaderButtonNotification> headerButtonNotifications;
         private Collection<ProgressNotification> progress;
         private Collection<DialogModel> dialogs;
@@ -921,26 +916,23 @@ public class ContextUIImpl implements ContextUI {
         }
 
         @Override
-        @SneakyThrows
-        public void sendFrame(String host, String title, boolean proxy) {
-            if (!frameRequest.containsKey(host)) {
-                try {
-                    if (!host.startsWith("http")) {
-                        host = "http://" + host;
-                    }
-                    URL url = new URL(host);
-                    ContextNetwork.ping(url.getHost(), url.getPort() == -1 ? 80 : url.getPort());
-                    if (proxy) {
-                        host = context.service().registerUrlProxy(String.valueOf(Math.abs(host.hashCode())), host, builder -> {
-                        });
-                    }
-                    DialogModel dialogModel = new DialogModel(host, title, null);
-                    dialogModel.frame();
-                    frameRequest.put(host, dialogModel);
-                    sendGlobal(GlobalSendType.frame, host, null, title, null);
-                } catch (Exception ignore) {
+        public MirrorImageDialog topImageDialog(@NotNull String title, @NotNull String icon, @NotNull String iconColor) {
+            ObjectNode content = OBJECT_MAPPER.createObjectNode();
+            content.put("icon", icon);
+            content.put("iconColor", iconColor);
+            content.put("title", title);
+            content.put("type", "image");
+            ObjectNode objectNode = OBJECT_MAPPER.createObjectNode();
+            objectNode.put("type", "image");
+            objectNode.set("value", content);
+            return imageBase64 -> {
+                objectNode.set("value", content);
+                content.put("image", imageBase64);
+                if (StringUtils.isEmpty(imageBase64)) {
+                    objectNode.set("value", null);
                 }
-            }
+                sendRawData("-global", objectNode);
+            };
         }
 
         @Override
@@ -1027,7 +1019,7 @@ public class ContextUIImpl implements ContextUI {
 
         @Override
         @SneakyThrows
-        public void playWebAudio(InputStream stream, AudioFormat format, Integer from, Integer to) {
+        public void playWebAudio(@NotNull InputStream stream, @NotNull AudioFormat format, Integer from, Integer to) {
             ByteArrayAudioStream audioStream = new ByteArrayAudioStream(IOUtils.toByteArray(stream), format);
             webAudioSink.play(audioStream, null, from, to);
         }

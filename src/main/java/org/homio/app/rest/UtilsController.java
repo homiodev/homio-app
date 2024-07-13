@@ -46,7 +46,7 @@ import org.homio.app.js.assistant.model.CompletionRequest;
 import org.homio.app.manager.ScriptService;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.ScriptEntity;
-import org.homio.app.model.entity.widget.impl.js.WidgetFrameEntity;
+import org.homio.app.model.entity.widget.impl.extra.WidgetFrameEntity;
 import org.homio.app.model.rest.DynamicUpdateRequest;
 import org.homio.hquery.Curl;
 import org.jetbrains.annotations.NotNull;

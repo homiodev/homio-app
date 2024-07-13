@@ -48,6 +48,9 @@ public class WidgetService implements ContextCreated {
             }
         }
 
+        AvailableWidget extraWidgets = new AvailableWidget("extra-widgets", "fas fa-cheese", new ArrayList<>());
+        extraWidgets.children.add(new AvailableWidget("IBKR", "fas fa-user", null));
+        options.add(extraWidgets);
         /*AvailableWidget extraWidgets = new AvailableWidget("extra-widgets", "fas fa-cheese", new ArrayList<>());
         Map<ParentWidget, AvailableWidget> widgetMap = new HashMap<>();
 

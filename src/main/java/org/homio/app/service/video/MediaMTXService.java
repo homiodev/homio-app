@@ -58,7 +58,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
     private @Getter boolean isRunningLocally;
 
     public MediaMTXService(@NotNull Context context, @NotNull MediaMTXEntity entity) {
-        super(context, entity, true);
+        super(context, entity, true, "MEDIAMTX");
         configurationPath = CommonUtils.getConfigPath().resolve("mediamtx.yml");
         context.bgp().addLowPriorityRequest("register-mediamtx", this::scheduleRegisterSources);
     }

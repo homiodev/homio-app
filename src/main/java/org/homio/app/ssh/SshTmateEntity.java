@@ -1,19 +1,13 @@
 package org.homio.app.ssh;
 
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-
 import jakarta.persistence.Entity;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.Set;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.homio.api.Context;
 import org.homio.api.ContextHardware;
+import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.service.ssh.SshBaseEntity;
@@ -29,32 +23,30 @@ import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.Set;
+
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+
 @Log4j2
 @Entity
+@CreateSingleEntity
 @UISidebarChildren(icon = "fas fa-satellite-dish", color = "#0088CC", allowCreateItem = false)
 public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateService> {
 
     public static void ensureEntityExists(ContextImpl context) {
-        SshTmateEntity tmate = getOrCreateTmateEntity(context);
+        SshTmateEntity tmate = context.db().getEntity(SshTmateEntity.class, PRIMARY_DEVICE);
         if (SystemUtils.IS_OS_LINUX) {
             ContextHardware hardware = context.hardware();
             if (!hardware.isSoftwareInstalled("tmate")) {
                 context.event().runOnceOnInternetUp("install-tmate", () ->
-                    context.bgp().runWithProgress("install-tmate", false).executeSync(progressBar ->
-                        installTmate(tmate, hardware, progressBar)));
+                        context.bgp().runWithProgress("install-tmate", false).executeSync(progressBar ->
+                                installTmate(tmate, hardware, progressBar)));
             }
         }
-    }
-
-    private static @NotNull SshTmateEntity getOrCreateTmateEntity(ContextImpl context) {
-        SshTmateEntity tmate = context.db().getEntity(SshTmateEntity.class, PRIMARY_DEVICE);
-        if (tmate == null) {
-            SshTmateEntity entity = new SshTmateEntity();
-            entity.setEntityID(PRIMARY_DEVICE);
-            entity.setName("Tmate");
-            tmate = context.db().save(entity);
-        }
-        return tmate;
     }
 
     @SneakyThrows
@@ -141,7 +133,8 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
                 optionModel.setTitle(Lang.getServerMessage("TITLE.TMATE_DISABLED"));
                 optionModel.setDisabled(true);
             }
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
     }
 
     @Override

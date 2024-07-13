@@ -1,14 +1,20 @@
 package org.homio.addon.ibkr;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.Context;
 import org.homio.api.ContextBGP;
+import org.homio.api.JSDisableMethod;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.model.HasEntityIdentifier;
-import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.service.EntityService;
 import org.homio.api.util.CommonUtils;
@@ -16,11 +22,18 @@ import org.homio.api.util.JsonUtils;
 import org.homio.hquery.Curl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 
 import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.api.util.JsonUtils.YAML_OBJECT_MAPPER;
 
 public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
@@ -29,15 +42,27 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
     private ContextBGP.ProcessContext processContext;
     private static final Path installPath = CommonUtils.getInstallPath().resolve("ibkr_client_portal");
     private static final Path configPath = installPath.resolve("root").resolve("conf.yaml");
-    private @Getter String proxyHost;
+    private final LoadingCache<String, JsonNode> fifteenMinQueryCache;
 
     public IbkrService(@NotNull Context context, @NotNull IbkrEntity ibkrEntity) {
-        super(context, ibkrEntity, true);
+        super(context, ibkrEntity, true, "IBKR");
+
+        this.fifteenMinQueryCache = CacheBuilder.newBuilder().
+                expireAfterWrite(15, TimeUnit.MINUTES).build(new CacheLoader<>() {
+                    public @NotNull JsonNode load(@NotNull String url) {
+                        return Curl.get(entity.getUrl(url), JsonNode.class);
+                    }
+                });
     }
 
     @Override
     public void destroy(boolean forRestart, @Nullable Exception ex) throws Exception {
         ContextBGP.cancel(processContext);
+    }
+
+    @Override
+    public void restartService() {
+        super.restartService();
     }
 
     @Override
@@ -70,6 +95,7 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
     }
 
     private void runService(Path execPath) {
+        entity.setStatus(Status.INITIALIZE);
         syncConfiguration();
         Path installPath = execPath.getParent().getParent();
         Path runPath = execPath.subpath(installPath.getNameCount(), execPath.getNameCount());
@@ -82,95 +108,68 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
         entity.setStatus(Status.INITIALIZE);
     }
 
-    private void authenticateUser() {
-        String host = "http://localhost:" + entity.getPort();
-        this.proxyHost = context.service().registerUrlProxy(String.valueOf(Math.abs(host.hashCode())), host, builder -> {
+    public void authenticateUser() {
+        entity.setStatus(Status.INITIALIZE);
+        context.media().fireSeleniumFirefox("IBKR authenticate", "fas fa-user-lock", "#E63917", driver -> {
+            try {
+                if (processContext.isStopped()) {
+                    return;
+                }
+                String loginPage = "http://localhost:" + entity.getPort();
+                driver.get(loginPage);
+
+                waitAction(driver, loginPage, 60);
+
+                String currentUrl = driver.getCurrentUrl();
+                WebElement usernameInput = driver.findElement(By.id("xyz-field-username"));
+                usernameInput.sendKeys(entity.getUser());
+                WebElement passwordInput = driver.findElement(By.id("xyz-field-password"));
+                passwordInput.sendKeys(entity.getPassword().asString());
+                WebElement submitButton = driver.findElement(By.xpath("//button[@type='submit']"));
+                submitButton.click();
+
+                if (!waitAction(driver, currentUrl, 120)) {
+                    entity.setStatus(Status.REQUIRE_AUTH);
+                    log.error("Error authenticating user");
+                    ContextBGP.cancel(processContext);
+                } else {
+                    entity.setStatus(Status.ONLINE);
+                    log.info("Successfully authenticated user");
+                    if (entity.getAccountId().isEmpty()) {
+                        ObjectNode accounts = Curl.get(entity.getUrl("portfolio/account"), ObjectNode.class);
+                        if (!accounts.isEmpty()) {
+                            JsonNode account = accounts.get(0);
+                            entity.setJsonData("aid", account.get("accountId").asText());
+                            entity.setJsonData("ccy", account.get("currency").asText());
+                            entity.setName(account.get("desc").asText());
+                            context.db().save(entity);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Error while authenticate to ibkr");
+            }
         });
+    }
+
+    private boolean waitAction(WebDriver driver, String loginPage, int maxWaitSeconds) throws InterruptedException {
+        long count = 0;
+        while (driver.getCurrentUrl().equals(loginPage) && count < maxWaitSeconds) {
+            TimeUnit.MILLISECONDS.sleep(1000);
+            count++;
+            if (processContext.isStopped()) {
+                throw new RuntimeException();
+            }
+        }
+        return !driver.getCurrentUrl().equals(loginPage);
     }
 
     @Override
     public String isRequireRestartService() {
-        if (!entity.getStatus().isOnline()) {
+        if (entity.getStatus() == Status.ERROR) {
             return "Status: " + entity.getStatus();
         }
         return null;
-    }
-
-    /*@SneakyThrows
-    public void authenticateUser() {
-        context.ui().dialog().sendWebDialogRequest("http://localhost:5000");
-        System.setProperty("webdriver.chrome.driver", "/usr/lib/chromium-browser/chromedriver");
-
-        ChromeDriver driver = new ChromeDriver(options);
-        driver.manage().timeouts().implicitlyWait(Duration.of(10, ChronoUnit.SECONDS));
-
-        try {
-            String loginPage = "http://localhost:%d".formatted(entity.getPort());
-            driver.get(loginPage);
-            Thread.sleep(1000);
-
-            // User is redirected to login page on first visit
-            while (driver.getCurrentUrl().equals(loginPage)) {
-                Thread.sleep(250); // Adjust as needed
-            }
-
-            String currentUrl = driver.getCurrentUrl();
-            driver.findElement(By.id("xyz-field-username")).sendKeys(entity.getUser());
-            driver.findElement(By.id("xyz-field-password")).sendKeys(entity.getPassword().asString());
-            driver.findElement(By.xpath("//button[@type='submit']")).click();
-
-            // Wait until user is redirected to the login confirmation page
-            for (int i = 0; i < 30; i++) {
-                if (!driver.getCurrentUrl().equals(currentUrl)) {
-                    return;
-                }
-                Thread.sleep(500);
-            }
-            if (driver.getCurrentUrl().equals(currentUrl)) {
-                entity.setStatus(Status.REQUIRE_AUTH);
-                context.ui().dialog().sendDialogRequest("ibkr", Lang.getServerMessage("IBKR_INFO"),
-                        (responseType, pressedButton, parameters) -> {
-                        }, builder -> {
-                            List<ActionInputParameter> inputs = new ArrayList<>();
-                            inputs.add(ActionInputParameter.message(Lang.getServerMessage("IBKR_AUTH")));
-                            builder.submitButton("OK", button -> {
-                            }).group("General", inputs);
-                        });
-                log.warn("Authentication requires using mobile phone");
-            }
-
-            for (int i = 0; i < 60; i++) {
-                if (!driver.getCurrentUrl().equals(currentUrl)) {
-                    return;
-                }
-                Thread.sleep(1000);
-            }
-            if (driver.getCurrentUrl().equals(currentUrl)) {
-                log.error("IBKR authentication failed");
-            } else {
-                entity.setStatus(Status.ONLINE);
-                MenuBlock.StaticMenuBlock<String> accountMenu = context.getBean(Scratch3IBKRBlocks.class).getAccountMenu();
-                ObjectNode nodes = Curl.get(entity.getUrl("portfolio/accounts"), ObjectNode.class);
-
-                if (!nodes.isEmpty()) {
-                    JsonNode node = nodes.iterator().next();
-                    accountMenu.setDefaultValue(node.get("id").asText());
-                    for (int i = 0; i < nodes.size(); i++) {
-                        String text = node.get(i).get("id").asText();
-                        accountMenu.add(text, text);
-                    }
-                }
-                log.info("IBKR authentication succeed");
-            }
-        } finally {
-            driver.quit();
-        }
-    }*/
-
-    @Override
-    public void updateNotificationBlock() {
-        context.ui().notification().addBlockOptional("IBKR", "IBKR", new Icon("fab fa-flickr", "#B55050"));
-        context.ui().notification().updateBlock("IBKR", entity);
     }
 
     @SneakyThrows
@@ -189,5 +188,78 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
         if (updated) {
             JsonUtils.saveToFile(configuration, configPath);
         }
+    }
+
+    public ArrayNode getBuyOrders() {
+        return filterOrders(order -> "BUY".equals(order.get("side").asText()));
+    }
+
+    public ArrayNode getSellOrders() {
+        return filterOrders(order -> "SELL".equals(order.get("side").asText()));
+    }
+
+    public @NotNull ArrayNode filterOrders(Predicate<JsonNode> acceptFn) {
+        JsonNode orders = getOrders().get("orders");
+        ArrayNode nodes = OBJECT_MAPPER.createArrayNode();
+        for (JsonNode order : orders) {
+            if (acceptFn.test(order)) {
+                nodes.add(order);
+            }
+        }
+        return nodes;
+    }
+
+    @SneakyThrows
+    public JsonNode getOrders() {
+        return fifteenMinQueryCache.get(entity.getUrl("iserver/account/orders"));
+    }
+
+    @SneakyThrows
+    public ArrayNode getPositions() {
+        String baseUrl = entity.getUrl("portfolio/%s/positions/".formatted(entity.getAccountId()));
+        ArrayNode allPositions = OBJECT_MAPPER.createArrayNode();
+        for (int i = 0; i < 100; i++) {
+            JsonNode objectNode = fifteenMinQueryCache.get(baseUrl + i);
+            ArrayNode positions = (ArrayNode) objectNode;
+            if (positions.isEmpty()) {
+                break;
+            }
+            allPositions.addAll(positions);
+        }
+        return allPositions;
+    }
+
+    @SneakyThrows
+    public String getPerformance() {
+        String url = entity.getUrl("pa/performance");
+        JsonNode response = fifteenMinQueryCache.getIfPresent(url);
+        if (response == null) {
+            fifteenMinQueryCache.put(url, Curl.post(url,
+                    new PerformanceRequest(Set.of(entity.getAccountId())), ObjectNode.class));
+            response = fifteenMinQueryCache.get(url);
+        }
+        return response.get("data").asText();
+    }
+
+    @SneakyThrows
+    @JSDisableMethod
+    public double getSummary(String field) {
+        JsonNode response = fifteenMinQueryCache.get(entity.getUrl("portfolio/%s/summary".formatted(entity.getAccountId())));
+        return response.get(field).get("amount").asDouble();
+    }
+
+    public double getTotalCash() {
+        return getSummary("totalcashvalue");
+    }
+
+    public double getAvailableFunds() {
+        return getSummary("availablefunds");
+    }
+
+    @Getter
+    @AllArgsConstructor
+    private static class PerformanceRequest {
+        private final String freq = "D";
+        private final Set<String> acctIds;
     }
 }

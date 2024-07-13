@@ -57,7 +57,7 @@ public class Go2RTCService extends ServiceInstance<Go2RTCEntity>
     private @Getter boolean isRunningLocally;
 
     public Go2RTCService(@NotNull Context context, @NotNull Go2RTCEntity entity) {
-        super(context, entity, true);
+        super(context, entity, true, "GO2RTC");
         configurationPath = CommonUtils.getConfigPath().resolve("go2rtc.yaml");
         apiURL = "http://localhost:%d/api".formatted(entity.getApiPort());
         readConfiguration();
