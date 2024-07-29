@@ -31,7 +31,7 @@ public class SshTmateService extends ServiceInstance<SshTmateEntity> implements 
     private Process process;
 
     public SshTmateService(Context context, SshTmateEntity entity) {
-        super(context, entity, true);
+        super(context, entity, true, "TMATE");
     }
 
     @Override

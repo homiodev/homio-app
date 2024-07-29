@@ -412,7 +412,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         private final SSHServerEndpoint sshServerEndpoint;
 
         public GenericWebSocketService(Context context, SshGenericEntity entity) {
-            super(context, entity, true);
+            super(context, entity, true, "SSH");
             this.sshServerEndpoint = context.getBean(SSHServerEndpoint.class);
         }
 

@@ -57,7 +57,9 @@ public class Go2RTCService extends ServiceInstance<Go2RTCEntity>
     private @Getter boolean isRunningLocally;
 
     public Go2RTCService(@NotNull Context context, @NotNull Go2RTCEntity entity) {
-        super(context, entity, true, "GO2RTC");
+        super(context, entity, true, "GO2RTC", true);
+        setExposeService(true);
+        setParent("STREAM");
         configurationPath = CommonUtils.getConfigPath().resolve("go2rtc.yaml");
         apiURL = "http://localhost:%d/api".formatted(entity.getApiPort());
         readConfiguration();
@@ -82,7 +84,7 @@ public class Go2RTCService extends ServiceInstance<Go2RTCEntity>
         }
     }
 
-    public void dispose(@Nullable Exception ex) {
+    private void dispose(@Nullable Exception ex) {
         context.service().unRegisterUrlProxy("go2rtc");
         context.ui().console().unRegisterPlugin("go2rtc");
         context.bgp().removeLowPriorityRequest("register-go2rtc");
@@ -101,7 +103,7 @@ public class Go2RTCService extends ServiceInstance<Go2RTCEntity>
 
     @Override
     public void destroy(boolean forRestart, Exception ex) {
-        this.dispose(ex);
+        dispose(ex);
     }
 
     @SneakyThrows

@@ -432,7 +432,7 @@ public class MediaController implements ContextCreated {
         BaseCameraEntity<?, ?> entity = context.db().getEntityRequire(entityID);
         if (!entity.getStatus().isOnline()) {
             throw new ServerException("Unable to run execute request. Video entity: %s has wrong status: %s".formatted(entity.getTitle(), entity.getStatus()))
-                    .setStatus(HttpStatus.PRECONDITION_FAILED);
+                    .setHttpStatus(HttpStatus.PRECONDITION_FAILED);
         }
         return entity;
     }

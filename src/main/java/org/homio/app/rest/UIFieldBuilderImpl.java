@@ -1,14 +1,6 @@
 package org.homio.app.rest;
 
-import static org.apache.commons.lang3.StringUtils.trimToNull;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.homio.app.utils.UIFieldUtils.nullIfFalse;
-import static org.homio.app.utils.UIFieldUtils.putIfNonEmpty;
-
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.NotImplementedException;
@@ -19,8 +11,18 @@ import org.homio.api.ui.field.action.HasDynamicUIFields;
 import org.homio.api.ui.field.action.HasDynamicUIFields.FieldBuilder;
 import org.homio.api.ui.field.action.HasDynamicUIFields.UIFieldBuilder;
 import org.homio.app.model.rest.EntityUIMetaData;
+import org.homio.app.utils.UIFieldSelectionUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.apache.commons.lang3.StringUtils.trimToNull;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.homio.app.utils.UIFieldUtils.nullIfFalse;
+import static org.homio.app.utils.UIFieldUtils.putIfNonEmpty;
 
 @Getter
 public class UIFieldBuilderImpl implements UIFieldBuilder {
@@ -40,18 +42,41 @@ public class UIFieldBuilderImpl implements UIFieldBuilder {
     @Override
     public @NotNull HasDynamicUIFields.FieldBuilder addSlider(int order, float min, float max, @Nullable String header,
         @NotNull UpdatableValue<Float> value) {
-        throw new NotImplementedException();
+        FieldBuilderImpl builder = new FieldBuilderImpl(order, value, UIFieldType.Slider);
+        builder.jsonTypeMetadata.put("min", min);
+        builder.jsonTypeMetadata.put("max", max);
+        return addField(value.getName(), builder);
     }
 
     @Override
     public @NotNull HasDynamicUIFields.FieldBuilder addNumber(int order, @NotNull UpdatableValue<Integer> value) {
-        throw new NotImplementedException();
+        return addField(value.getName(), new FieldBuilderImpl(order, value, UIFieldType.Float));
     }
 
     @Override
     public @NotNull HasDynamicUIFields.FieldBuilder addSelect(int order, @NotNull UpdatableValue<String> value,
         @NotNull List<OptionModel> selections) {
-        throw new NotImplementedException();
+        return addSelectBox(order, UIFieldType.SelectBox, value, selections);
+    }
+
+    @NotNull
+    @Override
+    public FieldBuilder addChips(int order, @NotNull UpdatableValue<String> value) {
+        return addField(value.getName(), new FieldBuilderImpl(order, value, UIFieldType.Chips));
+    }
+
+    @NotNull
+    @Override
+    public FieldBuilder addMultiSelect(int order, @NotNull UpdatableValue<String> value, @NotNull List<OptionModel> selections) {
+        return addSelectBox(order, UIFieldType.MultiSelectBox, value, selections);
+    }
+
+    private @NotNull FieldBuilder addSelectBox(int order, @NotNull UIFieldType uiFieldType, @NotNull UpdatableValue<String> value, @NotNull List<OptionModel> selections) {
+        FieldBuilderImpl builder = new FieldBuilderImpl(order, value, uiFieldType);
+        ObjectNode meta = UIFieldSelectionUtil.getSelectBoxList(builder.jsonTypeMetadata);
+        meta.put("selectType", "inline");
+        meta.set("selectOptions", OBJECT_MAPPER.valueToTree(selections));
+        return addField(value.getName(), builder);
     }
 
     private FieldBuilder addField(String key, FieldBuilderImpl fieldBuilder) {
@@ -65,6 +90,7 @@ public class UIFieldBuilderImpl implements UIFieldBuilder {
         private final EntityUIMetaData data = new EntityUIMetaData();
         private final ObjectNode jsonTypeMetadata = OBJECT_MAPPER.createObjectNode();
         private final int order;
+        @Getter
         private final UpdatableValue value;
         private final UIFieldType type;
 

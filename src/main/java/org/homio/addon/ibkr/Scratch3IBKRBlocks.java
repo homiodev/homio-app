@@ -19,7 +19,7 @@ public class Scratch3IBKRBlocks extends Scratch3ExtensionBlocks {
         super("#b55050", context, null, "ibkr");
         setParent(ScratchParent.storage);
 
-        this.service = context.db().getEntityRequire(IbkrEntity.class, PRIMARY_DEVICE).getService();
+        this.service = context.db().getEntityRequire(IbkrEntity.class, PRIMARY_DEVICE).getOrCreateService(context).get();
 
         // blocks
         blockReporter(5, "performance", "Performance", workspaceBlock ->

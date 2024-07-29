@@ -73,6 +73,7 @@ public class RouteController {
         bootstrapContext.settings = settingController.getSettings();
         bootstrapContext.notifications = ((ContextUIImpl) context.ui()).getNotifications();
         bootstrapContext.consoleTabs = consoleController.getTabs();
+        bootstrapContext.customImages = ContextUIImpl.customImages;
 
         String eTag = String.valueOf(bootstrapContext.hashCode());
         if (webRequest.checkNotModified(eTag)) {
@@ -298,6 +299,7 @@ public class RouteController {
         public List<SettingEntity> settings;
         public ContextUIImpl.NotificationResponse notifications;
         public Set<ConsoleTab> consoleTabs;
+        public Map<String, String> customImages;
     }
 
     public record SidebarMenuItem(String href, String icon, String bg, String label, int order) {

@@ -1,19 +1,30 @@
 package org.homio.app.manager.common.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
+import org.homio.api.Context;
 import org.homio.api.ContextService;
 import org.homio.api.ContextService.RouteProxyBuilder.ProxyUrl;
+import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.device.DeviceBaseEntity;
+import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.HasEntityIdentifier;
+import org.homio.api.model.OptionModel;
+import org.homio.api.service.BaseService;
+import org.homio.api.service.EntityService;
 import org.homio.api.service.EntityService.ServiceInstance;
+import org.homio.app.manager.bgp.WatchdogBgpService;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.user.UserBaseEntity;
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONObject;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.web.socket.WebSocketHandler;
@@ -22,24 +33,25 @@ import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
 import org.springframework.web.socket.server.support.WebSocketHandlerMapping;
 import org.springframework.web.socket.server.support.WebSocketHttpRequestHandler;
 
+import java.lang.reflect.AnnotatedType;
+import java.lang.reflect.Method;
 import java.net.URI;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
 
 @Log4j2
 public class ContextServiceImpl implements ContextService {
 
     public static final Map<String, Class<? extends HasEntityIdentifier>> entitySelectMap = new ConcurrentHashMap<>();
-    private static final Map<String, ServiceInstance> entityToService = new ConcurrentHashMap<>();
-    private final @Getter @Accessors(fluent = true) ContextImpl context;
+    private static final Map<String, BaseService> entityToService = new ConcurrentHashMap<>();
+    private final @Getter
+    @Accessors(fluent = true) ContextImpl context;
     private final @Getter Map<String, RouteProxyImpl> proxy = new ConcurrentHashMap<>();
 
     public ContextServiceImpl(ContextImpl context) {
@@ -87,19 +99,22 @@ public class ContextServiceImpl implements ContextService {
         proxy.put(entityID, routeProxy);
         return "$DEVICE_URL/rest/route/proxy/" + entityID + "/proxy_index.html";
     }
+
     @Override
     public ServiceInstance getEntityService(@NotNull String entityID) {
-        return entityToService.get(entityID);
+        return (ServiceInstance) entityToService.get(entityID);
     }
 
     @Override
-    public void addEntityService(@NotNull String entityID, @NotNull ServiceInstance service) {
+    public void addService(@NotNull String entityID, @NotNull BaseService service) {
         entityToService.put(entityID, service);
-        context.bgp().getWatchdogBgpService().addWatchDogService(entityID, service);
+        if (service instanceof EntityService.WatchdogService wds) {
+            context.bgp().getWatchdogBgpService().addWatchDogService(entityID, wds);
+        }
     }
 
     @Override
-    public ServiceInstance removeEntityService(@NotNull String entityID) {
+    public BaseService removeService(@NotNull String entityID) {
         context.bgp().getWatchdogBgpService().removeWatchDogService(entityID);
         return entityToService.remove(entityID);
     }
@@ -137,7 +152,7 @@ public class ContextServiceImpl implements ContextService {
     public static class RouteProxyImpl {
 
         private final @NotNull String entityID;
-        private @NotNull String url;
+        private final @NotNull String url;
         private Function<HttpServletRequest, ProxyUrl> urlBuilder;
         private Function<ProxyUrl, Map<String, String>> responseHeaderBuilder;
 
@@ -163,9 +178,37 @@ public class ContextServiceImpl implements ContextService {
             }
             return null;
         }
+    }
 
-        public void modifyUrl(URI uri) {
-            url = uri.getScheme() + "://" + uri.getHost() + ":" + uri.getPort() + uri.getPath();
+    public List<OptionModel> getServices() {
+        Map<String, List<BaseService>> servicesByName = new HashMap<>();
+        for (BaseService service : entityToService.values()) {
+            if (service.isExposeService() && service.getName() != null) {
+                String name = StringUtils.defaultIfEmpty(service.getParent(), service.getName());
+                servicesByName.computeIfAbsent(name, s -> new ArrayList<>())
+                        .add(service);
+            }
         }
+        List<OptionModel> list = new ArrayList<>();
+        for (Map.Entry<String, List<BaseService>> entry : servicesByName.entrySet()) {
+            if (entry.getValue().size() == 1) {
+                list.add(buildOptionModel(entry.getValue().get(0)));
+            } else {
+                OptionModel parent = OptionModel.of(entry.getKey());
+                list.add(parent);
+                for (BaseService service : entry.getValue()) {
+                    parent.addChild(buildOptionModel(service));
+                }
+            }
+        }
+
+        return list;
+    }
+
+    private OptionModel buildOptionModel(BaseService service) {
+        OptionModel optionModel = OptionModel.of(service.getEntityID(), service.getName());
+        optionModel.setIcon(service.getIcon());
+        optionModel.setColor(service.getColor());
+        return optionModel;
     }
 }

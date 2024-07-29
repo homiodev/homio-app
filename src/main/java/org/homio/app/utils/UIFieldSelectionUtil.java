@@ -169,7 +169,7 @@ public final class UIFieldSelectionUtil {
         }
     }
 
-    private static ObjectNode getSelectBoxList(ObjectNode jsonTypeMetadata) {
+    public static ObjectNode getSelectBoxList(ObjectNode jsonTypeMetadata) {
         if (!jsonTypeMetadata.has("textBoxSelections")) {
             jsonTypeMetadata.set("textBoxSelections", OBJECT_MAPPER.createArrayNode());
         }

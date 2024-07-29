@@ -19,8 +19,8 @@ import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
@@ -68,8 +68,8 @@ public class ContextHardwareImpl implements ContextHardware {
     }
 
     @Override
-    public @NotNull ArrayList<String> executeNoErrorThrowList(@NotNull String command, int maxSecondsTimeout,
-                                                              @Nullable ProgressBar progressBar) {
+    public @NotNull List<String> executeNoErrorThrowList(@NotNull String command, int maxSecondsTimeout,
+                                                         @Nullable ProgressBar progressBar) {
         return hardwareRepository.executeNoErrorThrowList(command, maxSecondsTimeout, progressBar);
     }
 

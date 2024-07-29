@@ -1,12 +1,16 @@
 package org.homio.app.model.entity;
 
+import com.pivovarit.function.ThrowingConsumer;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import jakarta.persistence.Entity;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.Context;
 import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.entity.types.MediaEntity;
 import org.homio.api.entity.version.HasFirmwareVersion;
+import org.homio.api.exception.ServerException;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.model.Status;
 import org.homio.api.service.EntityService;
@@ -27,8 +31,8 @@ import java.nio.file.Paths;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
 
 @Log4j2
 @Entity
@@ -37,7 +41,7 @@ import java.util.function.Consumer;
 public class FirefoxWebDriverEntity extends MediaEntity implements HasFirmwareVersion,
         EntityService<FirefoxWebDriverEntity.FirefoxWebDriverService> {
 
-    private static volatile boolean driverInUse;
+    private static Thread driverInUseThread;
     private static FirefoxDriver driver;
     private static Timer canceDriverTimer;
     private static FirefoxOptions options = getFirefoxOptions();
@@ -95,9 +99,10 @@ public class FirefoxWebDriverEntity extends MediaEntity implements HasFirmwareVe
 
     public static class FirefoxWebDriverService extends ServiceInstance<FirefoxWebDriverEntity> {
         private static String version;
+        private boolean firstInitialized;
 
         public FirefoxWebDriverService(@NotNull Context context, @NotNull FirefoxWebDriverEntity entity) {
-            super(context, entity, true);
+            super(context, entity, false, "Firefox");
         }
 
         @Override
@@ -105,14 +110,19 @@ public class FirefoxWebDriverEntity extends MediaEntity implements HasFirmwareVe
 
         }
 
-        @Override
-        protected void firstInitialize() {
-            installDriver();
-        }
-
+        @SneakyThrows
         @Override
         protected void initialize() {
-
+            if (!this.firstInitialized) {
+                this.firstInitialized = true;
+                Runtime.getRuntime().exec("pkill -f firefox");
+                installDriver();
+                context.bgp().executeOnExit("firefox", () -> {
+                    if (SystemUtils.IS_OS_LINUX) {
+                        Runtime.getRuntime().exec("pkill -f firefox");
+                    }
+                });
+            }
         }
 
         private void installDriver() {
@@ -186,26 +196,32 @@ public class FirefoxWebDriverEntity extends MediaEntity implements HasFirmwareVe
         }
     }
 
-    public static void executeInWebDriver(@NotNull Consumer<WebDriver> driverHandler) {
+    public static void executeInWebDriver(@NotNull ThrowingConsumer<WebDriver, Exception> driverHandler) {
         if (FirefoxWebDriverService.version == null) {
             throw new IllegalStateException("Firefox WebDriver not verified yet");
         }
         executeInDriver(driverHandler);
     }
 
-    private static void executeInDriver(@NotNull Consumer<WebDriver> driverHandler) {
+    @SneakyThrows
+    private static void executeInDriver(@NotNull ThrowingConsumer<WebDriver, Exception> driverHandler) {
         if (Files.exists(Paths.get("/opt/homio/installs/geckodriver"))) {
             System.setProperty("webdriver.gecko.driver", "/opt/homio/installs/geckodriver");
         }
 
-        if(driverInUse) {
-          throw new IllegalStateException("Firefox driver currently in use");
+        if (driverInUseThread != null) {
+            throw new IllegalStateException("Firefox driver currently in use");
         }
-        driverInUse = true;
+        driverInUseThread = Thread.currentThread();
+        boolean closeDriverImmediately = false;
 
         try {
             cancelTimer();
-            if(driver == null) {
+            if (driver == null) {
+                if (SystemUtils.IS_OS_LINUX) {
+                    // make sure driver not running
+                    Runtime.getRuntime().exec("pkill -f firefox");
+                }
                 log.info("Creating Firefox driver...");
                 driver = new FirefoxDriver(options);
                 log.info("Firefox driver created");
@@ -213,40 +229,58 @@ public class FirefoxWebDriverEntity extends MediaEntity implements HasFirmwareVe
             driverHandler.accept(driver);
         } catch (Exception ex) {
             log.error("Error while connect to firefox driver", ex);
+            closeDriverImmediately = ex instanceof ServerException se && se.getStatus() == Status.ERROR;
+            throw ex;
         } finally {
             if (driver != null) {
-                scheduleCloseTimer();
+                scheduleCloseTimer(closeDriverImmediately);
             }
-            driverInUse = false;
+            driverInUseThread = null;
         }
     }
 
-    private static void scheduleCloseTimer() {
-        canceDriverTimer = new Timer();
-        canceDriverTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                if(driverInUse) {
-                    // ignore close driver if someone else started use driver again
-                    return;
+    private static void scheduleCloseTimer(boolean closeDriverImmediately) {
+        if (closeDriverImmediately) {
+            driverInUseThread = null;
+            closeDriver();
+        } else {
+            canceDriverTimer = new Timer();
+            canceDriverTimer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    closeDriver();
                 }
-                driverInUse = true;
+            }, TimeUnit.MINUTES.toMillis(3));
+        }
+    }
+
+    private static void closeDriver() {
+        if (driverInUseThread != null) {
+            // ignore close driver if someone else started use driver again
+            return;
+        }
+        driverInUseThread = Thread.currentThread();
+        try {
+            log.info("Closing Firefox driver...");
+            driver.quit();
+            log.info("Closing Firefox driver successfully.");
+            driver = null;
+        } catch (Exception ex) {
+            log.error("Error while close firefox driver", ex);
+        } finally {
+            // make sure driver not running
+            if (SystemUtils.IS_OS_LINUX) {
                 try {
-                    log.info("Closing Firefox driver...");
-                    driver.quit();
-                    log.info("Closing Firefox driver successfully.");
-                    driver = null;
-                } catch (Exception ex) {
-                    log.error("Error while close firefox driver", ex);
-                } finally {
-                    driverInUse = false;
+                    Runtime.getRuntime().exec("pkill -f firefox");
+                } catch (IOException ignore) {
                 }
             }
-        }, 60000);
+            driverInUseThread = null;
+        }
     }
 
     private static void cancelTimer() {
-        if(canceDriverTimer != null) {
+        if (canceDriverTimer != null) {
             canceDriverTimer.cancel();
             canceDriverTimer = null;
         }

@@ -48,7 +48,7 @@ import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 @Entity
 @Log4j2
 @CreateSingleEntity
-@UISidebarChildren(icon = "", color = "", allowCreateItem = false)
+@UISidebarChildren(icon = "fas fa-microchip", color = "#9C3866", allowCreateItem = false)
 public class LocalBoardEntity extends MicroControllerBaseEntity
         implements EntityService<LocalBoardService>,
         BaseFileSystemEntity<LocalFileSystemProvider> {

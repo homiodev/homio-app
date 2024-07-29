@@ -3,25 +3,31 @@ package org.homio.addon.ibkr;
 import jakarta.persistence.Entity;
 import lombok.SneakyThrows;
 import org.homio.api.Context;
+import org.homio.api.entity.HasJsonData;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.types.MiscEntity;
 import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.OptionModel;
+import org.homio.api.model.UpdatableValue;
 import org.homio.api.service.EntityService;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.action.HasDynamicUIFields;
 import org.homio.api.ui.field.action.UIContextMenuAction;
+import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.SecureString;
+import org.homio.api.widget.CustomWidgetConfigurableEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
 
 @Entity
-@UISidebarChildren(icon = "fas fa-square-rss", color = "#308BB3", allowCreateItem = false)
+@UISidebarChildren(icon = "fas fa-square-rss", color = "#B33F30", allowCreateItem = false)
 public class IbkrEntity extends MiscEntity implements EntityService<IbkrService>,
-        HasStatusAndMsg {
+        HasStatusAndMsg, CustomWidgetConfigurableEntity {
 
     @UIField(order = 1, inlineEditWhenEmpty = true)
     @UIFieldGroup(order = 15, value = "SECURITY", borderColor = "#23ADAB")
@@ -37,12 +43,6 @@ public class IbkrEntity extends MiscEntity implements EntityService<IbkrService>
     @UIFieldGroup(order = 50, value = "INFO", borderColor = "#9C27B0")
     public String getAccountId() {
         return getJsonData("aid");
-    }
-
-    @UIField(order = 2, disableEdit = true)
-    @UIFieldGroup("INFO")
-    public String getCurrency() {
-        return getJsonData("ccy");
     }
 
     @UIField(order = 2)
@@ -125,7 +125,29 @@ public class IbkrEntity extends MiscEntity implements EntityService<IbkrService>
         return ActionResponseModel.success();
     }
 
+    @UIContextMenuAction(value = "CREATE_IBKR_WIDGET",
+            icon = "fas fa-table-list",
+            iconColor = "#91293E")
+    public ActionResponseModel createWidget() {
+        // context().widget().
+        return ActionResponseModel.success();
+    }
+
     public String getUrl(String path) {
         return "http://localhost:" + getPort() + "/v1/api/" + path;
+    }
+
+    @Override
+    public void assembleActions(UIInputBuilder uiInputBuilder) {
+    }
+
+    @Override
+    public void assembleUIFields(@NotNull HasDynamicUIFields.UIFieldBuilder uiFieldBuilder, @NotNull HasJsonData sourceEntity) {
+        UpdatableValue<String> sort = UpdatableValue.wrap(sourceEntity, Sort.positions.name(), "sort");
+        uiFieldBuilder.addSelect(1, sort, OptionModel.enumList(Sort.class));
+    }
+
+    public enum Sort {
+        price, positions
     }
 }

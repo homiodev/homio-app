@@ -1,5 +1,6 @@
 package org.homio.app.manager.common.impl;
 
+import com.pivovarit.function.ThrowingConsumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
@@ -8,7 +9,9 @@ import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.ContextBGP;
 import org.homio.api.ContextMedia;
 import org.homio.api.ContextUI;
+import org.homio.api.exception.ServerException;
 import org.homio.api.model.OptionModel;
+import org.homio.api.model.Status;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.FirefoxWebDriverEntity;
@@ -27,7 +30,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -38,14 +40,16 @@ public class ContextMediaImpl implements ContextMedia {
     private final FfmpegHardwareRepository repo;
     public static String FFMPEG_LOCATION = SystemUtils.IS_OS_LINUX ? "ffmpeg" :
             CommonUtils.getInstallPath().resolve("ffmpeg").resolve("ffmpeg.exe").toString();
+    private boolean closeDriverImmediatelly;
 
     @Override
-    public void fireSeleniumFirefox(@NotNull Consumer<WebDriver> driverHandler) {
+    public void fireSeleniumFirefox(@NotNull ThrowingConsumer<WebDriver, Exception> driverHandler) {
         FirefoxWebDriverEntity.executeInWebDriver(driverHandler);
     }
 
     @Override
-    public void fireSeleniumFirefox(@NotNull String title, @NotNull String icon, @NotNull String iconColor, @NotNull Consumer<WebDriver> driverHandler) {
+    public void fireSeleniumFirefox(@NotNull String title, @NotNull String icon, @NotNull String iconColor,
+                                    @NotNull ThrowingConsumer<WebDriver, Exception> driverHandler) {
         FirefoxWebDriverEntity.executeInWebDriver(driver -> {
             AtomicReference<String> imageRef = new AtomicReference<>("");
             ContextUI.ContextUIDialog.MirrorImageDialog imageDialog = context().ui().dialog().topImageDialog(title, icon, iconColor);
@@ -57,11 +61,15 @@ public class ContextMediaImpl implements ContextMedia {
                     .cancelOnError(false)
                     .execute(() -> {
                         if(!closed.get()) {
-                            String image = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BASE64);
-                            if (!imageRef.get().equals(image) || passedSeconds.getAndIncrement() == 10) {
-                                passedSeconds.set(0);
-                                imageRef.set(image);
-                                imageDialog.sendImage(image);
+                            try {
+                                String image = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BASE64);
+                                if (!imageRef.get().equals(image) || passedSeconds.getAndIncrement() == 10) {
+                                    passedSeconds.set(0);
+                                    imageRef.set(image);
+                                    imageDialog.sendImage(image);
+                                }
+                            } catch (Exception ex) {
+                                log.error("Error fetch firefox image driver: {}", ex.getMessage());
                             }
                         }
                     });

@@ -28,7 +28,8 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
     private int cpuFetchInterval;
 
     public LocalBoardService(@NotNull Context context, @NotNull LocalBoardEntity entity) {
-        super(context, entity, true);
+        super(context, entity, true, "Local board");
+        this.setExposeService(true);
         this.usbListener = new LocalBoardUsbListener(context);
     }
 

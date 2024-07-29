@@ -80,7 +80,7 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
     public static class RawWebSocketService extends ServiceInstance<SshRawWebSocketEntity> implements SshProviderService<SshRawWebSocketEntity> {
 
         public RawWebSocketService(Context context, SshRawWebSocketEntity entity) {
-            super(context, entity, true);
+            super(context, entity, true, "RAW_SSH");
         }
 
         @Override

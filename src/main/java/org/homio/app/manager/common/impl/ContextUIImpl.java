@@ -76,10 +76,11 @@ import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 @RequiredArgsConstructor
 public class ContextUIImpl implements ContextUI {
 
-    public static final @NotNull Map<String, ConsolePlugin<?>> consolePluginsMap = new HashMap<>();
-    public static final @NotNull Map<String, ConsolePlugin<?>> consoleRemovablePluginsMap = new HashMap<>();
+    public static final @NotNull Map<String, ConsolePlugin<?>> consolePluginsMap = new ConcurrentHashMap<>();
+    public static final @NotNull Map<String, ConsolePlugin<?>> consoleRemovablePluginsMap = new ConcurrentHashMap<>();
+    public static final @NotNull Map<String, String> customImages = new ConcurrentHashMap<>();
 
-    public static final @NotNull Map<String, String> customConsolePluginNames = new HashMap<>();
+    public static final @NotNull Map<String, String> customConsolePluginNames = new ConcurrentHashMap<>();
     private static final @NotNull Object EMPTY = new Object();
     private final @NotNull Map<DynamicUpdateRequest, DynamicUpdateContext> dynamicUpdateRegisters = new ConcurrentHashMap<>();
     private final @NotNull Map<String, DialogModel> dialogRequest = new ConcurrentHashMap<>();
@@ -210,6 +211,11 @@ public class ContextUIImpl implements ContextUI {
     @Override
     public @NotNull UIInputBuilder inputBuilder() {
         return new UIInputBuilderImpl(context);
+    }
+
+    @Override
+    public void registerUIImage(@NotNull String name, @NotNull String base64Image) {
+        customImages.put(name, base64Image);
     }
 
     @Override

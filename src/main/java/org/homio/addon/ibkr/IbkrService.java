@@ -1,18 +1,12 @@
 package org.homio.addon.ibkr;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.Context;
 import org.homio.api.ContextBGP;
-import org.homio.api.JSDisableMethod;
+import org.homio.api.exception.ServerException;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Status;
@@ -28,35 +22,37 @@ import org.openqa.selenium.WebElement;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.api.util.JsonUtils.YAML_OBJECT_MAPPER;
 
 public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
         implements HasEntityIdentifier {
 
+    public static String IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAAXNSR0IB2cksfwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAMxQTFRF2BIi////5H2E4k1Z2BQk2RYl/vz9756l797e9MTI3zpH2iIx/vj44UpW7tra5snJ+/b25MTE5mVv6oKK2h4t++fo6dDQ8ayy7ZCY41Rf7NfX4EZT/fr69Ojo5Wlz69TU3Cs66XmC+fLy58zM3jZD3UJO5X+G5MbG2zNA5HmB4EBN5bq82yc1+O/v52t198/S87e8+dze8Ket8+Xl9L3B7pif6HN82hsr5Flk8q606sLE2z5K7sHD9uzs8eHh+t/i8rK36XyF/fP0/O/wTriLqAAAAMhJREFUeJzVkccWgkAMRSeCIE0FC9il2Hvv/f//yciaxJUL3yKbe+dkkgjxi6S/8SbPZbfGC6rGcw8qLC/AguVbgCnHHQVK3JB7BaDAcMkEeBk0158A4NE8KiFX2rI/V/VEIYUcluKA1bRIIap8KswoYS02sWBSQlPosXAnhGDUFz7yW5sQquFxLIYPp0hMke+Vs2d6USnI5lqZhpb8HNOt22H1eslr1LW6GeywmtTBlZOFgf3pEOBB1WTBOHU6NcuSMDvyo/+aNywuDK+t8iEeAAAAAElFTkSuQmCC";
+
+    private final Path execPath = installPath.resolve("bin").resolve("run." + (IS_OS_WINDOWS ? "bat" : "sh"));
     private ContextBGP.ProcessContext processContext;
     private static final Path installPath = CommonUtils.getInstallPath().resolve("ibkr_client_portal");
     private static final Path configPath = installPath.resolve("root").resolve("conf.yaml");
-    private final LoadingCache<String, JsonNode> fifteenMinQueryCache;
+    private @Nullable IbkrApi api;
 
     public IbkrService(@NotNull Context context, @NotNull IbkrEntity ibkrEntity) {
         super(context, ibkrEntity, true, "IBKR");
 
-        this.fifteenMinQueryCache = CacheBuilder.newBuilder().
-                expireAfterWrite(15, TimeUnit.MINUTES).build(new CacheLoader<>() {
-                    public @NotNull JsonNode load(@NotNull String url) {
-                        return Curl.get(entity.getUrl(url), JsonNode.class);
-                    }
-                });
+
     }
 
     @Override
     public void destroy(boolean forRestart, @Nullable Exception ex) throws Exception {
+        if (api != null) {
+            api.destroy();
+        }
         ContextBGP.cancel(processContext);
     }
 
@@ -70,10 +66,9 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
         if (!entity.getMissingMandatoryFields().isEmpty()) {
             return;
         }
-        Path execPath = installPath.resolve("bin").resolve("run." + (IS_OS_WINDOWS ? "bat" : "sh"));
         if (Files.exists(execPath)) {
             try {
-                runService(execPath);
+                runService();
                 return;
             } catch (Exception ex) {
                 log.error("Error running IBKR CLI portal", ex);
@@ -89,12 +84,22 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
                         context.hardware().update();
                         context.hardware().installSoftware("chromium-browser", 600, progressBar);
                     }
-                    runService(execPath);
+                    runService();
                 },
                 ex -> context.ui().toastr().error(ex));
     }
 
-    private void runService(Path execPath) {
+    private @NotNull IbkrApi getApi() {
+        if (api == null) {
+            if(!entity.getStatus().isOnline()) {
+                throw new ServerException("IBKR service not online");
+            }
+            api = new IbkrApi(entity, context);
+        }
+        return api;
+    }
+
+    private void runService() {
         entity.setStatus(Status.INITIALIZE);
         syncConfiguration();
         Path installPath = execPath.getParent().getParent();
@@ -108,15 +113,19 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
         entity.setStatus(Status.INITIALIZE);
     }
 
-    public void authenticateUser() {
+    private void authenticateUser() {
         entity.setStatus(Status.INITIALIZE);
-        context.media().fireSeleniumFirefox("IBKR authenticate", "fas fa-user-lock", "#E63917", driver -> {
-            try {
+        try {
+            context.media().fireSeleniumFirefox("IBKR authenticate", "fas fa-user-lock", "#E63917", driver -> {
                 if (processContext.isStopped()) {
                     return;
                 }
                 String loginPage = "http://localhost:" + entity.getPort();
-                driver.get(loginPage);
+                try {
+                    driver.get(loginPage);
+                } catch (Exception ex) {
+                    throw new ServerException("Unable to get ibkr login page: " + loginPage).setStatus(Status.ERROR);
+                }
 
                 waitAction(driver, loginPage, 60);
 
@@ -129,27 +138,17 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
                 submitButton.click();
 
                 if (!waitAction(driver, currentUrl, 120)) {
-                    entity.setStatus(Status.REQUIRE_AUTH);
-                    log.error("Error authenticating user");
-                    ContextBGP.cancel(processContext);
+                    throw new ServerException("Error authenticating user", Status.REQUIRE_AUTH);
                 } else {
                     entity.setStatus(Status.ONLINE);
                     log.info("Successfully authenticated user");
-                    if (entity.getAccountId().isEmpty()) {
-                        ObjectNode accounts = Curl.get(entity.getUrl("portfolio/account"), ObjectNode.class);
-                        if (!accounts.isEmpty()) {
-                            JsonNode account = accounts.get(0);
-                            entity.setJsonData("aid", account.get("accountId").asText());
-                            entity.setJsonData("ccy", account.get("currency").asText());
-                            entity.setName(account.get("desc").asText());
-                            context.db().save(entity);
-                        }
-                    }
                 }
-            } catch (Exception e) {
-                log.error("Error while authenticate to ibkr");
-            }
-        });
+            });
+        } catch (Exception ex) {
+            entity.setStatusError(ex);
+            log.error(ex.getMessage());
+            ContextBGP.cancel(processContext);
+        }
     }
 
     private boolean waitAction(WebDriver driver, String loginPage, int maxWaitSeconds) throws InterruptedException {
@@ -190,76 +189,90 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
         }
     }
 
-    public ArrayNode getBuyOrders() {
-        return filterOrders(order -> "BUY".equals(order.get("side").asText()));
+    public List<IbkrApi.Order> getBuyOrders() {
+        return filterOrders(order -> "BUY".equals(order.getSide()));
     }
 
-    public ArrayNode getSellOrders() {
-        return filterOrders(order -> "SELL".equals(order.get("side").asText()));
+    public List<IbkrApi.Order> getSellOrders() {
+        return filterOrders(order -> "SELL".equals(order.getSide()));
     }
 
-    public @NotNull ArrayNode filterOrders(Predicate<JsonNode> acceptFn) {
-        JsonNode orders = getOrders().get("orders");
-        ArrayNode nodes = OBJECT_MAPPER.createArrayNode();
-        for (JsonNode order : orders) {
+    // For widget
+    public Collection<WidgetInfo> getWidgetInfo() {
+        return getApi().getAllWidgetInfo().stream().map(WidgetInfo::new).toList();
+    }
+
+    private @NotNull List<IbkrApi.Order> filterOrders(Predicate<IbkrApi.Order> acceptFn) {
+        List<IbkrApi.Order> result = new ArrayList<>();
+        for (IbkrApi.Order order : getApi().getOrders()) {
             if (acceptFn.test(order)) {
-                nodes.add(order);
+                result.add(order);
             }
         }
-        return nodes;
+        return result;
     }
 
-    @SneakyThrows
-    public JsonNode getOrders() {
-        return fifteenMinQueryCache.get(entity.getUrl("iserver/account/orders"));
-    }
-
-    @SneakyThrows
-    public ArrayNode getPositions() {
-        String baseUrl = entity.getUrl("portfolio/%s/positions/".formatted(entity.getAccountId()));
-        ArrayNode allPositions = OBJECT_MAPPER.createArrayNode();
-        for (int i = 0; i < 100; i++) {
-            JsonNode objectNode = fifteenMinQueryCache.get(baseUrl + i);
-            ArrayNode positions = (ArrayNode) objectNode;
-            if (positions.isEmpty()) {
-                break;
-            }
-            allPositions.addAll(positions);
-        }
-        return allPositions;
-    }
-
-    @SneakyThrows
-    public String getPerformance() {
-        String url = entity.getUrl("pa/performance");
-        JsonNode response = fifteenMinQueryCache.getIfPresent(url);
-        if (response == null) {
-            fifteenMinQueryCache.put(url, Curl.post(url,
-                    new PerformanceRequest(Set.of(entity.getAccountId())), ObjectNode.class));
-            response = fifteenMinQueryCache.get(url);
-        }
-        return response.get("data").asText();
-    }
-
-    @SneakyThrows
-    @JSDisableMethod
-    public double getSummary(String field) {
-        JsonNode response = fifteenMinQueryCache.get(entity.getUrl("portfolio/%s/summary".formatted(entity.getAccountId())));
-        return response.get(field).get("amount").asDouble();
+    public Object getPerformance() {
+        return getApi().getPerformance();
     }
 
     public double getTotalCash() {
-        return getSummary("totalcashvalue");
+        return getApi().getTotalCash();
     }
 
     public double getAvailableFunds() {
-        return getSummary("availablefunds");
+        return getApi().getAvailableFunds();
+    }
+
+    public List<IbkrApi.Position> getPositions() {
+        return getApi().getPositions();
+    }
+
+    public List<IbkrApi.Order> getOrders() {
+        return getApi().getOrders();
     }
 
     @Getter
-    @AllArgsConstructor
-    private static class PerformanceRequest {
-        private final String freq = "D";
-        private final Set<String> acctIds;
+    public static class WidgetInfo {
+
+        private final double position;
+        private final double mktPrice;
+        private final double mktValue;
+        private final double avgPrice;
+        private final String ticker;
+        private final double unrealizedPnl;
+        private final String name;
+        private final String group;
+        private final List<String> orders;
+        private final String currency;
+        private final Double bidSize;
+        private final Double askSize;
+        private final Double bidPrice;
+        private final Double closePrice;
+        private final Double changePrice;
+        private final Double changePercent;
+
+        public WidgetInfo(IbkrApi.Position position) {
+            this.ticker = position.getTicker();
+            this.position = position.getPosition();
+            this.mktPrice = position.getLastPrice() == null ? position.getMktPrice() : position.getLastPrice();
+            this.mktValue = position.getMktValue();
+            this.avgPrice = position.getAvgPrice();
+            this.currency = position.getCurrency();
+            this.unrealizedPnl = position.getUnrealizedPnl();
+            this.name = position.getName();
+            this.group = position.getGroup();
+            this.orders = position.getOrders().values().stream().map(WidgetInfo::getOrderInfo).toList();
+            this.bidSize = position.getBidSize();
+            this.askSize = position.getAskSize();
+            this.bidPrice = position.getBidPrice();
+            this.closePrice = position.getTodayClosePrice();
+            this.changePrice = position.getChangePrice();
+            this.changePercent = position.getChangePercent();
+        }
+
+        private static String getOrderInfo(IbkrApi.Order order) {
+            return (order.getSide().equals("SELL") ? "Sell" : "Buy") + " " + order.getTotalSize() + " " + order.getOrderType() + " " + order.getPrice();
+        }
     }
 }

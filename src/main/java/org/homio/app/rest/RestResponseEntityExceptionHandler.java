@@ -34,7 +34,7 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
 
     @ExceptionHandler({ServerException.class})
     public ResponseEntity<Object> handleServerException(ServerException ex, WebRequest request) {
-        return handleExceptionInternal(ex, null, null, ex.getStatus(), request);
+        return handleExceptionInternal(ex, null, null, ex.getHttpStatus(), request);
     }
 
     @ExceptionHandler({LinkageError.class})

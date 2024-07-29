@@ -1,10 +1,5 @@
 package org.homio.app.builder.widget;
 
-import static org.homio.app.model.entity.widget.WidgetTabEntity.MAIN_TAB_ID;
-
-import java.util.List;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
@@ -36,6 +31,7 @@ import org.homio.app.model.entity.widget.impl.color.WidgetColorEntity;
 import org.homio.app.model.entity.widget.impl.color.WidgetSimpleColorEntity;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplaySeriesEntity;
+import org.homio.app.model.entity.widget.impl.extra.WidgetCustomEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetSimpleToggleEntity;
@@ -44,11 +40,17 @@ import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntity;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
+import java.util.List;
+import java.util.function.Consumer;
+
+import static org.homio.app.model.entity.widget.WidgetTabEntity.MAIN_TAB_ID;
+
 @Log4j2
 @RequiredArgsConstructor
 public class ContextWidgetImpl implements ContextWidget {
 
-    private final @Getter @Accessors(fluent = true) ContextImpl context;
+    private final @Getter
+    @Accessors(fluent = true) ContextImpl context;
 
     @Override
     public void createLayoutWidget(@NotNull String entityID, @NotNull Consumer<LayoutWidgetBuilder> widgetBuilder) {
@@ -208,8 +210,38 @@ public class ContextWidgetImpl implements ContextWidget {
     }
 
     @Override
+    public void createCustomWidget(@NotNull String entityID, @NotNull Consumer<CustomWidgetBuilder> widgetBuilder) {
+        WidgetCustomEntity widget = new WidgetCustomEntity();
+        widgetBuilder.accept(new CustomWidgetBuilder() {
+            @Override
+            public CustomWidgetBuilder css(String value) {
+                widget.setCss(value);
+                return this;
+            }
+
+            @Override
+            public CustomWidgetBuilder code(@NotNull String value) {
+                widget.setCode(value);
+                return this;
+            }
+
+            @Override
+            public CustomWidgetBuilder parameterEntity(@NotNull String entityID) {
+                widget.setParameterEntity(entityID);
+                return this;
+            }
+
+            @Override
+            public CustomWidgetBuilder setValue(@NotNull String key, @NotNull String value) {
+                widget.getJsonData().put(key, value);
+                return this;
+            }
+        });
+    }
+
+    @Override
     public void createWidgetTemplate(@NotNull String entityID, @NotNull String name, @NotNull ParentWidget parent, @NotNull Icon icon,
-        @NotNull Consumer<JavaScriptBuilder> jsBuilder) {
+                                     @NotNull Consumer<JavaScriptBuilder> jsBuilder) {
         throw new IllegalArgumentException("Not implemented yet");
     }
 
@@ -228,14 +260,14 @@ public class ContextWidgetImpl implements ContextWidget {
             String title = "WIDGET.CREATE_" + widgetDefinition.getName();
             uiInputBuilder
                     .addOpenDialogSelectableButton(title, icon, null,
-                        (context, params) ->
-                            fireCreateTemplateWidget(entity, widgetDefinition, widgetBuilder, context, params))
+                            (context, params) ->
+                                    fireCreateTemplateWidget(entity, widgetDefinition, widgetBuilder, context, params))
                     .editDialog(dialogBuilder -> {
                         dialogBuilder.setTitle(title, icon);
                         dialogBuilder.addFlex("main", flex -> {
                             flex.addSelectBox("SELECTION.DASHBOARD_TAB")
-                                .setSelected(context().widget().getDashboardDefaultID())
-                                .addOptions(context().widget().getDashboardTabs());
+                                    .setSelected(context().widget().getDashboardDefaultID())
+                                    .addOptions(context().widget().getDashboardTabs());
                             addPropertyDefinitions(widgetDefinition, flex, entity);
                             addRequests(widgetDefinition, flex, entity);
                         });
@@ -250,7 +282,7 @@ public class ContextWidgetImpl implements ContextWidget {
 
     @NotNull
     private static ActionResponseModel fireCreateTemplateWidget(@NotNull DeviceEndpointsBehaviourContract entity, WidgetDefinition widgetDefinition,
-        TemplateWidgetBuilder widgetBuilder, Context context, JSONObject params) {
+                                                                TemplateWidgetBuilder widgetBuilder, Context context, JSONObject params) {
         String tab = params.getString("SELECTION.DASHBOARD_TAB");
         val includeEndpoints = widgetDefinition.getEndpoints(entity).stream()
                 .filter(pd -> params.getBoolean(pd.getEndpointEntityID()))

@@ -963,6 +963,7 @@ public class ContextBGPImpl implements ContextBGP {
         @SneakyThrows
         public void cancel(boolean sendSignal) {
             cancelProcess(sendSignal, false);
+            threadContext.cancel(true);
         }
 
         private void cancelProcess(boolean sendSignal, boolean shutdownHook) {
