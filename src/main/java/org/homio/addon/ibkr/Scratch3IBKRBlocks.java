@@ -22,12 +22,10 @@ public class Scratch3IBKRBlocks extends Scratch3ExtensionBlocks {
         this.service = context.db().getEntityRequire(IbkrEntity.class, PRIMARY_DEVICE).getOrCreateService(context).get();
 
         // blocks
-        blockReporter(5, "performance", "Performance", workspaceBlock ->
-                new JsonType(service.getPerformance()));
         blockReporter(10, "total_cash", "Total cash", workspaceBlock ->
                 new DecimalType(service.getTotalCash()));
-        blockReporter(15, "available_funds", "Available funds", workspaceBlock ->
-                new DecimalType(service.getAvailableFunds()));
+        blockReporter(15, "equity_with_loan_value", "Equity with loan", workspaceBlock ->
+                new DecimalType(service.getEquityWithLoanValue()));
         blockReporter(25, "positions", "Positions", workspaceBlock ->
                 new JsonType(service.getPositions()));
         blockReporter(30, "orders", "Orders", workspaceBlock ->

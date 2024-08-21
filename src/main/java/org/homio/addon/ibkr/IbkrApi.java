@@ -3,9 +3,6 @@ package org.homio.addon.ibkr;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import lombok.*;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
@@ -17,16 +14,10 @@ import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpMethod;
-import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -44,21 +35,18 @@ public class IbkrApi {
     @Getter
     private @NotNull List<Order> orders = List.of();
 
-    private final LoadingCache<String, JsonNode> fifteenMinQueryCache;
     private long lastWidgetInfoRequest;
     private long lastPositionsRequest;
     private long lastOrdersRequest;
     private Collection<Position> widgetInfo = List.of();
+    private ObjectNode performance;
+    private long lastPerformanceRequest;
+    private long lastSummaryRequest;
+    private JsonNode summary;
 
     @SneakyThrows
     public IbkrApi(IbkrEntity entity, Context context) {
         this.entity = entity;
-        this.fifteenMinQueryCache = CacheBuilder.newBuilder().
-                expireAfterWrite(15, TimeUnit.MINUTES).build(new CacheLoader<>() {
-                    public @NotNull JsonNode load(@NotNull String url) {
-                        return Curl.get(entity.getUrl(url), JsonNode.class);
-                    }
-                });
 
         if (entity.getAccountId().isEmpty()) {
             ObjectNode accounts = Curl.get(entity.getUrl("portfolio/account"), ObjectNode.class);
@@ -152,10 +140,7 @@ public class IbkrApi {
                 List<Position> result = new ArrayList<>();
                 String baseUrl = "portfolio/%s/positions/".formatted(entity.getAccountId());
                 for (int i = 0; i < 100; i++) {
-                    List<Position> list = restTemplate.exchange(entity.getUrl(baseUrl + i),
-                                    HttpMethod.GET, null, new ParameterizedTypeReference<List<Position>>() {
-                                    })
-                            .getBody();
+                    List<Position> list = Curl.getList(entity.getUrl(baseUrl + i), Position.class);
                     if (list == null || list.isEmpty()) {
                         break;
                     }
@@ -168,20 +153,21 @@ public class IbkrApi {
     }
 
     @SneakyThrows
-    public String getPerformance() {
-        String url = entity.getUrl("pa/performance");
-        JsonNode response = fifteenMinQueryCache.getIfPresent("pa/performance");
-        if (response == null) {
-            fifteenMinQueryCache.put("pa/performance", Curl.post(url,
-                    new PerformanceRequest(Set.of(entity.getAccountId())), ObjectNode.class));
-            response = fifteenMinQueryCache.get("pa/performance");
+    public ObjectNode getPerformance() {
+        if (System.currentTimeMillis() - lastPerformanceRequest > 15 * 60_000) {
+            lastPerformanceRequest = System.currentTimeMillis();
+
+            String url = entity.getUrl("pa/performance");
+            var body = OBJECT_MAPPER.writeValueAsString(new PerformanceRequest(Set.of(entity.getAccountId())));
+            performance = Curl.post(url, body, ObjectNode.class);
         }
-        return response.get("data").asText();
+        return performance;
     }
 
     public Collection<Position> getAllWidgetInfo() {
-        if (System.currentTimeMillis() - lastWidgetInfoRequest > 60000) {
+        if (System.currentTimeMillis() - lastWidgetInfoRequest > 60_000) {
             lastWidgetInfoRequest = System.currentTimeMillis();
+
             Map<String, Position> tickerToPosition = getAllPositions().stream()
                     .collect(Collectors.toMap(Position::getTicker, e -> e));
             for (Order order : getAllOrders()) {
@@ -204,7 +190,7 @@ public class IbkrApi {
     private @NotNull List<Order> getAllOrders() {
         if (System.currentTimeMillis() - lastOrdersRequest > 60_000 || orders.isEmpty()) {
             lastOrdersRequest = System.currentTimeMillis();
-            OrderResponse response = restTemplate.getForObject(entity.getUrl("iserver/account/orders"), OrderResponse.class);
+            OrderResponse response = Curl.get(entity.getUrl("iserver/account/orders"), OrderResponse.class);
             orders = response == null ? List.of() : response.orders;
         }
         return orders;
@@ -213,16 +199,31 @@ public class IbkrApi {
     @SneakyThrows
     @JSDisableMethod
     public double getSummary(String field) {
-        JsonNode response = fifteenMinQueryCache.get("portfolio/%s/summary".formatted(entity.getAccountId()));
-        return response.get(field).get("amount").asDouble();
+        if (System.currentTimeMillis() - lastSummaryRequest > 15 * 60_000) {
+            lastSummaryRequest = System.currentTimeMillis();
+            summary = Curl.get(entity.getUrl("portfolio/%s/summary".formatted(entity.getAccountId())), JsonNode.class);
+        }
+        return summary.get(field).get("amount").asDouble();
     }
 
     public double getTotalCash() {
         return getSummary("totalcashvalue");
     }
 
-    public double getAvailableFunds() {
-        return getSummary("availablefunds");
+    public double getEquityWithLoanValue() {
+        return getSummary("equitywithloanvalue");
+    }
+
+    public double getGrossPositionValue() {
+        return getSummary("grosspositionvalue");
+    }
+
+    public double getNetLiquidation() {
+        return getSummary("netliquidation");
+    }
+
+    public double getPreviousDayEquityWithLoanValue() {
+        return getSummary("previousdayequitywithloanvalue");
     }
 
     public void destroy() {
@@ -332,14 +333,5 @@ public class IbkrApi {
         private final List<String> fields;
         private final int tempo = 2000;
         private final boolean snapshot = true;
-    }
-
-    private static final RestTemplate restTemplate;
-
-    static {
-        restTemplate = new RestTemplateBuilder()
-                .setConnectTimeout(Duration.ofSeconds(10))
-                .setReadTimeout(Duration.ofSeconds(60))
-                .build();
     }
 }

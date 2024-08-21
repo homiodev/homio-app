@@ -67,6 +67,34 @@
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.45.0</version>
+                <configuration>
+                    <containerNamePattern>%n</containerNamePattern>
+                    <images>
+                        <image>
+                            <alias>maven-demo</alias>
+                            <name>homiodev/homio:${project.version}</name>
+                            <build>
+                                <from>openjdk:17-alpine</from>
+                                <assemblies>
+                                    <assembly>
+                                        <descriptorRef>artifact</descriptorRef>
+                                    </assembly>
+                                </assemblies>
+                                <entryPoint>java -jar homio.jar</entryPoint>
+                            </build>
+                            <run>
+                                <ports>
+                                    <port>9991:9991</port>
+                                </ports>
+                            </run>
+                        </image>
+                    </images>
+                </configuration>
+            </plugin>
         </plugins>
 
         <resources>

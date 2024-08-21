@@ -2,6 +2,7 @@ package org.homio.addon.ibkr;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.Context;
@@ -23,7 +24,6 @@ import org.openqa.selenium.WebElement;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
@@ -115,6 +115,7 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
 
     private void authenticateUser() {
         entity.setStatus(Status.INITIALIZE);
+        log.info("Authenticate to IBKR");
         try {
             context.media().fireSeleniumFirefox("IBKR authenticate", "fas fa-user-lock", "#E63917", driver -> {
                 if (processContext.isStopped()) {
@@ -198,8 +199,15 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
     }
 
     // For widget
-    public Collection<WidgetInfo> getWidgetInfo() {
-        return getApi().getAllWidgetInfo().stream().map(WidgetInfo::new).toList();
+    public WidgetInfo getWidgetInfo() {
+        List<TickerInfo> tickers = getApi().getAllWidgetInfo().stream().map(TickerInfo::new).toList();
+        return new WidgetInfo(tickers,
+                getApi().getPerformance(),
+                getApi().getTotalCash(),
+                getApi().getNetLiquidation(),
+                getApi().getGrossPositionValue(),
+                getApi().getEquityWithLoanValue(),
+                getApi().getPreviousDayEquityWithLoanValue());
     }
 
     private @NotNull List<IbkrApi.Order> filterOrders(Predicate<IbkrApi.Order> acceptFn) {
@@ -212,16 +220,12 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
         return result;
     }
 
-    public Object getPerformance() {
-        return getApi().getPerformance();
-    }
-
     public double getTotalCash() {
         return getApi().getTotalCash();
     }
 
-    public double getAvailableFunds() {
-        return getApi().getAvailableFunds();
+    public double getEquityWithLoanValue() {
+        return getApi().getEquityWithLoanValue();
     }
 
     public List<IbkrApi.Position> getPositions() {
@@ -233,7 +237,19 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
     }
 
     @Getter
+    @RequiredArgsConstructor
     public static class WidgetInfo {
+        private final List<TickerInfo> tickers;
+        private final ObjectNode performance;
+        private final double totalCache;
+        private final double netLiquidation;
+        private final double grossPositionValue;
+        private final double equityWithLoanValue;
+        private final double previousDayEquityWithLoanValue;
+    }
+
+    @Getter
+    public static class TickerInfo {
 
         private final double position;
         private final double mktPrice;
@@ -243,7 +259,7 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
         private final double unrealizedPnl;
         private final String name;
         private final String group;
-        private final List<String> orders;
+        private final List<TickerOrder> orders;
         private final String currency;
         private final Double bidSize;
         private final Double askSize;
@@ -252,7 +268,7 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
         private final Double changePrice;
         private final Double changePercent;
 
-        public WidgetInfo(IbkrApi.Position position) {
+        public TickerInfo(IbkrApi.Position position) {
             this.ticker = position.getTicker();
             this.position = position.getPosition();
             this.mktPrice = position.getLastPrice() == null ? position.getMktPrice() : position.getLastPrice();
@@ -262,7 +278,7 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
             this.unrealizedPnl = position.getUnrealizedPnl();
             this.name = position.getName();
             this.group = position.getGroup();
-            this.orders = position.getOrders().values().stream().map(WidgetInfo::getOrderInfo).toList();
+            this.orders = position.getOrders().values().stream().map(TickerInfo::getOrderInfo).toList();
             this.bidSize = position.getBidSize();
             this.askSize = position.getAskSize();
             this.bidPrice = position.getBidPrice();
@@ -271,8 +287,22 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
             this.changePercent = position.getChangePercent();
         }
 
-        private static String getOrderInfo(IbkrApi.Order order) {
-            return (order.getSide().equals("SELL") ? "Sell" : "Buy") + " " + order.getTotalSize() + " " + order.getOrderType() + " " + order.getPrice();
+        private static TickerOrder getOrderInfo(IbkrApi.Order order) {
+            return new TickerOrder(order.getSide().equals("SELL") ? "Sell" : "Buy",
+                    order.getTotalSize(),
+                    order.getOrderType(),
+                    order.getPrice(),
+                    order.isOutsideRTH());
+        }
+
+        @Getter
+        @RequiredArgsConstructor
+        private static class TickerOrder {
+            private final String side;
+            private final double size;
+            private final String type;
+            private final String price;
+            private final boolean outsideRTH;
         }
     }
 }
