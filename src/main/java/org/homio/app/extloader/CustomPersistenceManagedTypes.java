@@ -38,8 +38,8 @@ public class CustomPersistenceManagedTypes implements PersistenceManagedTypes {
         this.persistenceUnitRootUrl = persistenceManagedTypes.getPersistenceUnitRootUrl();
         List<String> scannedManagedClassNames = persistenceManagedTypes.getManagedClassNames();
         if (managedClassNames == null
-                || this.managedClassNames.size() != scannedManagedClassNames.size()
-                || !new HashSet<>(this.managedClassNames).containsAll(scannedManagedClassNames)) {
+            || this.managedClassNames.size() != scannedManagedClassNames.size()
+            || !new HashSet<>(this.managedClassNames).containsAll(scannedManagedClassNames)) {
             this.managedClassNames = scannedManagedClassNames;
             return true;
         }

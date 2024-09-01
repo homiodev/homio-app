@@ -3,14 +3,14 @@ package org.homio.addon.fs;
 import co.elastic.thumbnails4j.core.Dimensions;
 import com.mpatric.mp3agic.ID3v2;
 import com.mpatric.mp3agic.Mp3File;
-import java.awt.Graphics2D;
-import java.awt.Image;
+import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
+
+import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import javax.imageio.ImageIO;
-import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
 
 @Log4j2
 public class Mp3Thumbnailer extends FileRequireThumbnailer {

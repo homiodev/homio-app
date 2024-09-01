@@ -1,13 +1,5 @@
 package org.homio.app.ssh.service;
 
-import java.io.InputStream;
-import java.nio.charset.Charset;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.io.IOUtils;
@@ -22,6 +14,15 @@ import org.homio.api.util.CommonUtils;
 import org.homio.app.ssh.SshTmateEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.io.InputStream;
+import java.nio.charset.Charset;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class SshTmateService extends ServiceInstance<SshTmateEntity> implements SshProviderService<SshTmateEntity> {
 
@@ -62,8 +63,8 @@ public class SshTmateService extends ServiceInstance<SshTmateEntity> implements 
                 countDownLatch.countDown();
 
                 process.waitFor(context.setting().getEnv("tmate-max-timeout", 60, true,
-                        "Max wait timeout for tmate session(min)"),
-                    TimeUnit.MINUTES);
+                                "Max wait timeout for tmate session(min)"),
+                        TimeUnit.MINUTES);
             } catch (InterruptedException ie) {
                 log.info("Close ssh session using tmate provider");
             } catch (Exception ex) {
@@ -105,7 +106,8 @@ public class SshTmateService extends ServiceInstance<SshTmateEntity> implements 
         if (process != null && process.isAlive()) {
             try {
                 process.destroy();
-            } catch (Exception ignore) {}
+            } catch (Exception ignore) {
+            }
             process = null;
         }
     }

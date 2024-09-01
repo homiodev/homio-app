@@ -1,23 +1,6 @@
 package org.homio.app.video.ffmpeg;
 
-import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION;
-
 import com.pivovarit.function.ThrowingRunnable;
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -38,6 +21,18 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION;
+
 /**
  * Responsible for handling multiple ffmpeg conversions which are used for many tasks
  */
@@ -55,14 +50,16 @@ public class FFMPEGImpl implements FFMPEG {
 
     protected final FFMPEGHandler handler;
     private final @Getter String description;
-    private final @Getter @NotNull FFMPEGFormat format;
+    private final @Getter
+    @NotNull FFMPEGFormat format;
     private final @Getter String output;
     protected final @NotNull Map<String, ThrowingRunnable<Exception>> destroyListeners = new HashMap<>();
     private final @Getter String cmd;
     protected final String entityID;
     private final Context context;
     private final @Getter int commandHashCode;
-    private final @Getter @NotNull FileLogger fileLogger;
+    private final @Getter
+    @NotNull FileLogger fileLogger;
     protected @Nullable Collection<ThrowingRunnable<Exception>> threadDestroyListeners;
     protected Process process = null;
     // this is indicator that tells if this ffmpeg command is still need by 3th part request
@@ -70,32 +67,34 @@ public class FFMPEGImpl implements FFMPEG {
     private Thread ffmpegThread;
     private long lastAnswerFromFFMPEG = 0;
     private final @Getter AtomicBoolean running = new AtomicBoolean(false);
-    private @Setter @Accessors(chain = true) @Nullable Path workingDirectory;
+    private @Setter
+    @Accessors(chain = true)
+    @Nullable Path workingDirectory;
 
     @SneakyThrows
     public FFMPEGImpl(@NotNull String entityID,
-        @NotNull String description,
-        @NotNull FFMPEGHandler handler,
-        @NotNull FFMPEGFormat format,
-        @NotNull String inputArguments,
-        @NotNull String input,
-        @NotNull String outArguments,
-        @NotNull String output,
-        @NotNull String username,
-        @NotNull String password,
-        @NotNull Context context) {
+                      @NotNull String description,
+                      @NotNull FFMPEGHandler handler,
+                      @NotNull FFMPEGFormat format,
+                      @NotNull String inputArguments,
+                      @NotNull String input,
+                      @NotNull String outArguments,
+                      @NotNull String output,
+                      @NotNull String username,
+                      @NotNull String password,
+                      @NotNull Context context) {
         this(entityID, description, handler, format, output, buildCommand(inputArguments,
-            input, outArguments, output, username, password), context);
+                input, outArguments, output, username, password), context);
     }
 
     @SneakyThrows
     public FFMPEGImpl(@NotNull String entityID,
-        @NotNull String description,
-        @NotNull FFMPEGHandler handler,
-        @NotNull FFMPEGFormat format,
-        @NotNull String output,
-        @NotNull String command,
-        @NotNull Context context) {
+                      @NotNull String description,
+                      @NotNull FFMPEGHandler handler,
+                      @NotNull FFMPEGFormat format,
+                      @NotNull String output,
+                      @NotNull String command,
+                      @NotNull Context context) {
         this.context = context;
         FFMPEGImpl.ffmpegMap.put(entityID + "_" + description, this);
 
@@ -115,12 +114,12 @@ public class FFMPEGImpl implements FFMPEG {
     }
 
     public static String buildCommand(
-        @NotNull String inputArguments,
-        @NotNull String input,
-        @NotNull String outArguments,
-        @NotNull String output,
-        @NotNull String username,
-        @NotNull String password) {
+            @NotNull String inputArguments,
+            @NotNull String input,
+            @NotNull String outArguments,
+            @NotNull String output,
+            @NotNull String username,
+            @NotNull String password) {
         inputArguments = inputArguments.trim();
         List<String> builder = new ArrayList<>();
         CommonUtils.addToListSafe(builder, inputArguments.trim());
@@ -161,7 +160,7 @@ public class FFMPEGImpl implements FFMPEG {
 
     @Override
     public @NotNull Path getOutputFile() {
-        if(workingDirectory == null) {
+        if (workingDirectory == null) {
             return Paths.get(output);
         }
         return workingDirectory.resolve(output);
@@ -204,13 +203,13 @@ public class FFMPEGImpl implements FFMPEG {
     @SneakyThrows
     public ProcessStat getProcessStat(Runnable onRefreshUpdated) {
         UpdatableValue<ProcessStat> cachedValue = PROCESS_STAT_LOADING_CACHE.computeIfAbsent(entityID,
-            s -> UpdatableValue.wrap(new ProcessStatImpl(0, 0, 0), entityID));
+                s -> UpdatableValue.wrap(new ProcessStatImpl(0, 0, 0), entityID));
         return cachedValue.getFreshValue(Duration.ofSeconds(10), () ->
-            context.bgp().builder("fetch-ffmpeg-proc-stat")
-                         .execute(() -> {
-                             cachedValue.update(context.hardware().getProcessStat(process.pid()));
-                             onRefreshUpdated.run();
-                         }));
+                context.bgp().builder("fetch-ffmpeg-proc-stat")
+                        .execute(() -> {
+                            cachedValue.update(context.hardware().getProcessStat(process.pid()));
+                            onRefreshUpdated.run();
+                        }));
     }
 
     @Override
@@ -286,7 +285,7 @@ public class FFMPEGImpl implements FFMPEG {
             try {
                 threadDestroyListeners = new ArrayList<>(destroyListeners.values());
                 logInfo("Starting ffmpeg[%s] command '%s'. Run: %s".formatted(format,
-                    description, String.join(" ", commandArrayList)));
+                        description, String.join(" ", commandArrayList)));
                 ProcessBuilder builder = new ProcessBuilder(commandArrayList.toArray(new String[0]));
                 if (workingDirectory != null) {
                     builder.directory(workingDirectory.toFile());

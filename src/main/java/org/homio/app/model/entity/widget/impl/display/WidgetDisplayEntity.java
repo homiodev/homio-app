@@ -1,37 +1,28 @@
 package org.homio.app.model.entity.widget.impl.display;
 
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.persistence.Entity;
-import java.util.List;
 import lombok.SneakyThrows;
 import org.homio.api.ContextWidget.ChartType;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldIgnore;
-import org.homio.api.ui.field.UIFieldLayout;
+import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.UIFieldLayout.HorizontalAlign;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.homio.app.model.entity.widget.UIFieldJSONLine;
 import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
-import org.homio.app.model.entity.widget.attributes.HasActionOnClick;
-import org.homio.app.model.entity.widget.attributes.HasBackground;
-import org.homio.app.model.entity.widget.attributes.HasLayout;
-import org.homio.app.model.entity.widget.attributes.HasName;
-import org.homio.app.model.entity.widget.attributes.HasPadding;
-import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
+import org.homio.app.model.entity.widget.attributes.*;
 import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.homio.app.model.entity.widget.impl.chart.HasHorizontalLine;
 import org.homio.app.model.entity.widget.impl.chart.HasLineChartBehaviour;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.utils.UIFieldUtils.ConfigureFieldsService;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.List;
+
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 @SuppressWarnings("unused")
 @Entity

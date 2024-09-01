@@ -5,7 +5,7 @@ import org.homio.app.setting.CoreSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 
 public class SystemProxyAddressSetting
-    implements CoreSettingPlugin<String>, SettingPluginTextInput {
+        implements CoreSettingPlugin<String>, SettingPluginTextInput {
 
     @Override
     public @NotNull GroupKey getGroupKey() {

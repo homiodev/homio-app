@@ -8,6 +8,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.LogManager;
@@ -43,7 +44,7 @@ public class WatchdogBgpService {
                 String reason = isRequireRestartService(entry);
                 if (reason != null) {
                     LogManager.getLogger(entry.getValue())
-                              .warn("Restarting service: {}. Reason: {}", entry.getKey(), reason);
+                            .warn("Restarting service: {}. Reason: {}", entry.getKey(), reason);
                     restartingServices.add(CompletableFuture.runAsync(entry.getValue()::restartService));
                 }
             }

@@ -41,7 +41,7 @@ public class UIFieldBuilderImpl implements UIFieldBuilder {
 
     @Override
     public @NotNull HasDynamicUIFields.FieldBuilder addSlider(int order, float min, float max, @Nullable String header,
-        @NotNull UpdatableValue<Float> value) {
+                                                              @NotNull UpdatableValue<Float> value) {
         FieldBuilderImpl builder = new FieldBuilderImpl(order, value, UIFieldType.Slider);
         builder.jsonTypeMetadata.put("min", min);
         builder.jsonTypeMetadata.put("max", max);
@@ -55,7 +55,7 @@ public class UIFieldBuilderImpl implements UIFieldBuilder {
 
     @Override
     public @NotNull HasDynamicUIFields.FieldBuilder addSelect(int order, @NotNull UpdatableValue<String> value,
-        @NotNull List<OptionModel> selections) {
+                                                              @NotNull List<OptionModel> selections) {
         return addSelectBox(order, UIFieldType.SelectBox, value, selections);
     }
 

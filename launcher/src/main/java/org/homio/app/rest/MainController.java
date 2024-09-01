@@ -1,6 +1,7 @@
 package org.homio.app.rest;
 
 import jakarta.annotation.PostConstruct;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -9,6 +10,7 @@ import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -162,7 +164,7 @@ public class MainController {
             return "Unexpected NullPointerException at line: " + ex.getStackTrace()[0].toString();
         }
 
-        return StringUtils.defaultString(cause.getMessage(), cause.toString());
+        return Objects.toString(cause.getMessage(), cause.toString());
     }
 
     @Getter

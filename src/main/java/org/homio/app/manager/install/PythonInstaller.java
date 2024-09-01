@@ -1,14 +1,5 @@
 package org.homio.app.manager.install;
 
-import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
-import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
-
-import java.io.File;
-import java.io.FileWriter;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.regex.Pattern;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
@@ -20,6 +11,16 @@ import org.homio.hquery.Curl;
 import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Pattern;
+
+import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
+import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
 
 @Log4j2
 public class PythonInstaller extends DependencyExecutableInstaller {
@@ -77,10 +78,10 @@ public class PythonInstaller extends DependencyExecutableInstaller {
                     url = "https://www.python.org/ftp/python/3.12.0/python-3.12.0-embed-amd64.zip";
                 }
                 ArchiveUtil.downloadAndExtract(url, "python.zip",
-                    (progress, message, error) -> {
-                        progressBar.progress(progress, message);
-                        log.info("Python: {}", message);
-                    }, CommonUtils.getInstallPath().resolve("python"));
+                        (progress, message, error) -> {
+                            progressBar.progress(progress, message);
+                            log.info("Python: {}", message);
+                        }, CommonUtils.getInstallPath().resolve("python"));
                 Path pythonDir = CommonUtils.getInstallPath().resolve("python");
                 executable = pythonDir.resolve("python.exe").toString();
 

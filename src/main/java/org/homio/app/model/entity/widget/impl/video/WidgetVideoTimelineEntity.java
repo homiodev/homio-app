@@ -1,10 +1,6 @@
 package org.homio.app.model.entity.widget.impl.video;
 
 import jakarta.persistence.Entity;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
 import org.homio.addon.camera.entity.CameraPlaybackStorage;
 import org.homio.addon.camera.entity.IpCameraEntity;
 import org.homio.api.model.OptionModel;
@@ -15,6 +11,10 @@ import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 @Entity
 public class WidgetVideoTimelineEntity extends WidgetEntity<WidgetVideoTimelineEntity> {
@@ -67,7 +67,7 @@ public class WidgetVideoTimelineEntity extends WidgetEntity<WidgetVideoTimelineE
 
     @Override
     protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-        if(getDataSource().isEmpty()) {
+        if (getDataSource().isEmpty()) {
             fields.add("dataSource");
         }
     }

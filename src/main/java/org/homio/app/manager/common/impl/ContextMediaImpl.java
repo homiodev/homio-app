@@ -9,9 +9,7 @@ import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.ContextBGP;
 import org.homio.api.ContextMedia;
 import org.homio.api.ContextUI;
-import org.homio.api.exception.ServerException;
 import org.homio.api.model.OptionModel;
-import org.homio.api.model.Status;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.FirefoxWebDriverEntity;
@@ -60,7 +58,7 @@ public class ContextMediaImpl implements ContextMedia {
                     .interval(Duration.ofSeconds(1))
                     .cancelOnError(false)
                     .execute(() -> {
-                        if(!closed.get()) {
+                        if (!closed.get()) {
                             try {
                                 String image = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BASE64);
                                 if (!imageRef.get().equals(image) || passedSeconds.getAndIncrement() == 10) {

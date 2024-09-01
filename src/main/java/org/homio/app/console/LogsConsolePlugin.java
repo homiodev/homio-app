@@ -1,8 +1,5 @@
 package org.homio.app.console;
 
-import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
-
-import java.util.List;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
@@ -10,7 +7,10 @@ import org.homio.api.Context;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.console.ConsolePluginLines;
 import org.homio.app.LogService;
+import org.homio.app.model.entity.user.UserGuestEntity;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.List;
 
 @RequiredArgsConstructor
 public class LogsConsolePlugin implements ConsolePluginLines {
@@ -22,8 +22,12 @@ public class LogsConsolePlugin implements ConsolePluginLines {
 
     @Override
     public List<String> getValue() {
-        context.assertAccess(LOG_RESOURCE);
-        return this.logService.getLogs(name);
+        try {
+            UserGuestEntity.assertLogAccess(context);
+            return this.logService.getLogs(name);
+        } catch (Exception e) {
+            return List.of(e.getMessage());
+        }
     }
 
     @Override
@@ -33,7 +37,8 @@ public class LogsConsolePlugin implements ConsolePluginLines {
 
     @Override
     public boolean isEnabled() {
-        return context.accessEnabled(LOG_RESOURCE);
+        UserGuestEntity.assertLogAccess(context);
+        return true;
     }
 
     @Override

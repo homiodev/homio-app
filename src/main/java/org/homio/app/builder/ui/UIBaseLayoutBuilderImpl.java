@@ -1,27 +1,12 @@
 package org.homio.app.builder.ui;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import org.homio.api.model.Icon;
 import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.UIEntityBuilder;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.api.ui.field.action.v1.item.UIButtonItemBuilder;
-import org.homio.api.ui.field.action.v1.item.UICheckboxItemBuilder;
-import org.homio.api.ui.field.action.v1.item.UIColorPickerItemBuilder;
-import org.homio.api.ui.field.action.v1.item.UIIconPickerItemBuilder;
-import org.homio.api.ui.field.action.v1.item.UIInfoItemBuilder;
-import org.homio.api.ui.field.action.v1.item.UIMultiButtonItemBuilder;
-import org.homio.api.ui.field.action.v1.item.UISelectBoxItemBuilder;
-import org.homio.api.ui.field.action.v1.item.UISliderItemBuilder;
-import org.homio.api.ui.field.action.v1.item.UITextInputItemBuilder;
+import org.homio.api.ui.field.action.v1.item.*;
 import org.homio.api.ui.field.action.v1.item.UITextInputItemBuilder.InputType;
 import org.homio.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
 import org.homio.api.ui.field.action.v1.layout.UILayoutBuilder;
@@ -33,6 +18,10 @@ import org.homio.app.builder.ui.layout.UIStickyDialogItemBuilderImpl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
+
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
 
@@ -179,7 +168,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
     public UISliderItemBuilder addSlider(@NotNull String name, Float value, Float min, Float max, UIActionHandler action,
                                          UISliderItemBuilder.SliderType sliderType, int order) {
         return addEntity(
-            new UISliderItemBuilderImpl(name, order, action, value, min, max)
+                new UISliderItemBuilderImpl(name, order, action, value, min, max)
                         .setSliderType(sliderType));
     }
 

@@ -1,32 +1,23 @@
 package org.homio.app.builder.widget;
 
-import static java.lang.String.format;
-import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.ContextWidget;
 import org.homio.api.ContextWidget.DisplayWidgetBuilder;
 import org.homio.api.ContextWidget.DisplayWidgetSeriesBuilder;
-import org.homio.app.builder.widget.hasBuilder.HasActionOnClickBuilder;
-import org.homio.app.builder.widget.hasBuilder.HasChartDataSourceBuilder;
-import org.homio.app.builder.widget.hasBuilder.HasChartTimePeriodBuilder;
-import org.homio.app.builder.widget.hasBuilder.HasHorizontalLineBuilder;
-import org.homio.app.builder.widget.hasBuilder.HasIconColorThresholdBuilder;
-import org.homio.app.builder.widget.hasBuilder.HasLineChartBehaviourBuilder;
-import org.homio.app.builder.widget.hasBuilder.HasMinMaxChartValueBuilder;
-import org.homio.app.builder.widget.hasBuilder.HasNameBuilder;
-import org.homio.app.builder.widget.hasBuilder.HasPaddingBuilder;
-import org.homio.app.builder.widget.hasBuilder.HasValueConverterBuilder;
-import org.homio.app.builder.widget.hasBuilder.HasValueTemplateBuilder;
+import org.homio.app.builder.widget.hasBuilder.*;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplaySeriesEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+
+import static java.lang.String.format;
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 
 public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuilder, WidgetDisplayEntity>
         implements DisplayWidgetBuilder,

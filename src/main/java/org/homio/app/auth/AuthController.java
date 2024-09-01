@@ -1,5 +1,6 @@
 package org.homio.app.auth;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.BadRequestException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -45,8 +46,8 @@ public class AuthController {
     @GetMapping("/status")
     public StatusResponse getStatus(UsernamePasswordAuthenticationToken user) {
         if (user == null) {
-            UserAdminEntity userAdminEntity = context.db().getEntityRequire(UserAdminEntity.class, PRIMARY_DEVICE);
-            if (StringUtils.isBlank(userAdminEntity.getEmail())) {
+            UserAdminEntity userAdminEntity = context.db().getRequire(UserAdminEntity.class, PRIMARY_DEVICE);
+            if (userAdminEntity.getEmail().isEmpty()) {
                 return new StatusResponse(402, HardwareUtils.APP_ID);
             }
             return new StatusResponse(401, HardwareUtils.APP_ID);
@@ -68,8 +69,8 @@ public class AuthController {
         credentials.validate();
         UserBaseEntity.log.info("Registering <{}>", credentials.getEmail());
         try {
-            UserAdminEntity userAdminEntity = context.db().getEntityRequire(UserAdminEntity.class, PRIMARY_DEVICE);
-            if (StringUtils.isNotBlank(userAdminEntity.getEmail())) {
+            UserAdminEntity userAdminEntity = context.db().getRequire(UserAdminEntity.class, PRIMARY_DEVICE);
+            if (userAdminEntity.getEmail().isEmpty()) {
                 throw new IllegalStateException("Unable to register second primary user");
             }
             userAdminEntity.setEmail(credentials.email);
@@ -88,13 +89,14 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public String login(@RequestBody LoginRequest credentials) {
+    public String login(@RequestBody LoginRequest credentials, HttpServletRequest request) {
         credentials.validate();
         UserBaseEntity.log.info("Login <{}>", credentials.getEmail());
         try {
             String username = credentials.getEmail();
             Authentication authentication = getAuthentication(username, credentials.password);
-            UserBaseEntity.log.info("Login success for <{}>", credentials.getEmail());
+            UserBaseEntity.log.info("Login success for <{}>. Remote address: {}",
+                    credentials.getEmail(), request.getRemoteAddr());
             String entityID = UserEntityDetailsService.getEntityID(authentication);
             String email = UserEntityDetailsService.getEmail(authentication);
             addUserNotificationBlock(entityID, email, true);
@@ -134,7 +136,7 @@ public class AuthController {
         if (replace || !context.ui().notification().isHasBlock(key)) {
             context.ui().notification().addBlock(key, email, new Icon("fas fa-user", "#AAAC2C"), builder ->
                     builder.visibleForUser(email)
-                            .linkToEntity(context.db().getEntityRequire(entityID))
+                            .linkToEntity(context.db().getRequire(entityID))
                             .setBorderColor("#AAAC2C")
                             .addInfo(key, null, "")
                             .setRightButton(new Icon("fas fa-right-from-bracket"), "W.INFO.LOGOUT", "W.CONFIRM.LOGOUT", (ignore, params) -> {

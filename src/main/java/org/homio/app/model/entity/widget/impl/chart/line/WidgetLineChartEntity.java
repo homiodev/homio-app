@@ -19,7 +19,7 @@ import org.jetbrains.annotations.NotNull;
 @Entity
 public class WidgetLineChartEntity
         extends ChartBaseEntity<WidgetLineChartEntity, WidgetLineChartSeriesEntity>
-    implements HasLineChartBehaviour, HasHorizontalLine, HasAxis, HasPadding {
+        implements HasLineChartBehaviour, HasHorizontalLine, HasAxis, HasPadding {
 
     @UIField(order = 101)
     @UIFieldPadding

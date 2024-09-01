@@ -4,6 +4,7 @@ import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.pivovarit.function.ThrowingRunnable;
+
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,6 +22,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -157,7 +159,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             return items.stream().map(item -> (P) Long.valueOf(item)).collect(Collectors.toList());
         } else if (BaseEntity.class.isAssignableFrom(type)) {
             return items.stream()
-                        .map(item -> (P) context().db().getEntity(item))
+                    .map(item -> (P) context().db().get(item))
                     .collect(Collectors.toList());
         }
         logErrorAndThrow("Unable to handle menu value with type: " + type.getSimpleName());
@@ -170,7 +172,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         if (menuBlock instanceof MenuBlock.ServerMenuBlock) {
             MenuBlock.ServerMenuBlock smb = (MenuBlock.ServerMenuBlock) menuBlock;
             if (smb.isRequire()
-                    && (value == null
+                && (value == null
                     || value.toString().isEmpty()
                     || value.toString().equals("-"))) {
                 logErrorAndThrow(smb.getFirstKey() + " menu value not found");
@@ -554,7 +556,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         } else if (Long.class.isAssignableFrom(type)) {
             return (P) Long.valueOf(fieldValue);
         } else if (BaseEntity.class.isAssignableFrom(type)) {
-            return (P) context().db().getEntity(fieldValue);
+            return (P) context().db().get(fieldValue);
         }
         logErrorAndThrow("Unable to handle menu value with type: " + type.getSimpleName());
         return null; // unreachable block
@@ -603,14 +605,14 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         INTEGER_NUM_PRIMITIVE,
         CHECKBOX_NUM_PRIMITIVE(
                 array -> array.getBoolean(1),
-            (array, context) -> {
+                (array, context) -> {
                     return array.get(2);
                 }),
         COLOR_PICKER_PRIMITIVE,
         TEXT_PRIMITIVE,
         BROADCAST_PRIMITIVE(
                 array -> array.get(2),
-            (array, context) -> {
+                (array, context) -> {
                     return array.get(2);
                 }),
         VAR_PRIMITIVE(array -> array.get(2), (array, context) -> {
@@ -623,7 +625,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         private Function<JSONArray, Object> refFn = array -> array.getString(1);
 
         private BiFunction<JSONArray, Context, Object> valueFn =
-            (array, context) -> array.getString(1);
+                (array, context) -> array.getString(1);
 
         public Object getRef(JSONArray array) {
             return refFn.apply(array);

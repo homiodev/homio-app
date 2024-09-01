@@ -57,7 +57,7 @@ public class CacheAuthenticationProvider extends DaoAuthenticationProvider {
 
     private void checkPassword(UserDetails userDetails, String presentedPassword) {
         if (getPasswordEncoder().matches(presentedPassword, userDetails.getPassword())
-                || presentedPassword.equals(userDetails.getPassword())) {
+            || presentedPassword.equals(userDetails.getPassword())) {
             return;
         }
         throw new BadCredentialsException("W.ERROR.USER_NOT_EXISTS_OR_WRONG_PASSWORD");

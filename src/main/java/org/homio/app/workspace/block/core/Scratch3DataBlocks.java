@@ -1,7 +1,5 @@
 package org.homio.app.workspace.block.core;
 
-import java.text.NumberFormat;
-import java.util.function.BiFunction;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -13,6 +11,9 @@ import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.workspace.WorkspaceBlockImpl;
 import org.springframework.stereotype.Component;
+
+import java.text.NumberFormat;
+import java.util.function.BiFunction;
 
 @Getter
 @Component
@@ -54,7 +55,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     }
 
     /*private JSONObject getJsonVariableToReporter(WorkspaceBlock workspaceBlock) {
-        WorkspaceJsonVariableEntity entity = context.db().getEntity(WorkspaceJsonVariableEntity.PREFIX
+        WorkspaceJsonVariableEntity entity = context.db().get(WorkspaceJsonVariableEntity.PREFIX
                 + workspaceBlock.getFieldId("json_variables"));
         String query = workspaceBlock.getInputString("ITEM");
         return Scratch3MutatorBlocks.reduceJSON(entity.getValue().toString(), query);
@@ -96,7 +97,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         Eq("=",
                 (workspaceBlock, value) -> value.toString().equals(workspaceBlock.getInputString("ITEM", ""))),
         Regexp("regex",
-            (workspaceBlock, value) -> value.toString().matches(workspaceBlock.getInputString("ITEM", ""))),
+                (workspaceBlock, value) -> value.toString().matches(workspaceBlock.getInputString("ITEM", ""))),
         Any("any", (workspaceBlock, o) -> true),
         NotEq("!=",
                 (workspaceBlock, value) -> !value.toString().equals(workspaceBlock.getInputString("ITEM", "")));

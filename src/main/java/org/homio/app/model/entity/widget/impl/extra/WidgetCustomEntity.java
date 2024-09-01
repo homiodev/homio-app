@@ -6,8 +6,6 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
-import org.homio.api.entity.widget.ability.HasGetStatusValue;
-import org.homio.api.model.OptionModel;
 import org.homio.api.ui.field.MonacoLanguage;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldCodeEditor;
@@ -16,15 +14,11 @@ import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.HasDynamicUIFields;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
-import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
-import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.api.widget.CustomWidgetConfigurableEntity;
-import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -80,7 +74,7 @@ public class WidgetCustomEntity extends WidgetEntity<WidgetCustomEntity> impleme
     public void assembleUIFields(@NotNull HasDynamicUIFields.UIFieldBuilder uiFieldBuilder) {
         String parameterEntity = getParameterEntity();
         if (!parameterEntity.isEmpty()) {
-            BaseEntity entity = context().db().getEntity(parameterEntity);
+            BaseEntity entity = context().db().get(parameterEntity);
             if (entity instanceof CustomWidgetConfigurableEntity configurableEntity) {
                 configurableEntity.assembleUIFields(uiFieldBuilder, this);
             }
@@ -91,7 +85,7 @@ public class WidgetCustomEntity extends WidgetEntity<WidgetCustomEntity> impleme
     public void assembleActions(UIInputBuilder uiInputBuilder) {
         String parameterEntity = getParameterEntity();
         if (!parameterEntity.isEmpty()) {
-            BaseEntity entity = context().db().getEntity(parameterEntity);
+            BaseEntity entity = context().db().get(parameterEntity);
             if (entity instanceof CustomWidgetConfigurableEntity configurableEntity) {
                 configurableEntity.assembleActions(uiInputBuilder);
             }

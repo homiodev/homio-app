@@ -3,6 +3,7 @@ package org.homio.app.manager;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.JsonNode;
+
 import java.io.PrintStream;
 import java.io.StringReader;
 import java.time.Duration;
@@ -64,7 +65,7 @@ public class ScriptService implements ContextCreated {
             if (scriptEntity.isAutoStart()) {
                 this.context.bgp().builder(scriptEntity.getEntityID())
                         .onError(ex ->
-                            this.context.db().updateDelayed(scriptEntity, s ->
+                                this.context.db().updateDelayed(scriptEntity, s ->
                                         s.setStatus(Status.ERROR).setError(CommonUtils.getErrorMessage(ex))))
                         .execute(() -> {
                             CompileScriptContext compiledScriptContext = createCompiledScript(scriptEntity, null, null);
@@ -93,7 +94,7 @@ public class ScriptService implements ContextCreated {
      * @param state
      */
     public @NotNull State startThread(ScriptEntity scriptEntity, boolean allowRepeat,
-        PrintStream logPrintStream, boolean forceBackground, State state) throws Exception {
+                                      PrintStream logPrintStream, boolean forceBackground, State state) throws Exception {
         scriptEntity.setStatus(Status.RUNNING);
         if (forceBackground) {
             context.db().save(scriptEntity);

@@ -1,19 +1,8 @@
 package org.homio.app.console;
 
-import static java.lang.String.format;
-
 import com.fazecast.jSerialComm.SerialPort;
 import com.pivovarit.function.ThrowingSupplier;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
+import lombok.*;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.Context;
@@ -26,6 +15,10 @@ import org.homio.hquery.hardware.other.MachineInfo;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
+import java.util.*;
+
+import static java.lang.String.format;
+
 @Component
 @RequiredArgsConstructor
 public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePlugin.HardwarePluginEntity> {
@@ -33,7 +26,9 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
     @Getter
     private final @Accessors(fluent = true) Context context;
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     private final MachineHardwareRepository machineHardwareRepository;
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     private final NetworkHardwareRepository networkHardwareRepository;
 
     @Override
@@ -42,45 +37,50 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
     }
 
     @Override
-    @SneakyThrows
     public Collection<HardwarePluginEntity> getValue() {
         List<HardwarePluginEntity> list = new ArrayList<>();
 
         list.add(new HardwarePluginEntity("Database", format("Type: (%s). Url: (%s)",
-            context.setting().getEnv("databaseType"),
-            context.setting().getEnv("spring.datasource.url"))));
+                context.setting().getEnv("databaseType"),
+                context.setting().getEnv("spring.datasource.url"))));
         list.add(new HardwarePluginEntity("Cpu load", machineHardwareRepository.getCpuLoad()));
         list.add(new HardwarePluginEntity("Cpu temperature", onLinux(machineHardwareRepository::getCpuTemperature)));
         list.add(new HardwarePluginEntity("Ram memory", machineHardwareRepository.getRamMemory()));
         list.add(new HardwarePluginEntity("Disk memory", toString(machineHardwareRepository.getDiscCapacity())));
         list.add(new HardwarePluginEntity("Uptime", machineHardwareRepository.getUptime()));
         String activeNetworkInterface = networkHardwareRepository.getActiveNetworkInterface();
-        list.add(new HardwarePluginEntity("Network interface", activeNetworkInterface));
-        list.add(new HardwarePluginEntity("Internet stat", toString(networkHardwareRepository.stat(activeNetworkInterface))));
+        list.add(new HardwarePluginEntity("Network interface", adminOnly(activeNetworkInterface)));
+        list.add(new HardwarePluginEntity("Internet stat", adminOnly(toString(networkHardwareRepository.stat(activeNetworkInterface)))));
         list.add(new HardwarePluginEntity("Network description",
-                toString(networkHardwareRepository.getNetworkDescription(activeNetworkInterface))));
+                adminOnly(toString(networkHardwareRepository.getNetworkDescription(activeNetworkInterface)))));
         list.add(new HardwarePluginEntity("Cpu num", Runtime.getRuntime().availableProcessors()));
         list.add(new HardwarePluginEntity("Os", "Name: " + SystemUtils.OS_NAME +
-                ". Version: " + SystemUtils.OS_VERSION + ". Arch: " + SystemUtils.OS_ARCH));
+                                                ". Version: " + SystemUtils.OS_VERSION + ". Arch: " + SystemUtils.OS_ARCH));
         list.add(new HardwarePluginEntity("Java", "Name: " + SystemUtils.JAVA_RUNTIME_NAME + ". Version: " + SystemUtils.JAVA_RUNTIME_VERSION));
 
-        list.add(new HardwarePluginEntity("IP address", networkHardwareRepository.getIPAddress()));
+        list.add(new HardwarePluginEntity("IP address", adminOnly(networkHardwareRepository.getIPAddress())));
         list.add(new HardwarePluginEntity("Device model", SystemUtils.OS_NAME));
 
         MachineInfo machineInfo = machineHardwareRepository.getMachineInfo();
 
         list.add(new HardwarePluginEntity("CPU", "cpus(s) - %s, arch - %s".formatted(machineInfo.getCpuNum(), machineInfo.getArchitecture())));
-        list.add(new HardwarePluginEntity("Hostname", machineInfo.getProcessorModelName()));
+        list.add(new HardwarePluginEntity("Hostname", adminOnly(machineInfo.getProcessorModelName())));
 
-        for (SerialPort serialPort : SerialPort.getCommPorts()) {
-            list.add(new HardwarePluginEntity("Com port <" + serialPort.getSystemPortName() + ">",
-                    serialPort.getDescriptivePortName() +
-                            " [" + serialPort.getBaudRate() + "/" + serialPort.getPortDescription() + "]"));
+        if(context.isAdmin()) {
+            for (SerialPort serialPort : SerialPort.getCommPorts()) {
+                list.add(new HardwarePluginEntity("Com port <" + serialPort.getSystemPortName() + ">",
+                        serialPort.getDescriptivePortName() +
+                        " [" + serialPort.getBaudRate() + "/" + serialPort.getPortDescription() + "]"));
+            }
         }
 
         Collections.sort(list);
 
         return list;
+    }
+
+    private Object adminOnly(Object object) {
+        return object;
     }
 
     @Override
@@ -89,7 +89,7 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
     }
 
     @Override
-    public String getName() {
+    public @NotNull String getName() {
         return "machine";
     }
 
@@ -102,8 +102,14 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
         return Optional.ofNullable(value).map(Object::toString).orElse("N/A");
     }
 
-    private Object onLinux(ThrowingSupplier<Object, Exception> supplier) throws Exception {
-        return SystemUtils.IS_OS_LINUX ? supplier.get() : "N/A";
+    private Object onLinux(ThrowingSupplier<Object, Exception> supplier) {
+        if (SystemUtils.IS_OS_LINUX) {
+            try {
+                return supplier.get();
+            } catch (Exception ignore) {
+            }
+        }
+        return "N/A";
     }
 
     @Getter

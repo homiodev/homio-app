@@ -20,6 +20,7 @@ import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.model.endpoint.BaseDeviceEndpoint;
 import org.homio.api.model.endpoint.DeviceEndpoint;
+import org.homio.api.repository.GitHubProject;
 import org.homio.api.repository.GitHubProject.VersionedFile;
 import org.homio.api.service.DependencyExecutableInstaller;
 import org.homio.api.state.StringType;
@@ -47,7 +48,7 @@ import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION
 
 @Log4j2
 @Entity
-@CreateSingleEntity(disableEdit = true)
+@CreateSingleEntity
 @UISidebarChildren(icon = "fas fa-podcast", color = "#2DA844", allowCreateItem = false)
 public class FFMPEGEntity extends MediaEntity implements
         HasEntityLog,
@@ -66,7 +67,7 @@ public class FFMPEGEntity extends MediaEntity implements
                      });*/
         FFMPEGEntity.getFfmpegInstaller(context).installLatestAsync();
 
-        FFMPEGImpl.entity = context.db().getEntity(FFMPEGEntity.class, PRIMARY_DEVICE);
+        FFMPEGImpl.entity = context.db().get(FFMPEGEntity.class, PRIMARY_DEVICE);
 
         context.bgp().registerThreadsPuller("ffmpeg", threadPuller -> {
             for (Map.Entry<String, FFMPEGImpl> threadEntry : FFMPEGImpl.ffmpegMap.entrySet()) {
@@ -259,6 +260,15 @@ public class FFMPEGEntity extends MediaEntity implements
                 ContextHardware hardware = context.hardware();
                 if (!hardware.isSoftwareInstalled("ffmpeg")) {
                     hardware.installSoftware("ffmpeg", 600, progressBar);
+                    if (!hardware.isSoftwareInstalled("ffmpeg")) {
+                        GitHubProject gitHubProject = GitHubProject.of("BtbN", "FFmpeg-Builds");
+                        String lastReleaseVersion = gitHubProject.getLastReleaseVersion();
+                        if (lastReleaseVersion != null) {
+                            gitHubProject.downloadReleaseAndInstall(context, lastReleaseVersion, progressBar);
+                            Path path = gitHubProject.getLocalProjectPath().resolve("bin").resolve("ffmpeg");
+                            context.hardware().execute("ln -s " + path + " /usr/local/bin/ffmpeg");
+                        }
+                    }
                 }
             } else {
                 String url = context.setting().getEnv("source-ffmpeg");

@@ -39,7 +39,7 @@ public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBar
 
     @Override
     protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-        if(getChartDataSource().isEmpty()) {
+        if (getChartDataSource().isEmpty()) {
             fields.add("chartDataSource");
         }
     }

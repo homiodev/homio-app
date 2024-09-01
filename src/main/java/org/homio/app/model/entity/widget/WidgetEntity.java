@@ -1,13 +1,7 @@
 package org.homio.app.model.entity.widget;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Inheritance;
-import jakarta.persistence.InheritanceType;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -15,6 +9,7 @@ import lombok.experimental.Accessors;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
+import org.homio.api.entity.HasPermissions;
 import org.homio.api.model.JSON;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIFieldIgnore;
@@ -31,7 +26,7 @@ import org.jetbrains.annotations.NotNull;
 @Accessors(chain = true)
 @NoArgsConstructor
 public abstract class WidgetEntity<T extends WidgetEntity> extends BaseEntity
-        implements HasPosition<WidgetEntity>, HasStyle, HasJsonData {
+        implements HasPosition<WidgetEntity>, HasStyle, HasPermissions {
 
     private static final String PREFIX = "widget_";
 

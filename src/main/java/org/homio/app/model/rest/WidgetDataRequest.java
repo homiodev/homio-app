@@ -19,19 +19,19 @@ public class WidgetDataRequest {
 
     @SneakyThrows
     public <T extends BaseEntity> T getEntity(
-        Context context, ObjectMapper objectMapper, Class<T> tClass) {
+            Context context, ObjectMapper objectMapper, Class<T> tClass) {
         if (liveEntity != null) {
             return objectMapper.readValue(liveEntity, tClass);
         }
-        return context.db().getEntity(entityID);
+        return context.db().get(entityID);
     }
 
     @SneakyThrows
     public WidgetEntity getEntity(Context context, ObjectMapper objectMapper) {
-        WidgetEntity entity = context.db().getEntity(entityID);
+        WidgetEntity entity = context.db().get(entityID);
         if (liveEntity != null) {
             return objectMapper.readValue(liveEntity, entity.getClass());
         }
-        return context.db().getEntity(entityID);
+        return context.db().get(entityID);
     }
 }

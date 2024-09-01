@@ -1,22 +1,7 @@
 package org.homio.app.model.var;
 
-import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.homio.app.utils.UIFieldUtils.nullIfFalse;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.AttributeOverride;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -32,13 +17,8 @@ import org.homio.api.model.Icon;
 import org.homio.api.model.JSON;
 import org.homio.api.state.DecimalType;
 import org.homio.api.ui.UISidebarMenu;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldIconPicker;
-import org.homio.api.ui.field.UIFieldProgress;
+import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.UIFieldProgress.Progress;
-import org.homio.api.ui.field.UIFieldSlider;
-import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIActionInput;
 import org.homio.api.ui.field.action.UIActionInput.Type;
 import org.homio.api.ui.field.action.UIContextMenuAction;
@@ -57,6 +37,16 @@ import org.homio.app.model.var.WorkspaceVariable.VarType;
 import org.homio.app.repository.VariableBackupRepository;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
+
+import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.homio.api.ContextVar.GROUP_BROADCAST;
+import static org.homio.app.utils.UIFieldUtils.nullIfFalse;
 
 @Entity
 @Setter
@@ -93,12 +83,14 @@ public class WorkspaceGroup extends BaseEntity
 
     @UIField(order = 15, hideInEdit = true)
     public int getVarCount() {
-        if (workspaceVariables == null) {return 0;}
+        if (workspaceVariables == null) {
+            return 0;
+        }
         return workspaceVariables.size() +
-            (childrenGroups == null ? 0 : childrenGroups
-                .stream()
-                .map(WorkspaceGroup::getVarCount)
-                .reduce(0, Integer::sum));
+               (childrenGroups == null ? 0 : childrenGroups
+                       .stream()
+                       .map(WorkspaceGroup::getVarCount)
+                       .reduce(0, Integer::sum));
     }
 
     @Getter
@@ -192,7 +184,7 @@ public class WorkspaceGroup extends BaseEntity
 
     @Override
     public boolean isDisableDelete() {
-        return locked || getEntityID().equals(PREFIX + "broadcasts") || getJsonData("dis_del", false);
+        return locked || getEntityID().equals(PREFIX + GROUP_BROADCAST) || getJsonData("dis_del", false);
     }
 
     public static String generateValue(Object val, WorkspaceVariable variable) {
@@ -249,7 +241,7 @@ public class WorkspaceGroup extends BaseEntity
 
     private int clearAll(VariableBackupRepository repository) {
         return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
-                                 .map(repository::delete)
+                .map(repository::delete)
                 .mapToInt(i -> i).sum();
     }
 
@@ -328,12 +320,12 @@ public class WorkspaceGroup extends BaseEntity
             this.entityID = variable.getEntityID();
 
             name = new JSONObject()
-                .put("color", variable.getIconColor())
+                    .put("color", variable.getIconColor())
                     .put("name", variable.getName())
                     .put("description", variable.getDescription())
-                .put("listeners", context.event().getEventCount(variable.getEntityID()))
-                .put("linked", context.var().isLinked(variable.getEntityID()))
-                .put("source", ContextVarImpl.buildDataSource(variable))
+                    .put("listeners", context.event().getEventCount(variable.getEntityID()))
+                    .put("linked", context.var().isLinked(variable.getEntityID()))
+                    .put("source", ContextVarImpl.buildDataSource(variable))
                     .put("readOnly", variable.isReadOnly());
             if (variable.isBackup()) {
                 name.put("backupCount", context.var().backupCount(variable));

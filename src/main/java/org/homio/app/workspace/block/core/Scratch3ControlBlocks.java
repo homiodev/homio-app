@@ -1,16 +1,6 @@
 package org.homio.app.workspace.block.core;
 
-import static java.util.concurrent.TimeUnit.HOURS;
-
 import com.pivovarit.function.ThrowingRunnable;
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.Objects;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.homio.api.Context;
@@ -22,6 +12,17 @@ import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.workspace.WorkspaceBlockImpl;
 import org.springframework.stereotype.Component;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.Objects;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
+
+import static java.util.concurrent.TimeUnit.HOURS;
 
 @Getter
 @Component
@@ -52,16 +53,16 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
             WorkspaceBlock child = workspaceBlock.getChild();
             String cron =
                     workspaceBlock.getInputString("SEC")
-                            + " "
-                            + workspaceBlock.getInputString("MIN")
-                            + " "
-                            + workspaceBlock.getInputString("HOUR")
-                            + " "
-                            + workspaceBlock.getInputString("DAY")
-                            + " "
-                            + workspaceBlock.getInputString("MONTH")
-                            + " "
-                            + workspaceBlock.getInputString("DOW");
+                    + " "
+                    + workspaceBlock.getInputString("MIN")
+                    + " "
+                    + workspaceBlock.getInputString("HOUR")
+                    + " "
+                    + workspaceBlock.getInputString("DAY")
+                    + " "
+                    + workspaceBlock.getInputString("MONTH")
+                    + " "
+                    + workspaceBlock.getInputString("DOW");
             AtomicInteger index = new AtomicInteger();
             context
                     .bgp()
@@ -135,7 +136,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
         workspaceBlock.logInfo("Fire when-time-execution. Duration: {}", timeToExecute);
         AtomicInteger index = new AtomicInteger(0);
         ThreadContext<Void> executeContext =
-            context
+                context
                         .bgp()
                         .builder("when-time-execution" + workspaceBlock.getId())
                         .interval(Duration.ofMillis(100))
@@ -147,7 +148,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
                                 });
 
         ThreadContext<Void> threadKiller =
-            context
+                context
                         .bgp()
                         .builder("when-time-execution-killer-" + workspaceBlock.getId())
                         .delay(timeToExecute)
@@ -262,8 +263,8 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
 
     private void ifElseHandler(WorkspaceBlock workspaceBlock) {
         if (workspaceBlock.hasChild()
-                && workspaceBlock.hasInput("SUBSTACK2")
-                && workspaceBlock.hasInput(CONDITION)) {
+            && workspaceBlock.hasInput("SUBSTACK2")
+            && workspaceBlock.hasInput(CONDITION)) {
             if (workspaceBlock.getInputBoolean(CONDITION)) {
                 workspaceBlock.getChild().handle();
             } else {
@@ -276,7 +277,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
         workspaceBlock.handleChildOptional(
                 child -> {
                     if (workspaceBlock.hasInput(CONDITION)
-                            && workspaceBlock.getInputBoolean(CONDITION)) {
+                        && workspaceBlock.getInputBoolean(CONDITION)) {
                         child.handle();
                     }
                 });

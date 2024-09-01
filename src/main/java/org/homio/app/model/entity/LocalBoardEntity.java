@@ -39,6 +39,7 @@ import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -170,7 +171,7 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
     }
 
     public static LocalBoardEntity getEntity(Context context) {
-        return context.db().getEntity(LocalBoardEntity.class, PRIMARY_DEVICE);
+        return context.db().get(LocalBoardEntity.class, PRIMARY_DEVICE);
     }
 
     @Override
@@ -185,7 +186,7 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
             if (usb.getMount().isEmpty()) {
                 continue;
             }
-            String label = StringUtils.defaultString(usb.getModel(), usb.getMount());
+            String label = Objects.toString(usb.getModel(), usb.getMount());
             TreeConfiguration configuration = new TreeConfiguration(this, label, usb.alias, new Icon(usb.getIcon(), usb.getColor()));
             try {
                 FileStore fileStore = Files.getFileStore(Path.of(usb.getMount()));

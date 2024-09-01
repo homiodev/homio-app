@@ -3,16 +3,16 @@ package org.homio.app.utils;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.util.CommonUtils;
+import org.homio.app.model.entity.widget.impl.video.sourceResolver.FSWidgetVideoSourceResolver;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.*;
 import java.util.Collections;
-import org.homio.app.model.entity.widget.impl.video.sourceResolver.FSWidgetVideoSourceResolver;
-import org.jetbrains.annotations.NotNull;
+import java.util.Objects;
 
 @Log4j2
 public final class HardwareUtils {
@@ -36,7 +36,7 @@ public final class HardwareUtils {
         if (url.endsWith(".mpd")) {
             return "application/dash+xml";
         }
-        String extension = StringUtils.defaultString(FilenameUtils.getExtension(url));
+        String extension = Objects.toString(FilenameUtils.getExtension(url), "");
         if (FSWidgetVideoSourceResolver.IMAGE_FORMATS.matcher(extension).matches()) {
             return "image/" + extension;
         }

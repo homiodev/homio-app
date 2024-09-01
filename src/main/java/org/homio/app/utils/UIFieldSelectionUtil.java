@@ -1,20 +1,8 @@
 package org.homio.app.utils;
 
-import static java.util.stream.Collectors.groupingBy;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import java.lang.annotation.Annotation;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
@@ -23,32 +11,36 @@ import org.homio.api.entity.BaseEntity;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
-import org.homio.api.ui.field.selection.UIFieldBeanSelection;
+import org.homio.api.ui.field.selection.*;
 import org.homio.api.ui.field.selection.UIFieldBeanSelection.BeanSelectionCondition;
 import org.homio.api.ui.field.selection.UIFieldBeanSelection.UIFieldListBeanSelection;
-import org.homio.api.ui.field.selection.UIFieldDevicePortSelection;
-import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
-import org.homio.api.ui.field.selection.UIFieldEntityTypeSelection;
-import org.homio.api.ui.field.selection.UIFieldStaticSelection;
-import org.homio.api.ui.field.selection.UIFieldTreeNodeSelection;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.impl.ContextServiceImpl;
 import org.homio.app.utils.OptionUtil.LoadOptionsParameters;
 
+import java.lang.annotation.Annotation;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.util.stream.Collectors.groupingBy;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+
 @Log4j2
 public final class UIFieldSelectionUtil {
 
     public static final List<? extends Class<? extends Annotation>> SELECT_ANNOTATIONS =
-        Stream.of(SelectHandler.values()).map(h -> h.selectClass).collect(Collectors.toList());
+            Stream.of(SelectHandler.values()).map(h -> h.selectClass).collect(Collectors.toList());
 
     static void handleFieldSelections(UIFieldUtils.UIFieldContext uiFieldContext, ObjectNode jsonTypeMetadata) {
         List<OptionModel> selectOptions = new ArrayList<>();
 
         UIFieldListBeanSelection selectionList = uiFieldContext.getDeclaredAnnotation(UIFieldListBeanSelection.class);
         var beanSelections =
-            selectionList != null ? Arrays.asList(selectionList.value()) : uiFieldContext.getDeclaredAnnotationsByType(UIFieldBeanSelection.class);
+                selectionList != null ? Arrays.asList(selectionList.value()) : uiFieldContext.getDeclaredAnnotationsByType(UIFieldBeanSelection.class);
         if (!beanSelections.isEmpty()) {
             ObjectNode meta = getSelectBoxList(jsonTypeMetadata);
             meta.put("selectType", SelectHandler.bean.name());
@@ -107,29 +99,29 @@ public final class UIFieldSelectionUtil {
             meta.put("attachMetadata", fileSelection.isAttachMetadata());
             if (fileSelection.isAttachMetadata()) {
                 meta.put("prefix", fileSelection.prefix())
-                    .put("prefixColor", fileSelection.prefixColor());
+                        .put("prefixColor", fileSelection.prefixColor());
             }
             meta.putPOJO("icon", evaluateIcon(fileSelection.icon(), fileSelection.iconColor(), jsonTypeMetadata));
 
             ObjectNode parameters = OBJECT_MAPPER.createObjectNode();
             parameters.set("fileSystemIds", OBJECT_MAPPER.valueToTree(fileSelection.fileSystemIds()));
             parameters.put("rootPath", fileSelection.rootPath())
-                      .put("ASD", fileSelection.allowSelectDirs())
-                      .put("AMS", fileSelection.allowMultiSelect())
-                      .put("ASF", fileSelection.allowSelectFiles())
-                      .put("pattern", fileSelection.pattern())
-                      .put("dialogTitle", fileSelection.dialogTitle());
+                    .put("ASD", fileSelection.allowSelectDirs())
+                    .put("AMS", fileSelection.allowMultiSelect())
+                    .put("ASF", fileSelection.allowSelectFiles())
+                    .put("pattern", fileSelection.pattern())
+                    .put("dialogTitle", fileSelection.dialogTitle());
             meta.set("treeParameters", parameters);
         }
     }
 
     private static Icon evaluateIcon(String icon, String color, ObjectNode jsonTypeMetadata) {
-        if(jsonTypeMetadata.has("selectConfig")) {
+        if (jsonTypeMetadata.has("selectConfig")) {
             JsonNode iconNode = jsonTypeMetadata.get("selectConfig").path("icon");
-            if(StringUtils.isEmpty(icon)) {
+            if (StringUtils.isEmpty(icon)) {
                 icon = iconNode.asText();
             }
-            if(StringUtils.isEmpty(color)) {
+            if (StringUtils.isEmpty(color)) {
                 color = iconNode.asText();
             }
         }
@@ -137,9 +129,9 @@ public final class UIFieldSelectionUtil {
     }
 
     private static List<OptionModel> fetchOptionsFromDynamicOptionLoader(
-        Class<?> targetClass, Object classEntityForDynamicOptionLoader,
-        Context context,
-        UIFieldDynamicSelection uiFieldTargetSelection, Map<String, String> deps) {
+            Class<?> targetClass, Object classEntityForDynamicOptionLoader,
+            Context context,
+            UIFieldDynamicSelection uiFieldTargetSelection, Map<String, String> deps) {
         DynamicOptionLoader dynamicOptionLoader = null;
         if (DynamicOptionLoader.class.isAssignableFrom(targetClass)) {
             dynamicOptionLoader = (DynamicOptionLoader) CommonUtils.newInstance(targetClass);
@@ -147,7 +139,7 @@ public final class UIFieldSelectionUtil {
         if (dynamicOptionLoader != null) {
             BaseEntity baseEntity = classEntityForDynamicOptionLoader instanceof BaseEntity ? (BaseEntity) classEntityForDynamicOptionLoader : null;
             return dynamicOptionLoader.loadOptions(
-                new DynamicOptionLoader.DynamicOptionLoaderParameters(baseEntity, context, uiFieldTargetSelection.staticParameters(), deps));
+                    new DynamicOptionLoader.DynamicOptionLoaderParameters(baseEntity, context, uiFieldTargetSelection.staticParameters(), deps));
         }
         return null;
     }
@@ -197,13 +189,13 @@ public final class UIFieldSelectionUtil {
     public enum SelectHandler {
         simple(UIFieldDynamicSelection.class, params -> {
             params.classEntityForDynamicOptionLoader =
-                params.classEntityForDynamicOptionLoader == null ? params.classEntity : params.classEntityForDynamicOptionLoader;
+                    params.classEntityForDynamicOptionLoader == null ? params.classEntity : params.classEntityForDynamicOptionLoader;
             UIFieldDynamicSelection uiFieldTargetSelection = params.field.getDeclaredAnnotation(UIFieldDynamicSelection.class);
             if (uiFieldTargetSelection != null) {
                 params.targetClass = uiFieldTargetSelection.value();
             }
             List<OptionModel> options = fetchOptionsFromDynamicOptionLoader(params.targetClass, params.classEntityForDynamicOptionLoader, params.context,
-                uiFieldTargetSelection, params.deps);
+                    uiFieldTargetSelection, params.deps);
             if (options == null) {
                 options = OptionModel.enumList((Class<? extends Enum>) params.targetClass);
             }
@@ -217,7 +209,7 @@ public final class UIFieldSelectionUtil {
             return list;
         }),
         port(UIFieldDevicePortSelection.class, params ->
-            OptionModel.listOfPorts(false)),
+                OptionModel.listOfPorts(false)),
         entityByClass(UIFieldEntityByClassSelection.class, params -> {
             List<OptionModel> list = new ArrayList<>();
             for (UIFieldEntityByClassSelection item : params.field.getDeclaredAnnotationsByType(UIFieldEntityByClassSelection.class)) {

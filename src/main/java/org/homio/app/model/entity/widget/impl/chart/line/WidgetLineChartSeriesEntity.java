@@ -5,7 +5,6 @@ import org.homio.api.entity.widget.ability.HasTimeValueSeries;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnoreParent;
-import org.homio.api.ui.field.selection.UIFieldBeanSelection;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
@@ -42,7 +41,7 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
 
     @Override
     protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-        if(getChartDataSource().isEmpty()) {
+        if (getChartDataSource().isEmpty()) {
             fields.add("chartDataSource");
         }
     }

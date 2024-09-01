@@ -2,6 +2,7 @@ package org.homio.app.manager.common.impl;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
@@ -85,8 +86,12 @@ public class ContextStorageImpl implements ContextStorage {
         putToCache(entity, null);
     }
 
+    @SneakyThrows
     @Override
     public <T extends BaseEntity> void updateDelayed(T entity, Consumer<T> consumer) {
+        if (entity.isDisableEdit()) {
+            throw new IllegalAccessException("User is unable to update entity");
+        }
         Map<String, Object[]> changeFields = new HashMap<>();
         MethodInterceptor handler = (obj, method, args, proxy) -> {
             String setName = method.getName();
@@ -131,6 +136,7 @@ public class ContextStorageImpl implements ContextStorage {
         }
     }
 
+    @SneakyThrows
     @Override
     public <T extends BaseEntity> @NotNull T save(@NotNull T entity, boolean fireNotifyListeners) {
         AbstractRepository repository = ContextImpl.getRepository(entity.getEntityPrefix());
@@ -138,6 +144,9 @@ public class ContextStorageImpl implements ContextStorage {
 
         String entityID = entity.getEntityID();
         entity.setContext(context);
+        if (entity.isDisableEdit()) {
+            throw new IllegalAccessException("User is unable to persist/update entity");
+        }
         if (entityID == null) {
             if (StringUtils.isEmpty(entity.getName())) {
                 entity.setName(entity.refreshName());
@@ -146,8 +155,9 @@ public class ContextStorageImpl implements ContextStorage {
         } else {
             entity.beforeUpdate();
         }
+
         entity.validate();
-        T oldEntity = entityID == null ? null : getEntity(entityID, false);
+        T oldEntity = entityID == null ? null : get(entityID, false);
 
         T updatedEntity = transactionManagerContext.executeInTransaction(entityManager -> (T) repository.save(entity));
 
@@ -197,7 +207,7 @@ public class ContextStorageImpl implements ContextStorage {
     }
 
     @Override
-    public <T extends BaseEntity> T getEntity(@NotNull String entityID, boolean useCache) {
+    public <T extends BaseEntity> T get(@NotNull String entityID, boolean useCache) {
         T baseEntity = useCache ? entityManager.getEntityWithFetchLazy(entityID) : entityManager.getEntityNoCache(entityID);
         if (baseEntity == null) {
             baseEntity = entityManager.getEntityNoCache(entityID);
@@ -344,9 +354,9 @@ public class ContextStorageImpl implements ContextStorage {
 
         if (sendUpdateToUI) {
             context.ui().updateItem((BaseEntity) entity, key, value);
-            if (key.equals("status") && entity instanceof DeviceBaseEntity device) {
+            /*if (key.equals("status") && entity instanceof DeviceBaseEntity device) {
                 context.ui().updateItem((BaseEntity) entity, "entityStatus", device.getEntityStatus());
-            }
+            }*/
         }
     }
 
@@ -363,9 +373,10 @@ public class ContextStorageImpl implements ContextStorage {
             }
         }
 
-        if (entity instanceof BaseEntity) {
+        // Below must not be fired!!!! every time, Recursivelly update entity status
+        /*if (entity instanceof BaseEntity) {
             runUpdateNotifyListeners(entity, null, context.event().getEntityUpdateListeners());
-        }
+        }*/
     }
 
     private <T extends BaseEntity> List<T> findAllByRepository(Class<BaseEntity> clazz) {

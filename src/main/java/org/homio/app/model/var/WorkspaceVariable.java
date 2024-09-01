@@ -40,14 +40,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 
 import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
@@ -163,11 +159,6 @@ public class WorkspaceVariable extends BaseEntity
     @Override
     public boolean isDisableDelete() {
         return locked || getJsonData("dis_del", false) || context().event().getEventCount(getEntityID()) > 0;
-    }
-
-    @Override
-    public boolean isDisableEdit() {
-        return locked || getJsonData("dis_edit", false);
     }
 
     @Override
@@ -294,7 +285,7 @@ public class WorkspaceVariable extends BaseEntity
         if (isEmpty(unit)) {
             return str;
         }
-        return format("%s <small>%s</small>", defaultString(str, "-"), unit);
+        return format("%s <small>%s</small>", Objects.toString(str, "-"), unit);
     }
 
     @Override

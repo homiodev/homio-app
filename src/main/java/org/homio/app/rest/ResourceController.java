@@ -1,20 +1,9 @@
 package org.homio.app.rest;
 
-import jakarta.servlet.http.HttpServletRequest;
-import java.awt.Font;
-import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
-import java.nio.channels.WritableByteChannel;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.util.List;
-import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.util.CommonUtils;
-import org.homio.app.manager.common.ContextImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -24,30 +13,37 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.awt.*;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.List;
+import java.util.stream.Stream;
+
 @Log4j2
 @RestController
 @RequestMapping("/rest/resource")
 @RequiredArgsConstructor
-@Validated
 public class ResourceController {
-
-    private final ContextImpl context;
 
     @SneakyThrows
     @GetMapping(value = "/fonts", produces = "text/css; charset=utf-8")
-    public String getFonts(HttpServletRequest request) {
+    public String getFonts() {
         StringBuilder css = new StringBuilder();
         for (Path fontFile : getFontFiles()) {
             Font trueFont = Font.createFont(Font.TRUETYPE_FONT, fontFile.toFile());
             css.append("""
-                @font-face {
-                  font-family: '%s';
-                  font-style: normal;
-                  font-weight: 400;
-                  font-display: swap;
-                  src: url($DEVICE_URL/rest/resource/font/%s) format('truetype');
-                }
-                """.formatted(trueFont.getFamily(), fontFile.getFileName()));
+                    @font-face {
+                      font-family: '%s';
+                      font-style: normal;
+                      font-weight: 400;
+                      font-display: swap;
+                      src: url($DEVICE_URL/rest/resource/font/%s) format('truetype');
+                    }
+                    """.formatted(trueFont.getFamily(), fontFile.getFileName()));
         }
         return css.toString();
     }
@@ -56,14 +52,14 @@ public class ResourceController {
     public ResponseEntity<StreamingResponseBody> getFont(@PathVariable("name") String name) {
         Path fonts = CommonUtils.createDirectoriesIfNotExists(CommonUtils.getConfigPath().resolve("fonts"));
         return new ResponseEntity<>(
-            outputStream -> {
-                try (FileChannel inChannel = FileChannel.open(fonts.resolve(name), StandardOpenOption.READ)) {
-                    long size = inChannel.size();
-                    WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
-                    inChannel.transferTo(0, size, writableByteChannel);
-                }
-            },
-            HttpStatus.OK);
+                outputStream -> {
+                    try (FileChannel inChannel = FileChannel.open(fonts.resolve(name), StandardOpenOption.READ)) {
+                        long size = inChannel.size();
+                        WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
+                        inChannel.transferTo(0, size, writableByteChannel);
+                    }
+                },
+                HttpStatus.OK);
     }
 
     @SneakyThrows
@@ -71,9 +67,9 @@ public class ResourceController {
         Path fonts = CommonUtils.createDirectoriesIfNotExists(CommonUtils.getConfigPath().resolve("fonts"));
         try (Stream<Path> walk = Files.walk(fonts, 1)) {
             return walk
-                .filter(p -> !Files.isDirectory(p))
-                .filter(f -> f.getFileName().toString().endsWith(".ttf"))
-                .toList();
+                    .filter(p -> !Files.isDirectory(p))
+                    .filter(f -> f.getFileName().toString().endsWith(".ttf"))
+                    .toList();
         }
     }
 }

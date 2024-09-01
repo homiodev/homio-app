@@ -1,33 +1,13 @@
 package org.homio.app.rest;
 
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
-import static org.homio.app.model.entity.SettingEntity.getKey;
-import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;
-import static org.springframework.util.MimeTypeUtils.APPLICATION_JSON_VALUE;
-
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.Context;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.OptionModel;
-import org.homio.api.setting.SettingPlugin;
-import org.homio.api.setting.SettingPluginOptions;
-import org.homio.api.setting.SettingPluginOptionsRemovable;
-import org.homio.api.setting.SettingPluginPackageInstall;
-import org.homio.api.setting.SettingType;
+import org.homio.api.setting.*;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
 import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
 import org.homio.api.util.Lang;
@@ -40,14 +20,15 @@ import org.homio.app.repository.SettingRepository;
 import org.homio.app.spring.ContextRefreshed;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
+import static org.homio.app.model.entity.SettingEntity.getKey;
+import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;
+import static org.springframework.util.MimeTypeUtils.APPLICATION_JSON_VALUE;
 
 @RestController
 @RequestMapping(value = "/rest/setting", produces = APPLICATION_JSON_VALUE)
@@ -70,7 +51,7 @@ public class SettingController implements ContextRefreshed {
                 this.transientSettings.put((Class<? extends SettingPlugin<?>>) settingPlugin.getClass(), entity);
             }
             if (settingPlugin instanceof ConsoleSettingPlugin
-                    && !settingPlugin.getClass().getSimpleName().startsWith("Console")) {
+                && !settingPlugin.getClass().getSimpleName().startsWith("Console")) {
                 throw new ServerException("Console plugin class <" + settingPlugin.getClass().getName() + "> must starts with name 'Console'");
             }
         }
@@ -92,7 +73,7 @@ public class SettingController implements ContextRefreshed {
         SettingPlugin<?> settingPlugin = ContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
             SettingPluginPackageInstall.PackageContext packageContext =
-                ((SettingPluginPackageInstall) settingPlugin).allPackages(context);
+                    ((SettingPluginPackageInstall) settingPlugin).allPackages(context);
             for (Map.Entry<String, Boolean> entry : addonService.getPackagesInProgress().entrySet()) {
                 SettingPluginPackageInstall.PackageModel singlePackage =
                         packageContext.getPackages().stream()
@@ -122,7 +103,7 @@ public class SettingController implements ContextRefreshed {
     }
 
     @DeleteMapping("/{entityID}/package")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
     public void unInstallPackage(@PathVariable("entityID") String entityID, @RequestBody SettingPluginPackageInstall.PackageRequest packageRequest) {
         SettingPlugin<?> settingPlugin = ContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
@@ -131,7 +112,7 @@ public class SettingController implements ContextRefreshed {
     }
 
     @PostMapping("/{entityID}/package")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
     public void installPackage(@PathVariable("entityID") String entityID, @RequestBody SettingPluginPackageInstall.PackageRequest packageRequest) {
         SettingPlugin<?> settingPlugin = ContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
@@ -149,7 +130,6 @@ public class SettingController implements ContextRefreshed {
         }
     }
 
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     @DeleteMapping(value = "/{entityID}", consumes = "text/plain")
     public void removeSettingValue(@PathVariable("entityID") String entityID, @RequestBody String value) throws Exception {
         SettingPlugin<?> settingPlugin = ContextSettingImpl.settingPluginsByPluginKey.get(entityID);
@@ -212,6 +192,7 @@ public class SettingController implements ContextRefreshed {
         for (Map.Entry<Class<? extends SettingPlugin<?>>, SettingEntity> entry :
                 transientSettings.entrySet()) {
             SettingEntity settingEntity = entry.getValue();
+            settingEntity.setContext(context);
             settingEntity.setValue(context.setting().getRawValue((Class) entry.getKey()));
             if (DynamicConsoleHeaderContainerSettingPlugin.class.isAssignableFrom(entry.getKey())) {
                 settingEntity.setSettingTypeRaw("Container");
@@ -238,12 +219,12 @@ public class SettingController implements ContextRefreshed {
             SettingPlugin<?> plugin = ContextSettingImpl.settingPluginsByPluginKey.get(settingEntity.getEntityID());
             if (plugin instanceof ConsoleSettingPlugin) {
                 for (Map.Entry<String, ConsolePlugin<?>> entry :
-                    ContextUIImpl.consolePluginsMap.entrySet()) {
+                        ContextUIImpl.consolePluginsMap.entrySet()) {
                     if (((ConsoleSettingPlugin<?>) plugin)
                             .acceptConsolePluginPage(entry.getValue())) {
                         settingToPages
                                 .computeIfAbsent(settingEntity.getEntityID(), s -> new HashSet<>())
-                                .add(StringUtils.defaultString(entry.getValue().getParentTab(), entry.getKey()));
+                                .add(Objects.toString(entry.getValue().getParentTab(), entry.getKey()));
                     }
                 }
             }

@@ -61,6 +61,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
@@ -80,7 +81,7 @@ public class ContextUIImpl implements ContextUI {
     public static final @NotNull Map<String, ConsolePlugin<?>> consoleRemovablePluginsMap = new ConcurrentHashMap<>();
     public static final @NotNull Map<String, String> customImages = new ConcurrentHashMap<>();
 
-    public static final @NotNull Map<String, String> customConsolePluginNames = new ConcurrentHashMap<>();
+    public static final @NotNull Set<String> customConsolePluginNames = new ConcurrentSkipListSet<>();
     private static final @NotNull Object EMPTY = new Object();
     private final @NotNull Map<DynamicUpdateRequest, DynamicUpdateContext> dynamicUpdateRegisters = new ConcurrentHashMap<>();
     private final @NotNull Map<String, DialogModel> dialogRequest = new ConcurrentHashMap<>();
@@ -303,7 +304,7 @@ public class ContextUIImpl implements ContextUI {
 
     @Override
     public void addItemContextMenu(@NotNull String entityID, @NotNull String key, @NotNull Consumer<UIInputBuilder> builder) {
-        context.db().getEntityRequire(entityID);
+        context.db().getRequire(entityID);
         UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
         builder.accept(uiInputBuilder);
         itemsContextMenuActions.computeIfAbsent(entityID, s -> new HashMap<>())
@@ -855,8 +856,8 @@ public class ContextUIImpl implements ContextUI {
     public class ContextUIConsoleImpl implements ContextUIConsole {
 
         @Override
-        public void registerPluginName(@NotNull String name, @Nullable String resource) {
-            customConsolePluginNames.put(name, trimToEmpty(resource));
+        public void registerPluginName(@NotNull String name) {
+            customConsolePluginNames.add(name);
         }
 
         @Override

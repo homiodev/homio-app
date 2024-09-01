@@ -1,15 +1,41 @@
 package org.homio.app.rest;
 
-import static jakarta.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
-import static java.lang.String.format;
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import jakarta.validation.Valid;
+import lombok.*;
+import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.homio.api.ContextUI;
+import org.homio.api.exception.NotFoundException;
+import org.homio.api.exception.ServerException;
+import org.homio.api.state.State;
+import org.homio.api.util.CommonUtils;
+import org.homio.api.util.Lang;
+import org.homio.app.config.cacheControl.CacheControl;
+import org.homio.app.config.cacheControl.CachePolicy;
+import org.homio.app.js.assistant.impl.CodeParser;
+import org.homio.app.js.assistant.impl.ParserContext;
+import org.homio.app.js.assistant.model.Completion;
+import org.homio.app.js.assistant.model.CompletionRequest;
+import org.homio.app.manager.ScriptService;
+import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.model.entity.ScriptEntity;
+import org.homio.app.model.entity.user.UserGuestEntity;
+import org.homio.app.model.entity.widget.impl.extra.WidgetFrameEntity;
+import org.homio.app.model.rest.DynamicUpdateRequest;
+import org.homio.hquery.Curl;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -24,47 +50,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.TimeUnit;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.homio.api.ContextUI;
-import org.homio.api.exception.NotFoundException;
-import org.homio.api.exception.ServerException;
-import org.homio.api.state.State;
-import org.homio.api.util.CommonUtils;
-import org.homio.api.util.DataSourceUtil;
-import org.homio.api.util.Lang;
-import org.homio.app.config.cacheControl.CacheControl;
-import org.homio.app.config.cacheControl.CachePolicy;
-import org.homio.app.js.assistant.impl.CodeParser;
-import org.homio.app.js.assistant.impl.ParserContext;
-import org.homio.app.js.assistant.model.Completion;
-import org.homio.app.js.assistant.model.CompletionRequest;
-import org.homio.app.manager.ScriptService;
-import org.homio.app.manager.common.ContextImpl;
-import org.homio.app.model.entity.ScriptEntity;
-import org.homio.app.model.entity.widget.impl.extra.WidgetFrameEntity;
-import org.homio.app.model.rest.DynamicUpdateRequest;
-import org.homio.hquery.Curl;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import java.util.function.Predicate;
+
+import static jakarta.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
+import static java.lang.String.format;
+import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 @Log4j2
 @RestController
@@ -98,7 +89,7 @@ public class UtilsController {
 
     @GetMapping("/frame/{entityID}")
     public String getFrame(@PathVariable("entityID") String entityID) {
-        WidgetFrameEntity widgetFrameEntity = context.db().getEntityRequire(entityID);
+        WidgetFrameEntity widgetFrameEntity = context.db().getRequire(entityID);
         return widgetFrameEntity.getFrame();
     }
 
@@ -125,6 +116,12 @@ public class UtilsController {
     @GetMapping(value = "/download/tmp/{fileName:.+}", produces = APPLICATION_OCTET_STREAM)
     public ResponseEntity<StreamingResponseBody> downloadFile(
             @PathVariable("fileName") String fileName) {
+        UserGuestEntity.assertAction(context, new Predicate<UserGuestEntity>() {
+            @Override
+            public boolean test(UserGuestEntity guest) {
+                return guest.getDeleteWidget();
+            }
+        }, "User is not allowed to access to FileManager");
         Path outputPath = CommonUtils.getTmpPath().resolve(fileName);
         if (!Files.exists(outputPath)) {
             throw NotFoundException.fileNotFound(outputPath);
@@ -148,7 +145,7 @@ public class UtilsController {
     }
 
     @PostMapping("/code/run")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
     public RunScriptResponse runScriptOnce(@RequestBody RunScriptRequest request)
             throws IOException {
         RunScriptResponse runScriptResponse = new RunScriptResponse();
@@ -191,14 +188,13 @@ public class UtilsController {
 
     @SneakyThrows
     @PostMapping("/header/dialog/{entityID}")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void acceptDialog(@PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
         context.ui().handleDialog(entityID, ContextUI.DialogResponseType.Accepted, dialogRequest.pressedButton,
                 OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
     }
 
     @DeleteMapping("/header/dialog/{entityID}")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
     public void discardDialog(@PathVariable("entityID") String entityID) {
         context.ui().handleDialog(entityID, ContextUI.DialogResponseType.Cancelled, null, null);
     }

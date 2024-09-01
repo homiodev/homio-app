@@ -1,13 +1,6 @@
 package org.homio.app.manager;
 
 import com.fazecast.jSerialComm.SerialPort;
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
@@ -25,6 +18,10 @@ import org.homio.app.manager.common.impl.ContextSettingImpl;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
 import org.springframework.stereotype.Component;
+
+import java.time.Duration;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Port manager scan all setting addons to match type as SerialPort and listen if ports available or not, fire notifications and set header notifications
@@ -75,7 +72,7 @@ public class PortService implements ContextCreated, ContextRefreshed {
             }
             context.setting().listenValue(clazz,
                     "pm-listen-user-changes", serialPort -> {
-                    String newPortRawValue = context.setting().getRawValue(clazz);
+                        String newPortRawValue = context.setting().getRawValue(clazz);
                         if (StringUtils.isEmpty(newPortRawValue)) {
                             portListeners.remove(clazz);
                             portAvailable(newPortRawValue);

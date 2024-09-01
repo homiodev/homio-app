@@ -1,18 +1,6 @@
 package org.homio.app.console;
 
-import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
-
-import java.net.NetworkInterface;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
+import lombok.*;
 import lombok.experimental.Accessors;
 import org.homio.api.Context;
 import org.homio.api.console.ConsolePluginTable;
@@ -20,6 +8,15 @@ import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.ui.field.UIField;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
+
+import java.net.NetworkInterface;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 
 @Component
 @RequiredArgsConstructor
@@ -44,7 +41,7 @@ public class NetworkInterfaceConsolePlugin implements ConsolePluginTable<Network
                     networkInterface.getMTU(),
                     networkInterface.getInterfaceAddresses().stream()
                             .map(ia -> ia.getAddress().toString())
-                                    .collect(Collectors.joining(" %s|%s ".formatted(LIST_DELIMITER, LIST_DELIMITER)))));
+                            .collect(Collectors.joining(" %s|%s ".formatted(LIST_DELIMITER, LIST_DELIMITER)))));
         }
         Collections.sort(list);
         return list;

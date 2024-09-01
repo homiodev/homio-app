@@ -1,18 +1,8 @@
 package org.homio.app.model.entity.widget.impl.fm;
 
 import jakarta.persistence.Entity;
-import java.util.List;
-import java.util.Set;
-
 import org.homio.api.model.ActionResponseModel;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldIgnoreParent;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.api.ui.field.UIFieldSlider;
-import org.homio.api.ui.field.UIFieldTableLayout;
-import org.homio.api.ui.field.UIFieldType;
+import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.selection.UIFieldTreeNodeSelection;
@@ -23,14 +13,17 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
+import java.util.Set;
+
 @SuppressWarnings("unused")
 @Entity
 public class WidgetFMEntity extends WidgetEntity<WidgetFMEntity>
         implements
-    HasDynamicContextMenuActions,
-    HasLayout,
-    HasSingleValueDataSource,
-    HasSourceServerUpdates {
+        HasDynamicContextMenuActions,
+        HasLayout,
+        HasSingleValueDataSource,
+        HasSourceServerUpdates {
 
     @Override
     protected @NotNull String getWidgetPrefix() {
@@ -54,7 +47,7 @@ public class WidgetFMEntity extends WidgetEntity<WidgetFMEntity>
 
     @Override
     protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-        if(getValueDataSource().isEmpty()) {
+        if (getValueDataSource().isEmpty()) {
             fields.add("valueDataSource");
         }
     }
@@ -135,9 +128,9 @@ public class WidgetFMEntity extends WidgetEntity<WidgetFMEntity>
     @Override
     @UIField(order = 14, required = true)
     @UIFieldTreeNodeSelection(
-        allowSelectDirs = true,
-        allowSelectFiles = false,
-        iconColor = "#14A669")
+            allowSelectDirs = true,
+            allowSelectFiles = false,
+            iconColor = "#14A669")
     @UIFieldIgnoreParent
     public String getValueDataSource() {
         return HasSingleValueDataSource.super.getValueDataSource();
@@ -166,9 +159,9 @@ public class WidgetFMEntity extends WidgetEntity<WidgetFMEntity>
     @Override
     public void assembleActions(UIInputBuilder uiInputBuilder) {
         uiInputBuilder.addTableLayoutButton("LAYOUT", 8, 8, getLayout(), null,
-            (context, params) -> {
+                (context, params) -> {
                     this.setLayout(params.getString("value"));
-                context.db().save(this);
+                    context.db().save(this);
                     return ActionResponseModel.showSuccess("SUCCESS");
                 },
                 0);

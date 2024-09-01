@@ -1,33 +1,10 @@
 package org.homio.app.manager.common.impl;
 
-import static java.util.Collections.emptyMap;
-import static org.apache.xmlbeans.XmlBeans.getTitle;
-
 import com.pivovarit.function.ThrowingBiConsumer;
 import com.pivovarit.function.ThrowingRunnable;
 import jakarta.persistence.EntityManagerFactory;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -36,32 +13,39 @@ import org.hibernate.event.internal.PostDeleteEventListenerStandardImpl;
 import org.hibernate.event.internal.PostInsertEventListenerStandardImpl;
 import org.hibernate.event.internal.PostUpdateEventListenerStandardImpl;
 import org.hibernate.event.service.spi.EventListenerRegistry;
-import org.hibernate.event.spi.EventSource;
-import org.hibernate.event.spi.EventType;
-import org.hibernate.event.spi.PostDeleteEvent;
-import org.hibernate.event.spi.PostInsertEvent;
-import org.hibernate.event.spi.PostUpdateEvent;
+import org.hibernate.event.spi.*;
 import org.hibernate.internal.SessionFactoryImpl;
-import org.homio.api.ContextBGP;
 import org.homio.api.ContextEvent;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.BaseEntityIdentifier;
+import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.model.HasEntityIdentifier;
-import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.service.EntityService;
 import org.homio.api.service.EntityService.ServiceInstance;
 import org.homio.api.state.State;
 import org.homio.api.util.CommonUtils;
-import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.ContextImpl.ItemAction;
+import org.homio.app.model.entity.user.UserGuestEntity;
 import org.homio.app.model.var.WorkspaceVariable;
 import org.homio.app.service.mem.InMemoryDB;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
+
+import static java.util.Collections.emptyMap;
+import static org.apache.xmlbeans.XmlBeans.getTitle;
 
 @Log4j2
 public class ContextEventImpl implements ContextEvent {
@@ -323,8 +307,16 @@ public class ContextEventImpl implements ContextEvent {
             Object entity = event.getEntity();
             if (entity instanceof BaseEntity baseEntity) {
                 baseEntity.setContext(context);
+
+                UserEntity user = context.getUser();
+                if (user != null && !user.isAdmin()) {
+                    UserGuestEntity guest = (UserGuestEntity) user;
+                    guest.assertDeleteAccess(baseEntity);
+                }
+
                 if (baseEntity.isDisableDelete()) {
-                    throw new IllegalStateException("Unable to remove entity");
+                    context.ui().toastr().error("User is not allowed to delete entity");
+                    throw new IllegalStateException("Unable to delete entity");
                 }
                 baseEntity.beforeDelete();
             }
@@ -430,34 +422,34 @@ public class ContextEventImpl implements ContextEvent {
             if (entity instanceof BaseEntity be) {
                 // execute in separate thread
                 context.bgp().builder("delete-delay-entity-" + be.getEntityID())
-                       .execute(() -> {
-                           be.afterDelete();
-                           context.var().deleteGroup(be.getEntityID());
-                           if (be instanceof DeviceBaseEntity dbe) {
-                               context.var().deleteGroup(dbe.getIeeeAddress());
-                           }
-                           // destroy any additional services
-                           if (be instanceof EntityService) {
-                               try {
-                                   ((EntityService<?>) be).destroyService(null);
-                               } catch (Exception ex) {
-                                   log.warn("Unable to destroy service for entity: {}", getTitle());
-                               }
-                           }
-                           be.afterDelete();
+                        .execute(() -> {
+                            be.afterDelete();
+                            context.var().deleteGroup(be.getEntityID());
+                            if (be instanceof DeviceBaseEntity dbe) {
+                                context.var().deleteGroup(dbe.getIeeeAddress());
+                            }
+                            // destroy any additional services
+                            if (be instanceof EntityService) {
+                                try {
+                                    ((EntityService<?>) be).destroyService(null);
+                                } catch (Exception ex) {
+                                    log.warn("Unable to destroy service for entity: {}", getTitle());
+                                }
+                            }
+                            be.afterDelete();
 
-                           String entityID = be.getEntityID();
-                           // remove all status for entity
-                           ContextStorageImpl.ENTITY_MEMORY_MAP.remove(entityID);
-                           // remove in-memory data if any exists
-                           InMemoryDB.removeService(entityID);
-                           // clear all registered console plugins if any exists
-                           context.ui().console().unRegisterPlugin(entityID);
-                           // remove any registered notifications/notification block
-                           context.ui().notification().removeBlock(entityID);
-                           // remove in-memory data
-                           context.db().deleteInMemoryData(entityID);
-                       });
+                            String entityID = be.getEntityID();
+                            // remove all status for entity
+                            ContextStorageImpl.ENTITY_MEMORY_MAP.remove(entityID);
+                            // remove in-memory data if any exists
+                            InMemoryDB.removeService(entityID);
+                            // clear all registered console plugins if any exists
+                            context.ui().console().unRegisterPlugin(entityID);
+                            // remove any registered notifications/notification block
+                            context.ui().notification().removeBlock(entityID);
+                            // remove in-memory data
+                            context.db().deleteInMemoryData(entityID);
+                        });
             }
             if (entity instanceof WorkspaceVariable wv) {
                 // fire update if variable was removed
@@ -525,7 +517,9 @@ public class ContextEventImpl implements ContextEvent {
         }
     }
 
-    private record Event(String key, State value) {}
+    private record Event(String key, State value) {
+    }
 
-    private record EntityUpdate(Object entity, EntityUpdateAction itemAction) {}
+    private record EntityUpdate(Object entity, EntityUpdateAction itemAction) {
+    }
 }

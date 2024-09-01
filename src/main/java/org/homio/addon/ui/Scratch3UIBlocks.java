@@ -1,6 +1,7 @@
 package org.homio.addon.ui;
 
 import java.util.function.BiConsumer;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -28,7 +29,7 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3EventsBlocks scratch3EventsBlocks;
 
     public Scratch3UIBlocks(
-        Context context,
+            Context context,
             Scratch3EventsBlocks scratch3EventsBlocks,
             WorkspaceService workspaceService) {
         super("#7C4B96", context, null, "ui");
@@ -84,7 +85,7 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
                     String color = workspaceBlock.getInputString("COLOR");
                     // TODO: ????? String broadcast = workspaceBlock.getInputString("BROADCAST");
                     HeaderButtonBuilder headerButtonBuilder =
-                        context
+                            context
                                     .ui()
                                     .headerButtonBuilder(workspaceBlock.getId())
                                     .title(title)
@@ -97,14 +98,14 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
                         headerButtonBuilder.icon(new Icon("fas fa-" + workspaceBlock.getInputString("ICON"))).build();
                     }
                 },
-            () -> context.ui().removeHeaderButton(workspaceBlock.getId()));
+                () -> context.ui().removeHeaderButton(workspaceBlock.getId()));
     }
 
     private void showPopupHandler(WorkspaceBlock workspaceBlock) {
         workspaceBlock
                 .getMenuValue("TYPE", this.popupType)
                 .popupHandler
-            .accept(context, workspaceBlock.getInputString("MSG"));
+                .accept(context, workspaceBlock.getInputString("MSG"));
     }
 
     @RequiredArgsConstructor

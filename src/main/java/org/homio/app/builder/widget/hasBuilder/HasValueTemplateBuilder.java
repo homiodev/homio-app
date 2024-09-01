@@ -1,11 +1,11 @@
 package org.homio.app.builder.widget.hasBuilder;
 
-import static org.apache.commons.lang3.StringUtils.trimToEmpty;
-import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
-
 import org.homio.api.ContextWidget.HasValueTemplate;
 import org.homio.api.ContextWidget.VerticalAlign;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.commons.lang3.StringUtils.trimToEmpty;
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 
 public interface HasValueTemplateBuilder<T extends org.homio.app.model.entity.widget.attributes.HasValueTemplate, R>
         extends HasValueTemplate<R> {

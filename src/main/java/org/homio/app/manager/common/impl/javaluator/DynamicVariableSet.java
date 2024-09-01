@@ -1,18 +1,20 @@
 package org.homio.app.manager.common.impl.javaluator;
 
 import com.fathzer.soft.javaluator.AbstractVariableSet;
-import java.time.Duration;
-import java.util.List;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.exception.ServerException;
 import org.homio.app.manager.common.impl.ContextVarImpl.TransformVariableSourceImpl;
 import org.jetbrains.annotations.NotNull;
 
+import java.time.Duration;
+import java.util.List;
+
 @RequiredArgsConstructor
 public class DynamicVariableSet implements AbstractVariableSet<Object> {
 
-    private final @Getter @NotNull List<TransformVariableSourceImpl> sources;
+    private final @Getter
+    @NotNull List<TransformVariableSourceImpl> sources;
 
     @Override
     public Object get(String variableName) {

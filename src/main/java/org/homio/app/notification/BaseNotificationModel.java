@@ -8,8 +8,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Date;
 import java.util.Objects;
 
-import static org.apache.commons.lang3.StringUtils.defaultString;
-
 @Getter
 @Setter
 @Accessors(chain = true)
@@ -52,8 +50,8 @@ public class BaseNotificationModel<T extends BaseNotificationModel> implements C
             return 0;
         }
         int compareValue =
-                defaultString(this.title, this.entityID)
-                        .compareTo(defaultString(other.getTitle(), other.getEntityID()));
+                Objects.toString(this.title, this.entityID)
+                        .compareTo(Objects.toString(other.getTitle(), other.getEntityID()));
         if (compareValue == 0) {
             compareValue = String.valueOf(this.value).compareTo(String.valueOf(other.getValue()));
         }
@@ -62,6 +60,6 @@ public class BaseNotificationModel<T extends BaseNotificationModel> implements C
 
     @Override
     public String toString() {
-        return defaultString(title, "") + (value != null ? " | " + value : "");
+        return Objects.toString(title, "") + (value != null ? " | " + value : "");
     }
 }

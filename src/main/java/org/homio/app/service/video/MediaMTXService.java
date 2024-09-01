@@ -44,12 +44,13 @@ import static org.homio.api.util.JsonUtils.YAML_OBJECT_MAPPER;
 import static org.homio.app.model.entity.MediaMTXEntity.mediamtxGitHub;
 
 public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
-    implements HasEntityIdentifier {
+        implements HasEntityIdentifier {
 
     private final Map<String, String> successRegistered = new ConcurrentHashMap<>();
     private final Map<String, String> pendingRegistrations = new ConcurrentHashMap<>();
     private final @Getter Path configurationPath;
-    private @Getter @Nullable String apiURL;
+    private @Getter
+    @Nullable String apiURL;
     private @Nullable UpdatableValue<JsonNode> pathData;
 
     private ProcessContext processContext;
@@ -74,11 +75,11 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
                 pathData = UpdatableValue.wrap(Curl.get(getApi("paths/list"), JsonNode.class), "paths");
             }
             return pathData.getFreshValue(Duration.ofSeconds(60), () ->
-                Curl.sendAsync(Curl.createGetRequest(getApi("paths/list")), JsonNode.class, (data, code) -> {
-                    if (code == 200) {
-                        pathData.update(data);
-                    }
-                }));
+                    Curl.sendAsync(Curl.createGetRequest(getApi("paths/list")), JsonNode.class, (data, code) -> {
+                        if (code == 200) {
+                            pathData.update(data);
+                        }
+                    }));
         } catch (Exception ignore) {
             return OBJECT_MAPPER.createObjectNode();
         }
@@ -133,9 +134,13 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
 
     @Override
     public String isRequireRestartService() {
-        if (!entity.getStatus().isOnline()) {return "Status: " + entity.getStatus();}
+        if (!entity.getStatus().isOnline()) {
+            return "Status: " + entity.getStatus();
+        }
         int status = getApiStatus();
-        if (status != 200) {return "API status[%s]".formatted(status);}
+        if (status != 200) {
+            return "API status[%s]".formatted(status);
+        }
         return null;
     }
 
@@ -182,14 +187,14 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
                 projectUpdate.getGitHubProject().deleteProject();
             } catch (Exception ex) {
                 context().ui().toastr().error(
-                    Lang.getServerMessage("W.ERROR.DELETE_PROJECT",
-                        projectUpdate.getGitHubProject().getLocalProjectPath().toString()));
+                        Lang.getServerMessage("W.ERROR.DELETE_PROJECT",
+                                projectUpdate.getGitHubProject().getLocalProjectPath().toString()));
                 throw ex;
             }
             mediamtxGitHub.downloadReleaseAndInstall(context, version, (progress, message, error) ->
-                progressBar.progress(progress, message));
+                    progressBar.progress(progress, message));
             Files.copy(projectUpdate.getGitHubProject().getLocalProjectPath().resolve("mediamtx.yml"),
-                configurationPath, StandardCopyOption.REPLACE_EXISTING);
+                    configurationPath, StandardCopyOption.REPLACE_EXISTING);
             syncConfiguration();
             // fire restart service
             initialize();
@@ -201,11 +206,11 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         if (isMediaMtxAvailable(path)) {
             OptionModel webrtc = videoSources.get("webrtc");
             webrtc.addChild(OptionModel.of("mediamtx/video.webrtc", "MediaMTX WebRTC")
-                                       .setIcon(new Icon("fab fa-stumbleupon-circle", "#22725A")));
+                    .setIcon(new Icon("fab fa-stumbleupon-circle", "#22725A")));
 
             OptionModel hls = videoSources.get("hls");
             hls.addChild(OptionModel.of("mediamtx/index.m3u8", "MediaMTX HLS")
-                                     .setIcon(FFMPEGFormat.HLS.getIconModel()));
+                    .setIcon(FFMPEGFormat.HLS.getIconModel()));
         }
     }
 
@@ -238,7 +243,7 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
         if (!mediamtxGitHub.isLocalProjectInstalled()) {
             mediamtxGitHub.installLatestRelease(context);
             Files.copy(mediamtxGitHub.getLocalProjectPath().resolve("mediamtx.yml"),
-                configurationPath, StandardCopyOption.REPLACE_EXISTING);
+                    configurationPath, StandardCopyOption.REPLACE_EXISTING);
             if (SystemUtils.IS_OS_LINUX) {
                 context.hardware().execute("chmod +x " + executable);
             }
@@ -247,32 +252,33 @@ public class MediaMTXService extends ServiceInstance<MediaMTXEntity>
 
         AtomicReference<String> errorRef = new AtomicReference<>();
         this.processContext = context
-            .bgp().processBuilder(getEntityID())
-            .attachLogger(log)
-            .attachEntityStatus(entity)
-            .onStarted(this::setStatusOnline)
-            .onFinished((ex, responseCode) -> {
-                if (ex == null) {
-                    if (errorRef.get() != null) {
-                        ex = new ServerException(errorRef.get());
-                    } else if (responseCode != 0) {ex = new ServerException("Exit with code: " + responseCode);
+                .bgp().processBuilder(getEntityID())
+                .attachLogger(log)
+                .attachEntityStatus(entity)
+                .onStarted(this::setStatusOnline)
+                .onFinished((ex, responseCode) -> {
+                    if (ex == null) {
+                        if (errorRef.get() != null) {
+                            ex = new ServerException(errorRef.get());
+                        } else if (responseCode != 0) {
+                            ex = new ServerException("Exit with code: " + responseCode);
+                        }
                     }
-                }
-                dispose(ex);
-            })
-            .setInputLoggerOutput(msg -> {
-                Level level = Level.DEBUG;
-                if (msg.contains("WAR")) {
-                    level = Level.WARN;
-                } else if (msg.contains("ERR")) {
-                    level = Level.ERROR;
-                    if (msg.contains("cannot unmarshal")) {
-                        errorRef.set("W.ERROR.MTX_CONFIG");
+                    dispose(ex);
+                })
+                .setInputLoggerOutput(msg -> {
+                    Level level = Level.DEBUG;
+                    if (msg.contains("WAR")) {
+                        level = Level.WARN;
+                    } else if (msg.contains("ERR")) {
+                        level = Level.ERROR;
+                        if (msg.contains("cannot unmarshal")) {
+                            errorRef.set("W.ERROR.MTX_CONFIG");
+                        }
                     }
-                }
-                log.log(level, "[{}]: MediaMTX: {}", entityID, msg);
-            })
-            .execute(executable.toString(), configurationPath.toString());
+                    log.log(level, "[{}]: MediaMTX: {}", entityID, msg);
+                })
+                .execute(executable.toString(), configurationPath.toString());
     }
 
     private synchronized void scheduleRegisterSources() {

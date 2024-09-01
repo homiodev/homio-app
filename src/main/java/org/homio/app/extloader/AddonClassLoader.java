@@ -135,8 +135,8 @@ public class AddonClassLoader extends JarClassLoader {
             } else {
                 if (c <= 0x007F) {
                     if (c >= 'a' && c <= 'z' ||
-                            c >= 'A' && c <= 'Z' ||
-                            c >= '0' && c <= '9') {
+                        c >= 'A' && c <= 'Z' ||
+                        c >= '0' && c <= '9') {
                         retCC[retLen++] = c;
                     } else if (match(c, L_ENCODED, H_ENCODED)) {
                         retLen = escape(retCC, c, retLen);
@@ -183,8 +183,8 @@ public class AddonClassLoader extends JarClassLoader {
             // in the symbol range '&'-':' (includes '.', '/' and '0'-'9')
             // and more rarely in the A-Z range.
             if (c >= 'a' && c <= 'z' ||
-                    c >= '&' && c <= ':' ||
-                    c >= 'A' && c <= 'Z') {
+                c >= '&' && c <= ':' ||
+                c >= 'A' && c <= 'Z') {
                 continue;
             } else if (c > 0x007F || match(c, L_ENCODED, H_ENCODED)) {
                 return i;

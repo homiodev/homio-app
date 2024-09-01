@@ -1,21 +1,18 @@
 package org.homio.app.workspace;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import lombok.Getter;
+import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
+import org.homio.api.workspace.Lock;
+import org.homio.api.workspace.WorkspaceBlock;
+
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
-import lombok.Getter;
-import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
-import org.homio.api.workspace.Lock;
-import org.homio.api.workspace.WorkspaceBlock;
 
 @Log4j2
 public class LockImpl implements Lock {
@@ -38,7 +35,7 @@ public class LockImpl implements Lock {
             this.valueCheck = o -> true;
         } else if (this.expectedValue instanceof Pattern) {
             this.valueCheck =
-                    o -> ((Pattern) this.expectedValue).matcher(Objects.toString(value)).matches();
+                    o -> ((Pattern) this.expectedValue).matcher(Objects.toString(value, "")).matches();
         } else {
             this.valueCheck = o -> Objects.equals(o, this.expectedValue);
         }

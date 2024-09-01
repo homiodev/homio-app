@@ -2,7 +2,6 @@ package org.homio.app.service.device;
 
 import lombok.Getter;
 import lombok.SneakyThrows;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.homio.api.fs.FileSystemProvider;
 import org.homio.api.fs.TreeNode;
@@ -388,7 +387,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     private void copyNode(CopyOption[] options, TreeNode entry, Path entryPath) throws IOException {
         Long size = entry.getAttributes().getSize();
         if (size != null && size / ONE_MB >= 2) {
-            if(options[0] == StandardCopyOption.REPLACE_EXISTING) {
+            if (options[0] == StandardCopyOption.REPLACE_EXISTING) {
                 Files.delete(entryPath);
             }
             entity.context().ui().progress().run("copy-" + entry.getId(), true, progressBar ->
@@ -447,7 +446,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
         String contentType;
         boolean ade = false;
         try {
-            contentType = !isDirectory && exists ? StringUtils.defaultString(Files.probeContentType(path), TIKA.detect(path)) : null;
+            contentType = !isDirectory && exists ? Objects.toString(Files.probeContentType(path), TIKA.detect(path)) : null;
         } catch (AccessDeniedException e) {
             contentType = "";
             ade = true;

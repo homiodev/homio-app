@@ -1,10 +1,6 @@
 package org.homio.app.model.entity.widget.impl.video;
 
 import jakarta.persistence.Entity;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.video.HasVideoSources;
@@ -20,6 +16,10 @@ import org.homio.api.util.DataSourceUtil;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 @SuppressWarnings("unused")
 @Entity
@@ -94,8 +94,8 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
         private static void addOptions(BaseEntity entity, List<OptionModel> list) {
             if (entity instanceof HasVideoSources vs) {
                 OptionModel model = OptionModel
-                    .of(entity.getEntityID(), entity.getTitle())
-                    .setIcon(entity.getEntityIcon());
+                        .of(entity.getEntityID(), entity.getTitle())
+                        .setIcon(entity.getEntityIcon());
                 model.setChildren(vs.getVideoSources());
                 list.add(model);
             }
@@ -117,7 +117,7 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
 
     @Override
     protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-        if(getValueDataSource().isEmpty()) {
+        if (getValueDataSource().isEmpty()) {
             fields.add("valueDataSource");
         }
     }

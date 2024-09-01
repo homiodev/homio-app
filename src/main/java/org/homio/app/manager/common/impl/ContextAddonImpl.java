@@ -1,18 +1,5 @@
 package org.homio.app.manager.common.impl;
 
-import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.repeat;
-
-import java.io.IOException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -53,6 +40,20 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.core.env.Environment;
 
+import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
+import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.repeat;
+
 @Log4j2
 public class ContextAddonImpl {
 
@@ -78,9 +79,9 @@ public class ContextAddonImpl {
         log.info("Initialize addons...");
         ArrayList<AddonEntrypoint> addonEntrypoints = new ArrayList<>(applicationContext.getBeansOfType(AddonEntrypoint.class).values());
         Collections.sort(addonEntrypoints);
-        log.info("Found addons: \r\n---{}",
-            addonEntrypoints.stream().map(AddonEntrypoint::getAddonID)
-                            .collect(Collectors.joining("\r\n", "---", "---")));
+        log.info("Found addons: {}",
+                addonEntrypoints.stream().map(AddonEntrypoint::getAddonID)
+                        .collect(Collectors.joining("\n", "\n-------\n", "\n-------")));
         for (AddonEntrypoint entrypoint : addonEntrypoints) {
             //this.addons.put("addon-" + entrypoint.getAddonID(), new InternalAddonContext(entrypoint, null));
             fireAddonEntrypoint(entrypoint);
@@ -257,7 +258,7 @@ public class ContextAddonImpl {
                     HardwareUtils.copyResources(externalFiles);
 
                     context.ui().notification().updateBlock("addons",
-                        builder -> addAddonNotificationRow(addonContext, builder, false));
+                            builder -> addAddonNotificationRow(addonContext, builder, false));
 
                     log.info("Addon context <{}> registered successfully.", addonContext.getPomFile().getArtifactId());
                     addonContextMap.put(addonContext.getAddonID(), addonContext);
@@ -266,7 +267,7 @@ public class ContextAddonImpl {
                 }
             } catch (Exception ex) {
                 context.ui().notification().updateBlock("addons",
-                    builder -> addAddonNotificationRow(addonContext, builder, true));
+                        builder -> addAddonNotificationRow(addonContext, builder, true));
                 addonContextMap.remove(addonContext.getAddonID());
                 log.error("Unable to load addon context <{}>.", addonContext.getPomFile().getArtifactId(), ex);
             }
@@ -310,7 +311,7 @@ public class ContextAddonImpl {
             if (Files.exists(addonContext.getContextFile())) {
                 log.error("Addon <{}> has been stopped but unable to delete file. File will be removed on restart", addonID);
                 context.bgp().executeOnExit("Delete addon " + addonContext.getAddonID(),
-                    () -> Files.deleteIfExists(addonContext.getContextFile()));
+                        () -> Files.deleteIfExists(addonContext.getContextFile()));
             }
             log.info("Addon <{}> has been removed successfully", addonID);
         } else {
@@ -340,7 +341,7 @@ public class ContextAddonImpl {
         String info = addonContext.getAddonFriendlyName() + (disabledAddon ? "(Disabled)" : "");
         PackageModel packageModel = getPackageModel(key);
         List<OptionModel> versions = packageModel == null ? List.of() :
-            GitHubProject.getReleasesSince(addonContext.getVersion(), OptionModel.list(packageModel.getVersions()), false);
+                GitHubProject.getReleasesSince(addonContext.getVersion(), OptionModel.list(packageModel.getVersions()), false);
 
         if (versions.isEmpty()) {
             builder.addInfo(key, icon, info).setRightText(addonContext.getVersion());
@@ -348,9 +349,9 @@ public class ContextAddonImpl {
             builder.addFlexAction(key, flex -> {
                 flex.addInfo(info).setIcon(icon);
                 flex.addSelectBox("versions", (context, params) ->
-                        handleUpdateAddon(addonContext, key, context, params, versions, packageModel))
+                                handleUpdateAddon(addonContext, key, context, params, versions, packageModel))
                         .setHighlightSelected(false)
-                    .setOptions(versions)
+                        .setOptions(versions)
                         .setAsButton(new Icon("fas fa-cloud-download-alt", Color.PRIMARY_COLOR), addonContext.getVersion())
                         .setHeight(20).setPrimary(true);
             });
@@ -359,17 +360,17 @@ public class ContextAddonImpl {
 
     @Nullable
     private ActionResponseModel handleUpdateAddon(@NotNull AddonContext addonContext,
-        @NotNull String key,
-        @NotNull Context context,
-        @NotNull JSONObject params,
-        @NotNull List<OptionModel> versions,
-        @NotNull PackageModel packageModel) {
+                                                  @NotNull String key,
+                                                  @NotNull Context context,
+                                                  @NotNull JSONObject params,
+                                                  @NotNull List<OptionModel> versions,
+                                                  @NotNull PackageModel packageModel) {
         String newVersion = params.getString("value");
         if (OptionModel.getByKey(versions, newVersion) != null) {
             String question = Lang.getServerMessage("PACKAGE_UPDATE_QUESTION",
                     FlowMap.of("NAME", addonContext.getPomFile().getName(), "VERSION", newVersion));
             context.ui().dialog().sendConfirmation("update-" + key, "DIALOG.TITLE.UPDATE_PACKAGE", () ->
-                context.getBean(AddonService.class).installPackage(
+                    context.getBean(AddonService.class).installPackage(
                             new SystemAddonLibraryManagerSetting(),
                             new PackageRequest().setName(packageModel.getName())
                                     .setVersion(newVersion)

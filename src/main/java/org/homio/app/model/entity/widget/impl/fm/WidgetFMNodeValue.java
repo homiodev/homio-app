@@ -12,7 +12,6 @@ import co.elastic.thumbnails4j.xlsx.XLSXThumbnailer;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.codec.binary.Base64OutputStream;
@@ -58,10 +57,10 @@ public record WidgetFMNodeValue(TreeNode treeNode) {
             });
 
     public static String getThumbnail(TreeNode treeNode, int width, int height, boolean drawTextAsImage) throws IOException {
-        String contentType = StringUtils.defaultString(treeNode.getAttributes().getContentType(), "text/plain");
+        String contentType = Objects.toString(treeNode.getAttributes().getContentType(), "text/plain");
         if (contentType.startsWith("text/")
-                || contentType.equals("application/javascript")
-                || contentType.equals(APPLICATION_JSON_VALUE)) {
+            || contentType.equals("application/javascript")
+            || contentType.equals(APPLICATION_JSON_VALUE)) {
             if (!drawTextAsImage) {
                 try (InputStream stream = treeNode.getInputStream()) {
                     return IOUtils.toString(stream, StandardCharsets.UTF_8);

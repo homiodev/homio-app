@@ -6,7 +6,6 @@ import org.homio.api.entity.widget.ability.HasTimeValueSeries;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.*;
-import org.homio.api.ui.field.selection.UIFieldBeanSelection;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;
 import org.homio.app.rest.widget.ChartDataset;

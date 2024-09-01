@@ -120,7 +120,7 @@ public class AddonContext {
     }
 
     public String getAddonFriendlyName() {
-        return StringUtils.defaultString(this.pomFile.getName(), addonID);
+        return Objects.toString(this.pomFile.getName(), addonID);
     }
 
     public AnnotationConfigApplicationContext getApplicationContext() {

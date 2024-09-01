@@ -170,7 +170,7 @@ public class MediaController implements ContextCreated {
             @PathVariable(value = "from") @DateTimeFormat(pattern = "yyyyMMdd") Date from,
             @PathVariable(value = "to") @DateTimeFormat(pattern = "yyyyMMdd") Date to)
             throws Exception {
-        CameraPlaybackStorage entity = context.db().getEntityRequire(entityID);
+        CameraPlaybackStorage entity = context.db().getRequire(entityID);
         return entity.getAvailableDaysPlaybacks(context, "main", from, to);
     }
 
@@ -179,7 +179,7 @@ public class MediaController implements ContextCreated {
             @PathVariable("entityID") String entityID,
             @PathVariable(value = "date") @DateTimeFormat(pattern = "yyyyMMdd") Date date)
             throws Exception {
-        CameraPlaybackStorage entity = context.db().getEntityRequire(entityID);
+        CameraPlaybackStorage entity = context.db().getRequire(entityID);
         return entity.getPlaybackFiles(context, "main", date, new Date(date.getTime() + TimeUnit.DAYS.toMillis(1) - 1));
     }
 
@@ -224,7 +224,7 @@ public class MediaController implements ContextCreated {
             @PathVariable("fileId") String fileId,
             @RequestHeader HttpHeaders headers)
             throws IOException {
-        CameraPlaybackStorage entity = context.db().getEntityRequire(entityID);
+        CameraPlaybackStorage entity = context.db().getRequire(entityID);
         String ext = StringUtils.defaultIfEmpty(FilenameUtils.getExtension(fileId), "mp4");
         Path path = CommonUtils.getMediaPath().resolve("camera").resolve(entityID).resolve("playback").resolve(fileId + "." + ext);
 
@@ -347,7 +347,7 @@ public class MediaController implements ContextCreated {
 
     @SneakyThrows
     private Path getPlaybackThumbnailPath(String entityID, String fileId, String size) {
-        CameraPlaybackStorage entity = context.db().getEntityRequire(entityID);
+        CameraPlaybackStorage entity = context.db().getRequire(entityID);
         Path path = CommonUtils.getMediaPath().resolve("camera").resolve(entityID).resolve("playback")
                 .resolve(fileId + "_" + size.replaceAll(":", "x") + ".jpg");
         if (Files.exists(path) && Files.size(path) > 0) {
@@ -429,7 +429,7 @@ public class MediaController implements ContextCreated {
 
     @SneakyThrows
     private @NotNull BaseCameraEntity<?, ?> getEntity(String entityID) {
-        BaseCameraEntity<?, ?> entity = context.db().getEntityRequire(entityID);
+        BaseCameraEntity<?, ?> entity = context.db().getRequire(entityID);
         if (!entity.getStatus().isOnline()) {
             throw new ServerException("Unable to run execute request. Video entity: %s has wrong status: %s".formatted(entity.getTitle(), entity.getStatus()))
                     .setHttpStatus(HttpStatus.PRECONDITION_FAILED);

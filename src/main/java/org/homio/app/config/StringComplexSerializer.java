@@ -6,13 +6,14 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.ContextualSerializer;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
-import java.io.IOException;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.ui.field.UIFieldLinkToEntity;
 import org.homio.api.ui.field.UIFieldLinkToEntity.FieldLinkToEntityTitleProvider;
 import org.homio.app.manager.common.ContextImpl;
 import org.jetbrains.annotations.NotNull;
+
+import java.io.IOException;
 
 public class StringComplexSerializer extends StdSerializer<String> implements ContextualSerializer {
 
@@ -46,7 +47,7 @@ public class StringComplexSerializer extends StdSerializer<String> implements Co
         return new JsonSerializer<>() {
             @Override
             public void serialize(String value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-                BaseEntity entity = ContextImpl.INSTANCE == null ? null : ContextImpl.INSTANCE.db().getEntity(value);
+                BaseEntity entity = ContextImpl.INSTANCE == null ? null : ContextImpl.INSTANCE.db().get(value);
                 if (entity == null) {
                     gen.writeString(value);
                 } else {

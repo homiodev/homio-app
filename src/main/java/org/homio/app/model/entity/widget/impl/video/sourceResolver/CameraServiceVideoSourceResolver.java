@@ -20,7 +20,7 @@ public class CameraServiceVideoSourceResolver implements WidgetVideoSourceResolv
         String ds = DataSourceUtil.getSelection(valueDataSource).getValue();
         String[] keys = ds.split("-->");
         String entityID = keys[0];
-        DeviceBaseEntity entity = context.db().getEntity(entityID);
+        DeviceBaseEntity entity = context.db().get(entityID);
         if (entity != null && keys.length >= 2) {
             String videoIdentifier = keys[keys.length - 1];
             if (videoIdentifier.startsWith("http") || videoIdentifier.startsWith("$DEVICE_URL")) {

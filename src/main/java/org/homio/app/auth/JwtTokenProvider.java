@@ -1,20 +1,6 @@
 package org.homio.app.auth;
 
-import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
-
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.JwtParser;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import io.jsonwebtoken.*;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -36,6 +22,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
 @Log4j2
 @Component
@@ -95,31 +86,31 @@ public class JwtTokenProvider implements ContextCreated {
     private static void addCreateGuestAccessToken(ContextImpl context) {
         context.ui().addHeaderMenuButton("access", new Icon("fas fa-key"), IdentityEntity.class);
         context.ui().headerButtonBuilder("add-access").title("Create guest access token").icon(new Icon("fas fa-key"))
-               .clickAction(() -> {
-                   context.ui().dialog().sendDialogRequest("add-access-dialog", "add-access-dialog",
-                       (responseType, pressedButton, parameters) -> {
-                           String userName = parameters.get("user").asText();
-                           String password = parameters.get("password").asText();
-                           UserGuestEntity entity = new UserGuestEntity();
-                           entity.setName(userName);
-                           entity.setPassword(password);
-                           entity.setIeeeAddress("guest@mail.com");
-                           entity.setEmail("guest@mail.com");
-                           entity.setJsonData("ip", MACHINE_IP_ADDRESS);
-                           context.db().save(entity);
-                           String url = UserGuestEntity.getAccessURL(entity);
-                           context.ui().toastr().sendMessage("Access URL", url, NotificationLevel.success, 60);
-                       }, dialogEditor -> {
-                           dialogEditor.disableKeepOnUi();
-                           dialogEditor.appearance(new Icon("fas fa-users"), null);
-                           List<ActionInputParameter> inputs = new ArrayList<>();
-                           inputs.add(ActionInputParameter.textRequired("user", "", 3, 20));
-                           inputs.add(ActionInputParameter.textRequired("password", "", 3, 20));
-                           dialogEditor.submitButton("Create URL", button -> {
-                           }).group("General", inputs);
-                       });
-                   return null;
-               }).attachToHeaderMenu("access").build();
+                .clickAction(() -> {
+                    context.ui().dialog().sendDialogRequest("add-access-dialog", "ADD_ANONYMOUS_ACCESS",
+                            (responseType, pressedButton, parameters) -> {
+                                String userName = parameters.get("user").asText();
+                                String password = parameters.get("password").asText();
+                                UserGuestEntity entity = new UserGuestEntity();
+                                entity.setName(userName);
+                                entity.setPassword(password);
+                                entity.setIeeeAddress("guest@mail.com");
+                                entity.setEmail("guest@mail.com");
+                                entity.setJsonData("ip", MACHINE_IP_ADDRESS);
+                                context.db().save(entity);
+                                String url = UserGuestEntity.getAccessURL(entity);
+                                context.ui().toastr().sendMessage("Access URL", url, NotificationLevel.success, 60);
+                            }, dialogEditor -> {
+                                dialogEditor.disableKeepOnUi();
+                                dialogEditor.appearance(new Icon("fas fa-users"), null);
+                                List<ActionInputParameter> inputs = new ArrayList<>();
+                                inputs.add(ActionInputParameter.textRequired("user", "", 3, 20));
+                                inputs.add(ActionInputParameter.textRequired("password", "", 3, 20));
+                                dialogEditor.submitButton("Create URL", button -> {
+                                }).group("General", inputs);
+                            });
+                    return null;
+                }).attachToHeaderMenu("access").build();
     }
 
     public void revokeToken(String token) {
@@ -186,14 +177,14 @@ public class JwtTokenProvider implements ContextCreated {
         Date now = new Date();
         Date validity = new Date(now.getTime() + validMillis);
         return Jwts.builder()
-                   .setId(UUID.randomUUID().toString())
-                   .setAudience(username)
-                   .claim("auth", auth)
-                   .setIssuedAt(now)
-                   .setIssuer("homio_app")
-                   .setExpiration(validity)
-                   .signWith(SignatureAlgorithm.HS256, securityId)
-                   .compact();
+                .setId(UUID.randomUUID().toString())
+                .setAudience(username)
+                .claim("auth", auth)
+                .setIssuedAt(now)
+                .setIssuer("homio_app")
+                .setExpiration(validity)
+                .signWith(SignatureAlgorithm.HS256, securityId)
+                .compact();
     }
 
     private void regenerateSecurityID(ContextImpl context) {

@@ -16,9 +16,9 @@ public class AllDeviceRepository extends AbstractRepository<DeviceBaseEntity> {
     public DeviceBaseEntity getByEntityID(String entityID) {
         String sql = "FROM DeviceBaseEntity where ieeeAddress = :value OR entityID = :value";
         return tmc.executeInTransactionReadOnly(em ->
-            em.createQuery(sql, DeviceBaseEntity.class)
-              .setParameter("value", entityID)
-              .getResultList().stream().findAny().orElse(null));
+                em.createQuery(sql, DeviceBaseEntity.class)
+                        .setParameter("value", entityID)
+                        .getResultList().stream().findAny().orElse(null));
     }
 
     public <T extends DeviceBaseEntity> @Nullable T getByIeeeAddressOrName(String name) {

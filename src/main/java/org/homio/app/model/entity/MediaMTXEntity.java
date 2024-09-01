@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.SneakyThrows;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
 import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContractStub;
@@ -41,6 +40,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
@@ -60,13 +60,13 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
                     });
 
     public static MediaMTXEntity getEntity(Context context) {
-        return context.db().getEntity(MediaMTXEntity.class, PRIMARY_DEVICE);
+        return context.db().get(MediaMTXEntity.class, PRIMARY_DEVICE);
     }
 
     @Override
     public String getDescriptionImpl() {
         if (!getStatus().isOnline()) {
-            String message = StringUtils.defaultString(getStatusMessage());
+            String message = Objects.toString(getStatusMessage(), "");
             if (!message.isEmpty()) {
                 if (message.contains("Access is denied")) {
                     return "W.ERROR.MTX_ACCESS_DENIED";

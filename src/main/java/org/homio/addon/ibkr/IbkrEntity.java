@@ -3,6 +3,7 @@ package org.homio.addon.ibkr;
 import jakarta.persistence.Entity;
 import lombok.SneakyThrows;
 import org.homio.api.Context;
+import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.types.MiscEntity;
@@ -25,6 +26,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Set;
 
 @Entity
+@CreateSingleEntity
 @UISidebarChildren(icon = "fas fa-square-rss", color = "#B33F30", allowCreateItem = false)
 public class IbkrEntity extends MiscEntity implements EntityService<IbkrService>,
         HasStatusAndMsg, CustomWidgetConfigurableEntity {

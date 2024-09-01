@@ -4,12 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.hibernate5.jakarta.Hibernate5JakartaModule;
 import com.fasterxml.jackson.datatype.jsonorg.JsonOrgModule;
@@ -18,17 +13,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Optional;
-import java.util.TreeMap;
-import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 import lombok.extern.log4j.Log4j2;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
@@ -98,6 +82,13 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @Log4j2
 @Configuration
@@ -232,7 +223,7 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
         simpleModule.addDeserializer(DeviceBaseEntity.class, new JsonDeserializer<>() {
             @Override
             public DeviceBaseEntity deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-                return applicationContext.getBean(ContextImpl.class).db().getEntity(p.getText());
+                return applicationContext.getBean(ContextImpl.class).db().get(p.getText());
             }
         });
 
@@ -253,7 +244,7 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
     @Override
     public void addFormatters(final FormatterRegistry registry) {
         registry.addConverter(String.class, DeviceBaseEntity.class, source ->
-            applicationContext.getBean(Context.class).db().getEntity(source));
+                applicationContext.getBean(Context.class).db().get(source));
     }
 
     @Bean
@@ -290,7 +281,7 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
                 .flatMap(Arrays::stream)
                 .distinct()
                 .filter(prop -> !(prop.contains("java.class.path") || prop.contains("Path") || prop.contains("java.library.path") || prop.contains("credentials")
-                        || prop.contains("password")))
+                                  || prop.contains("password")))
                 .collect(Collectors.toMap(prop -> prop, key -> env.getProperty(key, "---"),
                         (v1, v2) -> {
                             throw new RuntimeException(String.format("Duplicate key for values %s and %s", v1, v2));
@@ -334,7 +325,7 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
 
     @Bean
     public ProxyExchangeArgumentResolver proxyExchangeArgumentResolver(Optional<RestTemplateBuilder> optional,
-        ProxyProperties proxy) {
+                                                                       ProxyProperties proxy) {
         RestTemplateBuilder builder = optional.orElse(new RestTemplateBuilder());
         CloseableHttpClient httpClient = HttpClientBuilder.create().disableRedirectHandling().build();
         var requestFactory = new HttpComponentsClientHttpRequestFactory(httpClient);

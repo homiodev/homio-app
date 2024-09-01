@@ -1,20 +1,12 @@
 package org.homio.app.rest;
 
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.bluetooth.BluetoothCharacteristicService;
 import org.homio.api.Context;
+import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
 import org.homio.api.model.Icon;
@@ -24,13 +16,17 @@ import org.homio.api.model.endpoint.DeviceEndpoint.EndpointType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
 
 @Log4j2
 @RestController
@@ -48,24 +44,29 @@ public class DeviceController {
         return characteristic == null ? null : OptionModel.key(characteristic);
     }
 
+    @SneakyThrows
     @PutMapping("/characteristic/{uuid}")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
     public void setDeviceCharacteristic(@PathVariable("uuid") String uuid, @RequestBody byte[] value) {
+        UserEntity user = context.getUser();
+        if(user != null && !user.isAdmin()) {
+            throw new IllegalAccessException("User is not allowed to change device characteristic");
+        }
         bluetoothService.setDeviceCharacteristic(uuid, value);
     }
 
     @GetMapping("/{endpoint}")
     public @NotNull Collection<OptionModel> getDevicesWithEndpoint(
-        @PathVariable("endpoint") @NotNull String endpoint,
-        @RequestParam("prefix") @NotNull String prefix) {
+            @PathVariable("endpoint") @NotNull String endpoint,
+            @RequestParam("prefix") @NotNull String prefix) {
         return getDevices(prefix, device -> device.getDeviceEndpoint(endpoint) != null);
     }
 
     @GetMapping
     public @NotNull Collection<OptionModel> getDevices(
             @RequestParam(value = "access", defaultValue = "any") @NotNull String access,
-        @RequestParam(value = "type", defaultValue = "any") @NotNull String type,
-        @RequestParam("prefix") @NotNull String prefix) {
+            @RequestParam(value = "type", defaultValue = "any") @NotNull String type,
+            @RequestParam("prefix") @NotNull String prefix) {
         return getDevices(prefix, buildDeviceAccessFilter(access, type));
     }
 
@@ -95,7 +96,7 @@ public class DeviceController {
             return null;
         }
         return (DeviceEndpointsBehaviourContract)
-            context.db().findAll(DeviceBaseEntity.class)
+                context.db().findAll(DeviceBaseEntity.class)
                         .stream()
                         .filter(d -> ieeeAddress.equals(d.getIeeeAddress()))
                         .findAny().orElse(null);
@@ -138,8 +139,8 @@ public class DeviceController {
     }
 
     private @NotNull Collection<OptionModel> getDevices(
-        @NotNull String prefix,
-        @NotNull Predicate<DeviceEndpointsBehaviourContract> deviceFilter) {
+            @NotNull String prefix,
+            @NotNull Predicate<DeviceEndpointsBehaviourContract> deviceFilter) {
 
         Collection<OptionModel> list = new ArrayList<>();
         for (DeviceBaseEntity deviceEntity : context.db().findAll(DeviceBaseEntity.class)) {
@@ -148,7 +149,7 @@ public class DeviceController {
                     Icon icon = deviceEntity.getEntityIcon();
                     list.add(OptionModel.of(Objects.requireNonNull(deviceEntity.getIeeeAddress()), deviceContract.getDeviceFullName())
                             .setDescription(deviceContract.getDescription())
-                             .setIcon(icon.getIcon())
+                            .setIcon(icon.getIcon())
                             .setColor(icon.getColor()));
                 }
             }

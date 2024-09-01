@@ -72,11 +72,6 @@ public class ContextServiceImpl implements ContextService {
     }
 
     @Override
-    public void registerUserRoleResource(@NotNull String resource) {
-        UserBaseEntity.registerResource(resource);
-    }
-
-    @Override
     public boolean unRegisterUrlProxy(@NotNull String entityID) {
         return proxy.remove(entityID) != null;
     }

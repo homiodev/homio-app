@@ -1,20 +1,5 @@
 package org.homio.app.manager.common.impl;
 
-import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
-
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiConsumer;
-import javax.jmdns.ServiceInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -31,6 +16,17 @@ import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository.CidrAddress;
 import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
+
+import javax.jmdns.ServiceInfo;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
+
+import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -79,8 +75,8 @@ public class ContextNetworkImpl implements ContextNetwork {
         });
         mdnsClient.start();
         context.bgp().builder("network-interface-poll")
-               .delay(Duration.ofSeconds(1))
-               .interval(Duration.ofSeconds(60)).execute(this::pollAndNotifyNetworkInterfaceAddress);
+                .delay(Duration.ofSeconds(1))
+                .interval(Duration.ofSeconds(60)).execute(this::pollAndNotifyNetworkInterfaceAddress);
     }
 
     private void pollAndNotifyNetworkInterfaceAddress() {
@@ -93,11 +89,11 @@ public class ContextNetworkImpl implements ContextNetwork {
         }
         // Look for added addresses to notify
         List<CidrAddress> added = newInterfaceAddresses
-            .stream().filter(newInterfaceAddr -> !lastKnownInterfaceAddresses.contains(newInterfaceAddr)).toList();
+                .stream().filter(newInterfaceAddr -> !lastKnownInterfaceAddresses.contains(newInterfaceAddr)).toList();
 
         // Look for removed addresses to notify
         List<CidrAddress> removed = lastKnownInterfaceAddresses
-            .stream().filter(lastKnownInterfaceAddr -> !newInterfaceAddresses.contains(lastKnownInterfaceAddr)).toList();
+                .stream().filter(lastKnownInterfaceAddr -> !newInterfaceAddresses.contains(lastKnownInterfaceAddr)).toList();
 
         lastKnownInterfaceAddresses = newInterfaceAddresses;
 
@@ -117,10 +113,10 @@ public class ContextNetworkImpl implements ContextNetwork {
             if (MACHINE_IP_ADDRESS.startsWith("169.254")) {
                 try {
                     log.warn("Device ip address is: {}. Trying to call autohotspot",
-                        machineHardwareRepository.execute("/usr/bin/autohotspot", 60));
+                            machineHardwareRepository.execute("/usr/bin/autohotspot", 60));
                 } catch (Exception ex) {
                     log.warn("Device ip address is: {}. Unable to run autohotspot to fix: {}",
-                        MACHINE_IP_ADDRESS, CommonUtils.getErrorMessage(ex));
+                            MACHINE_IP_ADDRESS, CommonUtils.getErrorMessage(ex));
                 }
             }
         }
@@ -139,7 +135,7 @@ public class ContextNetworkImpl implements ContextNetwork {
     @Override
     @SneakyThrows
     public void listenUdp(
-        String key, String host, int port, BiConsumer<DatagramPacket, String> listener) {
+            String key, String host, int port, BiConsumer<DatagramPacket, String> listener) {
         String hostPortKey = (host == null ? "0.0.0.0" : host) + ":" + port;
         if (!this.listenUdpMap.containsKey(hostPortKey)) {
             ContextBGP.ThreadContext<Void> scheduleFuture;

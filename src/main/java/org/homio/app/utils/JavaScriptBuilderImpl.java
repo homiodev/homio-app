@@ -1,16 +1,5 @@
 package org.homio.app.utils;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -20,6 +9,11 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.cglib.proxy.MethodInterceptor;
+
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class JavaScriptBuilderImpl implements JavaScriptBuilder {
 
@@ -58,8 +52,8 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
             readVariablesOnServerValues.raw(
                     () ->
                             "return ["
-                                    + String.join(" \", \"", jsServerVariables.variables.values())
-                                    + "];");
+                            + String.join(" \", \"", jsServerVariables.variables.values())
+                            + "];");
             builder.append(readVariablesOnServerValues.build());
 
             JsMethodImpl readVariablesOnServerKeys =
@@ -67,8 +61,8 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
             readVariablesOnServerKeys.raw(
                     () ->
                             "return ["
-                                    + String.join(" \", \"", jsServerVariables.variables.keySet())
-                                    + "];");
+                            + String.join(" \", \"", jsServerVariables.variables.keySet())
+                            + "];");
             builder.append(readVariablesOnServerKeys.build());
         }
 
@@ -173,25 +167,25 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
     private static String appendPOST(
             String request, String params, boolean singleLine, String tabs) {
         return ("$.ajax({type: \"POST\"," + "url: window.location.origin + \"/rest/widget/")
-                + request
-                + "\","
-                + (singleLine ? "\\\n" : "\n")
-                + tabs
-                + "\tdataType: \"json\",async: false,contentType: \"application/json; charset=utf-8\","
-                + (singleLine ? "\\\n" : "\n")
-                + tabs
-                + "\tdata: JSON.stringify("
-                + params
-                + "),"
-                + (singleLine ? "\\\n" : "\n")
-                + tabs
-                + "\tsuccess: function () {},"
-                + (singleLine ? "\\\n" : "\n")
-                + tabs
-                + "\terror: showException"
-                + (singleLine ? "\\\n" : "\n")
-                + tabs
-                + "});";
+               + request
+               + "\","
+               + (singleLine ? "\\\n" : "\n")
+               + tabs
+               + "\tdataType: \"json\",async: false,contentType: \"application/json; charset=utf-8\","
+               + (singleLine ? "\\\n" : "\n")
+               + tabs
+               + "\tdata: JSON.stringify("
+               + params
+               + "),"
+               + (singleLine ? "\\\n" : "\n")
+               + tabs
+               + "\tsuccess: function () {},"
+               + (singleLine ? "\\\n" : "\n")
+               + tabs
+               + "\terror: showException"
+               + (singleLine ? "\\\n" : "\n")
+               + tabs
+               + "});";
     }
 
     private void addTag(
@@ -470,8 +464,8 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
             this.addChild(
                     new JsBlockImpl(
                             cond1
-                                    + " === "
-                                    + (escapeSecondCondition ? "\\'" + cond2 + "\\'" : cond2)));
+                            + " === "
+                            + (escapeSecondCondition ? "\\'" + cond2 + "\\'" : cond2)));
             return this;
         }
 
@@ -574,8 +568,8 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
             if (params.length != jsMethodImpl.params.length) {
                 throw new IllegalArgumentException(
                         "JsMethod: "
-                                + jsMethod
-                                + "has different parameter count that onClick handling");
+                        + jsMethod
+                        + "has different parameter count that onClick handling");
             }
             for (int i = 0; i < params.length; i++) {
                 String param = params[i];
@@ -791,10 +785,10 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
                 this.addChildNoTab(
                         new SBuilder(
                                 "this."
-                                        + methodName
-                                        + " = function("
-                                        + String.join(",", params)
-                                        + ") {"));
+                                + methodName
+                                + " = function("
+                                + String.join(",", params)
+                                + ") {"));
             } else {
                 this.addChildNoTab(
                         () -> "function " + methodName + "(" + String.join(",", params) + ") {");

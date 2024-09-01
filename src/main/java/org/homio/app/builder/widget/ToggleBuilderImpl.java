@@ -1,8 +1,5 @@
 package org.homio.app.builder.widget;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.ContextWidget.ToggleType;
@@ -17,6 +14,10 @@ import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 
 public class ToggleBuilderImpl extends WidgetBaseBuilderImpl<ToggleWidgetBuilder, WidgetToggleEntity>
         implements ToggleWidgetBuilder,

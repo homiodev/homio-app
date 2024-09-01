@@ -1,9 +1,5 @@
 package org.homio.app.service;
 
-import static org.homio.api.ui.field.selection.UIFieldTreeNodeSelection.LOCAL_FS;
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-
-import java.util.List;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -19,6 +15,11 @@ import org.homio.app.spring.ContextRefreshed;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
+import static org.homio.api.ui.field.selection.UIFieldTreeNodeSelection.LOCAL_FS;
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+
 @Getter
 @Service
 @RequiredArgsConstructor
@@ -31,19 +32,19 @@ public class FileSystemService implements ContextCreated, ContextRefreshed {
     @Override
     public void onContextCreated(ContextImpl context) {
         this.context.event().addEntityRemovedListener(BaseFileSystemEntity.class, "fs-remove",
-            e -> findAllFileSystems(this.context));
+                e -> findAllFileSystems(this.context));
         this.context.event().addEntityCreateListener(BaseFileSystemEntity.class, "fs-create",
-            e -> findAllFileSystems(this.context));
+                e -> findAllFileSystems(this.context));
         this.context.event().addEntityUpdateListener(BaseFileSystemEntity.class, "fs-update",
-            e -> findAllFileSystems(this.context));
+                e -> findAllFileSystems(this.context));
         context.setting().listenValue(ConsoleFMClearCacheButtonSetting.class, "fs-cache",
-            jsonObject -> {
-                for (BaseFileSystemEntity<?> fileSystem : fileSystems) {
-                    fileSystem.getFileSystem(context, 0).clearCache();
-                }
-            });
+                jsonObject -> {
+                    for (BaseFileSystemEntity<?> fileSystem : fileSystems) {
+                        fileSystem.getFileSystem(context, 0).clearCache();
+                    }
+                });
 
-        LocalBoardEntity LocalBoardEntity = this.context.db().getEntityRequire(LocalBoardEntity.class, PRIMARY_DEVICE);
+        LocalBoardEntity LocalBoardEntity = this.context.db().getRequire(LocalBoardEntity.class, PRIMARY_DEVICE);
         localFileSystem = LocalBoardEntity.getFileSystem(this.context, 0);
     }
 

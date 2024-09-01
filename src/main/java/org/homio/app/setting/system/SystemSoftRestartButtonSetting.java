@@ -1,14 +1,19 @@
 package org.homio.app.setting.system;
 
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.homio.api.Context;
+import org.homio.api.entity.UserEntity;
 import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPluginButton;
 import org.homio.api.ui.UI.Color;
 import org.homio.app.LogService;
 import org.homio.app.config.AppConfig;
 import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.model.entity.user.UserGuestEntity;
 import org.homio.app.setting.CoreSettingPlugin;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -59,5 +64,13 @@ public class SystemSoftRestartButtonSetting
         } catch (Exception ex) {
             log.info("Could not doRestart: " + ex.getMessage());
         }
+    }
+
+    @SneakyThrows
+    @Override
+    public void assertUserAccess(@NotNull Context context, @Nullable UserEntity user) {
+        UserGuestEntity.assertAction(context,
+                UserGuestEntity::getRestartDevice,
+                "User is not allowed to restart device");
     }
 }

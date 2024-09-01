@@ -1,13 +1,13 @@
 package org.homio.app.builder.widget;
 
-import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
-
 import org.homio.api.ContextWidget.SimpleColorWidgetBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasAlignBuilder;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.impl.color.WidgetSimpleColorEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 
 public class SimpleColorBuilderImpl extends WidgetBaseBuilderImpl<SimpleColorWidgetBuilder, WidgetSimpleColorEntity>
         implements SimpleColorWidgetBuilder,

@@ -1,10 +1,11 @@
 package org.homio.app.model.rest;
 
-import java.util.Objects;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Objects;
 
 @Getter
 @Setter

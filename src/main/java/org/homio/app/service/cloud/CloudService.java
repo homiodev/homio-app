@@ -16,7 +16,7 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
 
 @Log4j2
 @Component
@@ -67,10 +67,10 @@ public class CloudService implements ContextCreated {
             @Override
             public String isRequireRestartService() {
                 if (currentEntity != null
-                        && currentEntity.isPrimary()
-                        && currentEntity.getStatus() == Status.ERROR
-                        && currentEntity.isRestartOnFailure()) {
-                    return "Error status of: " + currentEntity.getTitle();
+                    && currentEntity.isPrimary()
+                    && currentEntity.getStatus() == Status.ERROR
+                    && currentEntity.isRestartOnFailure()) {
+                    return currentEntity.getStatus() + " status of: " + currentEntity.getStatusMessage();
                 }
                 return null;
             }
@@ -107,7 +107,6 @@ public class CloudService implements ContextCreated {
     }
 
     @SuppressWarnings("unchecked")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void start() {
         currentEntity.setStatus(Status.WAITING);
         cloudProvider = currentEntity.getCloudProviderService(context);

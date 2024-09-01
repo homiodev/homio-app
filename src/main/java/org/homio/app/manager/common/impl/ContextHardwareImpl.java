@@ -19,6 +19,7 @@ import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +52,8 @@ public class ContextHardwareImpl implements ContextHardware {
     }
 
     public void onContextCreated() throws Exception {
-        HardwareUtils.APP_ID = context.setting().getEnv("appId", CommonUtils.generateUUID(), true);
+        String uuid = CommonUtils.generateUUID();
+        HardwareUtils.APP_ID = context.setting().getEnv("appId", uuid.substring(0, 8), true);
         HardwareUtils.MACHINE_IP_ADDRESS = networkHardwareRepository.getIPAddress();
         HardwareUtils.RUN_COUNT = context.setting().getEnv("runCount", 1, true);
         context.setting().setEnv("runCount", HardwareUtils.RUN_COUNT + 1);
@@ -167,11 +169,17 @@ public class ContextHardwareImpl implements ContextHardware {
         Map<String, JsonNode> assetNames = new HashMap<>();
         for (JsonNode asset : release.withArray("assets")) {
             String assetName = asset.get("name").asText();
-            if (architecture.matchName.test(assetName)) {
-                return asset;
-            }
             assetNames.put(assetName, asset);
         }
+        List<Entry<String, JsonNode>> sortedAssets = assetNames.entrySet().stream()
+                .filter(s -> architecture.matchName.test(s.getKey()))
+                .sorted(Comparator.comparingLong(o -> o.getValue().get("size").asLong()))
+                .toList();
+
+        if (!sortedAssets.isEmpty()) {
+            return sortedAssets.get(sortedAssets.size() - 1).getValue();
+        }
+
         if (architecture.name().startsWith("arm")) {
             JsonNode foundAsset = getFoundAsset(assetNames, s -> s.endsWith("_arm"));
             if (foundAsset == null) {
@@ -182,7 +190,7 @@ public class ContextHardwareImpl implements ContextHardware {
             }
         }
         throw new IllegalStateException("Unable to find release asset for current architecture: " + architecture.name()
-                + ". Available assets:\n\t" + String.join("\n\t", assetNames.keySet()));
+                                        + ". Available assets:\n\t" + String.join("\n\t", assetNames.keySet()));
     }
 
     private static JsonNode getFoundAsset(Map<String, JsonNode> assetNames, Function<String, Boolean> filter) {
@@ -231,7 +239,7 @@ public class ContextHardwareImpl implements ContextHardware {
         arm32v8(s -> s.contains("arm32v8") || s.contains("arm8")),
         arm64v8(s -> s.contains("arm64v8")),
         aarch64(s -> IS_OS_LINUX && s.contains("linux_arm64v8") || IS_OS_MAC && s.contains("darwin_arm64")),
-        amd64(s -> s.contains("amd64")),
+        amd64(s -> s.contains("amd64") || s.contains("linux64")),
         i386(s -> s.contains("i386")),
         win32(s -> s.contains("win32")),
         win64(s -> s.contains("win64") || s.contains("windows")),

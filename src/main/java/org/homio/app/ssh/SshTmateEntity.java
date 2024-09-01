@@ -38,7 +38,7 @@ import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateService> {
 
     public static void ensureEntityExists(ContextImpl context) {
-        SshTmateEntity tmate = context.db().getEntity(SshTmateEntity.class, PRIMARY_DEVICE);
+        SshTmateEntity tmate = context.db().get(SshTmateEntity.class, PRIMARY_DEVICE);
         if (SystemUtils.IS_OS_LINUX) {
             ContextHardware hardware = context.hardware();
             if (!hardware.isSoftwareInstalled("tmate")) {

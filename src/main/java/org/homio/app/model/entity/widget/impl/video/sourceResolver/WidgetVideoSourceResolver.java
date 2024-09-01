@@ -1,19 +1,18 @@
 package org.homio.app.model.entity.widget.impl.video.sourceResolver;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.regex.Pattern;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.regex.Pattern;
 
 public interface WidgetVideoSourceResolver {
 
@@ -34,9 +33,13 @@ public interface WidgetVideoSourceResolver {
         private final @NotNull String dataSource;
         private final @NotNull String source;
         private final @NotNull String type;
-        private @Nullable @Setter @Accessors(chain = true) String error;
+        private @Nullable
+        @Setter
+        @Accessors(chain = true) String error;
         private final @NotNull List<String> resolutions = new ArrayList<>();
-        private @Nullable @Setter Collection<UIInputEntity> actions;
-        private @Nullable @Setter String poster;
+        private @Nullable
+        @Setter Collection<UIInputEntity> actions;
+        private @Nullable
+        @Setter String poster;
     }
 }

@@ -1,17 +1,5 @@
 package org.homio.app.manager;
 
-import java.awt.image.BufferedImage;
-import java.io.InputStream;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-import javax.imageio.ImageIO;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -30,6 +18,14 @@ import org.homio.app.utils.color.RGBUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Log4j2
 @Component
@@ -100,7 +96,7 @@ public class AddonService implements ContextCreated, ContextRefreshed {
             packagesInProgress.put(packageRequest.getName(), true);
             String key = "Install " + packageRequest.getName() + "/" + packageRequest.getVersion();
             context.ui().progress().run(key, false, progressBar ->
-                    settingPlugin.installPackage(context, packageRequest, progressBar),
+                            settingPlugin.installPackage(context, packageRequest, progressBar),
                     ex -> packagesInProgress.remove(packageRequest.getName()));
         } else {
             context.ui().toastr().error("W.ERROR.UPDATE_IN_PROGRESS");
@@ -111,7 +107,7 @@ public class AddonService implements ContextCreated, ContextRefreshed {
         if (!packagesInProgress.containsKey(packageRequest.getName())) {
             packagesInProgress.put(packageRequest.getName(), false);
             context.ui().progress().run("Uninstall " + packageRequest.getName() + "/" + packageRequest.getVersion(), false,
-                progressBar -> settingPlugin.unInstallPackage(context, packageRequest, progressBar),
+                    progressBar -> settingPlugin.unInstallPackage(context, packageRequest, progressBar),
                     ex -> packagesInProgress.remove(packageRequest.getName()));
         }
     }

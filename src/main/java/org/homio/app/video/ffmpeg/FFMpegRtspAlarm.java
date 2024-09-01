@@ -1,12 +1,5 @@
 package org.homio.app.video.ffmpeg;
 
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.CameraConstants.AlarmEvent;
@@ -18,6 +11,14 @@ import org.homio.api.state.DecimalType;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 @Log4j2
 @Service
@@ -111,9 +112,9 @@ public class FFMpegRtspAlarm implements VideoMotionAlarmProvider {
                 ffmpegRtspHelper = new FFMpegRtspAlarmImpl(entity, command);
                 // add destroy handle in case if you need restart
                 ffmpegRtspHelper.addDestroyListener("restart-on-failure", () ->
-                    entity.context().bgp()
-                          .builder("restart-rtsp-alarm-" + entity.getEntityID())
-                          .delay(Duration.ofSeconds(10)).execute(this::startIfRequires));
+                        entity.context().bgp()
+                                .builder("restart-rtsp-alarm-" + entity.getEntityID())
+                                .delay(Duration.ofSeconds(10)).execute(this::startIfRequires));
                 commandHashCode = ffmpegRtspHelper.getCommandHashCode();
             }
             if (!suspended && !listeners.isEmpty() && !ffmpegRtspHelper.getIsAlive()) {
@@ -135,8 +136,8 @@ public class FFMpegRtspAlarm implements VideoMotionAlarmProvider {
             }
             optionsList.add("-f null");
             return FFMPEGImpl.buildCommand("",
-                entity.getService().getUrls().getRtspUri(), String.join(" ", optionsList), "-",
-                entity.getUser(), entity.getPassword().asString());
+                    entity.getService().getUrls().getRtspUri(), String.join(" ", optionsList), "-",
+                    entity.getUser(), entity.getPassword().asString());
         }
     }
 
@@ -146,7 +147,7 @@ public class FFMpegRtspAlarm implements VideoMotionAlarmProvider {
 
         public FFMpegRtspAlarmImpl(BaseCameraEntity<?, ?> entity, String command) {
             super(entity.getEntityID(), "RTSP ALARM", entity.getService(), FFMPEGFormat.RTSP_ALARMS,
-                "-", command, entity.context());
+                    "-", command, entity.context());
             this.entity = entity;
         }
 

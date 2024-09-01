@@ -1,9 +1,9 @@
 package org.homio.app.builder.widget.hasBuilder;
 
-import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
-
 import org.homio.api.ContextWidget.HasToggle;
 import org.homio.api.entity.BaseEntity;
+
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 
 public interface HasToggleBuilder<T extends BaseEntity & org.homio.app.model.entity.widget.impl.toggle.HasToggle, R>
         extends HasToggle<R> {

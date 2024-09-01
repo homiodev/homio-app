@@ -13,6 +13,7 @@ import org.homio.api.entity.HasJsonData;
 import org.homio.api.model.Icon;
 import org.homio.api.model.JSON;
 import org.homio.api.ui.field.selection.SelectionConfiguration;
+import org.homio.app.model.entity.user.UserGuestEntity;
 import org.homio.app.workspace.WorkspaceService;
 import org.jetbrains.annotations.NotNull;
 
@@ -24,8 +25,8 @@ import java.util.Set;
 @Accessors(chain = true)
 @NoArgsConstructor
 public final class WorkspaceEntity extends BaseEntity implements
-    HasJsonData,
-    SelectionConfiguration {
+        HasJsonData,
+        SelectionConfiguration {
 
     public static final String PREFIX = "space_";
 

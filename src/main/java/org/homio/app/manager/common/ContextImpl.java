@@ -6,7 +6,10 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.*;
+import org.homio.api.Context;
+import org.homio.api.ContextHardware;
+import org.homio.api.ContextMedia;
+import org.homio.api.ContextNetwork;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.entity.EntityFieldMetadata;
@@ -75,7 +78,6 @@ import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -259,14 +261,13 @@ public class ContextImpl implements Context {
         for (Class<?> createSingleItem : createSingleItems) {
             CreateSingleEntity createSingleEntity = createSingleItem.getDeclaredAnnotation(CreateSingleEntity.class);
             Class<BaseEntity> baseEntityClass = (Class<BaseEntity>) createSingleItem;
-            BaseEntity entity = db().getEntity(baseEntityClass, PRIMARY_DEVICE);
+            BaseEntity entity = db().get(baseEntityClass, PRIMARY_DEVICE);
             if (entity == null) {
                 entity = (BaseEntity) CommonUtils.newInstance(createSingleItem);
                 entity.setEntityID(PRIMARY_DEVICE);
                 entity.setName(createSingleEntity.name());
                 if (entity instanceof HasJsonData jsonData) {
                     jsonData.setJsonData("dis_del", createSingleEntity.disableDelete());
-                    jsonData.setJsonData("dis_edit", createSingleEntity.disableEdit());
                 }
                 db().save(entity);
             }

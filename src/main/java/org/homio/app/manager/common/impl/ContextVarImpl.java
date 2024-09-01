@@ -1,31 +1,9 @@
 package org.homio.app.manager.common.impl;
 
-import static java.lang.String.format;
-import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
-import static org.homio.api.util.CommonUtils.getErrorMessage;
-
 import com.fathzer.soft.javaluator.DoubleEvaluator;
 import com.fathzer.soft.javaluator.Operator;
 import com.fathzer.soft.javaluator.Parameters;
 import com.pivovarit.function.ThrowingConsumer;
-import java.math.BigDecimal;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -66,28 +44,47 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import static java.lang.String.format;
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
+import static org.homio.api.util.CommonUtils.getErrorMessage;
+
 @Log4j2
 @RequiredArgsConstructor
 public class ContextVarImpl implements ContextVar {
 
     public static final Map<String, VariableContext> globalVarStorageMap = new ConcurrentHashMap<>();
-    private final @Getter @Accessors(fluent = true) ContextImpl context;
+    private final @Getter
+    @Accessors(fluent = true) ContextImpl context;
     private final VariableBackupRepository variableBackupRepository;
     private final ReentrantLock createContextLock = new ReentrantLock();
 
     public void onContextCreated() {
-        String broadcastsId = context.var().createGroup("broadcasts", "Broadcasts", group ->
-            group.setIcon(new Icon("fas fa-tower-broadcast", "#A32677")).setLocked(true));
+        context.var().createGroup(GROUP_HARDWARE, "Hardware", group ->
+                group.setIcon(new Icon("fas fa-server", "#2662a3")).setLocked(true));
 
-        context.var().createGroup(getMiscGroup(), "Misc", group ->
-            group.setIcon(new Icon("fas fa-star-half-stroke", "#A32677")).setLocked(true));
+        String broadcastsId = context.var().createGroup(GROUP_BROADCAST, "Broadcasts", group ->
+                group.setIcon(new Icon("fas fa-tower-broadcast", "#A32677")).setLocked(true));
+
+        context.var().createGroup(GROUP_MISC, "Misc", group ->
+                group.setIcon(new Icon("fas fa-star-half-stroke", "#A32677")).setLocked(true));
 
         for (WorkspaceVariable workspaceVariable : context.db().findAll(WorkspaceVariable.class)) {
             getOrCreateContext(workspaceVariable.getEntityID());
         }
 
         context.event().addEntityCreateListener(WorkspaceVariable.class, "var-create", variable ->
-            getOrCreateContext(variable.getEntityID()));
+                getOrCreateContext(variable.getEntityID()));
         context.event().addEntityUpdateListener(WorkspaceVariable.class, "var-update", variable -> {
             VariableContext context = getOrCreateContext(variable.getEntityID());
             if (variable.isBackup() != context.hasBackup) {
@@ -102,32 +99,32 @@ public class ContextVarImpl implements ContextVar {
             }
         });
         context.event().addEntityRemovedListener(WorkspaceVariable.class, "var-delete",
-            this::onVariableRemoved);
+                this::onVariableRemoved);
 
         context.event().addEntityRemovedListener(WorkspaceGroup.class, "group-delete",
-            workspaceGroup -> workspaceGroup.getWorkspaceVariables().forEach(this::onVariableRemoved));
+                workspaceGroup -> workspaceGroup.getWorkspaceVariables().forEach(this::onVariableRemoved));
 
         context.bgp().builder("var-backup").intervalWithDelay(Duration.ofSeconds(60))
                 .cancelOnError(false).execute(this::backupVariables);
 
         context.ui().addItemContextMenu(broadcastsId, "addSubGroup",
-            uiInputBuilder -> uiInputBuilder.addOpenDialogSelectableButton("ADD_BROADCAST_GROUP", new Icon("fas fa-layer-group"), null,
-                (context1, params) -> createBroadcastGroup(params, broadcastsId)).editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
-                flex.addTextInput("name", Lang.getServerMessage("field.GROUP_NAME"), true);
-                flex.addTextInput("description", "", false);
-                flex.addIconPicker("icon", "fas fa-object-group");
-                flex.addColorPicker("color", "#999999");
-            })));
+                uiInputBuilder -> uiInputBuilder.addOpenDialogSelectableButton("ADD_BROADCAST_GROUP", new Icon("fas fa-layer-group"), null,
+                        (context1, params) -> createBroadcastGroup(params, broadcastsId)).editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
+                    flex.addTextInput("name", Lang.getServerMessage("field.GROUP_NAME"), true);
+                    flex.addTextInput("description", "", false);
+                    flex.addIconPicker("icon", "fas fa-object-group");
+                    flex.addColorPicker("color", "#999999");
+                })));
 
         context.ui().addItemContextMenu(broadcastsId, "add",
-            uiInputBuilder -> uiInputBuilder.addOpenDialogSelectableButton("ADD_BROADCAST_VARIABLE", new Icon("fas fa-rss"), null,
-                (context1, params) -> createBroadcastVar(params)).editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
-                flex.addTextInput("name", Lang.getServerMessage("field.BROADCAST_NAME"), true);
-                flex.addTextInput("description", "", false);
-                flex.addSelectBox("parentGroup").setLazyOptionLoader(FetchBroadcastSubGroups.class);
-                flex.addIconPicker("icon", "fas fa-cloud");
-                flex.addColorPicker("color", "#999999");
-            })));
+                uiInputBuilder -> uiInputBuilder.addOpenDialogSelectableButton("ADD_BROADCAST_VARIABLE", new Icon("fas fa-rss"), null,
+                        (context1, params) -> createBroadcastVar(params)).editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
+                    flex.addTextInput("name", Lang.getServerMessage("field.BROADCAST_NAME"), true);
+                    flex.addTextInput("description", "", false);
+                    flex.addSelectBox("parentGroup").setLazyOptionLoader(FetchBroadcastSubGroups.class);
+                    flex.addIconPicker("icon", "fas fa-cloud");
+                    flex.addColorPicker("color", "#999999");
+                })));
     }
 
     @Override
@@ -135,18 +132,17 @@ public class ContextVarImpl implements ContextVar {
             @NotNull String parentGroupId,
             @NotNull String groupId,
             @NotNull String groupName,
-        @NotNull Consumer<GroupMetaBuilder> groupBuilder) {
+            @NotNull Consumer<GroupMetaBuilder> groupBuilder) {
         WorkspaceGroup parentGroup = assertGroupExists(parentGroupId);
         return saveOrUpdateGroup(parentGroupId + "-" + groupId, groupName, groupBuilder, wg -> wg.setHidden(true).setParent(parentGroup));
     }
 
     private @NotNull ActionResponseModel createBroadcastGroup(JSONObject params, String broadcastsId) {
         String name = params.getString("name");
-        context.var().createSubGroup(broadcastsId, String.valueOf(name.hashCode()), name, builder -> {
-            builder.setIcon(new Icon(params.getString("icon"),
-                       StringUtils.defaultIfEmpty(params.optString("color"), "#999999")))
-                   .setDescription(params.optString("description"));
-        });
+        context.var().createSubGroup(broadcastsId, String.valueOf(name.hashCode()), name, builder ->
+                builder.setIcon(new Icon(params.getString("icon"),
+                                StringUtils.defaultIfEmpty(params.optString("color"), "#999999")))
+                        .setDescription(params.optString("description")));
         return ActionResponseModel.success();
     }
 
@@ -232,7 +228,7 @@ public class ContextVarImpl implements ContextVar {
 
     @Override
     public String getTitle(@NotNull String variableId, String defaultTitle) {
-        WorkspaceVariable variable = context.db().getEntity(WorkspaceVariable.class, variableId);
+        WorkspaceVariable variable = context.db().get(WorkspaceVariable.class, variableId);
         return variable == null ? defaultTitle : variable.getTitle();
     }
 
@@ -253,7 +249,7 @@ public class ContextVarImpl implements ContextVar {
 
     @Override
     public boolean existsGroup(@NotNull String groupId) {
-        return context.db().getEntity(WorkspaceGroup.class, groupId) != null;
+        return context.db().get(WorkspaceGroup.class, groupId) != null;
     }
 
     @Override
@@ -271,9 +267,9 @@ public class ContextVarImpl implements ContextVar {
 
     @Override
     public boolean renameVariable(@NotNull String variableId, @NotNull String name, @Nullable String description) {
-        WorkspaceVariable workspaceVariable = context.db().getEntity(WorkspaceVariable.class, variableId);
+        WorkspaceVariable workspaceVariable = context.db().get(WorkspaceVariable.class, variableId);
         if (workspaceVariable != null
-                && (!Objects.equals(workspaceVariable.getName(), name)
+            && (!Objects.equals(workspaceVariable.getName(), name)
                 || !Objects.equals(workspaceVariable.getDescription(), description))) {
             workspaceVariable.setName(name);
             workspaceVariable.setDescription(description);
@@ -288,9 +284,9 @@ public class ContextVarImpl implements ContextVar {
         if (icon == null) {
             return false;
         }
-        WorkspaceVariable workspaceVariable = context.db().getEntity(WorkspaceVariable.class, variableId);
+        WorkspaceVariable workspaceVariable = context.db().get(WorkspaceVariable.class, variableId);
         if (workspaceVariable != null
-                && (!Objects.equals(workspaceVariable.getIcon(), icon.getIcon())
+            && (!Objects.equals(workspaceVariable.getIcon(), icon.getIcon())
                 || !Objects.equals(workspaceVariable.getIconColor(), icon.getColor()))) {
             context.db().save(workspaceVariable.setIcon(icon.getIcon()).setIconColor(icon.getColor()));
             return true;
@@ -302,10 +298,10 @@ public class ContextVarImpl implements ContextVar {
         String name = params.getString("name");
         String group = params.getString("parentGroup");
         context.var().createVariable(group, name, name,
-            VariableType.Any, builder ->
-                builder.setDescription(params.optString("description"))
-                       .setIcon(new Icon(params.getString("icon"),
-                           StringUtils.defaultIfEmpty(params.optString("color"), "#999999"))));
+                VariableType.Any, builder ->
+                        builder.setDescription(params.optString("description"))
+                                .setIcon(new Icon(params.getString("icon"),
+                                        StringUtils.defaultIfEmpty(params.optString("color"), "#999999"))));
         return ActionResponseModel.success();
     }
 
@@ -316,7 +312,7 @@ public class ContextVarImpl implements ContextVar {
 
     @Override
     public @NotNull String buildDataSource(@NotNull String variableId) {
-        WorkspaceVariable variable = context.db().getEntityRequire(variableId);
+        WorkspaceVariable variable = context.db().getRequire(variableId);
         return buildDataSource(variable);
     }
 
@@ -339,10 +335,10 @@ public class ContextVarImpl implements ContextVar {
 
     public Object evaluate(@Nullable String code, @Nullable List<TransformVariableSource> sources) {
         List<TransformVariableSourceImpl> sourceIds = sources == null ? List.of() :
-            sources.stream()
-                   .filter(s -> StringUtils.isNotBlank(s.getType()) && StringUtils.isNotBlank(s.getValue()))
-                   .map((TransformVariableSource source) -> new TransformVariableSourceImpl(source, this))
-                   .toList();
+                sources.stream()
+                        .filter(s -> StringUtils.isNotBlank(s.getType()) && StringUtils.isNotBlank(s.getValue()))
+                        .map((TransformVariableSource source) -> new TransformVariableSourceImpl(source, this))
+                        .toList();
         if (StringUtils.isNotEmpty(code)) {
             DynamicVariableSet variables = new DynamicVariableSet(sourceIds);
             return new ExtendedDoubleEvaluator(ContextVarImpl.this).evaluate(code, variables);
@@ -375,7 +371,7 @@ public class ContextVarImpl implements ContextVar {
 
     public void deleteGroup(@Nullable String entityID) {
         if (entityID != null) {
-            WorkspaceGroup group = context.db().getEntity(WorkspaceGroup.class, entityID);
+            WorkspaceGroup group = context.db().get(WorkspaceGroup.class, entityID);
             if (group != null) {
                 if (group.isDisableDelete()) {
                     group.setLocked(false);
@@ -437,11 +433,11 @@ public class ContextVarImpl implements ContextVar {
 
     @Override
     public @NotNull Variable createTransformVariable(
-        @NotNull String groupId,
-        @Nullable String variableId,
-        @NotNull String variableName,
-        @NotNull VariableType variableType,
-        @Nullable Consumer<TransformVariableMetaBuilder> builder) {
+            @NotNull String groupId,
+            @Nullable String variableId,
+            @NotNull String variableName,
+            @NotNull VariableType variableType,
+            @Nullable Consumer<TransformVariableMetaBuilder> builder) {
         WorkspaceVariable entity = getOrCreateVariable(groupId, variableId);
         entity.setReadOnly(true);
         entity.setVarType(VarType.transform);
@@ -456,7 +452,7 @@ public class ContextVarImpl implements ContextVar {
     }
 
     private WorkspaceVariable getOrCreateVariable(@NotNull String groupId, @Nullable String variableId) {
-        WorkspaceVariable entity = variableId == null ? null : context.db().getEntity(WorkspaceVariable.class, variableId);
+        WorkspaceVariable entity = variableId == null ? null : context.db().get(WorkspaceVariable.class, variableId);
 
         if (entity == null) {
             entity = new WorkspaceVariable(assertGroupExists(groupId));
@@ -471,7 +467,7 @@ public class ContextVarImpl implements ContextVar {
                 createContextLock.lock();
                 variableContext = globalVarStorageMap.get(variableId);
                 if (variableContext == null) {
-                    WorkspaceVariable entity = context.db().getEntity(WorkspaceVariable.class, variableId);
+                    WorkspaceVariable entity = context.db().get(WorkspaceVariable.class, variableId);
                     if (entity == null) {
                         throw new NotFoundException("Unable to find variable: " + variableId);
                     }
@@ -489,7 +485,7 @@ public class ContextVarImpl implements ContextVar {
         WorkspaceGroup workspaceGroup = varContext.variable.getTopGroup();
         if (validateValueBeforeSave(value, varContext)) {
             String error = format("Validation type restriction: Unable to set value: '%s' to variable: '%s/%s' of type: '%s'", value,
-                varContext.variable.getName(), workspaceGroup.getEntityID(), varContext.variable.getRestriction().name());
+                    varContext.variable.getName(), workspaceGroup.getEntityID(), varContext.variable.getRestriction().name());
             throw new IllegalArgumentException(error);
         }
         varContext.storageService.save(new WorkspaceVariableMessage(value));
@@ -499,7 +495,7 @@ public class ContextVarImpl implements ContextVar {
         // Fire update 'value' on UI
         WorkspaceVariableEntity updatedEntity = WorkspaceVariableEntity.updatableEntity(varContext.variable, context);
         context.ui().updateInnerSetItem(workspaceGroup, "workspaceVariableEntities",
-            varContext.variable.getEntityID(), varContext.variable.getEntityID(), updatedEntity);
+                varContext.variable.getEntityID(), varContext.variable.getEntityID(), updatedEntity);
 
         if (varContext.linkListener != null) {
             try {
@@ -528,8 +524,8 @@ public class ContextVarImpl implements ContextVar {
                     }
                     String strValue = value.toString();
                     if (strValue.equalsIgnoreCase("true")
-                            || strValue.equalsIgnoreCase("1")
-                            || strValue.equalsIgnoreCase("ON")) {
+                        || strValue.equalsIgnoreCase("1")
+                        || strValue.equalsIgnoreCase("ON")) {
                         return true;
                     }
                     return false;
@@ -572,8 +568,8 @@ public class ContextVarImpl implements ContextVar {
 
         if (context.variable.isBackup()) {
             List<VariableBackup> backupData = variableBackupRepository.findAll(
-                context.variable,
-                context.variable.getQuota());
+                    context.variable,
+                    context.variable.getQuota());
             var messages = backupData.stream()
                     .map(bd -> WorkspaceVariableMessage.of(bd, context.valueConverter.apply(bd.getValue())))
                     .sorted().collect(Collectors.toList());
@@ -586,9 +582,9 @@ public class ContextVarImpl implements ContextVar {
     }
 
     private String saveOrUpdateGroup(@NotNull String groupId, @NotNull String groupName,
-        @NotNull Consumer<GroupMetaBuilder> groupBuilder,
-                                      @NotNull Consumer<WorkspaceGroup> additionalHandler) {
-        WorkspaceGroup entity = context.db().getEntity(WorkspaceGroup.class, groupId);
+                                     @NotNull Consumer<GroupMetaBuilder> groupBuilder,
+                                     @NotNull Consumer<WorkspaceGroup> additionalHandler) {
+        WorkspaceGroup entity = context.db().get(WorkspaceGroup.class, groupId);
         if (entity == null) {
             entity = new WorkspaceGroup();
             entity.setEntityID(groupId);
@@ -639,7 +635,7 @@ public class ContextVarImpl implements ContextVar {
     }
 
     private WorkspaceGroup assertGroupExists(@NotNull String groupId) {
-        WorkspaceGroup entity = context.db().getEntity(WorkspaceGroup.class, groupId);
+        WorkspaceGroup entity = context.db().get(WorkspaceGroup.class, groupId);
         if (entity == null) {
             throw new IllegalArgumentException("Variable group with id: " + groupId + " not exists");
         }
@@ -655,7 +651,8 @@ public class ContextVarImpl implements ContextVar {
         private WorkspaceVariable variable;
         // fire every link listener in separate thread
         private ThrowingConsumer<Object, Exception> linkListener;
-        private @Nullable @Setter TransformVariableContext transformVariableContext;
+        private @Nullable
+        @Setter TransformVariableContext transformVariableContext;
         private boolean hasBackup;
 
         @Override
@@ -777,7 +774,8 @@ public class ContextVarImpl implements ContextVar {
             return switch (source.getType()) {
                 case "mqtt" -> MQTTEntityService.buildMqttListenEvent(Objects.requireNonNull(source.getMeta()), value);
                 case "var" -> value;
-                default -> throw new IllegalArgumentException("Unable to find source listened for type: " + source.getType());
+                default ->
+                        throw new IllegalArgumentException("Unable to find source listened for type: " + source.getType());
             };
         }
 
@@ -794,7 +792,8 @@ public class ContextVarImpl implements ContextVar {
 
         public interface TransformVariableValueHandler {
 
-            @Nullable Number getValue();
+            @Nullable
+            Number getValue();
         }
     }
 
@@ -816,10 +815,12 @@ public class ContextVarImpl implements ContextVar {
         }
 
         private void recalculate() {
-            if (error) {return;}
+            if (error) {
+                return;
+            }
             try {
                 Double result = (Double) new ExtendedDoubleEvaluator(ContextVarImpl.this)
-                    .evaluate(varContext.variable.getCode(), variables);
+                        .evaluate(varContext.variable.getCode(), variables);
                 set(varContext, result, false);
             } catch (Exception ex) {
                 log.warn("Unable to evaluate variable expression: '{}'. Msg: {}", varContext.variable.getCode(), CommonUtils.getErrorMessage(ex));
@@ -830,17 +831,17 @@ public class ContextVarImpl implements ContextVar {
             List<TransformVariableSourceImpl> sources = List.of();
             try {
                 sources = varContext.variable.getSources().stream().map(
-                                     (TransformVariableSource source) ->
-                                         new TransformVariableSourceImpl(source, ContextVarImpl.this))
-                                             .toList();
+                                (TransformVariableSource source) ->
+                                        new TransformVariableSourceImpl(source, ContextVarImpl.this))
+                        .toList();
                 for (TransformVariableSourceImpl source : sources) {
                     context.event().addEventBehaviourListener(source.getListenSource(), varContext.variable.getEntityID(), o ->
-                        this.recalculate());
+                            this.recalculate());
                 }
             } catch (Exception ex) {
                 this.error = true;
                 log.warn("Unable to register variable sources: {}. Msg: {}",
-                    varContext.variable.getTitle(), CommonUtils.getErrorMessage(ex));
+                        varContext.variable.getTitle(), CommonUtils.getErrorMessage(ex));
             }
             this.variables = new DynamicVariableSet(sources);
         }
@@ -863,7 +864,7 @@ public class ContextVarImpl implements ContextVar {
                             Long from = arguments.hasNext() ? getSince((Double) arguments.next()) : null;
                             Long to = arguments.hasNext() ? getSince((Double) arguments.next()) : null;
                             Object value = varContext.aggregate(varId, from, to, aggregationType,
-                                true);
+                                    true);
                             return value == null ? 0 : ((Number) value).doubleValue();
                         });
                         params.add(func);
@@ -900,7 +901,7 @@ public class ContextVarImpl implements ContextVar {
 
         @Override
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
-            WorkspaceGroup entity = parameters.context().db().getEntityRequire(WorkspaceGroup.PREFIX + "broadcasts");
+            WorkspaceGroup entity = parameters.context().db().getRequire(WorkspaceGroup.PREFIX + GROUP_BROADCAST);
             return OptionModel.entityList(entity.getChildrenGroups(), parameters.context());
         }
     }

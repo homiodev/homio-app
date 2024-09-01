@@ -32,6 +32,7 @@ import java.net.ConnectException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import static java.lang.String.format;
@@ -217,7 +218,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
             errorMessage = error.path("message").asText("W.ERROR.SYNC");
         } catch (Exception ignore) {
         }
-        return defaultString(errorMessage, "W.ERROR.SYNC");
+        return Objects.toString(errorMessage, "W.ERROR.SYNC");
     }
 
     private record SyncRequest(String email, String password, String passphrase, String uuid, boolean recreate) {

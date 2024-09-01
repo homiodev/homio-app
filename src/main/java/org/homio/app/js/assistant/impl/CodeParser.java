@@ -257,8 +257,8 @@ public class CodeParser {
         }
 
         return collect.isEmpty() ? "()" : "(" + (asComments ? "/*" : "") +
-                StringUtils.join(collect, (asComments ? "*/" : "") + "   , " + (asComments ? "/*" : "") + " ") +
-                (asComments ? "*/" : "") + ")";
+                                          StringUtils.join(collect, (asComments ? "*/" : "") + "   , " + (asComments ? "/*" : "") + " ") +
+                                          (asComments ? "*/" : "") + ")";
     }
 
     private Completion convertFieldToCompletion(Field field) {

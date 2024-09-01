@@ -1,25 +1,12 @@
 package org.homio.app.model.entity.widget.impl.color;
 
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-
 import jakarta.persistence.Entity;
-
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldKeyValue;
+import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.UIFieldKeyValue.KeyValueType;
-import org.homio.api.ui.field.UIFieldLayout;
 import org.homio.api.ui.field.UIFieldLayout.HorizontalAlign;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.api.ui.field.UIFieldSlider;
-import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;
@@ -30,6 +17,12 @@ import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.model.entity.widget.attributes.HasName;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 @Entity
 public class WidgetColorEntity extends WidgetEntity<WidgetColorEntity>

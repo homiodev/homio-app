@@ -3,7 +3,6 @@ package org.homio.app.model.entity.widget.attributes;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.selection.UIFieldBeanSelection;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;

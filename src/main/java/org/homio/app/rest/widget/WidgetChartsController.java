@@ -2,9 +2,6 @@ package org.homio.app.rest.widget;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,6 +25,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 @Log4j2
 @RestController
@@ -103,7 +104,7 @@ public class WidgetChartsController {
     public TimeSeriesChartData<ChartDataset> getDoughnutSeries(
             @Valid @RequestBody WidgetDataRequest request) {
         WidgetDoughnutChartEntity entity =
-            request.getEntity(context, objectMapper, WidgetDoughnutChartEntity.class);
+                request.getEntity(context, objectMapper, WidgetDoughnutChartEntity.class);
         TimeSeriesChartData<ChartDataset> result =
                 getValueDataset(request, WidgetDoughnutChartEntity.class);
 

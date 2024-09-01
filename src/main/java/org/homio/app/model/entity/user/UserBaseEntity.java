@@ -25,43 +25,25 @@ import org.json.JSONObject;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
-import static org.homio.api.util.Constants.*;
+import static org.homio.api.util.Constants.ADMIN_ROLE;
 
 @Entity
 public abstract class UserBaseEntity extends IdentityEntity
         implements UserEntity, HasEntityLog, HasDynamicContextMenuActions {
 
-    public static final String LOG_RESOURCE = "ROLE_LOG";
-    public static final String LOG_RESOURCE_AUTHORIZE = "hasRole('" + LOG_RESOURCE + "')";
-    public static final String SSH_RESOURCE = "ROLE_SSH";
-    public static final String SSH_RESOURCE_AUTHORIZE = "hasRole('" + SSH_RESOURCE + "')";
-    public static final String MQTT_RESOURCE = "ROLE_MQTT";
-    public static final String FILE_MANAGER_RESOURCE = "ROLE_FILE_MANAGER";
-    public static final String FILE_MANAGER_RESOURCE_AUTHORIZE = "hasRole('" + FILE_MANAGER_RESOURCE + "')";
-    private static final Set<String> RESOURCES = new HashSet<>();
     public static Logger log = LogManager.getLogger(UserBaseEntity.class);
-
-    static {
-        RESOURCES.add(LOG_RESOURCE);
-        RESOURCES.add(SSH_RESOURCE);
-        RESOURCES.add(MQTT_RESOURCE);
-        RESOURCES.add(FILE_MANAGER_RESOURCE);
-    }
 
     @Override
     public @Nullable Status.EntityStatus getEntityStatus() {
         return null;
     }
 
-    public static void registerResource(String resource) {
-        RESOURCES.add(resource);
-    }
-
-    @UIField(order = 5, required = true, inlineEditWhenEmpty = true)
-    public String getEmail() {
-        return getIeeeAddress();
+    @UIField(order = 5, required = true, inlineEditWhenEmpty = true, disableEdit = true)
+    public @NotNull String getEmail() {
+        return Objects.toString(getIeeeAddress(), "");
     }
 
     public UserBaseEntity setEmail(String value) {
@@ -72,7 +54,7 @@ public abstract class UserBaseEntity extends IdentityEntity
         return this;
     }
 
-    @UIField(order = 10, required = true, inlineEditWhenEmpty = true)
+    @UIField(order = 10, required = true, inlineEditWhenEmpty = true, disableEdit = true)
     public SecureString getPassword() {
         return getJsonSecure("pwd");
     }
@@ -84,7 +66,7 @@ public abstract class UserBaseEntity extends IdentityEntity
         setJsonDataSecure("pwd", value);
     }
 
-    @UIField(order = 10)
+    @UIField(order = 10, disableEdit = true)
     public abstract @NotNull UserType getUserType();
 
     @Override
@@ -100,21 +82,10 @@ public abstract class UserBaseEntity extends IdentityEntity
     @JsonIgnore
     public @NotNull Set<String> getRoles() {
         Set<String> roles = new HashSet<>();
-        roles.add(GUEST_ROLE);
-        switch (getUserType()) {
-            case ADMIN -> {
-                roles.add(ADMIN_ROLE);
-                roles.add(PRIVILEGED_USER_ROLE);
-                roles.addAll(RESOURCES);
-            }
-            case PRIVILEGED -> roles.add(PRIVILEGED_USER_ROLE);
+        if (getUserType() == UserType.ADMIN) {
+            roles.add(ADMIN_ROLE);
         }
         return roles;
-    }
-
-    @Override
-    public boolean isDisableEdit() {
-        return true;
     }
 
     public boolean matchPassword(String password, PasswordEncoder passwordEncoder) {
@@ -167,7 +138,7 @@ public abstract class UserBaseEntity extends IdentityEntity
     @Override
     @UIFieldIgnore
     @JsonIgnore
-    public String getIeeeAddress() {
+    public @Nullable String getIeeeAddress() {
         return super.getIeeeAddress();
     }
 
@@ -218,5 +189,29 @@ public abstract class UserBaseEntity extends IdentityEntity
         if (getPassword().isEmpty()) {
             fields.add("password");
         }
+    }
+
+    @Override
+    public boolean isDisableDelete() {
+        return !context().isAdmin();
+    }
+
+    @Override
+    public boolean isDisableEdit() {
+        return !context().isAdmin();
+    }
+
+    @Override
+    @UIFieldIgnore
+    @JsonIgnore
+    public Set<String> getHideForUsers() {
+        return super.getHideForUsers();
+    }
+
+    @Override
+    @UIFieldIgnore
+    @JsonIgnore
+    public Set<String> getDisableEditForUsers() {
+        return super.getDisableEditForUsers();
     }
 }

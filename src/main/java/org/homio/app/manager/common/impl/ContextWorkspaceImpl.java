@@ -12,7 +12,8 @@ import org.jetbrains.annotations.NotNull;
 @Log4j2
 public class ContextWorkspaceImpl implements ContextWorkspace {
 
-    private final @Getter @Accessors(fluent = true) ContextImpl context;
+    private final @Getter
+    @Accessors(fluent = true) ContextImpl context;
     private WorkspaceService workspaceService;
 
     public ContextWorkspaceImpl(ContextImpl context) {

@@ -1,12 +1,5 @@
 package org.homio.app.audio.webaudio;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
@@ -18,6 +11,9 @@ import org.homio.api.audio.stream.URLAudioStream;
 import org.homio.app.audio.AudioService;
 import org.homio.app.manager.common.impl.ContextUIImpl;
 import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.util.*;
 
 @Log4j2
 @Component
@@ -53,7 +49,7 @@ public class WebAudioAudioSink implements AudioSink {
             } else {
                 throw new IllegalArgumentException(
                         "Web audio sink can only handle FixedLengthAudioStreams and URLAudioStreams: " +
-                                audioStream.getClass().getSimpleName());
+                        audioStream.getClass().getSimpleName());
             }
         } catch (IOException e) {
             log.debug("Error while closing the audio stream: {}", e.getMessage(), e);

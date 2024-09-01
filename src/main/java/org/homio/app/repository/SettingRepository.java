@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.Context;
 import org.homio.api.console.ConsolePlugin;
@@ -87,7 +88,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
             }
             if (entity.isStorable()) {
                 boolean isSelectBox = entity.getSettingType().equals(UIFieldType.SelectBoxButton.name())
-                    || entity.getSettingType().equals(UIFieldType.SelectBox.name());
+                                      || entity.getSettingType().equals(UIFieldType.SelectBox.name());
                 if (isSelectBox && !entity.isLazyLoad()) {
                     entity.setAvailableValues(SettingRepository.getOptions((SettingPluginOptions<?>) plugin, context, null));
                 }
@@ -138,7 +139,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
     @Override
     public void onContextRefresh(Context context) {
         for (SettingPlugin settingPlugin : ContextSettingImpl.settingPluginsBy(p -> !p.transientState())) {
-            SettingEntity settingEntity = context.db().getEntity(getKey(settingPlugin));
+            SettingEntity settingEntity = context.db().get(getKey(settingPlugin));
             if (settingEntity == null) {
                 SettingEntity entity = new SettingEntity();
                 entity.setEntityID(getKey(settingPlugin));

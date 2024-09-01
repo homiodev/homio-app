@@ -1,38 +1,8 @@
 package org.homio.app;
 
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.apache.logging.slf4j.Log4jLogger.FQCN;
-
 import com.pivovarit.function.ThrowingConsumer;
 import com.sshtools.common.logger.DefaultLoggerContext;
 import com.sshtools.common.logger.Log;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.logging.FileHandler;
-import java.util.logging.LogRecord;
-import java.util.logging.SimpleFormatter;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -69,6 +39,26 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
+
+import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.logging.FileHandler;
+import java.util.logging.LogRecord;
+import java.util.logging.SimpleFormatter;
+
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.logging.slf4j.Log4jLogger.FQCN;
 
 @Log4j2
 @Component
@@ -176,7 +166,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
 
     public FileLogger getFileLogger(BaseEntity baseEntity, String suffix) {
         return fileLoggers.computeIfAbsent(baseEntity.getEntityID(), s -> new ConcurrentHashMap<>())
-                          .computeIfAbsent(suffix, file -> new FileLoggerImpl(suffix, baseEntity));
+                .computeIfAbsent(suffix, file -> new FileLoggerImpl(suffix, baseEntity));
     }
 
     @SneakyThrows
@@ -204,7 +194,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
                         return;
                     }
                     if (level.intLevel() <= Level.DEBUG.intLevel()) {
-                        Message data = params.length == 0 ? messageFactory.newMessage(message) : messageFactory.newMessage(message, params);
+                        Message data = params == null || params.length == 0 ? messageFactory.newMessage(message) : messageFactory.newMessage(message, params);
                         LogEvent event = log4jLogEventFactory.createEvent(logger.getName(), marker, FQCN, level, data, null, data.getThrowable());
                         eventQueue.add(event);
                     }
@@ -267,10 +257,10 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
     private static void addLogEntity(BaseEntity entity) {
         if (!globalAppender.logConsumers.containsKey(entity.getEntityID())) {
             LogConsumer logConsumer = new LogConsumer(
-                entity.getEntityID(),
-                entity.getClass(),
-                createLogFile(entity, ""),
-                ((HasEntityLog) entity).isDebug());
+                    entity.getEntityID(),
+                    entity.getClass(),
+                    createLogFile(entity, ""),
+                    ((HasEntityLog) entity).isDebug());
             EntityLogBuilderImpl entityLogBuilder = new EntityLogBuilderImpl(entity, logConsumer);
             ((HasEntityLog) entity).logBuilder(entityLogBuilder);
 
@@ -295,7 +285,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
     @SneakyThrows
     private static void sendLogEvent(LogEvent event, ThrowingConsumer<String, Exception> consumer) {
         try {
-        boolean entityPrefix = Optional.ofNullable(event.getMessage().getFormat()).map(s -> s.startsWith("[{}]: ")).orElse(false);
+            boolean entityPrefix = Optional.ofNullable(event.getMessage().getFormat()).map(s -> s.startsWith("[{}]: ")).orElse(false);
             String message = event.getMessage().getFormattedMessage();
             if (entityPrefix) {
                 message = message.substring(message.indexOf("]: ") + 3);
@@ -376,7 +366,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
                 for (Entry<String, DefinedAppenderConsumer> entry : definedAppender.entrySet()) {
                     if (entry.getValue().accept(event.getLoggerName())) {
                         sendLogEvent(event, message ->
-                            context.ui().sendDynamicUpdate("appender-log-" + entry.getKey(), message));
+                                context.ui().sendDynamicUpdate("appender-log-" + entry.getKey(), message));
                     }
                 }
             }

@@ -1,9 +1,5 @@
 package org.homio.app.builder.widget;
 
-import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
-
-import java.util.Objects;
-import java.util.function.Consumer;
 import lombok.Getter;
 import org.homio.api.ContextWidget.PulseBuilder;
 import org.homio.api.ContextWidget.ThresholdBuilder;
@@ -15,6 +11,11 @@ import org.homio.app.model.entity.widget.attributes.HasBackground;
 import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Objects;
+import java.util.function.Consumer;
+
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 
 @Getter
 public class WidgetBaseBuilderImpl<T, W extends WidgetEntity> implements WidgetBaseBuilder<T> {
@@ -91,7 +92,7 @@ public class WidgetBaseBuilderImpl<T, W extends WidgetEntity> implements WidgetB
 
     @Override
     public @NotNull T attachToLayout(@NotNull String layoutEntityID, int rowNum, int columnNum) {
-        WidgetLayoutEntity entity = context.db().getEntity(WidgetLayoutEntity.class, layoutEntityID);
+        WidgetLayoutEntity entity = context.db().get(WidgetLayoutEntity.class, layoutEntityID);
         if (entity == null) {
             throw new IllegalArgumentException("Unable to find layout: " + layoutEntityID);
         }

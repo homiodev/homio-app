@@ -1,9 +1,5 @@
 package org.homio.app.builder.ui;
 
-import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
-
-import java.util.ArrayList;
-import java.util.Collection;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -18,6 +14,11 @@ import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.app.rest.ItemController;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.Collection;
+
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 
 @Getter
 @Accessors(chain = true)

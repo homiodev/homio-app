@@ -158,10 +158,10 @@ public class ColorThief {
         if (expectedDataLength != pixels.length) {
             throw new IllegalArgumentException(
                     "(expectedDataLength = "
-                            + expectedDataLength
-                            + ") != (pixels.length = "
-                            + pixels.length
-                            + ")");
+                    + expectedDataLength
+                    + ") != (pixels.length = "
+                    + pixels.length
+                    + ")");
         }
 
         // Store the RGB values in an array format suitable for quantize function

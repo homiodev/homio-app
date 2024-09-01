@@ -6,13 +6,6 @@ import com.sshtools.client.sftp.SftpClientTask;
 import com.sshtools.client.sftp.SftpFile;
 import com.sshtools.common.sftp.SftpStatusException;
 import com.sshtools.common.ssh.SshException;
-import java.io.InputStream;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Condition;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.homio.api.Context;
@@ -23,6 +16,14 @@ import org.homio.app.ssh.SshGenericFileSystem.SshFile;
 import org.homio.app.ssh.SshGenericFileSystem.SshFileService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.io.InputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Condition;
+import java.util.stream.Collectors;
 
 public class SshGenericFileSystem extends BaseCachedFileSystemProvider<SshGenericEntity, SshFile, SshFileService> {
 

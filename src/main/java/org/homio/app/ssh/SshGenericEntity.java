@@ -433,7 +433,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
                 sshClient.executeCommand("ls");
                 // success tested
             } catch (Exception e) {
-                if (StringUtils.defaultString(e.getMessage(), "").contains("Task did not succeed")) {
+                if (Objects.toString(e.getMessage(), "").contains("Task did not succeed")) {
                     e = new RuntimeException("Unknown error during execute 'ls' command");
                 }
                 throw new RuntimeException(e);

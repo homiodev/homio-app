@@ -1,21 +1,20 @@
 package org.homio.app.config;
 
-import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
-import static org.homio.app.config.WebSocketConfig.WEB_SOCKET_ENDPOINT;
-
 import jakarta.servlet.DispatcherType;
 import lombok.AllArgsConstructor;
 import lombok.val;
 import org.apache.catalina.filters.RequestFilter;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
-import org.homio.app.auth.CacheAuthenticationProvider;
 import org.homio.app.auth.AccessFilter;
+import org.homio.app.auth.CacheAuthenticationProvider;
 import org.homio.app.auth.JwtTokenProvider;
 import org.homio.app.auth.UserEntityDetailsService;
 import org.homio.app.manager.common.impl.ContextSettingImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -29,6 +28,9 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.validation.beanvalidation.MethodValidationPostProcessor;
 
+import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
+import static org.homio.app.config.WebSocketConfig.WEB_SOCKET_ENDPOINT;
+
 @Configuration
 @EnableWebSecurity
 @AllArgsConstructor
@@ -38,6 +40,7 @@ public class SecurityConfiguration {
     private final UserEntityDetailsService userEntityDetailsService;
     private final JwtTokenProvider jwtTokenProvider;
     private final Log log = LogFactory.getLog(RequestFilter.class);
+    private final Environment env;
 
     @Bean
     public MethodValidationPostProcessor methodValidationPostProcessor() {
@@ -54,7 +57,7 @@ public class SecurityConfiguration {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         // Entry points
-        if (ContextSettingImpl.getHomioProperties().getProperty("security-disable", "false").equalsIgnoreCase("true")) {
+        if (env.getProperty("security-disable", Boolean.class, false)) {
             log.warn("""
                     -----------------------------------
                     !!! HOMIO security disabled !!!
@@ -71,6 +74,7 @@ public class SecurityConfiguration {
                         CUSTOM_WEB_SOCKET_ENDPOINT + "/**",
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
+                        "/rest/i18n/**",
                         "/rest/auth/status",
                         "/rest/auth/login",
                         "/rest/auth/register",
@@ -83,6 +87,8 @@ public class SecurityConfiguration {
                         "/rest/media/image/**",
                         "/rest/route/proxy/**",
                         "/rest/device/**").permitAll();
+                // allow preflight requests
+                authorize.requestMatchers(HttpMethod.OPTIONS).permitAll();
                 authorize.requestMatchers("/rest/**").authenticated();
             });
             http.csrf(AbstractHttpConfigurer::disable);

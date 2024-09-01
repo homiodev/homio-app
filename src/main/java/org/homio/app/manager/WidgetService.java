@@ -2,6 +2,7 @@ package org.homio.app.manager;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -72,9 +73,11 @@ public class WidgetService implements ContextCreated {
     @RequiredArgsConstructor
     public static class AvailableWidget {
 
-        private @NotNull final String key;
+        private @NotNull
+        final String key;
         private final String icon;
         private final List<AvailableWidget> children;
-        private @Setter @Accessors(chain = true) String color;
+        private @Setter
+        @Accessors(chain = true) String color;
     }
 }

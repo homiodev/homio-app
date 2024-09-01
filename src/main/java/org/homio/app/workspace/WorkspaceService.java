@@ -3,6 +3,7 @@ package org.homio.app.workspace;
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 import com.pivovarit.function.ThrowingRunnable;
+
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
@@ -15,6 +16,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -146,7 +148,7 @@ public class WorkspaceService implements ContextRefreshed {
         }
 
         workspaceTabHolder =
-            new WorkspaceTabHolder(workspaceTab.getEntityID(), context, scratch3Blocks);
+                new WorkspaceTabHolder(workspaceTab.getEntityID(), context, scratch3Blocks);
         tabs.put(workspaceTab.getEntityID(), workspaceTabHolder);
 
         if (StringUtils.isNotEmpty(workspaceTab.getContent())) {
@@ -270,14 +272,14 @@ public class WorkspaceService implements ContextRefreshed {
 
         // listen for clear workspace
         context.setting().listenValue(WorkspaceClearButtonSetting.class, "wm-clear-workspace",
-            () -> context.db().findAll(WorkspaceEntity.class)
-                         .forEach(entity -> context.db().save(entity.setContent(""))));
+                () -> context.db().findAll(WorkspaceEntity.class)
+                        .forEach(entity -> context.db().save(entity.setContent(""))));
     }
 
     private void reloadWorkspaces() {
         List<WorkspaceEntity> workspaceTabs = context.db().findAll(WorkspaceEntity.class);
         if (workspaceTabs.isEmpty()) {
-            WorkspaceEntity mainWorkspace = context.db().getEntity(WorkspaceEntity.class, PRIMARY_DEVICE);
+            WorkspaceEntity mainWorkspace = context.db().get(WorkspaceEntity.class, PRIMARY_DEVICE);
             if (mainWorkspace == null) {
                 WorkspaceEntity main = new WorkspaceEntity(PRIMARY_DEVICE, "main");
                 main.setLocked(true);

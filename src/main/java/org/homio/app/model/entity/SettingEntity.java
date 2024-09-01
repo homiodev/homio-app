@@ -5,15 +5,14 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Transient;
-import java.util.Collection;
-import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.HasJsonData;
+import org.homio.api.entity.UserEntity;
 import org.homio.api.model.Icon;
 import org.homio.api.model.JSON;
 import org.homio.api.model.OptionModel;
@@ -25,11 +24,16 @@ import org.homio.app.repository.SettingRepository;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
+import java.util.Collection;
+import java.util.Set;
+
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+
 @Getter
 @Setter
 @Entity
 @Accessors(chain = true)
-public class SettingEntity extends BaseEntity {
+public class SettingEntity extends BaseEntity implements HasJsonData {
 
     public static final String PREFIX = "st_";
 
@@ -108,7 +112,7 @@ public class SettingEntity extends BaseEntity {
     public static String getKey(SettingPlugin settingPlugin) {
         if (settingPlugin instanceof DynamicConsoleHeaderSettingPlugin) {
             return SettingEntity.PREFIX
-                    + ((DynamicConsoleHeaderSettingPlugin) settingPlugin).getKey();
+                   + ((DynamicConsoleHeaderSettingPlugin) settingPlugin).getKey();
         }
         return SettingEntity.PREFIX + settingPlugin.getClass().getSimpleName();
     }
@@ -129,10 +133,19 @@ public class SettingEntity extends BaseEntity {
     }
 
     public String getValue() {
-        return StringUtils.defaultIfEmpty(value, defaultValue);
+        UserEntity user = context().getUser();
+        String value = this.value;
+        if (user != null && !user.isAdmin()) {
+            value = defaultIfEmpty(getJsonData(user.getEmail()), this.value);
+        }
+        return defaultIfEmpty(value, defaultValue);
     }
 
     public SettingEntity setValue(String value) {
+        UserEntity user = context().getUser();
+        if (user != null && !user.isAdmin()) {
+            setJsonData(user.getEmail(), value);
+        }
         this.value = value;
         return this;
     }
@@ -170,12 +183,6 @@ public class SettingEntity extends BaseEntity {
         // dynamic settings(firmata has no parameters)
         SettingPlugin plugin = ContextSettingImpl.settingPluginsByPluginKey.get(getEntityID());
         return plugin == null ? null : SettingRepository.getSettingAddonName(context(), plugin.getClass());
-    }
-
-    @Override
-    @JsonIgnore
-    public boolean isDisableEdit() {
-        return super.isDisableEdit();
     }
 
     @Override

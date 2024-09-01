@@ -51,9 +51,4 @@ public class SystemLogoutButtonSetting
     public String getDialogColor() {
         return Color.ERROR_DIALOG;
     }
-
-    @Override
-    public void assertUserAccess(@NotNull Context context, @Nullable UserEntity user) {
-        // allow logout for everyone
-    }
 }

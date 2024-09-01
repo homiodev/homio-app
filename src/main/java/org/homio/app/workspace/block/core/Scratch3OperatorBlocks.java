@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.function.Function;
+
 import lombok.Getter;
 import org.homio.api.Context;
 import org.homio.api.state.DecimalType;
@@ -73,7 +74,7 @@ public class Scratch3OperatorBlocks extends Scratch3ExtensionBlocks {
     private OnOffType orEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
         return OnOffType.of(
                 workspaceBlock.getInputWorkspaceBlock("OPERAND1").evaluate().boolValue()
-                        || workspaceBlock
+                || workspaceBlock
                         .getInputWorkspaceBlock("OPERAND2")
                         .evaluate()
                         .boolValue());
@@ -82,7 +83,7 @@ public class Scratch3OperatorBlocks extends Scratch3ExtensionBlocks {
     private OnOffType andEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
         return OnOffType.of(
                 workspaceBlock.getInputWorkspaceBlock("OPERAND1").evaluate().boolValue()
-                        && workspaceBlock
+                && workspaceBlock
                         .getInputWorkspaceBlock("OPERAND2")
                         .evaluate()
                         .boolValue());
@@ -93,7 +94,7 @@ public class Scratch3OperatorBlocks extends Scratch3ExtensionBlocks {
                 Double.compare(
                         workspaceBlock.getInputFloat("OPERAND1"),
                         workspaceBlock.getInputFloat("OPERAND2"))
-                        > 0);
+                > 0);
     }
 
     private OnOffType equalsEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
@@ -101,7 +102,7 @@ public class Scratch3OperatorBlocks extends Scratch3ExtensionBlocks {
                 Double.compare(
                         workspaceBlock.getInputFloat("OPERAND1"),
                         workspaceBlock.getInputFloat("OPERAND2"))
-                        == 0);
+                == 0);
     }
 
     private OnOffType ltEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
@@ -109,7 +110,7 @@ public class Scratch3OperatorBlocks extends Scratch3ExtensionBlocks {
                 Double.compare(
                         workspaceBlock.getInputFloat("OPERAND1"),
                         workspaceBlock.getInputFloat("OPERAND2"))
-                        < 0);
+                < 0);
     }
 
     private DecimalType randomEvaluateEvaluate(WorkspaceBlock workspaceBlock) {

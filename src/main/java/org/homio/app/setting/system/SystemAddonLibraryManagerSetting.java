@@ -4,6 +4,7 @@ import static java.lang.String.format;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -18,6 +19,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
@@ -76,7 +78,8 @@ public class SystemAddonLibraryManagerSetting
             // try fetch packages from local copy
             if (Files.exists(addonsCopy)) {
                 try {
-                    packageContext.setPackages(OBJECT_MAPPER.readValue(addonsCopy.toFile(), new TypeReference<List<PackageModel>>() {}));
+                    packageContext.setPackages(OBJECT_MAPPER.readValue(addonsCopy.toFile(), new TypeReference<List<PackageModel>>() {
+                    }));
                 } catch (IOException ignore) {
                     FileUtils.deleteQuietly(addonsCopy.toFile());
                 }
@@ -89,10 +92,10 @@ public class SystemAddonLibraryManagerSetting
     public PackageContext installedPackages(Context context) {
         return new PackageContext(
                 null,
-            ((ContextImpl) context).getAddon().getInstalledAddons()
-                                   .stream()
-                                   .map(this::build)
-                                   .collect(Collectors.toSet()));
+                ((ContextImpl) context).getAddon().getInstalledAddons()
+                        .stream()
+                        .map(this::build)
+                        .collect(Collectors.toSet()));
     }
 
     @Override
@@ -103,7 +106,7 @@ public class SystemAddonLibraryManagerSetting
 
     @Override
     public void unInstallPackage(
-        Context context, PackageRequest packageRequest, ProgressBar progressBar) {
+            Context context, PackageRequest packageRequest, ProgressBar progressBar) {
         ((ContextImpl) context).getAddon().uninstallAddon(packageRequest.getName(), true);
     }
 
@@ -127,11 +130,11 @@ public class SystemAddonLibraryManagerSetting
 
     private PackageModel build(AddonContext addonContext) {
         return new PackageModel()
-            .setName(addonContext.getAddonID())
-            .setTitle(addonContext.getPomFile().getName())
-            .setDescription(addonContext.getPomFile().getDescription())
-            .setVersion(addonContext.getVersion())
-            .setReadme(addonContext.getPomFile().getDescription());
+                .setName(addonContext.getAddonID())
+                .setTitle(addonContext.getPomFile().getName())
+                .setDescription(addonContext.getPomFile().getDescription())
+                .setVersion(addonContext.getVersion())
+                .setReadme(addonContext.getPomFile().getDescription());
     }
 
     @SneakyThrows
@@ -204,9 +207,9 @@ public class SystemAddonLibraryManagerSetting
                 String lastReleaseVersion = strVersions.get(strVersions.size() - 1);
                 String key = name.startsWith("addon-") ? name : "addon-" + name;
                 PackageModel entity = new PackageModel()
-                    .setName(key)
-                    .setTitle((String) addonConfig.get("name"))
-                    .setDescription((String) addonConfig.get("description"));
+                        .setName(key)
+                        .setTitle((String) addonConfig.get("name"))
+                        .setDescription((String) addonConfig.get("description"));
                 entity.setJarUrl(format("https://github.com/%s/releases/download/%s/%s.jar", repository, "%s", addonRepo.getRepo()));
                 entity.setWebsite("https://github.com/" + repository);
                 entity.setCategory((String) addonConfig.get("category"));

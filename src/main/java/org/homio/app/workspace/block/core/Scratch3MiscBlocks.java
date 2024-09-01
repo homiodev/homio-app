@@ -1,7 +1,5 @@
 package org.homio.app.workspace.block.core;
 
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -16,6 +14,8 @@ import org.homio.app.manager.ScriptService;
 import org.homio.app.model.entity.ScriptEntity;
 import org.homio.app.workspace.WorkspaceBlockImpl;
 import org.springframework.stereotype.Component;
+
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 @Log4j2
 @Getter
@@ -41,7 +41,7 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
     @SneakyThrows
     private State runCodeValueEvaluate(WorkspaceBlock workspaceBlock) {
         String scriptEntityId = workspaceBlock.getInputWorkspaceBlock("SCRIPT").getField("SCRIPT_REF");
-        ScriptEntity scriptEntity = context.db().getEntity(scriptEntityId);
+        ScriptEntity scriptEntity = context.db().get(scriptEntityId);
         if (scriptEntity == null) {
             context.ui().toastr().error("W.ERROR.SCRIPT_NOT_FOUND", scriptEntityId);
         } else {

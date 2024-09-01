@@ -2,16 +2,17 @@ package org.homio.addon.fs;
 
 import co.elastic.thumbnails4j.core.Dimensions;
 import co.elastic.thumbnails4j.core.Thumbnailer;
+import lombok.SneakyThrows;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.List;
-import lombok.SneakyThrows;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
-public abstract class FileRequireThumbnailer implements Thumbnailer  {
+public abstract class FileRequireThumbnailer implements Thumbnailer {
 
     public static Logger log = LogManager.getLogger(FileRequireThumbnailer.class);
 

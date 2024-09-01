@@ -1,29 +1,9 @@
 package org.homio.app.rest;
 
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
-import static org.homio.app.model.entity.user.UserBaseEntity.SSH_RESOURCE_AUTHORIZE;
-import static org.homio.app.model.entity.user.UserBaseEntity.log;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import lombok.SneakyThrows;
+import lombok.*;
 import lombok.experimental.Accessors;
-import lombok.val;
 import org.homio.api.Context;
 import org.homio.api.ContextNetwork;
 import org.homio.api.console.ConsolePlugin;
@@ -50,6 +30,7 @@ import org.homio.app.console.LogsConsolePlugin;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.impl.ContextUIImpl;
 import org.homio.app.model.entity.SettingEntity;
+import org.homio.app.model.entity.user.UserGuestEntity;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.rest.ItemController.ActionModelRequest;
 import org.homio.app.setting.system.SystemFramesSetting;
@@ -60,13 +41,15 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.net.URL;
+import java.util.*;
+import java.util.Map.Entry;
+
+import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.homio.app.model.entity.user.UserBaseEntity.log;
 
 @RestController
 @RequestMapping("/rest/console")
@@ -116,6 +99,8 @@ public class ConsoleController implements ContextCreated {
                 throw new IllegalArgumentException("Unable to find console plugin with name: " + tab);
             }
         }
+        UserGuestEntity.assertConsoleAccess(context, consolePlugin);
+
         if (consolePlugin instanceof ConsolePluginTable<? extends HasEntityIdentifier> tableConsolePlugin) {
             Collection<? extends HasEntityIdentifier> baseEntities = tableConsolePlugin.getValue();
             Class<? extends HasEntityIdentifier> clazz = tableConsolePlugin.getEntityClass();
@@ -152,13 +137,13 @@ public class ConsoleController implements ContextCreated {
 
     @SneakyThrows
     @PostMapping("/tab/{tab}/action")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
     public ActionResponseModel executeAction(@PathVariable("tab") String tab, @RequestBody ActionModelRequest request) {
         String entityID = request.getEntityID();
         ConsolePlugin<?> consolePlugin = ContextUIImpl.getPlugin(tab);
         if (consolePlugin instanceof ConsolePluginTable table) {
             HasEntityIdentifier identifier = table.findEntity(entityID);
-            return itemController.executeAction(request, identifier, context.db().getEntity(identifier.getEntityID()));
+            return itemController.executeAction(request, identifier, context.db().get(identifier.getEntityID()));
         }
         return consolePlugin.executeAction(entityID, request.getParams());
     }
@@ -173,7 +158,7 @@ public class ConsoleController implements ContextCreated {
             Collection<? extends HasEntityIdentifier> baseEntities = ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
             HasEntityIdentifier identifier =
                     baseEntities.stream().filter(e -> e.getEntityID().equals(entityID)).findAny().orElseThrow(
-                        () -> NotFoundException.entityNotFound(entityID));
+                            () -> NotFoundException.entityNotFound(entityID));
             return OptionUtil.loadOptions(identifier, context, fieldName, null, null, null);
         }
         return null;
@@ -182,10 +167,13 @@ public class ConsoleController implements ContextCreated {
     @GetMapping("/tab")
     public Set<ConsoleTab> getTabs() {
         Set<ConsoleTab> tabs = new HashSet<>();
-        if (context.accessEnabled(LOG_RESOURCE)) {
+        try {
+            UserGuestEntity.assertLogAccess(context);
+
             ConsoleTab logsTab = new ConsoleTab("logs", null, null);
             logs.forEach(logsTab::addChild);
             tabs.add(logsTab);
+        } catch (Exception ignore) {
         }
 
         Map<String, ConsoleTab> parens = new HashMap<>();
@@ -198,43 +186,27 @@ public class ConsoleController implements ContextCreated {
         tabs.addAll(parens.values());
 
         // register still unavailable console plugins if any
-        for (Entry<String, String> entry : ContextUIImpl.customConsolePluginNames.entrySet()) {
-            if (entry.getValue().isEmpty() || context.accessEnabled(entry.getValue())) {
-                String pluginName = entry.getKey();
-                if (tabs.stream().noneMatch(t -> t.name.equals(pluginName))) {
-                    tabs.add(new ConsoleTab(pluginName, null, null));
-                }
+        for (String pluginName : ContextUIImpl.customConsolePluginNames) {
+            if (tabs.stream().noneMatch(t -> t.name.equals(pluginName))) {
+                tabs.add(new ConsoleTab(pluginName, null, null));
             }
         }
-
-        /*ObjectNode nodes = context.setting().getValue(SystemFramesSetting.class);
-        Map<String, ConsoleTab> userTabs = new HashMap<>();
-        nodes.fields().forEachRemaining(entry -> {
-            ConsoleTab parentTab = userTabs.computeIfAbsent(entry.getKey(), s -> new ConsoleTab(entry.getKey(), null, null));
-            entry.getValue().fields().forEachRemaining(child -> {
-                String host = child.getValue().get("host").asText();
-                if (child.getValue().get("proxy").asBoolean()) {
-                    host = context.service().registerUrlProxy(host, host, builder -> {
-                    });
-                }
-                parentTab.addChild(new ConsoleTab(child.getKey(), RenderType.frame,
-                    new JSONObject().put("host", host)));
-            });
-        });
-        tabs.addAll(userTabs.values());*/
-
         return tabs;
     }
 
     private static void addConsolePlugin(Entry<String, ConsolePlugin<?>> entry,
-        Map<String, ConsoleTab> parens,
-        Set<ConsoleTab> tabs,
-        boolean removable) {
+                                         Map<String, ConsoleTab> parens,
+                                         Set<ConsoleTab> tabs,
+                                         boolean removable) {
         if (entry.getKey().equals("icl")) {
             return;
         }
         ConsolePlugin<?> consolePlugin = entry.getValue();
-        if (!consolePlugin.isEnabled()) {
+        try {
+            if (!consolePlugin.isEnabled()) {
+                return;
+            }
+        } catch (Exception ignore) {
             return;
         }
         String parentName = consolePlugin.getParentTab();
@@ -253,21 +225,21 @@ public class ConsoleController implements ContextCreated {
     }
 
     @PostMapping("/ssh/{entityID}/tab/{tabID}")
-    @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
     public SshProviderService.SshSession openSshSession(
-        @PathVariable("entityID") String entityID,
-        @PathVariable("tabID") String tabID) {
+            @PathVariable("entityID") String entityID,
+            @PathVariable("tabID") String tabID) {
         log.info("Request to open ssh: {}. TabID: {}", entityID, tabID);
+        UserGuestEntity.assertSshAccess(context);
 
         SshSession session = sessions
-            .values().stream()
-            .filter(s -> tabID.equals(s.getMetadata().get("tabID")))
-            .findAny().orElse(null);
+                .values().stream()
+                .filter(s -> tabID.equals(s.getMetadata().get("tabID")))
+                .findAny().orElse(null);
         if (session != null) {
             return session;
         }
 
-        BaseEntity entity = context.db().getEntity(entityID);
+        BaseEntity entity = context.db().get(entityID);
         if (entity instanceof SshBaseEntity) {
             SshProviderService service = ((SshBaseEntity<?, ?>) entity).getService();
             SshSession sshSession = service.openSshSession((SshBaseEntity) entity);
@@ -281,18 +253,18 @@ public class ConsoleController implements ContextCreated {
     }
 
     @GetMapping("/ssh/tabs")
-    @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
     public List<SshTab> getOpenedSshTabs() {
+        UserGuestEntity.assertSshAccess(context);
         return sessions
-            .values()
-            .stream()
-            .map(s -> new SshTab(s.getMetadata().get("tabID"), s.getEntity().getName()))
-            .toList();
+                .values()
+                .stream()
+                .map(s -> new SshTab(s.getMetadata().get("tabID"), s.getEntity().getName()))
+                .toList();
     }
 
     @PostMapping("/ssh/{token}/resize")
-    @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
     public void resizeSshConsole(@PathVariable("token") String token, @RequestBody SshResizeRequest request) {
+        UserGuestEntity.assertSshAccess(context);
         SshSession<?> sshSession = sessions.get(token);
         if (sshSession != null) {
             ((SshProviderService) sshSession.getEntity().getService())
@@ -301,8 +273,8 @@ public class ConsoleController implements ContextCreated {
     }
 
     @DeleteMapping("/ssh/{token}")
-    @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
     public void closeSshSession(@PathVariable("token") String token) {
+        UserGuestEntity.assertSshAccess(context);
         SshSession<?> sshSession = sessions.remove(token);
         if (sshSession != null) {
             ((SshProviderService) sshSession.getEntity().getService()).closeSshSession(sshSession);
@@ -311,7 +283,7 @@ public class ConsoleController implements ContextCreated {
 
     @SneakyThrows
     @PostMapping("/frame")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
     public void createFrame(@RequestBody CreateFrameRequest request) {
         if (!request.host.startsWith("http")) {
             request.host = "http://" + request.host;
@@ -325,8 +297,8 @@ public class ConsoleController implements ContextCreated {
         nodes.putIfAbsent(request.getParent(), OBJECT_MAPPER.createObjectNode());
         ObjectNode node = (ObjectNode) nodes.get(request.getParent());
         ObjectNode pluginData = OBJECT_MAPPER.createObjectNode()
-                                             .put("proxy", request.proxy)
-                                             .put("host", request.host);
+                .put("proxy", request.proxy)
+                .put("host", request.host);
         node.set(request.getName(), pluginData);
         context.setting().setValue(SystemFramesSetting.class, nodes);
 
@@ -344,7 +316,7 @@ public class ConsoleController implements ContextCreated {
 
     @SneakyThrows
     @DeleteMapping("/frame/{parent}/{name}")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
     public boolean removeFrame(@PathVariable("parent") String parent, @PathVariable("name") String name) {
         ObjectNode nodes = context.setting().getValue(SystemFramesSetting.class);
         if (!nodes.has(parent)) {

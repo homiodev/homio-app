@@ -1,9 +1,6 @@
 package org.homio.app.manager.bgp;
 
 import com.pivovarit.function.ThrowingRunnable;
-import java.net.ConnectException;
-import java.time.Duration;
-import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -13,6 +10,10 @@ import org.homio.api.ContextBGP.ThreadContext;
 import org.homio.api.ContextNetwork;
 import org.homio.api.state.OnOffType;
 import org.homio.app.manager.common.impl.ContextBGPImpl;
+
+import java.net.ConnectException;
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Log4j2
 public class InternetAvailabilityBgpService {

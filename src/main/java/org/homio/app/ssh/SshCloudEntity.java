@@ -1,13 +1,5 @@
 package org.homio.app.ssh;
 
-import static org.homio.api.ui.field.action.UIActionInput.Type.text;
-import static org.homio.api.ui.field.action.UIActionInput.Type.textarea;
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-import static org.homio.app.ssh.SshGenericEntity.PublicKeyAuthSign;
-import static org.homio.app.ssh.SshGenericEntity.execDeletePrivateKey;
-import static org.homio.app.ssh.SshGenericEntity.execUploadPrivateKey;
-import static org.homio.app.ssh.SshGenericEntity.updateSSHData;
-
 import com.sshtools.client.SshClient;
 import com.sshtools.common.publickey.SshPrivateKeyFile;
 import com.sshtools.common.publickey.SshPrivateKeyFileFactory;
@@ -42,6 +34,11 @@ import org.json.JSONObject;
 
 import java.util.Set;
 
+import static org.homio.api.ui.field.action.UIActionInput.Type.text;
+import static org.homio.api.ui.field.action.UIActionInput.Type.textarea;
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+import static org.homio.app.ssh.SshGenericEntity.*;
+
 @Log4j2
 @Entity
 @UISidebarChildren(icon = "fas fa-cloud", color = "#644DAB")
@@ -49,7 +46,7 @@ public class SshCloudEntity extends IdentityEntity implements
         CloudProviderService.SshCloud<SshCloudEntity>, HasEntityLog, HasDynamicContextMenuActions {
 
     public static SshCloudEntity ensureEntityExists(ContextImpl context) {
-        SshCloudEntity entity = context.db().getEntity(SshCloudEntity.class, PRIMARY_DEVICE);
+        SshCloudEntity entity = context.db().get(SshCloudEntity.class, PRIMARY_DEVICE);
         if (entity == null) {
             entity = new SshCloudEntity()
                     .setHostname("ssh.homio.org")
@@ -141,7 +138,7 @@ public class SshCloudEntity extends IdentityEntity implements
     }
 
     public boolean isRestartOnFailure() {
-        return isEnableWatchdog();
+        return isEnableWatchdog() && isHasPrivateKey();
     }
 
     @UIField(order = 2, required = true, inlineEditWhenEmpty = true)
@@ -193,13 +190,13 @@ public class SshCloudEntity extends IdentityEntity implements
 
     @Override
     protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-        if(getUser().isEmpty()) {
+        if (getUser().isEmpty()) {
             fields.add("user");
         }
-        if(getHostname().isEmpty()) {
+        if (getHostname().isEmpty()) {
             fields.add("hostname");
         }
-        if(getProvider().isEmpty()) {
+        if (getProvider().isEmpty()) {
             fields.add("provider");
         }
     }
@@ -291,7 +288,7 @@ public class SshCloudEntity extends IdentityEntity implements
             CloudProviderService<SshCloudEntity> service = getCloudProviderService(uiInputBuilder.context());
             if (service != null) {
                 uiInputBuilder.addSelectableButton("sync", new Icon("fas fa-right-to-bracket", Color.GREEN),
-                    (context, params) -> service.sync());
+                        (context, params) -> service.sync());
             }
         }
     }

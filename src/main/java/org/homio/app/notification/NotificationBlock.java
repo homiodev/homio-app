@@ -2,13 +2,6 @@ package org.homio.app.notification;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.pivovarit.function.ThrowingBiFunction;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -29,6 +22,10 @@ import org.homio.app.utils.UIFieldUtils;
 import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 @Getter
 @Setter
@@ -88,7 +85,7 @@ public class NotificationBlock {
     }
 
     public void setUpdatable(@NotNull ThrowingBiFunction<ProgressBar, String, ActionResponseModel, Exception> updateHandler,
-        @NotNull List<OptionModel> versions) {
+                             @NotNull List<OptionModel> versions) {
         this.versions = versions;
         this.updateHandler = updateHandler;
     }

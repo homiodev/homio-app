@@ -1,23 +1,19 @@
 package org.homio.app.manager.common.impl;
 
+import lombok.extern.log4j.Log4j2;
+import org.homio.api.util.HardwareUtils;
+import org.jetbrains.annotations.NotNull;
+
+import javax.jmdns.JmDNS;
+import javax.jmdns.ServiceInfo;
+import javax.jmdns.ServiceListener;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import javax.jmdns.JmDNS;
-import javax.jmdns.ServiceInfo;
-import javax.jmdns.ServiceListener;
-import lombok.extern.log4j.Log4j2;
-import org.homio.api.util.HardwareUtils;
-import org.jetbrains.annotations.NotNull;
 
 @Log4j2
 public class MDNSClient {
@@ -65,10 +61,10 @@ public class MDNSClient {
         }
 
         Set<ServiceDescription> services = Set.of(
-            new ServiceDescription("_homio-server._tcp.local.", "homio", 9111, Map.of(
-                "id", HardwareUtils.APP_ID,
-                "run", String.valueOf(HardwareUtils.RUN_COUNT),
-                "version", System.getProperty("server.version"))));
+                new ServiceDescription("_homio-server._tcp.local.", "homio", 9111, Map.of(
+                        "id", HardwareUtils.APP_ID,
+                        "run", String.valueOf(HardwareUtils.RUN_COUNT),
+                        "version", System.getProperty("server.version"))));
         registerService(services);
     }
 
@@ -94,10 +90,10 @@ public class MDNSClient {
     private void registerServiceInternal(ServiceDescription service) throws IOException {
         for (JmDNS instance : jmdnsInstances.values()) {
             log.info("Registering new service {} at {}:{} ({})", service.serviceType,
-                instance.getInetAddress().getHostAddress(), service.port, instance.getName());
+                    instance.getInetAddress().getHostAddress(), service.port, instance.getName());
             // Create one ServiceInfo object for each JmDNS instance
             ServiceInfo serviceInfo = ServiceInfo.create(service.serviceType, service.serviceName, service.port,
-                0, 0, service.properties);
+                    0, 0, service.properties);
             instance.registerService(serviceInfo);
         }
     }
@@ -153,5 +149,7 @@ public class MDNSClient {
         }
     }
 
-    private record ServiceDescription(String serviceType, String serviceName, int port, Map<String, String> properties) {}
+    private record ServiceDescription(String serviceType, String serviceName, int port,
+                                      Map<String, String> properties) {
+    }
 }

@@ -10,6 +10,7 @@ import org.homio.addon.camera.entity.BaseCameraEntity;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.HasOrder;
+import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
@@ -28,6 +29,7 @@ import org.homio.app.config.cacheControl.CacheControl;
 import org.homio.app.config.cacheControl.CachePolicy;
 import org.homio.app.manager.WidgetService;
 import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.model.entity.user.UserGuestEntity;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
@@ -38,9 +40,9 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.impl.color.WidgetColorEntity;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.homio.app.model.entity.widget.impl.extra.WidgetCustomEntity;
+import org.homio.app.model.entity.widget.impl.extra.WidgetJsEntity;
 import org.homio.app.model.entity.widget.impl.fm.WidgetFMEntity;
 import org.homio.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
-import org.homio.app.model.entity.widget.impl.extra.WidgetJsEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
@@ -53,17 +55,16 @@ import org.homio.app.model.rest.WidgetDataRequest;
 import org.homio.app.rest.widget.WidgetChartsController.SingleValueData;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 @Log4j2
 @RestController
@@ -119,14 +120,16 @@ public class WidgetController {
             @RequestParam("w") int width,
             @RequestParam("h") int height,
             @RequestBody FMRequest request) {
-        if(request.prevValues==null) {
+        if (request.prevValues == null) {
             request.prevValues = List.of();
         }
         Map<String, Long> seriesToSnapValue = request.prevValues.stream().collect(Collectors.toMap(n -> n.sid, n -> n.sn));
-        WidgetFMEntity entity = context.db().getEntity(entityID);
+        WidgetFMEntity entity = context.db().get(entityID);
         if (entity == null) { // in case if deleted but still requested
             return Set.of();
         }
+        context.getUserRequire().assertViewAccess(entity);
+
         List<BaseFileSystemEntity> fileSystems = context.getEntityServices(BaseFileSystemEntity.class);
         SelectionSource source = DataSourceUtil.getSelection(entity.getValueDataSource());
         String parentId = source.getValue();
@@ -134,7 +137,7 @@ public class WidgetController {
         if (fs.equals(parentId)) {
             parentId = "";
         }
-        if(request.cursor != null) {
+        if (request.cursor != null) {
             parentId = request.cursor;
         }
         BaseFileSystemEntity fileSystemEntity = fileSystems.stream()
@@ -203,6 +206,8 @@ public class WidgetController {
     @GetMapping("/video/{entityID}")
     public List<WidgetVideoSourceResolver.VideoEntityResponse> getCameraData(@PathVariable("entityID") String entityID) {
         WidgetVideoEntity entity = getEntity(entityID);
+        context.getUserRequire().assertViewAccess(entity);
+
         List<WidgetVideoSourceResolver.VideoEntityResponse> result = new ArrayList<>();
         for (WidgetVideoSeriesEntity item : entity.getSeries()) {
             for (WidgetVideoSourceResolver videoSourceResolver : videoSourceResolvers) {
@@ -232,11 +237,12 @@ public class WidgetController {
     }
 
     @PostMapping("/video/action")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void fireVideoAction(@RequestBody VideoActionRequest request) {
         WidgetVideoSeriesEntity series = getSeriesEntity(request);
+        context.getUserRequire().assertEditAccess(series.getWidgetEntity());
+
         try {
-            BaseCameraEntity entity = context.db().getEntity(series.getValueDataSource());
+            BaseCameraEntity entity = context.db().get(series.getValueDataSource());
             if (entity == null) {
                 throw new NotFoundException("ERROR.VIDEO_SERIES_NOT_FOUND");
             }
@@ -255,6 +261,8 @@ public class WidgetController {
     @PostMapping("/value")
     public SingleValueData getValue(@Valid @RequestBody WidgetDataRequest request) {
         WidgetEntity entity = request.getEntity(context, objectMapper);
+        context.getUserRequire().assertViewAccess(entity);
+
         if (entity instanceof HasSingleValueDataSource) {
             return new SingleValueData(timeSeriesUtil.getSingleValue(entity, (HasSingleValueDataSource) entity, o -> o), null);
         }
@@ -262,15 +270,18 @@ public class WidgetController {
     }
 
     @PostMapping("/value/update")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void updateValue(@RequestBody SingleValueRequest<Object> request) {
         HasSetSingleValueDataSource source = getEntity(request.entityID);
+        context.getUserRequire().assertEditAccess((BaseEntity) source);
+
         setValue(request.value, source.getSetValueDataSource(), source.getDynamicParameterFields("value"));
     }
 
     @PostMapping("/slider/values")
     public List<Integer> getSliderValues(@RequestBody WidgetDataRequest request) {
         WidgetSliderEntity entity = request.getEntity(context, objectMapper, WidgetSliderEntity.class);
+        context.getUserRequire().assertViewAccess(entity);
+
         List<Integer> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetSliderSeriesEntity item : entity.getSeries()) {
             values.add(timeSeriesUtil.getSingleValue(entity, item, o -> HasSetStatusValue.SetStatusValueRequest.rawValueToNumber(o, 0).intValue()));
@@ -279,15 +290,18 @@ public class WidgetController {
     }
 
     @PostMapping("/slider/update")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void handleSlider(@RequestBody SingleValueRequest<Number> request) {
         WidgetSliderSeriesEntity series = getSeriesEntity(request);
+        context.getUserRequire().assertEditAccess(series.getWidgetEntity());
+
         setValue(request.value, series.getSetValueDataSource(), series.getSetValueDynamicParameterFields());
     }
 
     @PostMapping("/toggle/values")
     public List<String> getToggleValues(@RequestBody WidgetDataRequest request) {
         WidgetToggleEntity entity = request.getEntity(context, objectMapper, WidgetToggleEntity.class);
+        context.getUserRequire().assertViewAccess(entity);
+
         List<String> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetToggleSeriesEntity item : entity.getSeries()) {
             values.add(timeSeriesUtil.getSingleValue(entity, item, String::valueOf));
@@ -296,15 +310,18 @@ public class WidgetController {
     }
 
     @PostMapping("/display/update")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void handleButtonClick(@RequestBody SingleValueRequest<String> request) {
         WidgetDisplayEntity source = getEntity(request.entityID);
+        context.getUserRequire().assertEditAccess(source);
+
         setValue(request.value, source.getSetValueDataSource(), source.getSetValueDynamicParameterFields());
     }
 
     @PostMapping("/colors/value")
     public WidgetColorValueResponse getColorValues(@RequestBody WidgetDataRequest request) {
         WidgetColorEntity entity = request.getEntity(context, objectMapper, WidgetColorEntity.class);
+        context.getUserRequire().assertViewAccess(entity);
+
         return new WidgetColorValueResponse(
                 timeSeriesUtil.getSingleValue(entity,
                         entity.getBrightnessValueDataSource(),
@@ -325,9 +342,10 @@ public class WidgetController {
     }
 
     @PostMapping("/colors/update")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void updateColorsValue(@RequestBody ColorValueRequest request) {
-        WidgetColorEntity entity = context.db().getEntityRequire(request.entityID);
+        WidgetColorEntity entity = context.db().getRequire(request.entityID);
+        context.getUserRequire().assertEditAccess(entity);
+
         switch (request.type) {
             case colorTemp -> setValue(request.value,
                     entity.getColorTemperatureSetValueDataSource(),
@@ -345,18 +363,21 @@ public class WidgetController {
     }
 
     @PostMapping("/toggle/update")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void updateToggleValue(@RequestBody SingleValueRequest<Boolean> request) {
-        WidgetToggleSeriesEntity series = getSeriesEntity(request);
+        WidgetToggleSeriesEntity entity = getSeriesEntity(request);
+        context.getUserRequire().assertEditAccess(entity);
+
         setValue(
-                request.value ? series.getPushToggleOnValue() : series.getPushToggleOffValue(),
-                series.getSetValueDataSource(),
-                series.getSetValueDynamicParameterFields());
+                request.value ? entity.getPushToggleOnValue() : entity.getPushToggleOffValue(),
+                entity.getSetValueDataSource(),
+                entity.getSetValueDynamicParameterFields());
     }
 
     @GetMapping("/{entityID}")
     public WidgetEntity getWidget(@PathVariable("entityID") String entityID) {
-        WidgetEntity widget = context.db().getEntity(entityID);
+        WidgetEntity widget = context.db().get(entityID);
+        context.getUserRequire().assertViewAccess(widget);
+
         updateWidgetBeforeReturnToUI(widget);
         return widget;
     }
@@ -367,12 +388,12 @@ public class WidgetController {
             @RequestParam("w") int width,
             @RequestParam("h") int height,
             @RequestParam(value = "widget", required = false) String widgetEntityID) {
-        List<WidgetEntity> widgets = context
+        Stream<WidgetEntity> stream = context
                 .db()
                 .findAll(WidgetEntity.class)
                 .stream()
-                .filter(w -> (widgetEntityID == null || w.getEntityID().equals(widgetEntityID)) && w.getWidgetTabEntity().getEntityID().equals(tabId))
-                .toList();
+                .filter(w -> (widgetEntityID == null || w.getEntityID().equals(widgetEntityID)) && w.getWidgetTabEntity().getEntityID().equals(tabId));
+        List<WidgetEntity> widgets = filterViewEntity(stream).toList();
         if (!widgets.isEmpty()) {
             ScreenLayout layout = widgets.get(0).getWidgetTabEntity().getLayoutOrDefault(width, height);
 
@@ -400,11 +421,27 @@ public class WidgetController {
         return result;
     }
 
+    private <T extends BaseEntity> Stream<T> filterViewEntity(Stream<T> stream) {
+        UserEntity user = context.getUserRequire();
+        if (!user.isAdmin()) {
+            UserGuestEntity guest = (UserGuestEntity) user;
+            stream = stream.filter(w -> {
+                try {
+                    guest.assertViewAccess(w);
+                    return true;
+                } catch (Exception ignore) {
+                }
+                return false;
+            });
+        }
+        return stream;
+    }
+
     @PostMapping("/{entityID}/block")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void updateBlockPosition(
             @PathVariable("entityID") String entityID, @RequestBody UpdateBlockPositionRequest position) {
-        WidgetEntity entity = context.db().getEntityRequire(entityID);
+        WidgetEntity entity = context.db().getRequire(entityID);
+
         ScreenLayout layout = entity.getWidgetTabEntity()
                 .getLayoutOrDefault(position.getSw(), position.getSh());
         entity.setXb(position.xb, layout.getKey());
@@ -416,14 +453,13 @@ public class WidgetController {
     }
 
     @PostMapping("/create/{tabId}/{type}")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public BaseEntity createWidget(
             @PathVariable("tabId") String tabId,
             @PathVariable("type") String type,
             @RequestParam("w") int width,
             @RequestParam("h") int height) throws Exception {
         log.debug("Request creating widget entity by type: <{}> in tabId <{}>", type, tabId);
-        WidgetTabEntity widgetTabEntity = context.db().getEntity(tabId);
+        WidgetTabEntity widgetTabEntity = context.db().get(tabId);
         if (widgetTabEntity == null) {
             throw new NotFoundException("ERROR.TAB_NOT_FOUND", tabId);
         }
@@ -431,7 +467,7 @@ public class WidgetController {
         Class<? extends EntityFieldMetadata> typeClass = ContextImpl.uiFieldClasses.get(type);
 
         WidgetEntity<?> baseEntity;
-        if(typeClass == null) {
+        if (typeClass == null) {
             baseEntity = new WidgetCustomEntity().setCode("test");
             baseEntity.setBw(3).setBh(3);
             // baseEntity.setWidgetTabEntity(widgetTabEntity)/*.setFieldFetchType(template.getName())*/;
@@ -446,13 +482,12 @@ public class WidgetController {
         return context.db().save(baseEntity);
     }
 
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     @PostMapping("/create/{tabId}/{type}/{addon}")
     public BaseEntity createExtraWidget(
             @PathVariable("tabId") String tabId,
             @PathVariable("type") String type) {
         log.debug("Request creating extra widget entity by type: <{}> in tabId <{}>", type, tabId);
-        WidgetTabEntity widgetTabEntity = context.db().getEntity(tabId);
+        WidgetTabEntity widgetTabEntity = context.db().get(tabId);
         if (widgetTabEntity == null) {
             throw new NotFoundException("ERROR.TAB_NOT_FOUND", tabId);
         }
@@ -487,7 +522,7 @@ public class WidgetController {
         widgetJsEntity.setWidgetTabEntity(widgetTabEntity)/*.setFieldFetchType(template.getName())*/;
         return context.db().save(widgetJsEntity);
         /*log.debug("Request creating extra widget entity by type: <{}> in tabId <{}>", type, tabId);
-        WidgetTabEntity widgetTabEntity = context.db().getEntity(tabId);
+        WidgetTabEntity widgetTabEntity = context.db().get(tabId);
         if (widgetTabEntity == null) {
             throw new NotFoundException("ERROR.TAB_NOT_FOUND", tabId);
         }
@@ -527,14 +562,14 @@ public class WidgetController {
 
     @GetMapping("/tab")
     public List<WidgetTabEntity> getWidgetTabs() {
-        return context.db().findAll(WidgetTabEntity.class);
+        var stream = context.db().findAll(WidgetTabEntity.class).stream();
+        return filterViewEntity(stream).toList();
     }
 
     @SneakyThrows
     @PostMapping("/tab/{name}")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public WidgetTabEntity createWidgetTab(@PathVariable("name") String name, @RequestBody CreateWidgetRequest request) {
-        BaseEntity widgetTab = context.db().getEntity(WidgetTabEntity.PREFIX + name);
+        BaseEntity widgetTab = context.db().get(WidgetTabEntity.PREFIX + name);
         if (widgetTab == null) {
             WidgetTabEntity widgetTabEntity = new WidgetTabEntity();
             widgetTabEntity.setEntityID(name);
@@ -549,9 +584,8 @@ public class WidgetController {
 
     @SneakyThrows
     @PostMapping("/tab/{tabId}/layout")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void updateTabLayout(@PathVariable("tabId") String tabId, @RequestBody LayoutTabRequest request) {
-        WidgetTabEntity tab = context.db().getEntity(tabId);
+        WidgetTabEntity tab = context.db().get(tabId);
         if (tab == null) {
             throw new IllegalArgumentException("No tab: " + tabId + " found");
         }
@@ -561,9 +595,8 @@ public class WidgetController {
 
     @SneakyThrows
     @PostMapping("/insert/{widgetEntityId}")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void updateTabLayout(@PathVariable("widgetEntityId") String widgetEntityID) {
-        WidgetEntity widgetEntity = context.db().getEntityRequire(widgetEntityID);
+        WidgetEntity widgetEntity = context.db().getRequire(widgetEntityID);
         AtomicBoolean processed = new AtomicBoolean(true);
         findSuitablePosition(widgetEntity, processed);
         if (!processed.get()) {
@@ -573,7 +606,6 @@ public class WidgetController {
     }
 
     @PostMapping("/tab/{tabId}/move")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void moveWidgetTab(@PathVariable("tabId") String tabId, @RequestParam("left") boolean left) {
         List<WidgetTabEntity> tabs = context.db().findAll(WidgetTabEntity.class).stream().sorted().collect(Collectors.toList());
         WidgetTabEntity tabToMove = tabs.stream().filter(t -> t.getEntityID().equals(tabId)).findAny().orElseThrow(
@@ -622,7 +654,7 @@ public class WidgetController {
     }
 
     private WidgetTabEntity getWidgetTabEntity(String tabId) {
-        BaseEntity baseEntity = context.db().getEntity(tabId);
+        BaseEntity baseEntity = context.db().get(tabId);
         if (baseEntity instanceof WidgetTabEntity) {
             return (WidgetTabEntity) baseEntity;
         }
@@ -630,7 +662,7 @@ public class WidgetController {
     }
 
     private <T extends WidgetSeriesEntity> T getSeriesEntity(SingleValueRequest<?> request) {
-        WidgetEntityAndSeries entity = context.db().getEntityRequire(request.entityID);
+        WidgetEntityAndSeries entity = context.db().getRequire(request.entityID);
         T series = ((Set<T>) entity.getSeries()).stream().filter(s -> s.getEntityID().equals(request.seriesEntityID)).findAny().orElse(null);
         if (series == null) {
             throw new NotFoundException("Unable to find series: " + request.seriesEntityID + " for entity: " + entity.getTitle());
@@ -639,7 +671,7 @@ public class WidgetController {
     }
 
     private <T> T getEntity(String entityID) {
-        BaseEntity entity = context.db().getEntity(entityID);
+        BaseEntity entity = context.db().get(entityID);
         if (entity == null) {
             throw new IllegalArgumentException("Unable to find widget with entityID: " + entityID);
         }
@@ -797,7 +829,7 @@ public class WidgetController {
             }
         }
     }
-
+    
     @Getter
     @Setter
     public static class WidgetFMPrevSnapshot {

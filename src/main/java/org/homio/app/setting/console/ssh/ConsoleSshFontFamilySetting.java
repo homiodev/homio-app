@@ -1,15 +1,5 @@
 package org.homio.app.setting.console.ssh;
 
-import static java.lang.String.format;
-
-import java.awt.Font;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 import lombok.SneakyThrows;
 import org.homio.api.Context;
 import org.homio.api.model.OptionModel;
@@ -18,6 +8,13 @@ import org.homio.api.setting.console.ConsoleSettingPlugin;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
+
+import java.awt.*;
+import java.io.File;
+import java.util.List;
+import java.util.*;
+
+import static java.lang.String.format;
 
 public class ConsoleSshFontFamilySetting
         implements ConsoleSettingPlugin<String>, SettingPluginOptions<String> {

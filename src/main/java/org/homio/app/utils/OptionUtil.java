@@ -1,32 +1,9 @@
 package org.homio.app.utils;
 
-import static java.util.stream.Collectors.groupingBy;
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.homio.app.utils.UIFieldSelectionUtil.SELECT_ANNOTATIONS;
-import static org.homio.app.utils.UIFieldUtils.buildDynamicParameterMetadata;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.SneakyThrows;
+import lombok.*;
 import lombok.extern.log4j.Log4j2;
-import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.homio.api.Context;
@@ -51,6 +28,20 @@ import org.homio.app.utils.UIFieldSelectionUtil.SelectHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.groupingBy;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.homio.app.utils.UIFieldSelectionUtil.SELECT_ANNOTATIONS;
+import static org.homio.app.utils.UIFieldUtils.buildDynamicParameterMetadata;
+
 @Log4j2
 public final class OptionUtil {
 
@@ -69,22 +60,22 @@ public final class OptionUtil {
     }
 
     public static void assembleOptionsForEntityByClassSelection(LoadOptionsParameters params, List<OptionModel> list,
-        Class<? extends HasEntityIdentifier> sourceClassType) {
+                                                                Class<? extends HasEntityIdentifier> sourceClassType) {
 
         for (Class<? extends HasEntityIdentifier> foundTargetType : params.context.getClassesWithParent(sourceClassType)) {
             if (BaseEntity.class.isAssignableFrom(foundTargetType)) {
                 List<BaseEntity> items = params.context.db().findAll((Class<BaseEntity>) foundTargetType)
-                                                             .stream().filter(baseEntity -> {
-                        // hack: check if sourceClassType is HasSetStatusValue and we if we are unable to write to value
-                        return !HasSetStatusValue.class.isAssignableFrom(sourceClassType) || ((HasSetStatusValue) baseEntity).isAbleToSetValue();
-                    }).collect(Collectors.toList());
+                        .stream().filter(baseEntity -> {
+                            // hack: check if sourceClassType is HasSetStatusValue and we if we are unable to write to value
+                            return !HasSetStatusValue.class.isAssignableFrom(sourceClassType) || ((HasSetStatusValue) baseEntity).isAbleToSetValue();
+                        }).collect(Collectors.toList());
                 OptionUtil.assembleItemsToOptions(list, sourceClassType, items, params.context, params.classEntityForDynamicOptionLoader);
             }
         }
     }
 
     public static List<OptionModel> loadOptions(Object classEntity, Context context, String fieldName, Object classEntityForDynamicOptionLoader,
-        String selectType, Map<String, String> deps) {
+                                                String selectType, Map<String, String> deps) {
 
         Method method = findMethodByName(classEntity.getClass(), fieldName, SELECT_ANNOTATIONS);
         if (method == null) {
@@ -108,7 +99,7 @@ public final class OptionUtil {
         }
 
         throw new NotFoundException(
-            "Unable to find select handler for entity type: " + classEntity.getClass().getSimpleName() + " and fieldName: " + fieldName);
+                "Unable to find select handler for entity type: " + classEntity.getClass().getSimpleName() + " and fieldName: " + fieldName);
     }
 
     private static Method findMethodByName(Class<?> clz, String name, List<? extends Class<? extends Annotation>> annotationClasses) {
@@ -127,11 +118,11 @@ public final class OptionUtil {
     }
 
     public static void assembleItemsToOptions(
-        @NotNull List<OptionModel> list,
-        @Nullable Class<? extends HasEntityIdentifier> sourceClassType,
-        @NotNull Collection<? extends BaseEntity> items,
-        @NotNull Context context,
-        @Nullable Object classEntityForDynamicOptionLoader) {
+            @NotNull List<OptionModel> list,
+            @Nullable Class<? extends HasEntityIdentifier> sourceClassType,
+            @NotNull Collection<? extends BaseEntity> items,
+            @NotNull Context context,
+            @Nullable Object classEntityForDynamicOptionLoader) {
 
         for (BaseEntity baseEntity : items) {
             String lastValue = tryFetchCurrentValueFromEntity(baseEntity, context);
@@ -187,7 +178,7 @@ public final class OptionUtil {
     }
 
     private static List<OptionModel> loadOptions(AccessibleObject field, Context context, Class<?> targetClass, Object classEntity,
-        Object classEntityForDynamicOptionLoader, String selectType, Map<String, String> deps) {
+                                                 Object classEntityForDynamicOptionLoader, String selectType, Map<String, String> deps) {
 
         LoadOptionsParameters param = new LoadOptionsParameters(field, context, targetClass, classEntity, classEntityForDynamicOptionLoader, deps);
         // fetch all options according to all selectType
@@ -242,11 +233,11 @@ public final class OptionUtil {
                 val dynamicParameterFields = ((SelectionWithDynamicParameterFields) target).getDynamicParameterFields(requestDynamicParameter);
                 if (dynamicParameterFields != null) {
                     DynamicParameter dynamicParameter =
-                        new DynamicParameter(
-                            dynamicParameterFields.getGroupName(),
-                            dynamicParameterFields.getBorderColor(),
-                            dynamicParameterFields.getClass().getSimpleName(),
-                            dynamicParameterFields);
+                            new DynamicParameter(
+                                    dynamicParameterFields.getGroupName(),
+                                    dynamicParameterFields.getBorderColor(),
+                                    dynamicParameterFields.getClass().getSimpleName(),
+                                    dynamicParameterFields);
                     json.set("dynamicParameter", OBJECT_MAPPER.valueToTree(dynamicParameter));
                 }
             });
@@ -301,20 +292,20 @@ public final class OptionUtil {
     }
 
     private static void buildGroupOption(
-        List<OptionModel> result,
-        Map<String, OptionModel> parentModels,
-        Entry<SelectionParent, List<OptionModel>> entry,
-        SelectionParent parent) {
+            List<OptionModel> result,
+            Map<String, OptionModel> parentModels,
+            Entry<SelectionParent, List<OptionModel>> entry,
+            SelectionParent parent) {
         OptionModel parentModel = OptionModel.of(parent.key, parent.getName()).setIcon(parent.icon).setColor(parent.iconColor)
-                                             .setDescription(parent.description).setChildren(entry.getValue());
+                .setDescription(parent.description).setChildren(entry.getValue());
         if (parent.getParent() != null) {
             JsonNode superParent = entry.getKey().getParent();
             String superParentKey = superParent.get("key").asText();
             OptionModel optionModel = parentModels.computeIfAbsent(superParentKey, key ->
-                OptionModel.of(key, superParent.get("name").asText())
-                           .setIcon(superParent.path("icon").asText())
-                           .setColor(superParent.path("iconColor").asText())
-                           .setDescription(superParent.path("description").asText()));
+                    OptionModel.of(key, superParent.get("name").asText())
+                            .setIcon(superParent.path("icon").asText())
+                            .setColor(superParent.path("iconColor").asText())
+                            .setDescription(superParent.path("description").asText()));
             optionModel.addChild(parentModel);
         } else {
             result.add(parentModel);
@@ -323,7 +314,7 @@ public final class OptionUtil {
 
     @NotNull
     private static Map<SelectionParent, List<OptionModel>> buildGroupOptionsBySelectionParent(List<OptionModel> options, List<OptionModel> result)
-        throws JsonProcessingException {
+            throws JsonProcessingException {
         Map<SelectionParent, List<OptionModel>> groupedModels = new HashMap<>();
         for (OptionModel option : options) {
             JsonNode parent = option.getJson() == null ? null : option.getJson().remove("sp");

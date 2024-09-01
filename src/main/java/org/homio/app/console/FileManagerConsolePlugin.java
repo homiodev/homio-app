@@ -1,12 +1,12 @@
 package org.homio.app.console;
 
-import static org.homio.app.model.entity.user.UserBaseEntity.FILE_MANAGER_RESOURCE;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 import org.homio.api.Context;
 import org.homio.api.console.ConsolePlugin;
+import org.homio.app.model.entity.user.UserGuestEntity;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
@@ -31,7 +31,12 @@ public class FileManagerConsolePlugin implements ConsolePlugin<Object> {
 
     @Override
     public boolean isEnabled() {
-        return context.accessEnabled(FILE_MANAGER_RESOURCE);
+        try {
+            UserGuestEntity.assertFileManagerReadAccess(context);
+        } catch (Exception ignore) {
+            UserGuestEntity.assertFileManagerWriteAccess(context);
+        }
+        return true;
     }
 
     @Override

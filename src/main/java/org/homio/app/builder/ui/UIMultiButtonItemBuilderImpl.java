@@ -1,7 +1,5 @@
 package org.homio.app.builder.ui;
 
-import java.util.ArrayList;
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
@@ -10,6 +8,10 @@ import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.item.UIMultiButtonItemBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 @Getter
 public class UIMultiButtonItemBuilderImpl
@@ -25,7 +27,7 @@ public class UIMultiButtonItemBuilderImpl
     @Override
     public @NotNull UIMultiButtonItemBuilder addButton(@NotNull String key, @Nullable String title, @Nullable Icon icon) {
         if (icon == null) {
-            buttons.add(new ExtraButton(key, StringUtils.defaultString(title, key), null, null));
+            buttons.add(new ExtraButton(key, Objects.toString(title, key), null, null));
         } else {
             buttons.add(new ExtraButton(key, title, icon.getColor(), icon.getIcon()));
         }

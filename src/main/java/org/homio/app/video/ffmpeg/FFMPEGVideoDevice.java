@@ -1,13 +1,14 @@
 package org.homio.app.video.ffmpeg;
 
-import java.awt.Dimension;
-import java.util.ArrayList;
-import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.homio.api.ContextMedia.VideoInputDevice;
 import org.jetbrains.annotations.NotNull;
+
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Accessors(chain = true)

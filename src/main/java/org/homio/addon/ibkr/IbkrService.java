@@ -44,8 +44,6 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
 
     public IbkrService(@NotNull Context context, @NotNull IbkrEntity ibkrEntity) {
         super(context, ibkrEntity, true, "IBKR");
-
-
     }
 
     @Override
@@ -91,7 +89,7 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
 
     private @NotNull IbkrApi getApi() {
         if (api == null) {
-            if(!entity.getStatus().isOnline()) {
+            if (!entity.getStatus().isOnline()) {
                 throw new ServerException("IBKR service not online");
             }
             api = new IbkrApi(entity, context);

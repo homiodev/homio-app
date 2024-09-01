@@ -303,7 +303,7 @@ public class ContextWidgetImpl implements ContextWidget {
         if (!entityID.startsWith(prefix)) {
             entityID = prefix + entityID;
         }
-        if (context.db().getEntity(entityID) != null) {
+        if (context.db().get(entityID) != null) {
             throw new IllegalArgumentException("Widget with such entityID already exists");
         }
         return entityID;
@@ -313,7 +313,7 @@ public class ContextWidgetImpl implements ContextWidget {
     private <T extends WidgetEntity> T createStubWidget(@NotNull String entityID, T widget) {
         entityID = ensureWidgetNotExists(entityID, widget.getEntityPrefix());
 
-        WidgetTabEntity generalTabEntity = context.db().getEntity(MAIN_TAB_ID);
+        WidgetTabEntity generalTabEntity = context.db().get(MAIN_TAB_ID);
         widget.setEntityID(entityID);
         widget.setWidgetTabEntity(generalTabEntity);
         return widget;
