@@ -1,5 +1,6 @@
 package org.homio.app.service.cloud;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
@@ -27,7 +28,7 @@ public class CloudService implements ContextCreated {
     @SuppressWarnings("rawtypes")
     private CloudProviderService cloudProvider;
     @SuppressWarnings("rawtypes")
-    private SshCloud currentEntity;
+    private @Getter SshCloud currentEntity;
     private ThreadContext<Void> cloudServiceThread;
     private long entityHashCode;
 

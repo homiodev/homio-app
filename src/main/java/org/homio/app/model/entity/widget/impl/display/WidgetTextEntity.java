@@ -28,11 +28,6 @@ public class WidgetTextEntity extends WidgetEntity<WidgetTextEntity> implements 
         return null;
     }
 
-    @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
-    }
-
     @UIField(order = 1)
     @UIFieldGroup(value = "TEXT", order = 10, borderColor = "#4AB64D")
     @UIFieldCodeEditor(editorTypeRef = "contentType")

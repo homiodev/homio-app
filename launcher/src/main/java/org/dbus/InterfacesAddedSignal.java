@@ -27,5 +27,3 @@ public interface InterfacesAddedSignal extends DBusInterface {
         }
     }
 }
-
-

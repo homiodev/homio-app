@@ -22,7 +22,6 @@ import org.homio.app.extloader.AddonContext;
 import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.SettingEntity;
-import org.homio.app.model.entity.user.UserGuestEntity;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.setting.system.SystemPlaceSetting;
 import org.homio.app.setting.system.proxy.SystemProxyAddressSetting;
@@ -49,26 +48,53 @@ import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin
 @RequiredArgsConstructor
 public class ContextSettingImpl implements ContextSetting {
 
+    public static final Map<String, SettingPlugin> settingPluginsByPluginKey = new HashMap<>();
+    public static final Map<Class<? extends DynamicConsoleHeaderContainerSettingPlugin>, List<SettingEntity>> dynamicHeaderSettings = new HashMap<>();
+    public static final Map<String, UserSettings> settings = new HashMap<>();
+    private static final Map<SettingPlugin, String> settingTransientState = new HashMap<>();
+    private static final Map<String, Function<String, String>> settingValuePostProcessors = new HashMap<>();
     @Getter
     private static Path propertiesLocation;
     private static CommentedProperties homioProperties;
-
-    public static final Map<String, SettingPlugin> settingPluginsByPluginKey = new HashMap<>();
-    public static final Map<Class<? extends DynamicConsoleHeaderContainerSettingPlugin>, List<SettingEntity>> dynamicHeaderSettings = new HashMap<>();
-    private static final Map<SettingPlugin, String> settingTransientState = new HashMap<>();
-    private static final Map<String, Function<String, String>> settingValuePostProcessors = new HashMap<>();
     private final Map<String, SettingPlugin> settingPluginsByPluginClass = new HashMap<>();
-
     private final Map<String, Map<String, ThrowingConsumer<?, Exception>>> settingListeners = new HashMap<>();
     private final Map<String, Map<String, ThrowingConsumer<?, Exception>>> httpRequestSettingListeners = new HashMap<>();
     private final ContextImpl context;
     private final ConfigurableEnvironment environment;
     private final ClassFinder classFinder;
 
-    public static final Map<String, UserSettings> settings = new HashMap<>();
-
     public static List<SettingPlugin> settingPluginsBy(Predicate<SettingPlugin> predicate) {
         return settingPluginsByPluginKey.values().stream().filter(predicate).collect(Collectors.toList());
+    }
+
+    @SneakyThrows
+    public static CommentedProperties getHomioProperties() {
+        if (homioProperties == null) {
+            homioProperties = new CommentedProperties();
+            propertiesLocation = CommonUtils.getRootPath().resolve("homio.properties");
+            log.info("Uses configuration file: {}", propertiesLocation);
+            try {
+                homioProperties.load(Files.newInputStream(propertiesLocation));
+            } catch (Exception ignore) {
+                homioProperties.store(Files.newOutputStream(propertiesLocation), null);
+            }
+        }
+        return homioProperties;
+    }
+
+    private static Map<SettingPlugin, String> getTransientState(@Nullable UserEntity user) {
+        if (user != null && !user.isAdmin()) {
+            return settings.computeIfAbsent(user.getEntityID(), s -> new UserSettings()).settingTransientState;
+        }
+        return settingTransientState;
+    }
+
+    private static void setSystemProxy(String ip, String port) {
+        System.setProperty("java.net.useSystemProxies", StringUtils.isEmpty(ip) ? "false" : "true");
+        System.setProperty("http.proxyHost", ip);
+        System.setProperty("https.proxyHost", ip);
+        System.setProperty("http.proxyPort", port);
+        System.setProperty("https.proxyPort", port);
     }
 
     @Override
@@ -212,21 +238,6 @@ public class ContextSettingImpl implements ContextSetting {
             return defaultValue;
         }
         return environment.getConversionService().convert(value, classType);
-    }
-
-    @SneakyThrows
-    public static CommentedProperties getHomioProperties() {
-        if (homioProperties == null) {
-            homioProperties = new CommentedProperties();
-            propertiesLocation = CommonUtils.getRootPath().resolve("homio.properties");
-            log.info("Uses configuration file: {}", propertiesLocation);
-            try {
-                homioProperties.load(Files.newInputStream(propertiesLocation));
-            } catch (Exception ignore) {
-                homioProperties.store(Files.newOutputStream(propertiesLocation), null);
-            }
-        }
-        return homioProperties;
     }
 
     @Override
@@ -375,8 +386,7 @@ public class ContextSettingImpl implements ContextSetting {
     private void setValueSilenceRaw(SettingPlugin<?> pluginFor, @Nullable String value) {
         log.debug("Update setting <{}> value <{}>", SettingEntity.getKey(pluginFor), value);
 
-        UserGuestEntity.assertSettingAccess(context);
-        UserEntity user = context.getUser();
+        UserEntity user = context.user().getLoggedInUser();
         pluginFor.assertUserAccess(context, user);
 
         if (!pluginFor.isStorable()) {
@@ -396,13 +406,6 @@ public class ContextSettingImpl implements ContextSetting {
         }
     }
 
-    private static Map<SettingPlugin, String> getTransientState(@Nullable UserEntity user) {
-        if (user != null && !user.isAdmin()) {
-            return settings.computeIfAbsent(user.getEntityID(), s -> new UserSettings()).settingTransientState;
-        }
-        return settingTransientState;
-    }
-
     @SneakyThrows
     private void configureProxy() {
         listenValueAndGet(SystemProxyAddressSetting.class, "proxy-host", proxyUrl -> {
@@ -416,14 +419,6 @@ public class ContextSettingImpl implements ContextSetting {
             }
             setSystemProxy(items[0], items[1]);
         });
-    }
-
-    private static void setSystemProxy(String ip, String port) {
-        System.setProperty("java.net.useSystemProxies", StringUtils.isEmpty(ip) ? "false" : "true");
-        System.setProperty("http.proxyHost", ip);
-        System.setProperty("https.proxyHost", ip);
-        System.setProperty("http.proxyPort", port);
-        System.setProperty("https.proxyPort", port);
     }
 
     public static class CommentedProperties extends Properties {

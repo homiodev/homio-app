@@ -2,8 +2,8 @@ spring:
   data.jpa.repositories.bootstrap-mode: lazy
   servlet:
     multipart:
-      max-file-size: 100MB
-      max-request-size: 100MB
+      max-file-size: 2000MB
+      max-request-size: 2000MB
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
@@ -17,6 +17,13 @@ spring:
     show-sql: true
 server:
   port: 9111
+  tomcat:
+    connection-timeout: PT30M
+    max-connections: 100
+    max-http-form-post-size: 2MB
+    threads:
+      max: 100
+      max-queue-capacity: 1000
   compression:
     enabled: true
     min-response-size: 512B

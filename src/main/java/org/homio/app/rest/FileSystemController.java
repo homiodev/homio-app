@@ -2,12 +2,13 @@ package org.homio.app.rest;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.pivovarit.function.ThrowingSupplier;
 import jakarta.ws.rs.BadRequestException;
 import lombok.*;
 import lombok.experimental.Accessors;
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
 import org.homio.api.Context;
-import org.homio.api.audio.AudioFormat;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.fs.FileSystemProvider;
@@ -15,9 +16,12 @@ import org.homio.api.fs.TreeConfiguration;
 import org.homio.api.fs.TreeNode;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
+import org.homio.api.stream.audio.AudioFormat;
+import org.homio.api.stream.audio.AudioStream;
+import org.homio.api.stream.audio.FileAudioStream;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.user.UserGuestEntity;
-import org.homio.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
+import org.homio.app.model.entity.widget.impl.media.WidgetFMNodeValue;
 import org.homio.app.service.FileSystemService;
 import org.homio.app.service.device.LocalFileSystemProvider;
 import org.homio.hquery.Curl;
@@ -25,7 +29,6 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -34,6 +37,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URLConnection;
 import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -45,7 +49,9 @@ import java.util.stream.Stream;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.homio.api.ui.field.selection.UIFieldTreeNodeSelection.LOCAL_FS;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.homio.hquery.Curl.ONE_MB;
 
+@Log4j2
 @RestController
 @RequestMapping("/rest/fs")
 @RequiredArgsConstructor
@@ -115,8 +121,14 @@ public class FileSystemController {
         if (treeNode == null || treeNode.getId() == null) {
             throw NotFoundException.fileNotFound(request.sourceFileId);
         }
-        InputStream inputStream = fileSystem.getEntryInputStream(treeNode.getId());
-        context.ui().media().playWebAudio(inputStream, AudioFormat.MP3, null, null);
+        AudioStream audioStream;
+        if (fileSystem instanceof LocalFileSystemProvider local) {
+            audioStream = new FileAudioStream(local.getFile(treeNode.getId()), AudioFormat.MP3);
+        } else {
+            InputStream inputStream = fileSystem.getEntryInputStream(treeNode.getId());
+            audioStream = AudioStream.fromUnknownStream(inputStream, AudioFormat.MP3);
+        }
+        context.ui().media().playWebAudio(audioStream, null, null);
     }
 
     @SneakyThrows
@@ -295,18 +307,43 @@ public class FileSystemController {
         UserGuestEntity.assertFileManagerWriteAccess(context);
 
         FileSystemProvider fileSystem = fileSystemService.getFileSystem(sourceFs, alias);
+
         if (files != null && files.length > 0) {
-            Set<TreeNode> treeNodes = Stream.of(files).map(TreeNode::of).collect(Collectors.toSet());
-            return fileSystem.copy(treeNodes, sourceFileId, FileSystemProvider.UploadOption.Replace);
+            log.info("Request upload files: '{}' to {}/{}", Arrays.stream(files).map(f -> Objects.toString(f.getOriginalFilename(),
+                    f.getName())).collect(Collectors.joining(", ")), sourceFs, sourceFileId);
+            int size = Arrays.stream(files).mapToInt(value -> (int) value.getSize()).sum();
+            return copyFiles(size, sourceFileId, () -> {
+                Set<TreeNode> treeNodes = Stream.of(files).map(TreeNode::of).collect(Collectors.toSet());
+                return fileSystem.copy(treeNodes, sourceFileId, FileSystemProvider.UploadOption.Replace);
+            });
         } else if (!url.isEmpty()) {
+            log.info("Request upload url file: '{}' to {}/{}", url, sourceFs, sourceFileId);
             URI uri = new URI(url);
             String name = Paths.get(uri.getPath()).getFileName().toString();
-            TreeNode treeNode = new TreeNode(false, false, name, name,
-                    (long) Curl.getFileSize(uri.toURL()), null, null, null)
-                    .setInputStream(uri.toURL().openStream());
-            return fileSystem.copy(treeNode, sourceFileId, FileSystemProvider.UploadOption.Replace);
+            int size = Curl.getFileSize(uri.toURL());
+            return copyFiles(size, sourceFileId, () -> {
+                URLConnection urlConnection = uri.toURL().openConnection();
+                urlConnection.setConnectTimeout(10_000);
+                urlConnection.setReadTimeout(10_000);
+                TreeNode treeNode = new TreeNode(false, false, name, name,
+                        (long) size, null, null, null)
+                        .setInputStream(urlConnection.getInputStream());
+                treeNode.setFileSystem(fileSystem);
+                return fileSystem.copy(treeNode, sourceFileId, FileSystemProvider.UploadOption.Replace);
+            });
         }
         throw new IllegalArgumentException("Unable to upload from unknown source");
+    }
+
+    @SneakyThrows
+    private TreeNode copyFiles(int size, String sourceFileId, ThrowingSupplier<TreeNode, Exception> handler) {
+        if (size / ONE_MB > 1) {
+            context.bgp().builder("copy-" + sourceFileId).execute(() ->
+                    handler.get().refreshOnUI(context));
+            return null;
+        } else {
+            return handler.get();
+        }
     }
 
     @PostMapping("/rename")

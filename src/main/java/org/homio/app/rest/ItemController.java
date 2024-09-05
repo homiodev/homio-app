@@ -183,7 +183,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             @RequestBody GetOptionsRequest optionsRequest) {
         Object classEntity = context.db().get(entityID);
         if(classEntity instanceof BaseEntity baseEntity) {
-            context.getUserRequire().assertViewAccess(baseEntity);
+            context.user().getLoggedInUserRequire().assertViewAccess(baseEntity);
         }
         if (classEntity == null) {
             // i.e in case we load Widget
@@ -328,10 +328,10 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                               @PathVariable("methodName") String methodName,
                               @RequestBody(required = false) String body) {
         WidgetCustomEntity widgetEntity = context.db().getRequire(entityID);
-        context.getUserRequire().assertViewAccess(widgetEntity);
+        context.user().getLoggedInUserRequire().assertViewAccess(widgetEntity);
 
         BaseEntity entity = context.db().getRequire(widgetEntity.getParameterEntity());
-        context.getUserRequire().assertViewAccess(entity);
+        context.user().getLoggedInUserRequire().assertViewAccess(entity);
 
         if (entity instanceof EntityService serviceEntity) {
             EntityService.ServiceInstance service = serviceEntity.getService();
@@ -350,7 +350,11 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                     throw new IllegalArgumentException("Unable to call " + entity.getTitle() + "." + methodName + ": Unknown parameter" + parameterType.getType());
                 }
             }
-            return method.invoke(service, objects.toArray());
+            try {
+                return method.invoke(service, objects.toArray());
+            } catch (Exception ex) {
+                throw new RuntimeException(service.getName() + " error: " + CommonUtils.getErrorMessage(ex));
+            }
         }
         throw new IllegalArgumentException("Service not found for entity: " + entity.getTitle());
     }
@@ -359,7 +363,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     public @NotNull List<OptionModel> getSourceLogs(
             @PathVariable("entityID") String entityID) {
         BaseEntity entity = context.db().getRequire(entityID);
-        context.getUserRequire().assertViewAccess(entity);
+        context.user().getLoggedInUserRequire().assertViewAccess(entity);
         UserGuestEntity.assertLogAccess(context);
 
         if (entity instanceof HasEntitySourceLog) {
@@ -373,9 +377,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         putTypeToEntityIfNotExists(type);
         List<BaseEntity> entities = new ArrayList<>();
         for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
-            for (BaseEntity entity : context.db().findAll(aClass)) {
-                entities.add(entity);
-            }
+            entities.addAll(context.db().findAll(aClass));
         }
         if (!entities.isEmpty()) {
             return context.toOptionModels(entities);
@@ -400,7 +402,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             }
 
             BaseEntity entity = context.db().getRequire(entityID);
-            context.getUserRequire().assertViewAccess(entity);
+            context.user().getLoggedInUserRequire().assertViewAccess(entity);
             if (request.params == null) {
                 request.params = new JSONObject();
             }
@@ -468,7 +470,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @GetMapping("/{entityID}/dependencies")
     public List<String> canRemove(@PathVariable("entityID") String entityID) {
         BaseEntity entity = context.db().get(entityID);
-        context.getUserRequire().assertEditAccess(entity);
+        context.user().getLoggedInUserRequire().assertEditAccess(entity);
         if (entity == null) {
             entity = context.db().get(entityID, false);
             if (entity == null) {
@@ -496,7 +498,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             for (String entityId : jsonObject.keySet()) {
                 log.info("Put update item: <{}>", entityId);
                 BaseEntity entity = context.db().get(entityId);
-                context.getUserRequire().assertEditAccess(entity);
+                context.user().getLoggedInUserRequire().assertEditAccess(entity);
 
                 if (entity == null) {
                     throw NotFoundException.entityNotFound(entityId);
@@ -563,7 +565,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @PostMapping("/dynamicData")
     public Map<String, EntityDynamicData> getActions(@RequestBody List<String> entityIDs) {
         Map<String, EntityDynamicData> contextActions = new HashMap<>();
-        UserEntity user = context.getUserRequire();
+        UserEntity user = context.user().getLoggedInUserRequire();
         for (String entityID : entityIDs) {
             BaseEntity entity = context.db().getRequire(entityID);
             user.assertViewAccess(entity);
@@ -650,7 +652,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @GetMapping("/{entityID}")
     public BaseEntity getItem(@PathVariable("entityID") String entityID) {
         BaseEntity entity = entityManager.getEntityWithFetchLazy(entityID);
-        context.getUserRequire().assertViewAccess(entity);
+        context.user().getLoggedInUserRequire().assertViewAccess(entity);
 
         return entity;
     }

@@ -57,7 +57,7 @@ public class WidgetDisplayEntity
         return "display";
     }
 
-    @UIField(order = 50)
+    @UIField(order = 50, hideInView = true)
     @UIFieldLayout(options = {"name", "value", "icon"}, rows = "1:10")
     @UIFieldReadDefaultValue
     public String getLayout() {
@@ -127,6 +127,15 @@ public class WidgetDisplayEntity
 
     public void setShowChart(boolean value) {
         setJsonData("showC", value);
+    }
+
+    @Override
+    @UIField(order = 3)
+    @UIFieldColorPicker // disable thresholding
+    @UIFieldGroup("NAME")
+    @UIFieldReadDefaultValue
+    public String getNameColor() {
+        return HasName.super.getNameColor();
     }
 
     private String getDefaultLayout() {

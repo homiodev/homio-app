@@ -1,15 +1,14 @@
 package org.homio.app;
 
 import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.config.AppConfig;
-import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.impl.ContextSettingImpl;
+import org.homio.app.utils.HardwareUtils;
 import org.homio.hquery.EnableHQuery;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -33,7 +32,6 @@ import java.util.jar.Manifest;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 
-@Log4j2
 @EnableHQuery(scanBaseClassesPackage = "org.homio")
 @SpringBootApplication(exclude = {
         ErrorMvcAutoConfiguration.class,
@@ -52,7 +50,7 @@ public class HomioApplication implements WebMvcConfigurer {
             System.out.println(version);
             return;
         }
-        System.out.println("Starting Homio app " + version);
+        System.out.println("Starting Homio app: " + version);
         // set primary class loader
         Thread.currentThread().setContextClassLoader(HomioClassLoader.INSTANCE);
         // set root path before init log4j2
@@ -68,7 +66,7 @@ public class HomioApplication implements WebMvcConfigurer {
                     .run(args);
             if (!context.isRunning()) {
                 log.error("Exist Homio due unable to start context");
-                ContextImpl.exitApplication(context, 7);
+                HardwareUtils.exitApplication(context, 7);
             } else {
                 log.info("Homio app started successfully");
                 Files.deleteIfExists(Paths.get(System.getProperty("rootPath")).resolve("homio-app.jar_backup"));
@@ -121,7 +119,7 @@ public class HomioApplication implements WebMvcConfigurer {
         } else {
             rootPath = Paths.get(sysRootPath);
         }
-        log.info("Set root path: {}", rootPath);
+        System.out.println("Set root path: " + rootPath);
         Files.createDirectories(rootPath);
         System.setProperty("rootPath", rootPath.toString());
     }

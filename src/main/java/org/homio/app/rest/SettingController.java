@@ -125,7 +125,7 @@ public class SettingController implements ContextRefreshed {
     public <T> void updateSetting(@PathVariable("entityID") String entityID, @RequestBody(required = false) String value) {
         SettingPlugin<?> settingPlugin = ContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin != null) {
-            settingPlugin.assertUserAccess(context, context.getUser());
+            settingPlugin.assertUserAccess(context, context.user().getLoggedInUser());
             context.setting().setValueRaw((Class<? extends SettingPlugin<T>>) settingPlugin.getClass(), value, false);
         }
     }
@@ -150,7 +150,7 @@ public class SettingController implements ContextRefreshed {
             fulfillEntityFromPlugin(setting, context, null);
         }
 
-        boolean isAdmin = context.isAdmin();
+        boolean isAdmin = context.user().isAdminLoggedUser();
 
         if (settingToPages == null) {
             settingToPages = new HashMap<>();

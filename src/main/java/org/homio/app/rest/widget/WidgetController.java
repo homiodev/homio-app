@@ -41,8 +41,9 @@ import org.homio.app.model.entity.widget.impl.color.WidgetColorEntity;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.homio.app.model.entity.widget.impl.extra.WidgetCustomEntity;
 import org.homio.app.model.entity.widget.impl.extra.WidgetJsEntity;
-import org.homio.app.model.entity.widget.impl.fm.WidgetFMEntity;
-import org.homio.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
+import org.homio.app.model.entity.widget.impl.media.WidgetCalendarEntity;
+import org.homio.app.model.entity.widget.impl.media.WidgetFMEntity;
+import org.homio.app.model.entity.widget.impl.media.WidgetFMNodeValue;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
@@ -63,8 +64,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.commons.lang3.StringUtils.*;
 
 @Log4j2
 @RestController
@@ -128,7 +128,7 @@ public class WidgetController {
         if (entity == null) { // in case if deleted but still requested
             return Set.of();
         }
-        context.getUserRequire().assertViewAccess(entity);
+        context.user().getLoggedInUserRequire().assertViewAccess(entity);
 
         List<BaseFileSystemEntity> fileSystems = context.getEntityServices(BaseFileSystemEntity.class);
         SelectionSource source = DataSourceUtil.getSelection(entity.getValueDataSource());
@@ -206,7 +206,7 @@ public class WidgetController {
     @GetMapping("/video/{entityID}")
     public List<WidgetVideoSourceResolver.VideoEntityResponse> getCameraData(@PathVariable("entityID") String entityID) {
         WidgetVideoEntity entity = getEntity(entityID);
-        context.getUserRequire().assertViewAccess(entity);
+        context.user().getLoggedInUserRequire().assertViewAccess(entity);
 
         List<WidgetVideoSourceResolver.VideoEntityResponse> result = new ArrayList<>();
         for (WidgetVideoSeriesEntity item : entity.getSeries()) {
@@ -239,7 +239,7 @@ public class WidgetController {
     @PostMapping("/video/action")
     public void fireVideoAction(@RequestBody VideoActionRequest request) {
         WidgetVideoSeriesEntity series = getSeriesEntity(request);
-        context.getUserRequire().assertEditAccess(series.getWidgetEntity());
+        context.user().getLoggedInUserRequire().assertEditAccess(series.getWidgetEntity());
 
         try {
             BaseCameraEntity entity = context.db().get(series.getValueDataSource());
@@ -261,7 +261,7 @@ public class WidgetController {
     @PostMapping("/value")
     public SingleValueData getValue(@Valid @RequestBody WidgetDataRequest request) {
         WidgetEntity entity = request.getEntity(context, objectMapper);
-        context.getUserRequire().assertViewAccess(entity);
+        context.user().getLoggedInUserRequire().assertViewAccess(entity);
 
         if (entity instanceof HasSingleValueDataSource) {
             return new SingleValueData(timeSeriesUtil.getSingleValue(entity, (HasSingleValueDataSource) entity, o -> o), null);
@@ -269,10 +269,78 @@ public class WidgetController {
         throw new IllegalStateException("Entity: " + request.getEntityID() + " not implement 'HasSingleValueDataSource'");
     }
 
+    @PutMapping("/calendar")
+    public void updateCalendar(@RequestBody CalendarRequest request) {
+        WidgetCalendarEntity.CalendarEvent event = request.event;
+        event.validate();
+        WidgetCalendarEntity entity = getEntity(request.entityID);
+        Set<WidgetCalendarEntity.CalendarEvent> events = entity.getEvents();
+
+        if (event.getId() == null) {
+            event.setId(System.currentTimeMillis() + "");
+            events.addAll(event.getRepeat().populateEvents(event));
+        } else if (request.multiple && event.getBid() != null) {
+            String bid = event.getBid();
+            events.stream().filter(e -> Objects.equals(e.getBid(), bid) && e.getStart() > event.getStart())
+                    .forEach(e -> e.updateFrom(event));
+        }
+        events.remove(event);
+        events.add(event);
+        entity.setEvents(events);
+        context.db().save(entity);
+    }
+
+    @PostMapping("/calendar/date")
+    public void updateCalendarDate(@RequestBody CalendarRequest request) {
+        var event = request.event;
+        event.validateDates();
+        WidgetCalendarEntity entity = getEntity(request.entityID);
+        var events = entity.getEvents();
+
+        var eventToUpdate = events.stream()
+                .filter(e -> e.getId().equals(event.getId()))
+                .findFirst().orElseThrow();
+        if (request.multiple && eventToUpdate.getBid() != null) {
+            String bid = event.getBid();
+            long diffStart = event.getStart() - eventToUpdate.getStart();
+            long diffEnd = event.getEnd() - eventToUpdate.getEnd();
+            events.stream().filter(e -> Objects.equals(e.getBid(), bid) && e.getStart() > event.getStart())
+                    .forEach(e -> {
+                        e.setStart(e.getStart() + diffStart);
+                        e.setEnd(e.getEnd() + diffEnd);
+                    });
+        }
+
+        eventToUpdate.setStart(event.getStart());
+        eventToUpdate.setEnd(event.getEnd());
+        entity.setEvents(events);
+        context.db().save(entity);
+    }
+
+    @DeleteMapping("/calendar")
+    public void deleteCalendar(@RequestBody CalendarRequest request) {
+        WidgetCalendarEntity entity = getEntity(request.entityID);
+        Set<WidgetCalendarEntity.CalendarEvent> events = entity.getEvents();
+        String eventId = request.event.getId();
+        if (eventId == null) {
+            throw new IllegalArgumentException("Event ID is required for delete calendar event");
+        }
+        var savedEvent = events.stream().filter(e -> e.getId().equals(eventId)).findAny().orElseThrow();
+        if (request.multiple) {
+            String bid = savedEvent.getBid();
+            if (bid != null) {
+                events.removeIf(e -> Objects.equals(e.getBid(), bid) && e.getStart() > savedEvent.getStart());
+            }
+        }
+        events.remove(request.event);
+        entity.setEvents(events);
+        context.db().save(entity);
+    }
+
     @PostMapping("/value/update")
     public void updateValue(@RequestBody SingleValueRequest<Object> request) {
         HasSetSingleValueDataSource source = getEntity(request.entityID);
-        context.getUserRequire().assertEditAccess((BaseEntity) source);
+        context.user().getLoggedInUserRequire().assertEditAccess((BaseEntity) source);
 
         setValue(request.value, source.getSetValueDataSource(), source.getDynamicParameterFields("value"));
     }
@@ -280,7 +348,7 @@ public class WidgetController {
     @PostMapping("/slider/values")
     public List<Integer> getSliderValues(@RequestBody WidgetDataRequest request) {
         WidgetSliderEntity entity = request.getEntity(context, objectMapper, WidgetSliderEntity.class);
-        context.getUserRequire().assertViewAccess(entity);
+        context.user().getLoggedInUserRequire().assertViewAccess(entity);
 
         List<Integer> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetSliderSeriesEntity item : entity.getSeries()) {
@@ -292,7 +360,7 @@ public class WidgetController {
     @PostMapping("/slider/update")
     public void handleSlider(@RequestBody SingleValueRequest<Number> request) {
         WidgetSliderSeriesEntity series = getSeriesEntity(request);
-        context.getUserRequire().assertEditAccess(series.getWidgetEntity());
+        context.user().getLoggedInUserRequire().assertEditAccess(series.getWidgetEntity());
 
         setValue(request.value, series.getSetValueDataSource(), series.getSetValueDynamicParameterFields());
     }
@@ -300,7 +368,7 @@ public class WidgetController {
     @PostMapping("/toggle/values")
     public List<String> getToggleValues(@RequestBody WidgetDataRequest request) {
         WidgetToggleEntity entity = request.getEntity(context, objectMapper, WidgetToggleEntity.class);
-        context.getUserRequire().assertViewAccess(entity);
+        context.user().getLoggedInUserRequire().assertViewAccess(entity);
 
         List<String> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetToggleSeriesEntity item : entity.getSeries()) {
@@ -312,7 +380,7 @@ public class WidgetController {
     @PostMapping("/display/update")
     public void handleButtonClick(@RequestBody SingleValueRequest<String> request) {
         WidgetDisplayEntity source = getEntity(request.entityID);
-        context.getUserRequire().assertEditAccess(source);
+        context.user().getLoggedInUserRequire().assertEditAccess(source);
 
         setValue(request.value, source.getSetValueDataSource(), source.getSetValueDynamicParameterFields());
     }
@@ -320,7 +388,7 @@ public class WidgetController {
     @PostMapping("/colors/value")
     public WidgetColorValueResponse getColorValues(@RequestBody WidgetDataRequest request) {
         WidgetColorEntity entity = request.getEntity(context, objectMapper, WidgetColorEntity.class);
-        context.getUserRequire().assertViewAccess(entity);
+        context.user().getLoggedInUserRequire().assertViewAccess(entity);
 
         return new WidgetColorValueResponse(
                 timeSeriesUtil.getSingleValue(entity,
@@ -344,7 +412,7 @@ public class WidgetController {
     @PostMapping("/colors/update")
     public void updateColorsValue(@RequestBody ColorValueRequest request) {
         WidgetColorEntity entity = context.db().getRequire(request.entityID);
-        context.getUserRequire().assertEditAccess(entity);
+        context.user().getLoggedInUserRequire().assertEditAccess(entity);
 
         switch (request.type) {
             case colorTemp -> setValue(request.value,
@@ -365,7 +433,7 @@ public class WidgetController {
     @PostMapping("/toggle/update")
     public void updateToggleValue(@RequestBody SingleValueRequest<Boolean> request) {
         WidgetToggleSeriesEntity entity = getSeriesEntity(request);
-        context.getUserRequire().assertEditAccess(entity);
+        context.user().getLoggedInUserRequire().assertEditAccess(entity);
 
         setValue(
                 request.value ? entity.getPushToggleOnValue() : entity.getPushToggleOffValue(),
@@ -376,7 +444,7 @@ public class WidgetController {
     @GetMapping("/{entityID}")
     public WidgetEntity getWidget(@PathVariable("entityID") String entityID) {
         WidgetEntity widget = context.db().get(entityID);
-        context.getUserRequire().assertViewAccess(widget);
+        context.user().getLoggedInUserRequire().assertViewAccess(widget);
 
         updateWidgetBeforeReturnToUI(widget);
         return widget;
@@ -422,7 +490,7 @@ public class WidgetController {
     }
 
     private <T extends BaseEntity> Stream<T> filterViewEntity(Stream<T> stream) {
-        UserEntity user = context.getUserRequire();
+        UserEntity user = context.user().getLoggedInUserRequire();
         if (!user.isAdmin()) {
             UserGuestEntity guest = (UserGuestEntity) user;
             stream = stream.filter(w -> {
@@ -563,7 +631,9 @@ public class WidgetController {
     @GetMapping("/tab")
     public List<WidgetTabEntity> getWidgetTabs() {
         var stream = context.db().findAll(WidgetTabEntity.class).stream();
-        return filterViewEntity(stream).toList();
+        return filterViewEntity(stream)
+                .sorted(Comparator.comparingInt(HasOrder::getOrder))
+                .toList();
     }
 
     @SneakyThrows
@@ -693,7 +763,7 @@ public class WidgetController {
         }
         if (!filters.isEmpty()) {
             for (Pattern filter : filters) {
-                if (filter.matcher(StringUtils.defaultIfEmpty(n.getId(), n.getId())).matches()) {
+                if (filter.matcher(defaultIfEmpty(n.getId(), n.getId())).matches()) {
                     return true;
                 }
             }
@@ -829,7 +899,7 @@ public class WidgetController {
             }
         }
     }
-    
+
     @Getter
     @Setter
     public static class WidgetFMPrevSnapshot {
@@ -844,6 +914,17 @@ public class WidgetController {
         private String name;
         private String value;
     }
+
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CalendarRequest {
+
+        private String entityID;
+        private boolean multiple;
+        private WidgetCalendarEntity.CalendarEvent event;
+    }
+
 
     @Setter
     @NoArgsConstructor

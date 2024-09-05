@@ -1,10 +1,8 @@
 package org.homio.app.ble;
 
-
 import org.springframework.stereotype.Controller;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.homio.hquery.hardware.other.MachineHardwareRepository;
-
 
 @Controller
 public class BluetoothBundleService extends BaseBluetoothCharacteristicService {

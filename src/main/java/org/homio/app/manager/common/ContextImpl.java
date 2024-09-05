@@ -8,26 +8,18 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
 import org.homio.api.ContextHardware;
-import org.homio.api.ContextMedia;
 import org.homio.api.ContextNetwork;
+import org.homio.api.ContextUser;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.exception.ServerException;
-import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
-import org.homio.api.model.Status;
-import org.homio.api.repository.GitHubProject;
 import org.homio.api.service.discovery.ItemDiscoverySupport;
-import org.homio.api.service.discovery.VideoStreamScanner;
-import org.homio.api.state.StringType;
 import org.homio.api.util.CommonUtils;
-import org.homio.api.util.FlowMap;
-import org.homio.api.util.Lang;
 import org.homio.app.LogService;
-import org.homio.app.audio.AudioService;
 import org.homio.app.auth.JwtTokenProvider;
 import org.homio.app.builder.widget.ContextWidgetImpl;
 import org.homio.app.config.TransactionManagerContext;
@@ -47,13 +39,13 @@ import org.homio.app.service.FileSystemService;
 import org.homio.app.service.cloud.CloudService;
 import org.homio.app.service.scan.BeansItemsDiscovery;
 import org.homio.app.setting.ScanDevicesSetting;
-import org.homio.app.setting.ScanMediaSetting;
 import org.homio.app.setting.system.SystemClearCacheButtonSetting;
 import org.homio.app.setting.system.SystemShowEntityStateSetting;
 import org.homio.app.setting.system.SystemSoftRestartButtonSetting;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.ssh.SshTmateEntity;
+import org.homio.app.utils.NotificationUtils;
 import org.homio.app.utils.OptionUtil;
 import org.homio.app.video.ffmpeg.FfmpegHardwareRepository;
 import org.homio.app.workspace.LockManagerImpl;
@@ -63,7 +55,6 @@ import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
-import org.springframework.boot.SpringApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -71,13 +62,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Component;
 
 import java.lang.annotation.Annotation;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -89,13 +75,13 @@ import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 public class ContextImpl implements Context {
 
     public static final Map<String, Object> FIELD_FETCH_TYPE = new HashMap<>();
-    public static final ThreadLocal<HttpServletRequest> REQUEST = new ThreadLocal();
+    public static final ThreadLocal<HttpServletRequest> REQUEST = new ThreadLocal<>();
     private static final Set<Class<? extends ContextCreated>> BEAN_CONTEXT_CREATED = new LinkedHashSet<>();
     private static final Set<Class<? extends ContextRefreshed>> BEAN_CONTEXT_REFRESH = new LinkedHashSet<>();
-    private static final long START_TIME = System.currentTimeMillis();
-    private static AllDeviceRepository allDeviceRepository;
     public static Map<String, Class<? extends EntityFieldMetadata>> uiFieldClasses;
     public static Map<String, AbstractRepository> repositoriesByPrefix;
+    public static ContextImpl INSTANCE;
+    private static AllDeviceRepository allDeviceRepository;
 
     static {
         BEAN_CONTEXT_CREATED.add(AddonService.class);
@@ -118,17 +104,13 @@ public class ContextImpl implements Context {
         BEAN_CONTEXT_REFRESH.add(WorkspaceService.class);
         BEAN_CONTEXT_REFRESH.add(ItemController.class);
         BEAN_CONTEXT_REFRESH.add(PortService.class);
-        BEAN_CONTEXT_REFRESH.add(AudioService.class);
     }
 
-    public static ContextImpl INSTANCE;
     private final ContextUIImpl contextUI;
     private final ContextInstallImpl contextInstall;
     private final ContextEventImpl contextEvent;
     private final ContextBGPImpl contextBGP;
     private final ContextSettingImpl contextSetting;
-    private final GitHubProject appGitHub = GitHubProject.of("homiodev", "homio-app", CommonUtils.getInstallPath().resolve("homio"))
-            .setInstalledVersionResolver((context, gitHubProject) -> setting().getApplicationVersion());
     private final ContextVarImpl contextVar;
     private final ContextHardwareImpl contextHardware;
     private final ContextWidgetImpl contextWidget;
@@ -137,16 +119,18 @@ public class ContextImpl implements Context {
     private final ContextWorkspaceImpl contextWorkspace;
     private final ContextStorageImpl contextStorage;
     private final ContextNetworkImpl contextNetwork;
+    private final ContextUserImpl contextUser;
     private final ClassFinder classFinder;
     @Getter
     private final CacheService cacheService;
     @Getter
     private final Set<ApplicationContext> allApplicationContexts = new HashSet<>();
-    private boolean showEntityState;
-    private ApplicationContext applicationContext;
-    private WorkspaceService workspaceService;
     @Getter
     private final ContextAddonImpl addon;
+    private boolean showEntityState;
+    @Getter
+    private ApplicationContext applicationContext;
+    private WorkspaceService workspaceService;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public ContextImpl(
@@ -193,11 +177,29 @@ public class ContextImpl implements Context {
                 cacheService,
                 widgetRepository,
                 widgetSeriesRepository);
+        this.contextUser = new ContextUserImpl(this);
         this.contextNetwork = new ContextNetworkImpl(this, mhr, nhr);
         this.addon = new ContextAddonImpl(this, cacheService);
 
         this.contextBGP.builder("flush-delayed-updates").intervalWithDelay(Duration.ofSeconds(30))
                 .execute(cacheService::flushDelayedUpdates);
+    }
+
+    public static AbstractRepository getRepository(@NotNull String entityIdOrPrefix) {
+        for (AbstractRepository repository : ContextImpl.repositoriesByPrefix.values()) {
+            if (repository.isMatch(entityIdOrPrefix)) {
+                return repository;
+            }
+        }
+        return allDeviceRepository;
+    }
+
+    public static Object getFetchType(String subType) {
+        Object pojoInstance = ContextImpl.FIELD_FETCH_TYPE.get(subType);
+        if (pojoInstance == null) {
+            throw new ServerException("Unable to find fetch type: " + subType);
+        }
+        return pojoInstance;
     }
 
     @SneakyThrows
@@ -224,6 +226,7 @@ public class ContextImpl implements Context {
         contextBGP.onContextCreated();
         contextHardware.onContextCreated();
         contextNetwork.onContextCreated();
+        contextMedia.onContextCreated();
         // initialize all addons
         addon.onContextCreated();
         contextWorkspace.onContextCreated(workspaceService);
@@ -239,11 +242,8 @@ public class ContextImpl implements Context {
 
         addon.initializeInlineAddons();
 
-        bgp().builder("app-version").interval(Duration.ofDays(1)).delay(Duration.ofSeconds(1))
-                .execute(this::updateAppNotificationBlock);
-        event().runOnceOnInternetUp("app-version", this::updateAppNotificationBlock);
+        NotificationUtils.addAppNotifications(this);
 
-        event().fireEventIfNotSame("app-status", new StringType(Status.ONLINE.toString()));
         setting().listenValue(SystemClearCacheButtonSetting.class, "im-clear-cache", () -> {
             cacheService.clearCache();
             ui().toastr().success("Cache has been cleared successfully");
@@ -251,8 +251,6 @@ public class ContextImpl implements Context {
         setting().listenValue(SystemSoftRestartButtonSetting.class, "soft-restart", () -> SystemSoftRestartButtonSetting.restart(this));
         setting().listenValue(ScanDevicesSetting.class, "scan-devices", () ->
                 ui().handleResponse(new BeansItemsDiscovery(ItemDiscoverySupport.class).handleAction(this, null)));
-        setting().listenValue(ScanMediaSetting.class, "scan-video-sources", () ->
-                ui().handleResponse(new BeansItemsDiscovery(VideoStreamScanner.class).handleAction(this, null)));
         INSTANCE = this;
     }
 
@@ -332,7 +330,12 @@ public class ContextImpl implements Context {
     }
 
     @Override
-    public @NotNull ContextMedia media() {
+    public @NotNull ContextUser user() {
+        return contextUser;
+    }
+
+    @Override
+    public @NotNull ContextMediaImpl media() {
         return contextMedia;
     }
 
@@ -348,15 +351,6 @@ public class ContextImpl implements Context {
 
     public @NotNull ContextWidgetImpl widget() {
         return this.contextWidget;
-    }
-
-    public static AbstractRepository getRepository(@NotNull String entityIdOrPrefix) {
-        for (AbstractRepository repository : ContextImpl.repositoriesByPrefix.values()) {
-            if (repository.isMatch(entityIdOrPrefix)) {
-                return repository;
-            }
-        }
-        return allDeviceRepository;
     }
 
     @Override
@@ -438,7 +432,6 @@ public class ContextImpl implements Context {
                 .collect(Collectors.toList());
     }
 
-
     public void fireAllLock(Consumer<LockManagerImpl> handler) {
         this.workspaceService.fireAllLock(handler);
     }
@@ -456,14 +449,6 @@ public class ContextImpl implements Context {
         }
     }
 
-    public static Object getFetchType(String subType) {
-        Object pojoInstance = ContextImpl.FIELD_FETCH_TYPE.get(subType);
-        if (pojoInstance == null) {
-            throw new ServerException("Unable to find fetch type: " + subType);
-        }
-        return pojoInstance;
-    }
-
     private void restartEntityServices() {
         log.info("Loading entities and initialize all related services");
         for (BaseEntity baseEntity : db().findAllBaseEntities()) {
@@ -471,62 +456,6 @@ public class ContextImpl implements Context {
                 ((BaseFileSystemEntity<?>) baseEntity).getFileSystem(this, 0).restart(false);
             }
         }
-    }
-
-    /**
-     * Fully restart application
-     */
-    @SneakyThrows
-    public static void exitApplication(ApplicationContext applicationContext, int code) {
-        SpringApplication.exit(applicationContext, () -> code);
-        System.exit(code);
-        // sleep to allow program exist
-        Thread.sleep(30000);
-        log.info("Unable to stop app in 30sec. Force stop it");
-        // force exit
-        Runtime.getRuntime().halt(code);
-    }
-
-    private void updateAppNotificationBlock() {
-        ui().notification().addBlock("app", "App", new Icon("fas fa-house", "#E65100"), builder -> {
-            builder.setBorderColor("#FF4400");
-            String installedVersion = appGitHub.getInstalledVersion(this);
-            builder.setUpdating(appGitHub.isUpdating());
-            builder.setVersion(installedVersion);
-            String latestVersion = appGitHub.getLastReleaseVersion();
-            if (!Objects.equals(installedVersion, latestVersion)) {
-                builder.setUpdatable(
-                        (progressBar, version) -> appGitHub.updateProject("homio", progressBar, false, projectUpdate -> {
-                            Path jarLocation = Paths.get(setting().getEnvRequire("appPath", String.class, CommonUtils.getRootPath().toString(), true));
-                            Path archiveAppPath = jarLocation.resolve("homio-app.zip");
-                            Files.deleteIfExists(archiveAppPath);
-                            try {
-                                projectUpdate.downloadReleaseFile(version, archiveAppPath.getFileName().toString(), archiveAppPath);
-                                ui().dialog().reloadWindow("Finish update", 200);
-                                log.info("Exit app to restart it after update");
-                            } catch (Exception ex) {
-                                log.error("Unable to download homio app", ex);
-                                Files.deleteIfExists(archiveAppPath);
-                                return null;
-                            }
-                            exitApplication(applicationContext, 221);
-                            return null;
-                        }, null),
-                        appGitHub.getReleasesSince(installedVersion, false));
-            }
-            builder.fireOnFetch(() -> {
-                long runDuration = TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - START_TIME);
-                String time = runDuration + "h";
-                if (runDuration == 0) {
-                    runDuration = TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - START_TIME);
-                    time = runDuration + "m";
-                }
-                String serverStartMsg = Lang.getServerMessage("SERVER_STARTED", FlowMap.of("VALUE",
-                        new SimpleDateFormat("MM/dd HH:mm").format(new Date(START_TIME)),
-                        "TIME", time));
-                builder.addInfo("time", new Icon("fas fa-clock"), serverStartMsg);
-            });
-        });
     }
 
     @AllArgsConstructor

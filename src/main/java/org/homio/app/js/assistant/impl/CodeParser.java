@@ -314,8 +314,6 @@ public class CodeParser {
                         // getPinRequestType
                         addCompetitionFrom("", parameter.getType(), methodParameters[methodParameters.length - 1], new Stack<>(),
                                 context);
-
-
                     }
                 }
             }

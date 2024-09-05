@@ -5,14 +5,14 @@ import com.pivovarit.function.ThrowingBiFunction;
 import lombok.*;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.homio.api.ContextUI;
-import org.homio.api.audio.AudioFormat;
-import org.homio.api.audio.stream.ByteArrayAudioStream;
+import org.homio.api.stream.audio.AudioStream;
 import org.homio.api.console.ConsolePlugin;
+import org.homio.api.console.ConsolePluginTable;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.BaseEntityIdentifier;
 import org.homio.api.entity.HasStatusAndMsg;
@@ -25,6 +25,7 @@ import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
+import org.homio.api.service.EntityService;
 import org.homio.api.setting.SettingPluginButton;
 import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.UISidebarMenu;
@@ -37,7 +38,6 @@ import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
 import org.homio.api.util.NotificationLevel;
-import org.homio.app.audio.webaudio.WebAudioAudioSink;
 import org.homio.app.builder.ui.UIInputBuilderImpl;
 import org.homio.app.builder.ui.UIInputEntityActionHandler;
 import org.homio.app.config.WebSocketConfig;
@@ -56,7 +56,7 @@ import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
-import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.*;
 import java.util.Map.Entry;
@@ -70,7 +70,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 @Log4j2
@@ -115,10 +114,25 @@ public class ContextUIImpl implements ContextUI {
     @NotNull Map<String, Map<String, ItemsContextMenuAction>> itemsContextMenuActions = new ConcurrentHashMap<>();
     private final @NotNull Map<String, Object> refreshConsolePlugin = new ConcurrentHashMap<>();
 
-    private WebAudioAudioSink webAudioSink;
+    public static ConsolePlugin<?> getPlugin(String tab) {
+        ConsolePlugin<?> consolePlugin = consolePluginsMap.get(tab);
+        if (consolePlugin == null) {
+            consolePlugin = consoleRemovablePluginsMap.get(tab);
+        }
+        return consolePlugin;
+    }
+
+    private static String getPageName(@NotNull Class<? extends BaseEntity> page) {
+        return defaultIfEmpty(
+                page.getDeclaredAnnotation(UISidebarMenu.class).overridePath(),
+                page.getSimpleName());
+    }
+
+    private static String buildEntityDynamicUpdateId(@NotNull BaseEntityIdentifier parentEntity) {
+        return "entity-type-%s".formatted(parentEntity instanceof WidgetEntity ? "widget" : parentEntity.getType());
+    }
 
     public void onContextCreated() {
-        webAudioSink = context.getBean(WebAudioAudioSink.class);
         // run hourly script to drop not used dynamicUpdateRegisters
         context
                 .bgp()
@@ -163,7 +177,19 @@ public class ContextUIImpl implements ContextUI {
                 }
                 iterator.remove();
             }
+
+            ContextUIImpl.consolePluginsMap.forEach(this::updateConsoleUI);
+            ContextUIImpl.consoleRemovablePluginsMap.forEach(this::updateConsoleUI);
         });
+    }
+
+    private void updateConsoleUI(String key, ConsolePlugin<?> p) {
+        if(isUpdateRegistered(key)) {
+            if(p instanceof ConsolePluginTable<?> table) {
+                sendDynamicUpdateSupplied(new DynamicUpdateRequest(key, null),
+                        () -> OBJECT_MAPPER.createObjectNode().putPOJO("value", table.getUpdatableValues()));
+            }
+        }
     }
 
     public void registerForUpdates(DynamicUpdateRequest request) {
@@ -294,14 +320,6 @@ public class ContextUIImpl implements ContextUI {
                 OBJECT_MAPPER.createObjectNode().putPOJO("value", value)));
     }
 
-    public static ConsolePlugin<?> getPlugin(String tab) {
-        ConsolePlugin<?> consolePlugin = consolePluginsMap.get(tab);
-        if (consolePlugin == null) {
-            consolePlugin = consoleRemovablePluginsMap.get(tab);
-        }
-        return consolePlugin;
-    }
-
     @Override
     public void addItemContextMenu(@NotNull String entityID, @NotNull String key, @NotNull Consumer<UIInputBuilder> builder) {
         context.db().getRequire(entityID);
@@ -316,7 +334,11 @@ public class ContextUIImpl implements ContextUI {
     }
 
     private boolean isUpdateNotRegistered(@NotNull BaseEntityIdentifier parentEntity) {
-        return !this.dynamicUpdateRegisters.containsKey(new DynamicUpdateRequest("entity-type-" + parentEntity.getDynamicUpdateType()));
+        return !isUpdateRegistered("entity-type-" + parentEntity.getDynamicUpdateType());
+    }
+
+    private boolean isUpdateRegistered(@NotNull String entityID) {
+        return this.dynamicUpdateRegisters.containsKey(new DynamicUpdateRequest(entityID));
     }
 
     public void updateItem(@NotNull BaseEntity entity, boolean ignoreExtra) {
@@ -432,12 +454,6 @@ public class ContextUIImpl implements ContextUI {
         };
     }
 
-    private static String getPageName(@NotNull Class<? extends BaseEntity> page) {
-        return defaultIfEmpty(
-                page.getDeclaredAnnotation(UISidebarMenu.class).overridePath(),
-                page.getSimpleName());
-    }
-
     @Override
     public void removeHeaderButton(
             @NotNull String entityID, @Nullable String icon, boolean forceRemove) {
@@ -473,7 +489,7 @@ public class ContextUIImpl implements ContextUI {
         notificationResponse.headerMenuButtons = headerMenuButtons.values();
 
         notificationResponse.dialogs = dialogRequest.values();
-        UserEntity user = context.getUser();
+        UserEntity user = context.user().getLoggedInUser();
         notificationResponse.notifications = blockNotifications.values();
         if (user != null) {
             for (NotificationBlock notification : notificationResponse.notifications) {
@@ -561,8 +577,11 @@ public class ContextUIImpl implements ContextUI {
                     notificationBlock.getInfoItems().stream()
                             .filter(i -> Objects.equals(actionEntityID, i.getKey()))
                             .findAny().orElse(null);
-            if (info != null) {
-                return info.getHandler().handleAction(context, null);
+            if (info != null && info.getRightAction() != null) {
+                UIActionHandler action = info.getRightAction().findAction(actionEntityID);
+                if (action != null) {
+                    return action.handleAction(context, params);
+                }
             }
             UIActionHandler actionHandler = findNotificationAction(actionEntityID, notificationBlock);
             if (actionHandler != null) {
@@ -762,10 +781,19 @@ public class ContextUIImpl implements ContextUI {
                 setStatus(sm.getStatus());
             }
             if (entity instanceof HasFirmwareVersion ve) {
-                if (info.getRightText() == null) {
-                    info.setRightText(ve.getFirmwareVersion(), null, null);
-                } else {
-                    info.updateTextInfo(entity.getTitle() + " [" + ve.getFirmwareVersion() + "]");
+                info.updateTextInfo(entity.getTitle() + " [" + ve.getFirmwareVersion() + "]");
+            }
+            if (entity instanceof EntityService es && !es.isStart() && es.getStatus() == Status.OFFLINE) {
+                try {
+                    Method method = MethodUtils.getMatchingAccessibleMethod(entity.getClass(), "setStart", Boolean.class);
+                    if (method != null) {
+                        info.setRightToggleButton(false, (ec, params) -> {
+                            method.invoke(entity, true);
+                            ec.db().save(entity);
+                            return ActionResponseModel.fired();
+                        });
+                    }
+                } catch (Exception ignore) {
                 }
             }
             return this;
@@ -784,12 +812,16 @@ public class ContextUIImpl implements ContextUI {
         }
     }
 
-    private static String buildEntityDynamicUpdateId(@NotNull BaseEntityIdentifier parentEntity) {
-        return "entity-type-%s".formatted(parentEntity instanceof WidgetEntity ? "widget" : parentEntity.getType());
-    }
-
     private record SendUpdateContext(@NotNull String dynamicUpdateID, @NotNull Supplier<ObjectNode> handler) {
 
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class ItemsContextMenuAction {
+
+        private UIInputBuilder uiInputBuilder;
+        private Collection<UIInputEntity> actions;
     }
 
     public class ContextUIToastrImpl implements ContextUIToastr {
@@ -1026,17 +1058,8 @@ public class ContextUIImpl implements ContextUI {
 
         @Override
         @SneakyThrows
-        public void playWebAudio(@NotNull InputStream stream, @NotNull AudioFormat format, Integer from, Integer to) {
-            ByteArrayAudioStream audioStream = new ByteArrayAudioStream(IOUtils.toByteArray(stream), format);
-            webAudioSink.play(audioStream, null, from, to);
+        public void playWebAudio(@NotNull AudioStream stream, @Nullable Integer from, @Nullable Integer to) {
+            context.media().getWebAudioSpeaker().play(stream, from, to);
         }
-    }
-
-    @Getter
-    @AllArgsConstructor
-    public static class ItemsContextMenuAction {
-
-        private UIInputBuilder uiInputBuilder;
-        private Collection<UIInputEntity> actions;
     }
 }

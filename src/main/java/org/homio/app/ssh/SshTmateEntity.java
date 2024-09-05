@@ -143,11 +143,6 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
     }
 
     @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
-    }
-
-    @Override
     protected @NotNull String getDevicePrefix() {
         return "ssh-tmate";
     }

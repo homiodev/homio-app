@@ -74,11 +74,6 @@ public final class WorkspaceEntity extends BaseEntity implements
     }
 
     @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
-    }
-
-    @Override
     public boolean isDisableDelete() {
         return super.isDisableDelete() || isLocked() || !context().getBean(WorkspaceService.class).isEmpty(content);
     }

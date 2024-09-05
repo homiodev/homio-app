@@ -22,13 +22,12 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
     private final String itemType;
     private final UIActionHandler actionHandler;
     private final String entityID;
+    private final List<String> validators = new ArrayList<>();
     private String title;
     private int order;
     private Boolean disabled;
     @JsonIgnore
     private Map<String, Runnable> fetchValueHandlers;
-
-    private final List<String> validators = new ArrayList<>();
     private String color;
     private String outerClass;
 
@@ -48,6 +47,14 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
         this.entityID = entityID;
         this.actionHandler = actionHandler;
         this.order = order;
+    }
+
+    @Override
+    public UIActionHandler findAction(String key) {
+        if (getEntityID().equals(key)) {
+            return actionHandler;
+        }
+        return null;
     }
 
     public Owner setRequired(boolean value) {

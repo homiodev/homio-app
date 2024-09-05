@@ -51,6 +51,9 @@ import static org.apache.xmlbeans.XmlBeans.getTitle;
 public class ContextEventImpl implements ContextEvent {
 
     @Getter
+    private final EntityListener entityUpdateStatusListeners = new EntityListener();
+
+    @Getter
     private final EntityListener entityUpdateListeners = new EntityListener();
 
     @Getter
@@ -168,6 +171,13 @@ public class ContextEventImpl implements ContextEvent {
     @Override
     public boolean isInternetUp() {
         return context.bgp().getInternetAvailabilityService().getInternetUp().get();
+    }
+
+    @Override
+    public <T extends BaseEntityIdentifier> ContextEvent addEntityStatusUpdateListener(String entityID, String key, Consumer<T> listener) {
+        this.entityUpdateStatusListeners.idListeners.putIfAbsent(entityID, new HashMap<>());
+        this.entityUpdateStatusListeners.idListeners.get(entityID).put(key, listener);
+        return this;
     }
 
     @Override
@@ -308,7 +318,7 @@ public class ContextEventImpl implements ContextEvent {
             if (entity instanceof BaseEntity baseEntity) {
                 baseEntity.setContext(context);
 
-                UserEntity user = context.getUser();
+                UserEntity user = context.user().getLoggedInUser();
                 if (user != null && !user.isAdmin()) {
                     UserGuestEntity guest = (UserGuestEntity) user;
                     guest.assertDeleteAccess(baseEntity);

@@ -6,18 +6,15 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.val;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.UserEntity.UserType;
-import org.homio.api.model.Icon;
 import org.homio.api.util.HardwareUtils;
 import org.homio.app.manager.common.impl.ContextAddonImpl;
 import org.homio.app.model.entity.user.UserAdminEntity;
 import org.homio.app.model.entity.user.UserBaseEntity;
 import org.homio.app.model.entity.user.UserGuestEntity;
-import org.homio.app.setting.system.SystemLogoutButtonSetting;
-import org.json.JSONObject;
+import org.homio.app.utils.NotificationUtils;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -55,7 +52,7 @@ public class AuthController {
         String email = UserEntityDetailsService.getEmail(user);
         String userEntityID = UserEntityDetailsService.getEntityID(user);
 
-        addUserNotificationBlock(userEntityID, email, false);
+        NotificationUtils.addUserNotificationBlock(context, userEntityID, email, false);
         String version = format("%s-%s-%s-%s",
                 HardwareUtils.APP_ID,
                 context.setting().getApplicationVersion(),
@@ -85,7 +82,7 @@ public class AuthController {
 
     @GetMapping("/user")
     public UserEntity getUser() {
-        return context.getUser();
+        return context.user().getLoggedInUser();
     }
 
     @PostMapping("/login")
@@ -99,7 +96,7 @@ public class AuthController {
                     credentials.getEmail(), request.getRemoteAddr());
             String entityID = UserEntityDetailsService.getEntityID(authentication);
             String email = UserEntityDetailsService.getEmail(authentication);
-            addUserNotificationBlock(entityID, email, true);
+            NotificationUtils.addUserNotificationBlock(context, entityID, email, true);
             return jwtTokenProvider.createToken(username, authentication, TimeUnit.MINUTES.toMillis(jwtTokenProvider.getJwtValidityTimeout()));
         } catch (Exception ex) {
             UserBaseEntity.log.info("Login failed for <{}>", credentials.getEmail(), ex);
@@ -129,21 +126,6 @@ public class AuthController {
         }
         val userToken = new UsernamePasswordAuthenticationToken(username, password);
         return authenticationManager.authenticate(userToken);
-    }
-
-    private void addUserNotificationBlock(String entityID, String email, boolean replace) {
-        String key = "user-" + entityID;
-        if (replace || !context.ui().notification().isHasBlock(key)) {
-            context.ui().notification().addBlock(key, email, new Icon("fas fa-user", "#AAAC2C"), builder ->
-                    builder.visibleForUser(email)
-                            .linkToEntity(context.db().getRequire(entityID))
-                            .setBorderColor("#AAAC2C")
-                            .addInfo(key, null, "")
-                            .setRightButton(new Icon("fas fa-right-from-bracket"), "W.INFO.LOGOUT", "W.CONFIRM.LOGOUT", (ignore, params) -> {
-                                context.setting().setValue(SystemLogoutButtonSetting.class, new JSONObject());
-                                return null;
-                            }));
-        }
     }
 
     @Getter

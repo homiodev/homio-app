@@ -73,11 +73,6 @@ public class WidgetFrameEntity extends WidgetEntity<WidgetFrameEntity> implement
         return "Frame";
     }
 
-    @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
-    }
-
     @JsonIgnore
     public String getFrame() {
         StringBuilder html = new StringBuilder(getHtml());

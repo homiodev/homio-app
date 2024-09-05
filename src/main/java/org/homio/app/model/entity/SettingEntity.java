@@ -133,7 +133,7 @@ public class SettingEntity extends BaseEntity implements HasJsonData {
     }
 
     public String getValue() {
-        UserEntity user = context().getUser();
+        UserEntity user = context().user().getLoggedInUser();
         String value = this.value;
         if (user != null && !user.isAdmin()) {
             value = defaultIfEmpty(getJsonData(user.getEmail()), this.value);
@@ -142,7 +142,7 @@ public class SettingEntity extends BaseEntity implements HasJsonData {
     }
 
     public SettingEntity setValue(String value) {
-        UserEntity user = context().getUser();
+        UserEntity user = context().user().getLoggedInUser();
         if (user != null && !user.isAdmin()) {
             setJsonData(user.getEmail(), value);
         }
@@ -161,11 +161,6 @@ public class SettingEntity extends BaseEntity implements HasJsonData {
     @Override
     protected long getChildEntityHashCode() {
         return 0;
-    }
-
-    @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
     }
 
     @Override

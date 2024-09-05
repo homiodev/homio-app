@@ -23,9 +23,4 @@ public class DeviceFallbackEntity extends DeviceBaseEntity {
     public String getDefaultName() {
         return null;
     }
-
-    @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
-    }
 }

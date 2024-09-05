@@ -1,4 +1,8 @@
 {
+  "CHROMECAST": {
+    "APPLICATION": "Application: {{VALUE}}",
+    "NEW_DEVICE_QUESTION": "Do you want create new chromecast device?"
+  },
   "IBKR_DESCRIPTION": "Use <a href=\"{{VALUE}}\" target=\"_blank\">IBKR login</a> to authenticate to ibkr gateway",
   "MOUNT": {
     "SUCCESS": "Mount device to {{VALUE}} successfully",
@@ -13,6 +17,10 @@
   "BOARD_INFO": "Board info",
   "NO_BOARD_SELECTED": "No selected board",
   "TITLE": {
+    "NAME": "Name: {{VALUE}}",
+    "BRAND": "Brand: {{VALUE}}",
+    "MODEL": "Model: {{VALUE}}",
+    "ADDRESS": "Address: {{VALUE}}",
     "TMATE_DISABLED": "Tmate: [disabled]. Only one running instance allowed",
     "DEVICES_STAT": "Online {{ONLINE}} of {{TOTAL}} devices"
   },
@@ -20,6 +28,8 @@
   "MAIN_TAB_NAME": "Default tab",
   "PACKAGE_UPDATE_QUESTION": "Are you sure update {{NAME}}-{{VERSION}} package?",
   "SERVER_STARTED": "Started: {{VALUE}}. Uptime: {{TIME}}",
+  "INTERNET_STATUS_UP": "Internet status: UP",
+  "INTERNET_STATUS_DOWN": "Internet status: DOWN",
   "ERROR": {
     "NO_FONT_FOUND": "No font name {{VALUE}} found",
     "PRIVATE_KEY_NOT_FOUND": "Private key not found",

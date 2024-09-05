@@ -2,11 +2,13 @@ package org.homio.app.audio;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.audio.AudioStream;
+import org.apache.commons.io.IOUtils;
+import org.homio.api.stream.audio.AudioStream;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.sound.sampled.*;
-import java.io.IOException;
+import java.io.InputStream;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -46,39 +48,24 @@ public class AudioPlayer extends Thread {
             }
             return;
         }
-        line.start();
-        int nRead = 0;
-        byte[] abData = new byte[65532]; // needs to be a multiple of 4 and 6, to support both 16 and 24 bit stereo
-        try {
-            while (-1 != nRead) {
-                nRead = audioStream.read(abData, 0, abData.length);
-                if (nRead >= 0) {
-                    line.write(abData, 0, nRead);
-                }
+        try (InputStream inputStream = audioStream.getInputStream()) {
+            line.start();
+            int nRead;
+            byte[] abData = new byte[65532]; // needs to be a multiple of 4 and 6, to support both 16 and 24 bit stereo
+            while ((nRead = inputStream.read(abData, 0, abData.length)) != -1) {
+                line.write(abData, 0, nRead);
             }
-        } catch (IOException e) {
-            log.error("Error while playing audio: {}", e.getMessage());
+        } catch (Exception e) {
+            log.error("Error while getting audio input stream: {}", e.getMessage());
         } finally {
             line.drain();
             line.close();
-            try {
-                audioStream.close();
-            } catch (IOException ignored) {
-            }
+            IOUtils.closeQuietly(audioStream);
         }
     }
 
-    protected @Nullable AudioFormat convertAudioFormat(org.homio.api.audio.AudioFormat audioFormat) {
-        String codec = audioFormat.getCodec();
-        AudioFormat.Encoding encoding = new AudioFormat.Encoding(codec);
-        if (org.homio.api.audio.AudioFormat.CODEC_PCM_SIGNED.equals(codec)) {
-            encoding = AudioFormat.Encoding.PCM_SIGNED;
-        } else if (org.homio.api.audio.AudioFormat.CODEC_PCM_ULAW.equals(codec)) {
-            encoding = AudioFormat.Encoding.ULAW;
-        } else if (org.homio.api.audio.AudioFormat.CODEC_PCM_ALAW.equals(codec)) {
-            encoding = AudioFormat.Encoding.ALAW;
-        }
-
+    protected @Nullable AudioFormat convertAudioFormat(org.homio.api.stream.audio.AudioFormat audioFormat) {
+        AudioFormat.Encoding encoding = getEncoding(audioFormat);
         final Long frequency = audioFormat.getFrequency();
         if (frequency == null) {
             return null;
@@ -103,5 +90,17 @@ public class AudioPlayer extends Thread {
         }
 
         return new AudioFormat(encoding, sampleRate, sampleSizeInBits, channels, frameSize, frameRate, bigEndian);
+    }
+
+    private static AudioFormat.@NotNull Encoding getEncoding(org.homio.api.stream.audio.AudioFormat audioFormat) {
+        String codec = audioFormat.getCodec();
+        if (org.homio.api.stream.audio.AudioFormat.CODEC_PCM_SIGNED.equals(codec)) {
+            return AudioFormat.Encoding.PCM_SIGNED;
+        } else if (org.homio.api.stream.audio.AudioFormat.CODEC_PCM_ULAW.equals(codec)) {
+            return AudioFormat.Encoding.ULAW;
+        } else if (org.homio.api.stream.audio.AudioFormat.CODEC_PCM_ALAW.equals(codec)) {
+            return AudioFormat.Encoding.ALAW;
+        }
+        return new AudioFormat.Encoding(codec);
     }
 }

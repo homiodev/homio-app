@@ -66,8 +66,4 @@ public abstract class WidgetSeriesEntity<T extends WidgetEntityAndSeries>
         ((ContextImpl) context()).event().removeEvents(widgetEntity.getEntityID() + getEntityID());
     }
 
-    @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
     }
-}

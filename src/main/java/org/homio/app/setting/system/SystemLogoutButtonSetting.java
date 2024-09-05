@@ -30,7 +30,7 @@ public class SystemLogoutButtonSetting
 
     @Override
     public String getText(Context context) {
-        UserEntity user = context.getUser();
+        UserEntity user = context.user().getLoggedInUser();
         if (user != null) {
             return user.getEmail();
         }
@@ -50,5 +50,10 @@ public class SystemLogoutButtonSetting
     @Override
     public String getDialogColor() {
         return Color.ERROR_DIALOG;
+    }
+
+    @Override
+    public void assertUserAccess(@NotNull Context context, @Nullable UserEntity user) {
+        // access to everyone
     }
 }

@@ -1,63 +1,52 @@
-package org.homio.app.audio.javasound;
+package org.homio.app.audio;
 
 import javazoom.jl.decoder.JavaLayerException;
 import javazoom.jl.player.advanced.AdvancedPlayer;
 import javazoom.jl.player.advanced.PlaybackEvent;
 import javazoom.jl.player.advanced.PlaybackListener;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
-import org.homio.api.audio.AudioFormat;
-import org.homio.api.audio.AudioSink;
-import org.homio.api.audio.AudioStream;
-import org.homio.app.audio.AudioPlayer;
-import org.jetbrains.annotations.Nullable;
-import org.springframework.stereotype.Component;
+import org.homio.api.stream.audio.AudioFormat;
+import org.homio.api.stream.audio.AudioSpeaker;
+import org.homio.api.stream.audio.AudioStream;
+import org.jetbrains.annotations.NotNull;
 
 import javax.sound.sampled.*;
-import java.util.*;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 
 @Log4j2
-@Component
 @RequiredArgsConstructor
-public class JavaSoundAudioSink implements AudioSink {
+public class JavaSoundAudioSpeaker implements AudioSpeaker {
 
-    private static final Set<AudioFormat> SUPPORTED_AUDIO_FORMATS =
-            new HashSet<>(Arrays.asList(AudioFormat.MP3, AudioFormat.WAV));
-    private static final Set<Class<? extends AudioStream>> SUPPORTED_AUDIO_STREAMS =
-            new HashSet<>(Collections.singletonList(AudioStream.class));
     private static AdvancedPlayer streamPlayer;
+
     private final Context context;
+    private final Mixer mixer;
+
     // for resume
     private Integer pausedOnFrame;
     private AudioStream audioStream;
-    private String sinkSource;
-
-    @Override
-    public Map<String, String> getSources() {
-        Map<String, String> sources = new HashMap<>();
-        Mixer.Info[] infos = AudioSystem.getMixerInfo();
-        for (Mixer.Info info : infos) {
-            Mixer mixer = AudioSystem.getMixer(info);
-            if (mixer.isLineSupported(Port.Info.SPEAKER)) {
-                sources.put("system:" + mixer.getMixerInfo().getName(), "System:" + mixer.getMixerInfo().getName());
-            }
-        }
-        return sources;
-    }
 
     @Override
     public void resume() {
         if (pausedOnFrame != null) {
-            play(audioStream, sinkSource, pausedOnFrame, null);
+            play(audioStream, pausedOnFrame, null);
         }
     }
 
     @Override
-    public void play(AudioStream audioStream, String sinkSource, Integer startFrame, Integer endFrame) {
+    public Set<AudioFormat> getSupportedFormats() {
+        return Set.of(AudioFormat.MP3, AudioFormat.WAV, AudioFormat.PCM_SIGNED);
+    }
+
+    @SneakyThrows
+    @Override
+    public void play(AudioStream audioStream, Integer startFrame, Integer endFrame) {
         this.audioStream = audioStream;
-        this.sinkSource = sinkSource;
 
         if (!Objects.equals(audioStream.getFormat().getCodec(), AudioFormat.CODEC_MP3)) {
             AudioPlayer audioPlayer = new AudioPlayer(audioStream);
@@ -72,8 +61,8 @@ public class JavaSoundAudioSink implements AudioSink {
             pausedOnFrame = null;
             try {
                 // we start a new continuous stream and store its handle
-                streamPlayer = new AdvancedPlayer(audioStream);
-                playInThread(streamPlayer, startFrame, endFrame);
+                streamPlayer = new AdvancedPlayer(audioStream.getInputStream());
+                playInThread(streamPlayer, startFrame, endFrame, audioStream);
             } catch (JavaLayerException e) {
                 log.error("An exception occurred while playing url audio stream : '{}'", e.getMessage());
             }
@@ -81,38 +70,32 @@ public class JavaSoundAudioSink implements AudioSink {
     }
 
     @Override
-    public Set<AudioFormat> getSupportedFormats() {
-        return SUPPORTED_AUDIO_FORMATS;
-    }
-
-    @Override
-    public Set<Class<? extends AudioStream>> getSupportedStreams() {
-        return SUPPORTED_AUDIO_STREAMS;
-    }
-
-    @Override
     public String getId() {
-        return "javasound";
+        return "javasound-" + mixer.getMixerInfo().getName();
     }
 
     @Override
-    public @Nullable String getLabel(@Nullable Locale locale) {
-        return "System Speaker";
+    public @NotNull String getLabel() {
+        return mixer.getMixerInfo().getName();
     }
 
     @Override
-    public int pause() {
+    public void pause() {
         if (streamPlayer != null) {
             // if we are already playing a stream, stop it first
             streamPlayer.close();
             streamPlayer = null;
         }
-        return 0;
     }
 
-    public int resume(AudioStream audioStream, String sinkSource, Integer startFrame, Integer endFrame) {
+    @Override
+    public void stop() {
+        pause();
+    }
+
+    public int resume(AudioStream audioStream, Integer startFrame, Integer endFrame) {
         if (streamPlayer != null) {
-            play(audioStream, sinkSource, startFrame, endFrame);
+            play(audioStream, startFrame, endFrame);
             // if we are already playing a stream, stop it first
             streamPlayer.close();
             streamPlayer = null;
@@ -136,7 +119,7 @@ public class JavaSoundAudioSink implements AudioSink {
         });
     }
 
-    private void playInThread(AdvancedPlayer player, Integer from, Integer to) {
+    private void playInThread(AdvancedPlayer player, Integer from, Integer to, AudioStream audioStream) {
         if (player != null) {
             player.setPlayBackListener(new PlaybackListener() {
                 @Override
@@ -144,7 +127,7 @@ public class JavaSoundAudioSink implements AudioSink {
                     pausedOnFrame = event.getFrame();
                 }
             });
-            context.bgp().builder("java_sink-audio").execute(() -> {
+            context.bgp().builder("java_speaker-audio").execute(() -> {
                 try {
                     Integer start = from;
                     Integer end = to;
@@ -164,6 +147,7 @@ public class JavaSoundAudioSink implements AudioSink {
                     }
                 } finally {
                     player.close();
+                    audioStream.close();
                 }
             });
         }

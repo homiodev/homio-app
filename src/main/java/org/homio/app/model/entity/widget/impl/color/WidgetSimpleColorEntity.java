@@ -40,11 +40,6 @@ public class WidgetSimpleColorEntity extends WidgetEntity<WidgetSimpleColorEntit
         return null;
     }
 
-    @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
-    }
-
     @UIField(order = 1)
     @UIFieldKeyValue(maxSize = 20, keyType = UIFieldType.String, valueType = UIFieldType.ColorPicker,
             defaultKey = "0", showKey = false, defaultValue = "#FFFFFF", keyValueType = KeyValueType.array)

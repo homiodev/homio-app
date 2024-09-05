@@ -48,7 +48,7 @@ public class DeviceController {
     @PutMapping("/characteristic/{uuid}")
     @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
     public void setDeviceCharacteristic(@PathVariable("uuid") String uuid, @RequestBody byte[] value) {
-        UserEntity user = context.getUser();
+        UserEntity user = context.user().getLoggedInUser();
         if(user != null && !user.isAdmin()) {
             throw new IllegalAccessException("User is not allowed to change device characteristic");
         }

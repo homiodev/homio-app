@@ -67,9 +67,11 @@ public class AccessFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
         } catch (ExpiredJwtException ex) {
             SecurityContextHolder.clearContext();
+            response.setHeader("Access-Control-Allow-Origin", "*");
             response.sendError(420, ex.getMessage());
         } catch (BadCredentialsException ex) {
             SecurityContextHolder.clearContext();
+            response.setHeader("Access-Control-Allow-Origin", "*");
             response.sendError(419, ex.getMessage());
         }
     }

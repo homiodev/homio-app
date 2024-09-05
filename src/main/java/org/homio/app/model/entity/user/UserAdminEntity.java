@@ -1,12 +1,12 @@
 package org.homio.app.model.entity.user;
 
 import jakarta.persistence.Entity;
+import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.CreateSingleEntity;
+import org.homio.api.setting.SettingPlugin;
 import org.homio.api.ui.UISidebarChildren;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.List;
 
 @Entity
 @CreateSingleEntity
@@ -40,6 +40,10 @@ public final class UserAdminEntity extends UserBaseEntity {
     @Override
     public void assertViewAccess(BaseEntity entity) {
 
+    }
+
+    @Override
+    public void assertSettingsAccess(SettingPlugin<?> setting, Context context) {
     }
 
     @Override

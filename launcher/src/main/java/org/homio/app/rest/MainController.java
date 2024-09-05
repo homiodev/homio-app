@@ -40,7 +40,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 
-
 @RestController
 @RequestMapping("/rest")
 @RequiredArgsConstructor

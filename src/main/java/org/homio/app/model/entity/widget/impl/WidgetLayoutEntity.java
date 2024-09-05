@@ -37,11 +37,6 @@ public class WidgetLayoutEntity extends WidgetEntity<WidgetLayoutEntity>
         return null;
     }
 
-    @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
-    }
-
     @UIField(order = 24)
     @UIFieldGroup("UI")
     @UIFieldColorPicker

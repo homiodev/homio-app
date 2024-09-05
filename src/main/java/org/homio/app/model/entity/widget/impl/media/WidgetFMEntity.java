@@ -1,4 +1,4 @@
-package org.homio.app.model.entity.widget.impl.fm;
+package org.homio.app.model.entity.widget.impl.media;
 
 import jakarta.persistence.Entity;
 import org.homio.api.model.ActionResponseModel;

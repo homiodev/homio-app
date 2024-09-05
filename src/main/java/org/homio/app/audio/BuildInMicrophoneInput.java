@@ -1,11 +1,10 @@
-package org.homio.app.audio.javasound;
+package org.homio.app.audio;
 
-import org.homio.api.audio.AudioFormat;
-import org.homio.api.audio.AudioSource;
-import org.homio.api.audio.AudioStream;
-import org.homio.api.audio.stream.JavaSoundInputStream;
+import org.homio.api.stream.audio.AudioFormat;
+import org.homio.api.stream.audio.AudioStream;
+import org.homio.api.stream.audio.JavaSoundInputStream;
+import org.homio.api.stream.audio.MicrophoneInput;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.stereotype.Component;
 
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
@@ -13,8 +12,7 @@ import javax.sound.sampled.TargetDataLine;
 import java.util.Collections;
 import java.util.Set;
 
-@Component
-public class JavaSoundAudioSource implements AudioSource {
+public class BuildInMicrophoneInput implements MicrophoneInput {
 
     /**
      * Java Sound audio format
@@ -32,12 +30,6 @@ public class JavaSoundAudioSource implements AudioSource {
      */
     private @Nullable TargetDataLine microphone;
 
-    /**
-     * Constructs a JavaSoundAudioSource
-     */
-    public JavaSoundAudioSource() {
-    }
-
     @Override
     public synchronized AudioStream getInputStream(AudioFormat expectedFormat) {
         if (!expectedFormat.isCompatible(audioFormat)) {
@@ -51,13 +43,8 @@ public class JavaSoundAudioSource implements AudioSource {
     }
 
     @Override
-    public String toString() {
-        return "javasound";
-    }
-
-    @Override
-    public String getEntityID() {
-        return "javasound";
+    public String getId() {
+        return "BuildInMicrophone";
     }
 
     @Override

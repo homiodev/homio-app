@@ -8,7 +8,6 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
-import org.homio.api.entity.HasJsonData;
 import org.homio.api.entity.HasPermissions;
 import org.homio.api.model.JSON;
 import org.homio.api.ui.UISidebarMenu;
@@ -69,6 +68,9 @@ public abstract class WidgetEntity<T extends WidgetEntity> extends BaseEntity
 
     public abstract @NotNull String getImage();
 
+    /**
+     * Is able to create widget from UI
+     */
     public boolean isVisible() {
         return true;
     }

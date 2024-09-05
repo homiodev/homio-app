@@ -62,6 +62,14 @@ public class SshCloudEntity extends IdentityEntity implements
         return entity;
     }
 
+    @Override
+    public String getDescriptionImpl() {
+        if (!isHasPrivateKey()) {
+            return "CLOUD.SYNC_REQUIRED";
+        }
+        return null;
+    }
+
     @UIField(order = 1, hideInEdit = true, disableEdit = true)
     @UIFieldGroup(order = 5, value = "SSH")
     public boolean isPrimary() {

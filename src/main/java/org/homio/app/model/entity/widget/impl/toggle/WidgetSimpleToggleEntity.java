@@ -36,11 +36,6 @@ public class WidgetSimpleToggleEntity extends WidgetEntity<WidgetSimpleToggleEnt
         return null;
     }
 
-    @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
-    }
-
     // @UIField(order = 32)
     public ToggleType getDisplayType() {
         return getJsonDataEnum("displayType", ToggleType.Slide);

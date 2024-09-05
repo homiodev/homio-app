@@ -220,6 +220,8 @@ public class UIFieldUtils {
         entityUIMetaData.setInlineEditWhenEmpty(nullIfFalse(field.inlineEditWhenEmpty()));
         entityUIMetaData.setSemiRequired(nullIfFalse(field.semiRequired()));
         entityUIMetaData.setHideOnEmpty(nullIfFalse(field.hideOnEmpty()));
+        entityUIMetaData.setValueSuffix(field.valueSuffix());
+        entityUIMetaData.setValueSuffixColor(field.valueSuffixColor());
 
         entityUIMetaData.setHideInEdit(nullIfFalse(field.hideInEdit()));
         entityUIMetaData.setDisableEdit(nullIfFalse(field.disableEdit()));

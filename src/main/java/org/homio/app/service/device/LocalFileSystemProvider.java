@@ -10,6 +10,7 @@ import org.homio.api.ui.UI.Color;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.hquery.Curl;
+import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -299,7 +300,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
 
     @Override
     @SneakyThrows
-    public TreeNode copy(@NotNull Collection<TreeNode> entries, @NotNull String targetId, UploadOption uploadOption) {
+    public @NotNull TreeNode copy(@NotNull Collection<TreeNode> entries, @NotNull String targetId, UploadOption uploadOption) {
         CopyOption[] options = uploadOption == UploadOption.Replace ? new CopyOption[]{REPLACE_EXISTING} : new CopyOption[0];
         List<Path> result = new ArrayList<>();
         Path targetPath = buildPath(targetId);
@@ -388,10 +389,12 @@ public class LocalFileSystemProvider implements FileSystemProvider {
         Long size = entry.getAttributes().getSize();
         if (size != null && size / ONE_MB >= 2) {
             if (options[0] == StandardCopyOption.REPLACE_EXISTING) {
-                Files.delete(entryPath);
+                Files.deleteIfExists(entryPath);
             }
-            entity.context().ui().progress().run("copy-" + entry.getId(), true, progressBar ->
-                            Curl.downloadWithProgress(entry.getInputStream(), entry.getName(), entryPath, progressBar, size),
+            entity.context().ui().progress().run("copy-" + entry.getId(), true, progressBar -> {
+                        Curl.downloadWithProgress(entry.getInputStream(), entry.getName(), entryPath, progressBar, size);
+                        entry.refreshOnUI(entity.context());
+                    },
                     ex -> {
                     });
         } else {
@@ -504,7 +507,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
         }
     }
 
-    private TreeNode buildRoot(Collection<Path> paths) {
+    private @NotNull TreeNode buildRoot(Collection<Path> paths) {
         Path root = Paths.get(basePath);
         TreeNode rootPath = this.buildTreeNode(root, root.toFile());
         for (Path path : paths) {

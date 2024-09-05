@@ -47,17 +47,12 @@ public class WidgetCustomEntity extends WidgetEntity<WidgetCustomEntity> impleme
     }
 
     public @NotNull String getImage() {
-        return "fab fa-panorama";
+        return "fas fa-panorama";
     }
 
     @Override
     public @Nullable String getDefaultName() {
         return "Custom";
-    }
-
-    @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
     }
 
     @UIField(order = 50, required = true)

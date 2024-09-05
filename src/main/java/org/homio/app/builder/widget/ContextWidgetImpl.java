@@ -214,25 +214,25 @@ public class ContextWidgetImpl implements ContextWidget {
         WidgetCustomEntity widget = new WidgetCustomEntity();
         widgetBuilder.accept(new CustomWidgetBuilder() {
             @Override
-            public CustomWidgetBuilder css(String value) {
+            public @NotNull CustomWidgetBuilder css(@NotNull String value) {
                 widget.setCss(value);
                 return this;
             }
 
             @Override
-            public CustomWidgetBuilder code(@NotNull String value) {
+            public @NotNull CustomWidgetBuilder code(@NotNull String value) {
                 widget.setCode(value);
                 return this;
             }
 
             @Override
-            public CustomWidgetBuilder parameterEntity(@NotNull String entityID) {
+            public @NotNull CustomWidgetBuilder parameterEntity(@NotNull String entityID) {
                 widget.setParameterEntity(entityID);
                 return this;
             }
 
             @Override
-            public CustomWidgetBuilder setValue(@NotNull String key, @NotNull String value) {
+            public @NotNull CustomWidgetBuilder setValue(@NotNull String key, @NotNull String value) {
                 widget.getJsonData().put(key, value);
                 return this;
             }

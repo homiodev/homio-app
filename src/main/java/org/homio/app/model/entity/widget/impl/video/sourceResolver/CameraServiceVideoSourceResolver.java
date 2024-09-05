@@ -6,7 +6,7 @@ import org.homio.api.Context;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.DataSourceUtil;
-import org.homio.app.utils.HardwareUtils;
+import org.homio.app.utils.MediaUtils;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -24,10 +24,10 @@ public class CameraServiceVideoSourceResolver implements WidgetVideoSourceResolv
         if (entity != null && keys.length >= 2) {
             String videoIdentifier = keys[keys.length - 1];
             if (videoIdentifier.startsWith("http") || videoIdentifier.startsWith("$DEVICE_URL")) {
-                return new VideoEntityResponse(valueDataSource, videoIdentifier, videoIdentifier, HardwareUtils.getVideoType(videoIdentifier));
+                return new VideoEntityResponse(valueDataSource, videoIdentifier, videoIdentifier, MediaUtils.getVideoType(videoIdentifier));
             }
             String url = getUrl(videoIdentifier, entityID);
-            VideoEntityResponse response = new VideoEntityResponse(valueDataSource, ds, url, HardwareUtils.getVideoType(url));
+            VideoEntityResponse response = new VideoEntityResponse(valueDataSource, ds, url, MediaUtils.getVideoType(url));
 
             if (entity instanceof BaseCameraEntity<?, ?> camera) {
                 UIInputBuilder uiInputBuilder = context.ui().inputBuilder();

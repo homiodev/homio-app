@@ -26,6 +26,8 @@ public class UIButtonItemBuilderImpl
     private JSONObject metadata;
     private String confirmMessage;
     private String confirmMessageDialogColor;
+    private String confirmMessageDialogTitle;
+    private Icon confirmMessageDialogIcon;
 
     private UIDialogLayoutBuilder dialogEntityBuilder;
 

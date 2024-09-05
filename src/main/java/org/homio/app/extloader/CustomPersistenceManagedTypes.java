@@ -21,7 +21,6 @@ public class CustomPersistenceManagedTypes implements PersistenceManagedTypes {
     private List<String> managedPackages;
     private URL persistenceUnitRootUrl;
 
-
     public CustomPersistenceManagedTypes(ResourceLoader resourceLoader) {
         this.resourceLoader = resourceLoader;
         this.scan();

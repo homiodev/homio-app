@@ -1,4 +1,4 @@
-package org.homio.app.model.entity.widget.impl.fm;
+package org.homio.app.model.entity.widget.impl.media;
 
 import co.elastic.thumbnails4j.core.Dimensions;
 import co.elastic.thumbnails4j.core.Thumbnailer;

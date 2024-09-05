@@ -2,48 +2,31 @@ package org.homio.app.utils;
 
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.io.FilenameUtils;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.util.CommonUtils;
-import org.homio.app.model.entity.widget.impl.video.sourceResolver.FSWidgetVideoSourceResolver;
-import org.jetbrains.annotations.NotNull;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ApplicationContext;
 
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.*;
 import java.util.Collections;
-import java.util.Objects;
 
 @Log4j2
 public final class HardwareUtils {
 
-    public static @NotNull String getVideoType(String url) {
-        if (url.startsWith("https://youtu")) {
-            return "video/youtube";
-        }
-        if (url.startsWith("https://vimeo")) {
-            return "video/vimeo";
-        }
-        if (url.endsWith(".ts")) {
-            return "video/MP2T";
-        }
-        if (url.endsWith(".ogv")) {
-            return "video/ogg";
-        }
-        if (url.endsWith(".m3u8")) {
-            return "application/x-mpegURL";
-        }
-        if (url.endsWith(".mpd")) {
-            return "application/dash+xml";
-        }
-        String extension = Objects.toString(FilenameUtils.getExtension(url), "");
-        if (FSWidgetVideoSourceResolver.IMAGE_FORMATS.matcher(extension).matches()) {
-            return "image/" + extension;
-        }
-        if (FSWidgetVideoSourceResolver.VIDEO_FORMATS.matcher(extension).matches()) {
-            return "video/" + extension;
-        }
-        return "video/unknown";
+    /**
+     * Fully restart application
+     */
+    @SneakyThrows
+    public static void exitApplication(ApplicationContext applicationContext, int code) {
+        SpringApplication.exit(applicationContext, () -> code);
+        System.exit(code);
+        // sleep to allow program exist
+        Thread.sleep(30000);
+        log.info("Unable to stop app in 30sec. Force stop it");
+        // force exit
+        Runtime.getRuntime().halt(code);
     }
 
     @SneakyThrows

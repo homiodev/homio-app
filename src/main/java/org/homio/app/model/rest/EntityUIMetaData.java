@@ -34,6 +34,8 @@ public class EntityUIMetaData implements Comparable<EntityUIMetaData> {
     private String color;
     private String icon;
     private String style;
+    private String valueSuffix;
+    private String valueSuffixColor;
 
     @Override
     public int compareTo(@NotNull EntityUIMetaData entityUIMetaData) {

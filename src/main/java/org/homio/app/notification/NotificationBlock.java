@@ -5,18 +5,21 @@ import com.pivovarit.function.ThrowingBiFunction;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.api.ContextUI.NotificationBlockBuilder;
 import org.homio.api.ContextUI.NotificationInfoLineBuilder;
 import org.homio.api.entity.BaseEntity;
-import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
+import org.homio.api.ui.field.action.v1.item.UIInfoItemBuilder;
 import org.homio.api.ui.field.action.v1.layout.UILayoutBuilder;
+import org.homio.app.builder.ui.UIButtonItemBuilderImpl;
+import org.homio.app.builder.ui.UICheckboxItemBuilderImpl;
+import org.homio.app.builder.ui.UIInfoItemBuilderImpl;
+import org.homio.app.builder.ui.UIItemType;
 import org.homio.app.builder.ui.layout.UIStickyDialogItemBuilderImpl;
 import org.homio.app.utils.UIFieldUtils;
 import org.homio.hquery.ProgressBar;
@@ -35,6 +38,8 @@ public class NotificationBlock {
     private final @NotNull String entityID;
     private final @NotNull String name;
     private final @Nullable Icon icon;
+    @JsonIgnore
+    private final @NotNull Map<String, Info> infoItemMap = new ConcurrentHashMap<>();
     private @Nullable Consumer<NotificationBlockBuilder> refreshBlockBuilder;
     private @Nullable String nameColor;
     private @Nullable String version;
@@ -45,12 +50,7 @@ public class NotificationBlock {
     private @Nullable String link;
     private @Nullable String linkType;
     private @Nullable String borderColor;
-
     private @Nullable Collection<UIInputEntity> contextMenuActions;
-
-    @JsonIgnore
-    private final @NotNull Map<String, Info> infoItemMap = new ConcurrentHashMap<>();
-
     @JsonIgnore
     private @NotNull Map<String, Collection<UIInputEntity>> keyValueActions = new HashMap<>();
 
@@ -98,29 +98,18 @@ public class NotificationBlock {
     public static class Info implements NotificationInfoLineBuilder {
 
         private final String key;
-        private String info;
         private final Icon icon;
-
+        private String info;
         private String textColor;
 
         private String link;
         private String linkType;
 
-        private String rightText;
-        private Icon rightTextIcon;
-        private String rightTextColor;
-
-        private Icon buttonIcon;
-        private String buttonText;
-        private String confirmMessage;
-        @JsonIgnore
-        private UIActionHandler handler;
-
         private Icon settingIcon;
         private UIInputEntity settingButton;
 
-        private String description;
-        private Status status;
+        private String tooltip;
+        private UIInputEntity rightAction;
 
         public Info(String key, String info, Icon icon) {
             this.key = key;
@@ -136,28 +125,58 @@ public class NotificationBlock {
 
         @Override
         public @NotNull NotificationInfoLineBuilder setRightText(@Nullable String text, @Nullable Icon icon, @Nullable String color) {
-            this.rightText = text;
-            this.rightTextIcon = icon;
-            this.rightTextColor = color;
+            UIInfoItemBuilderImpl builder = new UIInfoItemBuilderImpl("i", 0, text, UIInfoItemBuilder.InfoType.Text);
+            builder.setIcon(icon);
+            builder.setColor(color);
+            builder.setHeight(20);
+            this.rightAction = builder.buildEntity();
             return this;
         }
 
         @Override
-        public @NotNull NotificationInfoLineBuilder setStatus(@NotNull HasStatusAndMsg entity) {
-            this.status = entity.getStatus();
-            if (StringUtils.isNotEmpty(entity.getStatusMessage())) {
-                this.description = entity.getStatusMessage();
-            }
+        public @NotNull NotificationInfoLineBuilder setTooltip(@Nullable String tooltip) {
+            this.tooltip = tooltip;
             return this;
         }
 
         @Override
-        public @NotNull NotificationInfoLineBuilder setRightButton(@Nullable Icon buttonIcon, @Nullable String buttonText, @Nullable String confirmMessage,
-                                                                   @Nullable UIActionHandler handler) {
-            this.buttonIcon = buttonIcon;
-            this.buttonText = buttonText;
-            this.confirmMessage = confirmMessage;
-            this.handler = handler;
+        public @NotNull NotificationButtonBuilder setRightButton(@Nullable Icon buttonIcon, @Nullable String buttonText,
+                                                                 @Nullable UIActionHandler handler) {
+            UIButtonItemBuilderImpl builder = new UIButtonItemBuilderImpl(UIItemType.Button, this.key, buttonIcon, 0, handler);
+            builder.setText(Objects.toString(buttonText, ""));
+            builder.setHeight(20);
+            this.rightAction = builder.buildEntity();
+            return new NotificationButtonBuilder() {
+                @Override
+                public NotificationButtonBuilder setConfirmMessage(@Nullable String value) {
+                    ((UIButtonItemBuilderImpl) rightAction).setConfirmMessage(value);
+                    return this;
+                }
+
+                @Override
+                public NotificationButtonBuilder setDialogBackgroundColor(@Nullable String value) {
+                    ((UIButtonItemBuilderImpl) rightAction).setConfirmMessageDialogColor(value);
+                    return this;
+                }
+
+                @Override
+                public NotificationButtonBuilder setDialogTitle(@Nullable String value) {
+                    ((UIButtonItemBuilderImpl) rightAction).setConfirmMessageDialogTitle(value);
+                    return this;
+                }
+
+                @Override
+                public NotificationButtonBuilder setDialogIcon(@Nullable Icon icon) {
+                    ((UIButtonItemBuilderImpl) rightAction).setConfirmMessageDialogIcon(icon);
+                    return this;
+                }
+            };
+        }
+
+        @Override
+        public @NotNull NotificationInfoLineBuilder setRightToggleButton(boolean value, @Nullable UIActionHandler handler) {
+            UICheckboxItemBuilderImpl builder = new UICheckboxItemBuilderImpl(this.key, 0, handler, value);
+            this.rightAction = builder.buildEntity();
             return this;
         }
 

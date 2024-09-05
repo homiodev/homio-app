@@ -65,7 +65,7 @@ public class JwtTokenProvider implements ContextCreated {
             log.info("Generated securityID: {} on disable auth on restart: {}", securityId, value);
         });
         context.setting().listenValue(SystemLogoutButtonSetting.class, "logout", () -> {
-            UserEntity user = context.getUser();
+            UserEntity user = context.user().getLoggedInUser();
             if (user != null) {
                 boolean removed = userCache.entrySet().removeIf(entry -> {
                     if (user.getEntityID().equals(UserEntityDetailsService.getEntityID(entry.getValue()))) {

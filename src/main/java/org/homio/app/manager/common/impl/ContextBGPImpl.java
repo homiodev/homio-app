@@ -84,6 +84,44 @@ public class ContextBGPImpl implements ContextBGP {
         this.watchdogBgpService = new WatchdogBgpService(this);
     }
 
+    public static void stopProcess(Process process, String name) {
+        if (SystemUtils.IS_OS_WINDOWS) {
+            WinProcess p = new WinProcess(process);
+            try {
+                boolean sent = p.sendCtrlC();
+                log.info("Sending Ctrl-C to process: {}. Result: {}", name, sent);
+            } catch (Exception ex) {
+                log.error(CommonUtils.getErrorMessage(ex));
+            }
+            sleep(1000);
+            log.info("Killing process tree: {}", name);
+            p.killRecursively();
+        } else {
+            try {
+                Process exec = Runtime.getRuntime().exec("kill -SIGINT " + process.pid());
+                StreamGobbler.streamAndStop(exec, 200, 500, log::info, log::error);
+            } catch (IOException ignore) {
+            }
+        }
+    }
+
+    private static void executeOnExitImpl(@NotNull String name, @NotNull ThrowingRunnable runnable) {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                runnable.run();
+            } catch (Exception ex) {
+                System.err.println("Unable to execute shutdown hook: " + name);
+            }
+        }));
+    }
+
+    private static void sleep(int timeout) {
+        try {
+            Thread.sleep(timeout);
+        } catch (Exception ignore) {
+        }
+    }
+
     public void onContextCreated() {
         // send update to UI about changed processes. Send only of user open console with thread/scheduler tab!
         builder("send-bgp-to-ui")
@@ -111,26 +149,6 @@ public class ContextBGPImpl implements ContextBGP {
             response.add(context);
         }
         return response;
-    }
-
-    public static void stopProcess(Process process, String name) {
-        if (SystemUtils.IS_OS_WINDOWS) {
-            WinProcess p = new WinProcess(process);
-            try {
-                boolean sent = p.sendCtrlC();
-                log.info("Sending Ctrl-C to process: {}. Result: {}", name, sent);
-            } catch (Exception ex) {
-                log.error(CommonUtils.getErrorMessage(ex));
-            }
-            sleep(1000);
-            log.info("Killing process tree: {}", name);
-            p.killRecursively();
-        } else {
-            try {
-                StreamGobbler.streamAndStop(Runtime.getRuntime().exec("kill -SIGINT " + process.pid()), 200, 500);
-            } catch (IOException ignore) {
-            }
-        }
     }
 
     @Override
@@ -211,16 +229,6 @@ public class ContextBGPImpl implements ContextBGP {
     @Override
     public void removeLowPriorityRequest(String key) {
         lowPriorityRequests.remove(key);
-    }
-
-    private static void executeOnExitImpl(@NotNull String name, @NotNull ThrowingRunnable runnable) {
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            try {
-                runnable.run();
-            } catch (Exception ex) {
-                System.err.println("Unable to execute shutdown hook: " + name);
-            }
-        }));
     }
 
     @Override
@@ -661,6 +669,32 @@ public class ContextBGPImpl implements ContextBGP {
         threadContext.scheduledFuture = (ScheduledFuture<T>) scheduleHandler.apply(runnable);
     }
 
+    private ThreadContext<Void> createPingService() {
+        return context
+                .bgp()
+                .builder("ping")
+                .interval(Duration.ofSeconds(60))
+                .cancelOnError(false)
+                .execute(() -> {
+                    Map<String, List<Consumer<Boolean>>> pingers =
+                            pingMap.values().stream()
+                                    .flatMap(value -> value.entrySet().stream())
+                                    .collect(Collectors.groupingBy(
+                                            Entry::getKey,
+                                            Collectors.mapping(Entry::getValue, Collectors.toList())
+                                    ));
+                    pingers.entrySet().stream().parallel().forEach(ping -> {
+                        AtomicBoolean isReachable = new AtomicBoolean(false);
+                        try {
+                            InetAddress address = InetAddress.getByName(ping.getKey());
+                            isReachable.set(address.isReachable(5000));
+                        } catch (IOException ignore) {
+                        }
+                        ping.getValue().forEach(booleanConsumer -> booleanConsumer.accept(isReachable.get()));
+                    });
+                });
+    }
+
     @RequiredArgsConstructor
     public enum ScheduleType {
         DELAY,
@@ -674,6 +708,133 @@ public class ContextBGPImpl implements ContextBGP {
 
         private final ThreadPoolExecutor executor;
         private final Map<String, Future<T>> processes = new HashMap<>();
+    }
+
+    @Getter
+    public static class ProcessContextImpl implements ProcessContext {
+
+        private final Date creationTime = new Date();
+        public @Nullable ThrowingConsumer<ProcessContext, Exception> startedHandler;
+        public @Nullable ThrowingBiConsumer<Exception, Integer, Exception> finishHandler;
+        public Process process;
+        public ThreadContext<Void> threadContext;
+        public Consumer<String> inputConsumer;
+        public Consumer<String> errorConsumer;
+        public @Nullable Logger logger;
+        public @Nullable HasStatusAndMsg entity;
+        public Path workingDir;
+        private StreamGobbler streamGobbler;
+
+        @Override
+        public @NotNull String getName() {
+            return threadContext.getName();
+        }
+
+        @Override
+        public boolean isStopped() {
+            return process == null || !process.isAlive();
+        }
+
+        @Override
+        @SneakyThrows
+        public void cancel(boolean sendSignal) {
+            cancelProcess(sendSignal, false);
+            threadContext.cancel(true);
+        }
+
+        private void cancelProcess(boolean sendSignal, boolean shutdownHook) {
+            if (process != null) {
+                if (sendSignal) {
+                    stopProcess(process, getName());
+                }
+
+                if (streamGobbler != null && !shutdownHook) {
+                    this.streamGobbler.stopStream(1000, 5000);
+                }
+                process.destroy();
+            }
+        }
+
+        public void run(@NotNull String name, @NotNull String[] command) throws Exception {
+            getLogger().info("[{}]: Starting process command: '{}'", name, command);
+            if (workingDir != null) {
+                process = Runtime.getRuntime().exec(command, null, workingDir.toFile());
+            } else {
+                process = Runtime.getRuntime().exec(command);
+            }
+            executeOnExitImpl("Process: " + name, () -> cancelProcess(true, true));
+            if (entity != null) {
+                entity.setStatusOnline();
+            }
+            if (startedHandler != null) {
+                try {
+                    startedHandler.accept(this);
+                } catch (Exception ex) {
+                    if (entity != null) {
+                        entity.setStatusError(ex);
+                    }
+                    getLogger().error("[{}]: Error during run process start handler. Err: {}", name, CommonUtils.getErrorMessage(ex));
+                    throw ex;
+                }
+            }
+
+            if (errorConsumer != null || inputConsumer != null || logger != null) {
+                if (errorConsumer == null) {
+                    if (logger != null) {
+                        errorConsumer = msg -> logger.error("[{}]: {}", name, msg);
+                    } else {
+                        errorConsumer = msg -> {
+                        };
+                    }
+                }
+                if (inputConsumer == null) {
+                    if (logger != null) {
+                        inputConsumer = msg -> logger.info("[{}]: {}", name, msg);
+                    } else {
+                        inputConsumer = msg -> {
+                        };
+                    }
+                }
+                streamGobbler = new StreamGobbler(name, inputConsumer, errorConsumer);
+                streamGobbler.stream(process);
+            }
+
+            getLogger().info("[{}]: wait process to finish.", name);
+            sleep(1000);
+            int responseCode = process.waitFor();
+            sleep(1000);
+            executeFinishHandler(null, responseCode);
+        }
+
+        private @NotNull Logger getLogger() {
+            return logger == null ? log : logger;
+        }
+
+        public void onError(Exception ex) {
+            executeFinishHandler(ex, -1);
+        }
+
+        private void executeFinishHandler(Exception ex, int exitCode) {
+            if (ex != null) {
+                getLogger().error("[{}]: Process finished with status: '{}' and error: '{}'", getName(), exitCode, CommonUtils.getErrorMessage(ex));
+                if (entity != null) {
+                    entity.setStatusError(ex);
+                }
+            } else {
+                getLogger().info("[{}]: Process finished with status: {}", getName(), exitCode);
+            }
+
+            if (finishHandler != null) {
+                try {
+                    finishHandler.accept(ex, exitCode);
+                } catch (Exception fex) {
+                    getLogger().error("[{}]: Error occurred during finish process", getName(), fex);
+                }
+            }
+            if (streamGobbler != null) {
+                this.streamGobbler.stopStream(100, 1000);
+            }
+        }
     }
 
     @Setter
@@ -905,165 +1066,5 @@ public class ContextBGPImpl implements ContextBGP {
                 }
             }
         }
-    }
-
-    @Getter
-    public static class ProcessContextImpl implements ProcessContext {
-
-        private final Date creationTime = new Date();
-        public @Nullable ThrowingConsumer<ProcessContext, Exception> startedHandler;
-        public @Nullable ThrowingBiConsumer<Exception, Integer, Exception> finishHandler;
-        public Process process;
-        public ThreadContext<Void> threadContext;
-        public Consumer<String> inputConsumer;
-        public Consumer<String> errorConsumer;
-        public @Nullable Logger logger;
-        public @Nullable HasStatusAndMsg entity;
-        public Path workingDir;
-        private StreamGobbler streamGobbler;
-
-        @Override
-        public @NotNull String getName() {
-            return threadContext.getName();
-        }
-
-        @Override
-        public boolean isStopped() {
-            return process == null || !process.isAlive();
-        }
-
-        @Override
-        @SneakyThrows
-        public void cancel(boolean sendSignal) {
-            cancelProcess(sendSignal, false);
-            threadContext.cancel(true);
-        }
-
-        private void cancelProcess(boolean sendSignal, boolean shutdownHook) {
-            if (process != null) {
-                if (sendSignal) {
-                    stopProcess(process, getName());
-                }
-
-                if (streamGobbler != null && !shutdownHook) {
-                    this.streamGobbler.stopStream(1000, 5000);
-                }
-                process.destroy();
-            }
-        }
-
-        public void run(@NotNull String name, @NotNull String[] command) throws Exception {
-            getLogger().info("[{}]: Starting process command: '{}'", name, command);
-            if (workingDir != null) {
-                process = Runtime.getRuntime().exec(command, null, workingDir.toFile());
-            } else {
-                process = Runtime.getRuntime().exec(command);
-            }
-            executeOnExitImpl("Process: " + name, () -> cancelProcess(true, true));
-            if (entity != null) {
-                entity.setStatusOnline();
-            }
-            if (startedHandler != null) {
-                try {
-                    startedHandler.accept(this);
-                } catch (Exception ex) {
-                    if (entity != null) {
-                        entity.setStatusError(ex);
-                    }
-                    getLogger().error("[{}]: Error during run process start handler. Err: {}", name, CommonUtils.getErrorMessage(ex));
-                    throw ex;
-                }
-            }
-
-            if (errorConsumer != null || inputConsumer != null || logger != null) {
-                if (errorConsumer == null) {
-                    if (logger != null) {
-                        errorConsumer = msg -> logger.error("[{}]: {}", name, msg);
-                    } else {
-                        errorConsumer = msg -> {
-                        };
-                    }
-                }
-                if (inputConsumer == null) {
-                    if (logger != null) {
-                        inputConsumer = msg -> logger.info("[{}]: {}", name, msg);
-                    } else {
-                        inputConsumer = msg -> {
-                        };
-                    }
-                }
-                streamGobbler = new StreamGobbler(name, inputConsumer, errorConsumer);
-                streamGobbler.stream(process);
-            }
-
-            getLogger().info("[{}]: wait process to finish.", name);
-            sleep(1000);
-            int responseCode = process.waitFor();
-            sleep(1000);
-            executeFinishHandler(null, responseCode);
-        }
-
-        private @NotNull Logger getLogger() {
-            return logger == null ? log : logger;
-        }
-
-        public void onError(Exception ex) {
-            executeFinishHandler(ex, -1);
-        }
-
-        private void executeFinishHandler(Exception ex, int exitCode) {
-            if (ex != null) {
-                getLogger().error("[{}]: Process finished with status: '{}' and error: '{}'", getName(), exitCode, CommonUtils.getErrorMessage(ex));
-                if (entity != null) {
-                    entity.setStatusError(ex);
-                }
-            } else {
-                getLogger().info("[{}]: Process finished with status: {}", getName(), exitCode);
-            }
-
-            if (finishHandler != null) {
-                try {
-                    finishHandler.accept(ex, exitCode);
-                } catch (Exception fex) {
-                    getLogger().error("[{}]: Error occurred during finish process", getName(), fex);
-                }
-            }
-            if (streamGobbler != null) {
-                this.streamGobbler.stopStream(100, 1000);
-            }
-        }
-    }
-
-    private static void sleep(int timeout) {
-        try {
-            Thread.sleep(timeout);
-        } catch (Exception ignore) {
-        }
-    }
-
-    private ThreadContext<Void> createPingService() {
-        return context
-                .bgp()
-                .builder("ping")
-                .interval(Duration.ofSeconds(60))
-                .cancelOnError(false)
-                .execute(() -> {
-                    Map<String, List<Consumer<Boolean>>> pingers =
-                            pingMap.values().stream()
-                                    .flatMap(value -> value.entrySet().stream())
-                                    .collect(Collectors.groupingBy(
-                                            Entry::getKey,
-                                            Collectors.mapping(Entry::getValue, Collectors.toList())
-                                    ));
-                    pingers.entrySet().stream().parallel().forEach(ping -> {
-                        AtomicBoolean isReachable = new AtomicBoolean(false);
-                        try {
-                            InetAddress address = InetAddress.getByName(ping.getKey());
-                            isReachable.set(address.isReachable(5000));
-                        } catch (IOException ignore) {
-                        }
-                        ping.getValue().forEach(booleanConsumer -> booleanConsumer.accept(isReachable.get()));
-                    });
-                });
     }
 }

@@ -2,7 +2,9 @@ package org.homio.app.manager.common.impl;
 
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.util.HardwareUtils;
+import org.homio.app.manager.common.ContextImpl;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.core.env.Environment;
 
 import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceInfo;
@@ -50,18 +52,18 @@ public class MDNSClient {
         return addresses;
     }
 
-
     public Set<JmDNS> getClientInstances() {
         return new HashSet<>(jmdnsInstances.values());
     }
 
-    public void start() {
+    public void start(ContextImpl context) {
         for (InetAddress address : getAllInetAddresses()) {
             createJmDNSByAddress(address);
         }
 
+        int port = context.getBean(Environment.class).getRequiredProperty("server.port", Integer.class);
         Set<ServiceDescription> services = Set.of(
-                new ServiceDescription("_homio-server._tcp.local.", "homio", 9111, Map.of(
+                new ServiceDescription("_homio-server._tcp.local.", "homio", port, Map.of(
                         "id", HardwareUtils.APP_ID,
                         "run", String.valueOf(HardwareUtils.RUN_COUNT),
                         "version", System.getProperty("server.version"))));
@@ -81,7 +83,6 @@ public class MDNSClient {
     public void addServiceListener(String type, ServiceListener listener) {
         jmdnsInstances.values().forEach(jmdns -> jmdns.addServiceListener(type, listener));
     }
-
 
     public void removeServiceListener(String type, ServiceListener listener) {
         jmdnsInstances.values().forEach(jmdns -> jmdns.removeServiceListener(type, listener));

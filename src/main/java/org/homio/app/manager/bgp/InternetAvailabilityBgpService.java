@@ -11,7 +11,6 @@ import org.homio.api.ContextNetwork;
 import org.homio.api.state.OnOffType;
 import org.homio.app.manager.common.impl.ContextBGPImpl;
 
-import java.net.ConnectException;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -41,7 +40,7 @@ public class InternetAvailabilityBgpService {
         internetAccessBuilder.execute(tc -> pingTest());
     }
 
-    private static boolean pingTest() throws ConnectException {
+    private static boolean pingTest() {
         try {
             return ContextNetwork.ping("google.com", 80) != null;
         } catch (Exception ignore) {

@@ -113,7 +113,7 @@ public abstract class UserBaseEntity extends IdentityEntity
 
     @Override
     public void assembleActions(UIInputBuilder uiInputBuilder) {
-        UserEntity user = uiInputBuilder.context().getUser();
+        UserEntity user = uiInputBuilder.context().user().getLoggedInUser();
         if (user != null && user.isAdmin()) {
             uiInputBuilder.addOpenDialogSelectableButton("CHANGE_PASSWORD", new Icon("fas fa-unlock-keyhole",
                             Color.RED), null, this::changePassword)
@@ -193,12 +193,12 @@ public abstract class UserBaseEntity extends IdentityEntity
 
     @Override
     public boolean isDisableDelete() {
-        return !context().isAdmin();
+        return !context().user().isAdminLoggedUser();
     }
 
     @Override
     public boolean isDisableEdit() {
-        return !context().isAdmin();
+        return !context().user().isAdminLoggedUser();
     }
 
     @Override

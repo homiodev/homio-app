@@ -104,11 +104,6 @@ public class FFMPEGEntity extends MediaEntity implements
     }
 
     @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
-    }
-
-    @Override
     public @Nullable Status.EntityStatus getEntityStatus() {
         return null;
     }

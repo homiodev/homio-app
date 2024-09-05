@@ -29,6 +29,7 @@ import org.homio.app.manager.CacheService;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.ContextImpl.ItemAction;
 import org.homio.app.manager.common.EntityManager;
+import org.homio.app.model.entity.user.UserGuestEntity;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
@@ -144,6 +145,7 @@ public class ContextStorageImpl implements ContextStorage {
 
         String entityID = entity.getEntityID();
         entity.setContext(context);
+        UserGuestEntity.assertEditAction(context, entity);
         if (entity.isDisableEdit()) {
             throw new IllegalAccessException("User is unable to persist/update entity");
         }
@@ -373,10 +375,9 @@ public class ContextStorageImpl implements ContextStorage {
             }
         }
 
-        // Below must not be fired!!!! every time, Recursivelly update entity status
-        /*if (entity instanceof BaseEntity) {
-            runUpdateNotifyListeners(entity, null, context.event().getEntityUpdateListeners());
-        }*/
+        if (entity instanceof BaseEntity) {
+            runUpdateNotifyListeners(entity, null, context.event().getEntityUpdateStatusListeners());
+        }
     }
 
     private <T extends BaseEntity> List<T> findAllByRepository(Class<BaseEntity> clazz) {

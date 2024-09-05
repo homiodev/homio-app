@@ -69,7 +69,6 @@ public class BackgroundProcessController {
                 if (scriptEntity != null) {
                     String backgroundProcessServiceID = scriptEntity.getBackgroundProcessServiceID();
 
-
                     BackgroundProcessService bgp = backgroundProcessManager.getBackgroundProcessByDescriptorID
                     (backgroundProcessServiceID);
                     BackgroundProcessStatusJSON backgroundProcessStatusJSON = new BackgroundProcessStatusJSON();

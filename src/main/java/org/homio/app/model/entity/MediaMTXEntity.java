@@ -254,11 +254,6 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     }
 
     @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
-    }
-
-    @Override
     public @NotNull Map<String, ? extends DeviceEndpoint> getDeviceEndpoints() {
         Map<String, StreamEndpoint> streams = new HashMap<>();
         JsonNode list = getService().getApiList();

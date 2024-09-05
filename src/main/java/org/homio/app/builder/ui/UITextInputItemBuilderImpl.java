@@ -13,7 +13,7 @@ public class UITextInputItemBuilderImpl
 
     private final InputType inputType;
     @Setter
-    private boolean applyButton;
+    private boolean requireApply;
 
     public UITextInputItemBuilderImpl(String entityID, int order, String defaultValue, InputType inputType) {
         super(UIItemType.Input, entityID, order, null);

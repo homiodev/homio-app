@@ -68,7 +68,6 @@ public class WidgetJsEntity extends WidgetEntity<WidgetJsEntity> implements HasJ
     }
    /* @Override
 
-
     @Override
     public String getEntityPrefix() {
         return PREFIX;
@@ -91,8 +90,4 @@ public class WidgetJsEntity extends WidgetEntity<WidgetJsEntity> implements HasJ
         return "JS";
     }
 
-    @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
     }
-}

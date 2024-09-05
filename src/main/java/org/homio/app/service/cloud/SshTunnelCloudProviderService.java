@@ -37,7 +37,6 @@ import java.util.function.Consumer;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.homio.api.ContextSetting.SERVER_PORT;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.ssh.SshGenericEntity.buildSshKeyPair;
@@ -127,7 +126,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
     }
 
     public void handleSync(Context context, ObjectNode params) {
-        context.assertAdminAccess();
+        context.user().assertAdminAccess();
         if (params == null) {
             return;
         }
@@ -185,7 +184,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
                 dialogModel -> {
                     dialogModel.disableKeepOnUi();
                     List<ActionInputParameter> inputs = new ArrayList<>();
-                    inputs.add(ActionInputParameter.text("email", context.getUserRequire().getEmail()));
+                    inputs.add(ActionInputParameter.text("email", context.user().getLoggedInUserRequire().getEmail()));
                     inputs.add(ActionInputParameter.textRequired("password", "", 8, 40));
                     inputs.add(ActionInputParameter.text("passphrase", ""));
                     dialogModel.submitButton("Login", button -> {
@@ -197,14 +196,14 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
     private Consumer<NotificationBlockBuilder> buildNotSyncHandler() {
         return builder ->
                 builder.addInfo("sync", null, "CLOUD.NOT_SYNC").setTextColor(Color.RED)
-                        .setRightButton(new Icon("fas fa-right-to-bracket"), "Sync", null,
+                        .setRightButton(new Icon("fas fa-right-to-bracket"), "Sync",
                                 (context, params) -> openSyncDialog());
     }
 
     private Consumer<NotificationBlockBuilder> tryConnectHandler() {
         return builder -> builder.addInfo("sync", null, "CLOUD.NOT_SYNC")
                 .setTextColor(Color.RED)
-                .setRightButton(new Icon("fas fa-rss"), "Connect", null,
+                .setRightButton(new Icon("fas fa-rss"), "Connect",
                         (context, params) -> {
                             context.getBean(CloudService.class).start();
                             return null;

@@ -44,11 +44,6 @@ public class WidgetSimpleValueEntity extends WidgetEntity<WidgetSimpleValueEntit
     }
 
     @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
-    }
-
-    @Override
     @UIFieldIgnore
     @JsonIgnore
     public Boolean getShowLastUpdateTimer() {

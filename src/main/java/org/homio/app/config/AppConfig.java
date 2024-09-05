@@ -29,6 +29,7 @@ import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.workspace.block.Scratch3Space;
+import org.homio.hquery.HQueryLogger;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -103,6 +104,21 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
     private ApplicationContext applicationContext;
 
     private boolean applicationReady;
+
+    @Bean
+    public HQueryLogger hQueryLogger() {
+        return new HQueryLogger() {
+            @Override
+            public void info(String message) {
+                log.info(message);
+            }
+
+            @Override
+            public void error(String message) {
+                log.error(message);
+            }
+        };
+    }
 
     @Bean
     public EntityManagerFactoryBuilder entityManagerFactoryBuilder(
@@ -318,11 +334,6 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
         registry.addInterceptor(new CacheControlHandlerInterceptor());
     }
 
-    @JsonIdentityInfo(generator = JSOGGenerator.class, property = "entityID", resolver = JSOGResolver.class)
-    interface Bean2MixIn {
-
-    }
-
     @Bean
     public ProxyExchangeArgumentResolver proxyExchangeArgumentResolver(Optional<RestTemplateBuilder> optional,
                                                                        ProxyProperties proxy) {
@@ -354,5 +365,10 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
         resolver.setAutoForwardedHeaders(proxy.getAutoForward());
         resolver.setSensitive(proxy.getSensitive()); // can be null
         return resolver;
+    }
+
+    @JsonIdentityInfo(generator = JSOGGenerator.class, property = "entityID", resolver = JSOGResolver.class)
+    interface Bean2MixIn {
+
     }
 }

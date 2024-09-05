@@ -8,6 +8,7 @@ import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasPermissions;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.model.ActionResponseModel;
+import org.homio.api.setting.SettingPlugin;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
@@ -38,7 +39,7 @@ public final class UserGuestEntity extends UserBaseEntity {
     }
 
     public static boolean isDisabled(Context context, Predicate<UserGuestEntity> predicate) {
-        UserEntity user = context.getUser();
+        UserEntity user = context.user().getLoggedInUser();
         if (user != null && !user.isAdmin()) {
             UserGuestEntity guest = (UserGuestEntity) user;
             return !predicate.test(guest);
@@ -64,9 +65,35 @@ public final class UserGuestEntity extends UserBaseEntity {
 
     @SneakyThrows
     public static void assertConsoleAccess(Context context, ConsolePlugin<?> consolePlugin) {
-        if(!consolePlugin.isEnabled()) {
+        if (!consolePlugin.isEnabled()) {
             throw new IllegalAccessException("Console plugin is not enabled");
         }
+    }
+
+    public static void assertEditAction(ContextImpl context, BaseEntity entity) {
+        UserEntity user = context.user().getLoggedInUser();
+        if (user != null && !user.isAdmin()) {
+            UserGuestEntity guest = (UserGuestEntity) user;
+            guest.assertEditAccess(entity);
+        }
+    }
+
+    public static String getAccessURL(UserGuestEntity entity) {
+        String remoteHost = ContextImpl.REQUEST.get().getHeader("origin");
+        String encodedText = Base64.getEncoder().encodeToString((MACHINE_IP_ADDRESS + "~~~" + entity.getName()).getBytes());
+        return remoteHost + "?aid=" + encodedText;
+    }
+
+    public static boolean isEnabledLogAccess(Context context) {
+        UserEntity user = context.user().getLoggedInUser();
+        if (user != null && !user.isAdmin()) {
+            try {
+                UserGuestEntity.assertLogAccess(context);
+            } catch (Exception ignore) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
@@ -91,15 +118,9 @@ public final class UserGuestEntity extends UserBaseEntity {
         return null;
     }
 
-    public static String getAccessURL(UserGuestEntity entity) {
-        String remoteHost = ContextImpl.REQUEST.get().getHeader("origin");
-        String encodedText = Base64.getEncoder().encodeToString((MACHINE_IP_ADDRESS + "~~~" + entity.getName()).getBytes());
-        return remoteHost + "?aid=" + encodedText;
-    }
-
     @UIField(order = 1)
     @UIFieldTab("PERMISSIONS")
-    @UIFieldGroup(order = 1, value = "ACCESS_WIDGET", borderColor = "#5BB4A5")
+    @UIFieldGroup(order = 50, value = "ACCESS_WIDGET", borderColor = "#5BB4A5")
     public boolean getUpdateWidget() {
         return getJsonData("perm_upd_wt", false);
     }
@@ -121,7 +142,7 @@ public final class UserGuestEntity extends UserBaseEntity {
 
     @UIField(order = 1)
     @UIFieldTab("PERMISSIONS")
-    @UIFieldGroup(order = 2, value = "ACCESS_WIDGET_TAB", borderColor = "#5BB47C")
+    @UIFieldGroup(order = 55, value = "ACCESS_WIDGET_TAB", borderColor = "#5BB47C")
     public boolean getUpdateWidgetTab() {
         return getJsonData("perm_upd_wtt", false);
     }
@@ -130,7 +151,7 @@ public final class UserGuestEntity extends UserBaseEntity {
         setJsonData("perm_upd_wtt", value);
     }
 
-    @UIField(order = 2)
+    @UIField(order = 2, hideOnEmpty = true)
     @UIFieldTab("PERMISSIONS")
     @UIFieldGroup("ACCESS_WIDGET_TAB")
     public Set<String> getVisibleWidgetTab() {
@@ -141,7 +162,7 @@ public final class UserGuestEntity extends UserBaseEntity {
         setJsonData("perm_view_wtt", value);
     }
 
-    @UIField(order = 3)
+    @UIField(order = 3, hideOnEmpty = true)
     @UIFieldTab("PERMISSIONS")
     @UIFieldGroup("ACCESS_WIDGET_TAB")
     public Set<String> getFullAccessToWidgetTab() {
@@ -165,7 +186,7 @@ public final class UserGuestEntity extends UserBaseEntity {
 
     @UIField(order = 1)
     @UIFieldTab("PERMISSIONS")
-    @UIFieldGroup(order = 3, value = "ACCESS_WORKSPACE_TAB", borderColor = "#B4AB5B")
+    @UIFieldGroup(order = 60, value = "ACCESS_WORKSPACE_TAB", borderColor = "#B4AB5B")
     public boolean getUpdateWorkspaceTab() {
         return getJsonData("perm_upd_wst", false);
     }
@@ -187,7 +208,7 @@ public final class UserGuestEntity extends UserBaseEntity {
 
     @UIField(order = 1)
     @UIFieldTab("PERMISSIONS")
-    @UIFieldGroup(order = 10, value = "ACCESS_FM", borderColor = "#7D4BB0")
+    @UIFieldGroup(order = 65, value = "ACCESS_FM", borderColor = "#7D4BB0")
     public boolean getFileMangerReadAccess() {
         return getJsonData("perm_fm_r", false);
     }
@@ -209,9 +230,9 @@ public final class UserGuestEntity extends UserBaseEntity {
 
     @UIField(order = 1)
     @UIFieldTab("PERMISSIONS")
-    @UIFieldGroup(order = 30, value = "ACCESS_SETTINGS", borderColor = "#B04B9D")
+    @UIFieldGroup(order = 70, value = "ACCESS_SETTINGS", borderColor = "#B04B9D")
     public boolean getUpdateSettings() {
-        return getJsonData("perm_upd_stt", false);
+        return getJsonData("perm_upd_stt", true);
     }
 
     public void setUpdateSettings(boolean value) {
@@ -231,7 +252,7 @@ public final class UserGuestEntity extends UserBaseEntity {
 
     @UIField(order = 2)
     @UIFieldTab("PERMISSIONS")
-    @UIFieldGroup("ACCESS_OTHER")
+    @UIFieldGroup(order = 75, value = "ACCESS_OTHER", borderColor = "#CA2C2C")
     public boolean getLogAccess() {
         return getJsonData("perm_log", false);
     }
@@ -251,14 +272,22 @@ public final class UserGuestEntity extends UserBaseEntity {
         setJsonData("perm_ssh", value);
     }
 
-    public static void assertSettingAccess(ContextImpl context) {
-        UserGuestEntity.assertAction(context, UserGuestEntity::getUpdateSettings, "settings");
+    @UIField(order = 3)
+    @UIFieldTab("PERMISSIONS")
+    @UIFieldGroup("ACCESS_OTHER")
+    public boolean getDisableFullEditAccess() {
+        return getJsonData("perm_fae", true);
+    }
+
+    public void setDisableFullEditAccess(boolean value) {
+        setJsonData("perm_fae", value);
     }
 
     @Override
     @SneakyThrows
     public void assertDeleteAccess(BaseEntity entity) {
-        assertEditAccess(entity);
+        assertModifyAccess(entity, "delete");
+
         if (entity instanceof WorkspaceEntity && !getDeleteWorkspaceTab()) {
             throw new IllegalAccessException("User is not allowed to delete workspace tab");
         } else if (entity instanceof WidgetTabEntity tab && !getDeleteWidgetTab()) {
@@ -266,7 +295,7 @@ public final class UserGuestEntity extends UserBaseEntity {
                 return;
             }
             if (!getDeleteWidgetTab() || !getUpdateWidgetTab()) {
-                throw new IllegalAccessException("User is not allowed to update widget tab");
+                throw new IllegalAccessException("User is not allowed to delete widget tab");
             }
         } else if (entity instanceof WidgetEntity<?> widget) {
             if (getFullAccessToWidgetTab().contains(widget.getWidgetTabEntity().getName())) {
@@ -278,38 +307,33 @@ public final class UserGuestEntity extends UserBaseEntity {
         }
     }
 
-    public static boolean isEnabledLogAccess(Context context) {
-        UserEntity user = context.getUser();
-        if(user != null && !user.isAdmin()) {
-            try {
-                UserGuestEntity.assertLogAccess(context);
-            } catch (Exception ignore) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     @Override
     @SneakyThrows
     public void assertEditAccess(BaseEntity entity) {
         assertViewAccess(entity);
+        assertModifyAccess(entity, "update");
+    }
+
+    private void assertModifyAccess(BaseEntity entity, String action) throws IllegalAccessException {
         if (entity instanceof WorkspaceEntity && !getUpdateWorkspaceTab()) {
-            throw new IllegalAccessException("User is not allowed to update workspace tab");
+            throw new IllegalAccessException("User is not allowed to " + action + " workspace tab");
         } else if (entity instanceof WidgetTabEntity tab) {
             if (getFullAccessToWidgetTab().contains(tab.getName())) {
                 return;
             }
             if (!getUpdateWidgetTab()) {
-                throw new IllegalAccessException("User is not allowed to update widget tab");
+                throw new IllegalAccessException("User is not allowed to " + action + " widget tab");
             }
         } else if (entity instanceof WidgetEntity<?> widget) {
             if (getFullAccessToWidgetTab().contains(widget.getWidgetTabEntity().getName())) {
                 return;
             }
             if (!getUpdateWidget() || !getUpdateWidgetTab()) {
-                throw new IllegalAccessException("User is not allowed to update widget");
+                throw new IllegalAccessException("User is not allowed to " + action + " widget");
             }
+        }
+        if (getDisableFullEditAccess()) {
+            throw new IllegalAccessException("User is not allowed to " + action + " " + entity.getTitle());
         }
     }
 
@@ -328,5 +352,10 @@ public final class UserGuestEntity extends UserBaseEntity {
                 throw new IllegalAccessException("User is not allowed to view entity");
             }
         }
+    }
+
+    @Override
+    public void assertSettingsAccess(SettingPlugin<?> setting, Context context) {
+        UserGuestEntity.assertAction(context, UserGuestEntity::getUpdateSettings, "settings");
     }
 }

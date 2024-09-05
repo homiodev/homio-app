@@ -21,11 +21,6 @@ public class WidgetFallbackEntity extends WidgetEntity<WidgetFallbackEntity> {
     }
 
     @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
-    }
-
-    @Override
     protected @NotNull String getWidgetPrefix() {
         return "fallback";
     }
@@ -33,5 +28,10 @@ public class WidgetFallbackEntity extends WidgetEntity<WidgetFallbackEntity> {
     @Override
     public @NotNull String getImage() {
         return "fas fa-question";
+    }
+
+    @Override
+    public boolean isVisible() {
+        return false;
     }
 }

@@ -18,7 +18,6 @@ import org.freedesktop.dbus.UInt16;
 import org.freedesktop.dbus.Variant;
 import org.freedesktop.dbus.exceptions.DBusException;
 
-
 @RequiredArgsConstructor
 class BleCharacteristic implements GattCharacteristic1, Properties {
 

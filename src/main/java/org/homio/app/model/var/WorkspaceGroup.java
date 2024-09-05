@@ -234,11 +234,6 @@ public class WorkspaceGroup extends BaseEntity
         return result;
     }
 
-    @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
-    }
-
     private int clearAll(VariableBackupRepository repository) {
         return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
                 .map(repository::delete)

@@ -71,9 +71,9 @@ public class ContextNetworkImpl implements ContextNetwork {
     public void onContextCreated() {
         addNetworkAddressChanged("mdnsClient", (inetAddress, inetAddress2) -> {
             mdnsClient.close();
-            mdnsClient.start();
+            mdnsClient.start(context);
         });
-        mdnsClient.start();
+        mdnsClient.start(context);
         context.bgp().builder("network-interface-poll")
                 .delay(Duration.ofSeconds(1))
                 .interval(Duration.ofSeconds(60)).execute(this::pollAndNotifyNetworkInterfaceAddress);

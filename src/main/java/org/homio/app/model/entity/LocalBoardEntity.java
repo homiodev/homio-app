@@ -137,11 +137,6 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
     }
 
     @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
-    }
-
-    @Override
     public @Nullable Set<String> getConfigurationErrors() {
         return null;
     }

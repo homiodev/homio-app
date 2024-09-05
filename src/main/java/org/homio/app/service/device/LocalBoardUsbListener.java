@@ -203,7 +203,6 @@ public class LocalBoardUsbListener {
             return devices.get(0).path;
         }
 
-
         @Override
         public boolean equals(Object o) {
             if (this == o) {

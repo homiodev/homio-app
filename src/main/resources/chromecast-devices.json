@@ -1,0 +1,165 @@
+{
+  "version": "7",
+  "devices": [
+    {
+      "name": "Chromecast",
+      "icon": "fab fa-usb",
+      "iconColor": "#4E783D"
+    }
+  ],
+  "endpoints": [
+    {
+      "name": "device_status",
+      "stateless": true,
+      "availableValues": [
+        "ONLINE", "OFFLINE", "ERROR", "UNKNOWN"
+      ]
+    },
+    {
+      "name": "imageSrc",
+      "icon": "fa-images",
+      "iconColor": "#3EC210",
+      "stateless": true
+    },
+    {
+      "name": "duration",
+      "icon": "fa-stopwatch",
+      "iconColor": "#3EC210",
+      "stateless": true,
+      "endpointType": "number"
+    },
+    {
+      "name": "currentTime",
+      "icon": "fa-hourglass-half",
+      "iconColor": "#3EC210",
+      "stateless": true,
+      "endpointType": "number"
+    },
+    {
+      "name": "idling",
+      "icon": "fa-chalkboard",
+      "iconColor": "#3EC210",
+      "stateless": true,
+      "endpointType": "bool"
+    },
+    {
+      "name": "statusText",
+      "icon": "fa-square-poll-vertical",
+      "iconColor": "#3EC210",
+      "stateless": true
+    },
+    {
+      "name": "appId",
+      "icon": "fab fa-ideal",
+      "iconColor": "#3EC210",
+      "stateless": true
+    },
+    {
+      "name": "appName",
+      "icon": "fa-file-signature",
+      "iconColor": "#3EC210",
+      "stateless": true
+    },
+    {
+      "name": "play",
+      "icon": "fa-play",
+      "iconColor": "#3EC210",
+      "stateless": true,
+      "endpointType": "bool"
+    },
+    {
+      "name": "next",
+      "icon": "fa-forward",
+      "iconColor": "#339B93",
+      "stateless": true,
+      "endpointType": "trigger"
+    },
+    {
+      "name": "stop",
+      "icon": "fa-circle-stop",
+      "iconColor": "#C21250",
+      "stateless": true,
+      "endpointType": "trigger"
+    },
+    {
+      "name": "playuri",
+      "icon": "fab fa-fw fa-internet-explorer",
+      "iconColor": "#1299C2",
+      "stateless": true
+    },
+    {
+      "name": "volume",
+      "icon": "fa-volume-high",
+      "iconColor": "#1B6B73",
+      "stateless": true,
+      "min": 0,
+      "max": 100,
+      "scale": 0,
+      "unit": "%",
+      "endpointType": "dimmer"
+    },
+    {
+      "name": "mute",
+      "icon": "fa-volume-xmark",
+      "iconColor": "#D42527",
+      "stateless": true,
+      "endpointType": "bool"
+    },
+    {
+      "name": "albumName",
+      "icon": "fa-image-portrait",
+      "iconColor": "#A65535",
+      "stateless": true,
+      "readMeta": true
+    },
+    {
+      "name": "artist",
+      "icon": "fa-users",
+      "iconColor": "#9A7DA6",
+      "stateless": true,
+      "readMeta": true
+    },
+    {
+      "name": "locationName",
+      "icon": "fa-microchip",
+      "iconColor": "#27A66F",
+      "stateless": true,
+      "readMeta": true
+    },
+    {
+      "name": "seasonNumber",
+      "icon": "fa-ticket",
+      "iconColor": "#1A8CA6",
+      "stateless": true,
+      "readMeta": true
+    },
+    {
+      "name": "episodeNumber",
+      "icon": "fa-film",
+      "iconColor": "#A67C39",
+      "stateless": true,
+      "readMeta": true
+    },
+    {
+      "name": "seriesTitle",
+      "icon": "fa-photo-film",
+      "iconColor": "#A6569A",
+      "stateless": true,
+      "readMeta": true
+    },
+    {
+      "name": "title",
+      "icon": "fa-font",
+      "iconColor": "#6D9FA6",
+      "stateless": true,
+      "readMeta": true
+    },
+    {
+      "name": "trackNumber",
+      "icon": "fa-shuffle",
+      "iconColor": "#59A65A",
+      "stateless": true,
+      "readMeta": true
+    }
+  ]
+}

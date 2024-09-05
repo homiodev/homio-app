@@ -80,7 +80,7 @@ public class SecurityConfiguration {
                         "/rest/auth/register",
                         "/rest/frame/**",
                         "rest/resource/**",
-                        "/rest/media/audio/**",
+                        "/rest/media/stream/**",
                         "/rest/media/video/**",
                         "/rest/media/video/playback/**",
                         "/rest/addon/image/**",

@@ -212,11 +212,6 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
     }
 
     @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
-    }
-
-    @Override
     @UIFieldIgnore
     @JsonIgnore
     public String getValueTemplate() {

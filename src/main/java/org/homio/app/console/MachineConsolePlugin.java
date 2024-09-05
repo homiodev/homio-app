@@ -2,22 +2,31 @@ package org.homio.app.console;
 
 import com.fazecast.jSerialComm.SerialPort;
 import com.pivovarit.function.ThrowingSupplier;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.Context;
+import org.homio.api.ContextVar;
 import org.homio.api.console.ConsolePluginTable;
 import org.homio.api.model.HasEntityIdentifier;
+import org.homio.api.state.DecimalType;
 import org.homio.api.ui.field.UIField;
+import org.homio.app.model.entity.LocalBoardEntity;
+import org.homio.app.service.device.LocalBoardService;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.homio.hquery.hardware.other.MachineInfo;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
 
 import static java.lang.String.format;
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 @Component
 @RequiredArgsConstructor
@@ -30,6 +39,8 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
     private final MachineHardwareRepository machineHardwareRepository;
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     private final NetworkHardwareRepository networkHardwareRepository;
+    private LocalBoardService service;
+    private final Map<String, String> externalInfo = new HashMap<>();
 
     @Override
     public String getParentTab() {
@@ -43,10 +54,14 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
         list.add(new HardwarePluginEntity("Database", format("Type: (%s). Url: (%s)",
                 context.setting().getEnv("databaseType"),
                 context.setting().getEnv("spring.datasource.url"))));
-        list.add(new HardwarePluginEntity("Cpu load", machineHardwareRepository.getCpuLoad()));
-        list.add(new HardwarePluginEntity("Cpu temperature", onLinux(machineHardwareRepository::getCpuTemperature)));
-        list.add(new HardwarePluginEntity("Ram memory", machineHardwareRepository.getRamMemory()));
+
+        LocalBoardService service = getService();
+        list.add(new HardwarePluginEntity("Cpu load", service.getCpuUsageVar().getValue()));
+        list.add(new HardwarePluginEntity("Cpu temperature", onLinux(() -> decimalToString(service.getCpuTemp()))));
+        list.add(new HardwarePluginEntity("Ram memory", service.getMemoryVar().getValue()));
         list.add(new HardwarePluginEntity("Disk memory", toString(machineHardwareRepository.getDiscCapacity())));
+        list.add(new HardwarePluginEntity("Network TX", onLinux(() -> decimalToString(service.getNetTXVar()))));
+        list.add(new HardwarePluginEntity("Network RX", onLinux(() -> decimalToString(service.getNetRXVar()))));
         list.add(new HardwarePluginEntity("Uptime", machineHardwareRepository.getUptime()));
         String activeNetworkInterface = networkHardwareRepository.getActiveNetworkInterface();
         list.add(new HardwarePluginEntity("Network interface", adminOnly(activeNetworkInterface)));
@@ -66,7 +81,7 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
         list.add(new HardwarePluginEntity("CPU", "cpus(s) - %s, arch - %s".formatted(machineInfo.getCpuNum(), machineInfo.getArchitecture())));
         list.add(new HardwarePluginEntity("Hostname", adminOnly(machineInfo.getProcessorModelName())));
 
-        if(context.isAdmin()) {
+        if (context.user().isAdminLoggedUser()) {
             for (SerialPort serialPort : SerialPort.getCommPorts()) {
                 list.add(new HardwarePluginEntity("Com port <" + serialPort.getSystemPortName() + ">",
                         serialPort.getDescriptivePortName() +
@@ -74,9 +89,43 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
             }
         }
 
+        for (Map.Entry<String, String> entry : externalInfo.entrySet()) {
+            list.add(new HardwarePluginEntity(entry.getKey(), entry.getValue()));
+        }
+
         Collections.sort(list);
 
         return list;
+    }
+
+    private LocalBoardService getService() {
+        if (service == null) {
+            LocalBoardEntity localBoardEntity = this.context.db().getRequire(LocalBoardEntity.class, PRIMARY_DEVICE);
+            service = localBoardEntity.getService();
+        }
+        return service;
+    }
+
+    @Override
+    public @Nullable Collection<TableCell> getUpdatableValues() {
+        Set<TableCell> cells = new HashSet<>();
+
+        LocalBoardService service = getService();
+        cells.add(new TableCell("Cpu load", "value", service.getCpuUsageVar().getValue().toString()));
+        cells.add(new TableCell("Ram memory", "value", service.getMemoryVar().getValue().toString()));
+        cells.add(new TableCell("Uptime", "value", machineHardwareRepository.getUptime()));
+        if (SystemUtils.IS_OS_LINUX) {
+            cells.add(new TableCell("Cpu temperature", "value", decimalToString(service.getCpuTemp())));
+            cells.add(new TableCell("Network TX", "value", decimalToString(service.getNetTXVar())));
+            cells.add(new TableCell("Network RX", "value", decimalToString(service.getNetRXVar())));
+        }
+
+        return cells;
+    }
+
+    private Object decimalToString(ContextVar.Variable variable) {
+        DecimalType value = (DecimalType) variable.getValue();
+        return value == null ? null : value.toUIString();
     }
 
     private Object adminOnly(Object object) {
@@ -110,6 +159,10 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
             }
         }
         return "N/A";
+    }
+
+    public void addHardwareInfo(String name, String value) {
+        this.externalInfo.put(name, value);
     }
 
     @Getter

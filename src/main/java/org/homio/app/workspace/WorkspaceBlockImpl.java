@@ -1,5 +1,6 @@
 package org.homio.app.workspace;
 
+import static org.homio.api.entity.HasJsonData.LEVEL_DELIMITER;
 import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
@@ -44,9 +45,13 @@ import org.homio.api.workspace.scratch.BlockType;
 import org.homio.api.workspace.scratch.MenuBlock;
 import org.homio.api.workspace.scratch.Scratch3Block;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.service.FileSystemService;
 import org.homio.app.workspace.WorkspaceService.WorkspaceTabHolder;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 
 @Setter
 @Log4j2
@@ -182,12 +187,15 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     }
 
     @Override
-    public Path getFile(String key, MenuBlock menuBlock, boolean required) {
+    public Resource getFile(String key, MenuBlock menuBlock, boolean required) {
         WorkspaceBlock refBlock = getInputWorkspaceBlock(key);
         Path result = null;
+        FileSystemService fileSystemService = context().getBean(FileSystemService.class);
         if (refBlock.hasField(menuBlock.getName())) {
-            String[] keys = getMenuValue(key, menuBlock, String.class).split(LIST_DELIMITER);
-            result = Paths.get(keys[keys.length - 1]);
+            String menuValue = getMenuValue(key, menuBlock, String.class);
+            String[] keys = menuValue.split(LEVEL_DELIMITER);
+            int alias = Integer.parseInt(keys[1]);
+            return fileSystemService.getFileSystem(keys[0], alias).getEntryResource(keys[2]);
         } else {
             Object evaluate = refBlock.evaluate();
             if (evaluate instanceof RawType) {
@@ -198,7 +206,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         if (required && (result == null || !Files.isReadable(result))) {
             logErrorAndThrow("Unable to evaluate file for: <{}>", this.opcode);
         }
-        return result;
+        return result != null ? new FileSystemResource(result.toFile()) : null;
     }
 
     @Override

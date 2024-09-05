@@ -33,7 +33,11 @@ public class ConsoleSshFontFamilySetting
     @Override
     public @NotNull Collection<OptionModel> getOptions(Context context, JSONObject params) {
         List<OptionModel> result = new ArrayList<>();
-        Set<String> fml = new HashSet<>(Arrays.asList("DejaVu Sans Mono", "Liberation Mono", "Cascadia Code", "Courier New", "Ubuntu Mono"));
+        Set<String> fml = new HashSet<>(Arrays.asList(
+                "Cascadia Code",
+                "Courier New",
+                "Ubuntu Mono",
+                "Source Sans Pro"));
         File fontsFile = CommonUtils.getConfigPath().resolve("fonts").toFile();
         if (fontsFile.exists()) {
             File[] fonts = fontsFile.listFiles();

@@ -7,18 +7,24 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.Context;
 import org.homio.api.ContextHardware;
+import org.homio.api.ContextNetwork;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.HardwareUtils;
+import org.homio.app.console.MachineConsolePlugin;
 import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.service.cloud.CloudService;
 import org.homio.hquery.ProgressBar;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.core.env.Environment;
 
+import java.net.ConnectException;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -29,6 +35,7 @@ import java.util.function.Predicate;
 
 import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
 import static org.apache.commons.lang3.SystemUtils.IS_OS_MAC;
+import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.service.device.LocalBoardService.TOTAL_MEMORY;
 
@@ -52,9 +59,9 @@ public class ContextHardwareImpl implements ContextHardware {
     }
 
     public void onContextCreated() throws Exception {
-        String uuid = CommonUtils.generateUUID();
-        HardwareUtils.APP_ID = context.setting().getEnv("appId", uuid.substring(0, 8), true);
-        HardwareUtils.MACHINE_IP_ADDRESS = networkHardwareRepository.getIPAddress();
+        String uuid = CommonUtils.generateShortUUID(8);
+        HardwareUtils.APP_ID = context.setting().getEnv("appId", uuid, true);
+        MACHINE_IP_ADDRESS = networkHardwareRepository.getIPAddress();
         HardwareUtils.RUN_COUNT = context.setting().getEnv("runCount", 1, true);
         context.setting().setEnv("runCount", HardwareUtils.RUN_COUNT + 1);
     }
@@ -164,6 +171,12 @@ public class ContextHardwareImpl implements ContextHardware {
     }
 
     @Override
+    public @NotNull ContextHardware addHardwareInfo(@NotNull String name, @NotNull String value) {
+        context.getBean(MachineConsolePlugin.class).addHardwareInfo(name, value);
+        return this;
+    }
+
+    @Override
     public @NotNull JsonNode findAssetByArchitecture(JsonNode release) {
         Architecture architecture = getArchitecture(context);
         Map<String, JsonNode> assetNames = new HashMap<>();
@@ -191,6 +204,23 @@ public class ContextHardwareImpl implements ContextHardware {
         }
         throw new IllegalStateException("Unable to find release asset for current architecture: " + architecture.name()
                                         + ". Available assets:\n\t" + String.join("\n\t", assetNames.keySet()));
+    }
+
+    @Override
+    public String getServerUrl() {
+        Environment env = context.getBean(Environment.class);
+        int port = env.getRequiredProperty("server.port", Integer.class);
+        try {
+            if (StringUtils.isNotEmpty(ContextNetwork.ping("homio.local", port))) {
+                return "http://homio.local";
+            }
+        } catch (ConnectException ignore) {
+        }
+        boolean cloudOnline = context.getBean(CloudService.class).getCurrentEntity().getStatus().isOnline();
+        if (cloudOnline) {
+            return "https://homio.org";
+        }
+        return MACHINE_IP_ADDRESS + ":" + port;
     }
 
     private static JsonNode getFoundAsset(Map<String, JsonNode> assetNames, Function<String, Boolean> filter) {

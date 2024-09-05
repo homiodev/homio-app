@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-
 /**
  * Base class for scan devices, controllers, camera, etc...
  */
@@ -32,7 +31,6 @@ public abstract class BaseItemsDiscovery implements UIActionHandler {
         }
 
         log.info("Start batch scanning for <{}>", getBatchName());
-        String headerButtonKey = "SCAN." + getBatchName();
 
         context.bgp().runInBatch(getBatchName(), Duration.ofSeconds(getMaxTimeToWaitInSeconds()), scanners,
                 scanner -> {
@@ -43,7 +41,7 @@ public abstract class BaseItemsDiscovery implements UIActionHandler {
                         return () -> context.ui().progress().runAndGet(scanner.name, true,
                                 progressBar -> {
                                     try {
-                                        return scanner.handler.handle(context, progressBar, headerButtonKey);
+                                        return scanner.handler.handle(context, progressBar);
                                     } catch (Exception ex) {
                                         log.error("Error while execute task: " + scanner.name, ex);
                                         return new DeviceScannerResult();
@@ -65,11 +63,15 @@ public abstract class BaseItemsDiscovery implements UIActionHandler {
                     int foundNewCount = 0;
                     int foundOldCount = 0;
                     for (DeviceScannerResult deviceScannerResult : result) {
-                        foundNewCount += deviceScannerResult.getNewCount().get();
-                        foundOldCount += deviceScannerResult.getExistedCount().get();
+                        if (deviceScannerResult != null) {
+                            foundNewCount += deviceScannerResult.getNewCount().get();
+                            foundOldCount += deviceScannerResult.getExistedCount().get();
+                        }
                     }
-                    context.ui().toastr().info("SCAN.RESULT", FlowMap.of("OLD", foundOldCount, "NEW", foundNewCount));
-                    log.info("Done batch scanning for <{}>", getBatchName());
+                    if (foundNewCount > 0 || foundOldCount > 0) {
+                        context.ui().toastr().info("SCAN.RESULT", FlowMap.of("OLD", foundOldCount, "NEW", foundNewCount));
+                        log.info("Done batch scanning for <{}>", getBatchName());
+                    }
                 });
         return ActionResponseModel.showSuccess("SCAN.STARTED");
     }
@@ -90,14 +92,12 @@ public abstract class BaseItemsDiscovery implements UIActionHandler {
         /**
          * Fires to start search for new items
          *
-         * @param headerConfirmationButtonKey - special header button where confirm request to attach
          * @param context                     -
          * @param progressBar                 -
          * @return found items count
          */
-        DeviceScannerResult handle(Context context, ProgressBar progressBar, String headerConfirmationButtonKey);
+        DeviceScannerResult handle(Context context, ProgressBar progressBar);
     }
-
 
     public static class DevicesScanner implements HasEntityIdentifier {
 

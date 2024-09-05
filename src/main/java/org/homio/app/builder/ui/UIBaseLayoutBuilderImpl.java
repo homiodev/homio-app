@@ -23,6 +23,8 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import static org.homio.api.util.CommonUtils.generateShortUUID;
+
 public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
 
     @Getter
@@ -146,7 +148,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
 
     @Override
     public UIInfoItemBuilder addInfo(@NotNull String name, UIInfoItemBuilder.InfoType infoType, int order) {
-        return addEntity(new UIInfoItemBuilderImpl(name, order, name, infoType));
+        return addEntity(new UIInfoItemBuilderImpl(generateShortUUID(8), order, name, infoType));
     }
 
     @Override

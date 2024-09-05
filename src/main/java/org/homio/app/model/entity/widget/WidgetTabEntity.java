@@ -13,10 +13,8 @@ import org.homio.api.model.JSON;
 import org.homio.api.ui.field.selection.SelectionConfiguration;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.ContextImpl;
-import org.homio.app.model.entity.user.UserGuestEntity;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashSet;
 import java.util.Set;
 
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
@@ -43,6 +41,8 @@ public final class WidgetTabEntity extends BaseEntity implements
     private String icon;
 
     private String iconColor;
+
+    private String bgColor;
 
     private boolean locked = false;
 
@@ -74,14 +74,13 @@ public final class WidgetTabEntity extends BaseEntity implements
         return new Icon(icon, iconColor);
     }
 
-    public Set<ScreenLayout> getLayout() {
+    public @NotNull Set<ScreenLayout> getLayout() {
         return getJsonDataSet("wl", ScreenLayout.class);
     }
 
     @SneakyThrows
     public void addLayout(int hb, int vb, int sw, int sh) {
         Set<ScreenLayout> layouts = getLayout();
-        layouts = layouts == null ? new HashSet<>() : layouts;
         ScreenLayout layout = new ScreenLayout(hb, vb, sw, sh);
         layouts.remove(layout);
         layouts.add(layout);
@@ -91,7 +90,6 @@ public final class WidgetTabEntity extends BaseEntity implements
     @SneakyThrows
     public void addLayoutOptional(int sw, int sh) {
         Set<ScreenLayout> layouts = getLayout();
-        layouts = layouts == null ? new HashSet<>() : layouts;
         ScreenLayout layout = new ScreenLayout(8, 8, sw, sh);
         if (!layouts.contains(layout)) {
             layouts.add(layout);
@@ -111,11 +109,6 @@ public final class WidgetTabEntity extends BaseEntity implements
     @Override
     protected long getChildEntityHashCode() {
         return 0;
-    }
-
-    @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
     }
 
     @Override

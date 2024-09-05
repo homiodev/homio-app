@@ -64,12 +64,7 @@ public class WidgetColorEntity extends WidgetEntity<WidgetColorEntity>
         return null;
     }
 
-    @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
-    }
-
-    @UIField(order = 10)
+    @UIField(order = 10, hideInView = true)
     @UIFieldLayout(options = {"colors", "icon", "name", "brightness", "colorTemp", "onOff"})
     @UIFieldReadDefaultValue
     public String getLayout() {

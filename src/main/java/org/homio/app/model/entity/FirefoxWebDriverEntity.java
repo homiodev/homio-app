@@ -52,11 +52,6 @@ public class FirefoxWebDriverEntity extends MediaEntity implements HasFirmwareVe
     }
 
     @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
-    }
-
-    @Override
     public String getDefaultName() {
         return "Firefox WebDriver";
     }
