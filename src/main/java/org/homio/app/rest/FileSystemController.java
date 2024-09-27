@@ -16,9 +16,10 @@ import org.homio.api.fs.TreeConfiguration;
 import org.homio.api.fs.TreeNode;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
+import org.homio.api.stream.ContentStream;
 import org.homio.api.stream.audio.AudioFormat;
-import org.homio.api.stream.audio.AudioStream;
-import org.homio.api.stream.audio.FileAudioStream;
+import org.homio.api.stream.impl.FileContentStream;
+import org.homio.api.stream.impl.InputContentStream;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.user.UserGuestEntity;
 import org.homio.app.model.entity.widget.impl.media.WidgetFMNodeValue;
@@ -121,14 +122,14 @@ public class FileSystemController {
         if (treeNode == null || treeNode.getId() == null) {
             throw NotFoundException.fileNotFound(request.sourceFileId);
         }
-        AudioStream audioStream;
+        ContentStream stream;
         if (fileSystem instanceof LocalFileSystemProvider local) {
-            audioStream = new FileAudioStream(local.getFile(treeNode.getId()), AudioFormat.MP3);
+            stream = new FileContentStream(local.getFile(treeNode.getId()), AudioFormat.MP3);
         } else {
             InputStream inputStream = fileSystem.getEntryInputStream(treeNode.getId());
-            audioStream = AudioStream.fromUnknownStream(inputStream, AudioFormat.MP3);
+            stream = new InputContentStream(inputStream, AudioFormat.MP3);
         }
-        context.ui().media().playWebAudio(audioStream, null, null);
+        context.ui().media().playWebAudio(stream, null, null);
     }
 
     @SneakyThrows

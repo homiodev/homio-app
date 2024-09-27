@@ -10,7 +10,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.homio.api.ContextUI;
-import org.homio.api.stream.audio.AudioStream;
+import org.homio.api.stream.ContentStream;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.console.ConsolePluginTable;
 import org.homio.api.entity.BaseEntity;
@@ -229,10 +229,6 @@ public class ContextUIImpl implements ContextUI {
                 }
             }
         }
-    }
-
-    public void sendAudio(String url) {
-        sendGlobal(GlobalSendType.audio, String.valueOf(url.hashCode()), url, null, null);
     }
 
     @Override
@@ -544,7 +540,7 @@ public class ContextUIImpl implements ContextUI {
         }
     }
 
-    void sendGlobal(@NotNull GlobalSendType type, @Nullable String entityID, @Nullable Object value, @Nullable String title, @Nullable ObjectNode objectNode) {
+    public void sendGlobal(@NotNull GlobalSendType type, @Nullable String entityID, @Nullable Object value, @Nullable String title, @Nullable ObjectNode objectNode) {
         if (objectNode == null) {
             objectNode = OBJECT_MAPPER.createObjectNode();
         }
@@ -637,7 +633,7 @@ public class ContextUIImpl implements ContextUI {
         return action;
     }
 
-    enum GlobalSendType {
+    public enum GlobalSendType {
         headerMenuButton,
         popup,
         json,
@@ -654,6 +650,7 @@ public class ContextUIImpl implements ContextUI {
         dialog,
         // send audio to play on ui
         audio,
+        video,
         // next generation
         dynamicUpdate
     }
@@ -1056,10 +1053,11 @@ public class ContextUIImpl implements ContextUI {
 
     public class ContextUIMediaImpl implements ContextUIMedia {
 
-        @Override
+
         @SneakyThrows
-        public void playWebAudio(@NotNull AudioStream stream, @Nullable Integer from, @Nullable Integer to) {
-            context.media().getWebAudioSpeaker().play(stream, from, to);
+        @Override
+        public void playWebAudio(@NotNull ContentStream stream, @Nullable Integer from, @Nullable Integer to) {
+            context.media().getWebAudioPlayer().play(stream, from, to);
         }
     }
 }

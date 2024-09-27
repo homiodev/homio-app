@@ -7,52 +7,55 @@ import javazoom.jl.player.advanced.PlaybackListener;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.Context;
+import org.homio.api.stream.ContentStream;
 import org.homio.api.stream.audio.AudioFormat;
-import org.homio.api.stream.audio.AudioSpeaker;
-import org.homio.api.stream.audio.AudioStream;
+import org.homio.api.stream.audio.AudioPlayer;
+import org.homio.app.manager.common.ContextImpl;
 import org.jetbrains.annotations.NotNull;
 
 import javax.sound.sampled.*;
+import java.io.InputStream;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 
 @Log4j2
 @RequiredArgsConstructor
-public class JavaSoundAudioSpeaker implements AudioSpeaker {
+public class JavaSoundAudioPlayer implements AudioPlayer {
 
     private static AdvancedPlayer streamPlayer;
 
-    private final Context context;
+    private final ContextImpl context;
     private final Mixer mixer;
 
     // for resume
     private Integer pausedOnFrame;
-    private AudioStream audioStream;
+    private ContentStream stream;
 
     @Override
     public void resume() {
         if (pausedOnFrame != null) {
-            play(audioStream, pausedOnFrame, null);
+            play(stream, pausedOnFrame, null);
         }
     }
 
     @Override
-    public Set<AudioFormat> getSupportedFormats() {
+    public Set<AudioFormat> getAudioSupportedFormats() {
         return Set.of(AudioFormat.MP3, AudioFormat.WAV, AudioFormat.PCM_SIGNED);
     }
 
     @SneakyThrows
     @Override
-    public void play(AudioStream audioStream, Integer startFrame, Integer endFrame) {
-        this.audioStream = audioStream;
+    public void play(ContentStream stream, Integer startFrame, Integer endFrame) {
+        this.stream = stream;
+        AudioFormat audioFormat = (AudioFormat) stream.getStreamFormat();
 
-        if (!Objects.equals(audioStream.getFormat().getCodec(), AudioFormat.CODEC_MP3)) {
-            AudioPlayer audioPlayer = new AudioPlayer(audioStream);
-            audioPlayer.start();
+        if (!Objects.equals(audioFormat.getCodec(), AudioFormat.CODEC_MP3)) {
+            WebPlayer audioPlayer = new WebPlayer(context);
+            Thread audioThread = audioPlayer.newThread(stream);
+            audioThread.start();
             try {
-                audioPlayer.join();
+                audioThread.join();
             } catch (InterruptedException e) {
                 log.error("Playing audio has been interrupted.");
             }
@@ -60,9 +63,10 @@ public class JavaSoundAudioSpeaker implements AudioSpeaker {
             pause();
             pausedOnFrame = null;
             try {
+                InputStream inputStream = stream.getResource().getInputStream();
                 // we start a new continuous stream and store its handle
-                streamPlayer = new AdvancedPlayer(audioStream.getInputStream());
-                playInThread(streamPlayer, startFrame, endFrame, audioStream);
+                streamPlayer = new AdvancedPlayer(inputStream);
+                playInThread(streamPlayer, startFrame, endFrame, stream, inputStream);
             } catch (JavaLayerException e) {
                 log.error("An exception occurred while playing url audio stream : '{}'", e.getMessage());
             }
@@ -80,7 +84,7 @@ public class JavaSoundAudioSpeaker implements AudioSpeaker {
     }
 
     @Override
-    public void pause() {
+    public void stop() {
         if (streamPlayer != null) {
             // if we are already playing a stream, stop it first
             streamPlayer.close();
@@ -88,14 +92,9 @@ public class JavaSoundAudioSpeaker implements AudioSpeaker {
         }
     }
 
-    @Override
-    public void stop() {
-        pause();
-    }
-
-    public int resume(AudioStream audioStream, Integer startFrame, Integer endFrame) {
+    public int resume(ContentStream stream, Integer startFrame, Integer endFrame) {
         if (streamPlayer != null) {
-            play(audioStream, startFrame, endFrame);
+            play(stream, startFrame, endFrame);
             // if we are already playing a stream, stop it first
             streamPlayer.close();
             streamPlayer = null;
@@ -119,7 +118,7 @@ public class JavaSoundAudioSpeaker implements AudioSpeaker {
         });
     }
 
-    private void playInThread(AdvancedPlayer player, Integer from, Integer to, AudioStream audioStream) {
+    private void playInThread(AdvancedPlayer player, Integer from, Integer to, ContentStream stream, InputStream inputStream) {
         if (player != null) {
             player.setPlayBackListener(new PlaybackListener() {
                 @Override
@@ -147,7 +146,8 @@ public class JavaSoundAudioSpeaker implements AudioSpeaker {
                     }
                 } finally {
                     player.close();
-                    audioStream.close();
+                    inputStream.close();
+                    stream.close();
                 }
             });
         }

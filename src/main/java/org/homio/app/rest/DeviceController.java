@@ -39,20 +39,19 @@ public class DeviceController {
 
     @SneakyThrows
     @GetMapping("/characteristic/{uuid}")
-    public OptionModel getDeviceCharacteristic(@PathVariable("uuid") String uuid) {
-        String characteristic = bluetoothService.getDeviceCharacteristic(uuid);
-        return characteristic == null ? null : OptionModel.key(characteristic);
+    public OptionModel getDeviceCharacteristic(@PathVariable("uuid") String ignored) {
+        return OptionModel.key(bluetoothService.getDeviceInfo());
     }
 
     @SneakyThrows
     @PutMapping("/characteristic/{uuid}")
     @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
-    public void setDeviceCharacteristic(@PathVariable("uuid") String uuid, @RequestBody byte[] value) {
+    public void setDeviceCharacteristic(@PathVariable("uuid") String ignored, @RequestBody byte[] value) {
         UserEntity user = context.user().getLoggedInUser();
-        if(user != null && !user.isAdmin()) {
+        if (user != null && !user.isAdmin()) {
             throw new IllegalAccessException("User is not allowed to change device characteristic");
         }
-        bluetoothService.setDeviceCharacteristic(uuid, value);
+        bluetoothService.handleCommand(value);
     }
 
     @GetMapping("/{endpoint}")

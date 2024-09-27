@@ -4,7 +4,9 @@ import dev.failsafe.ExecutionContext;
 import dev.failsafe.Failsafe;
 import dev.failsafe.Fallback;
 import dev.failsafe.RetryPolicy;
+import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -23,7 +25,8 @@ import org.homio.api.exception.ServerException;
 import org.homio.api.fs.FileSystemProvider;
 import org.homio.api.model.OptionModel;
 import org.homio.api.stream.ContentStream;
-import org.homio.api.stream.audio.AudioSpeaker;
+import org.homio.api.stream.audio.AudioPlayer;
+import org.homio.api.stream.video.VideoPlayer;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader.DynamicOptionLoaderParameters;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.AddonService;
@@ -46,9 +49,11 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.*;
+import org.springframework.http.converter.ResourceRegionHttpMessageConverter;
+import org.springframework.http.server.ServletServerHttpResponse;
+import org.springframework.util.MimeType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -64,6 +69,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
@@ -121,42 +127,57 @@ public class MediaController implements ContextCreated {
 
     @SneakyThrows
     @GetMapping("/stream/{streamID}")
-    public ResponseEntity<?> transferStream(@PathVariable String streamID, @RequestHeader HttpHeaders headers) {
-        try {
-            StreamContext streamContext = streams.get(streamID);
-            if (streamContext == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Stream not found");
-            }
-            streamContext.lastRequested = System.currentTimeMillis();
-            MediaType mediaType = streamContext.getMediaType();
-            HttpRange range = headers.getRange().isEmpty() ? null : headers.getRange().get(0);
-            Resource resource = streamContext.stream.getResource();
-            long contentLength = resource.contentLength();
-            if (contentLength == -1 || range == null) {
-                StreamingResponseBody stream = outputStream -> {
-                    try (InputStream inputStream = resource.getInputStream()) {
-                        byte[] buffer = new byte[8192];
-                        int read;
-                        while ((read = inputStream.read(buffer)) >= 0) {
-                            outputStream.write(buffer, 0, read);
-                            outputStream.flush();
-                            streamContext.lastRequested = System.currentTimeMillis();
-                        }
-                    } catch (IOException e) {
-                        log.error("Error streaming the resource: {}", e.getMessage());
-                        throw e;
-                    }
-                };
-                return ResponseEntity.ok()
-                        .header(HttpHeaders.TRANSFER_ENCODING, "chunked")
-                        .contentType(mediaType)
-                        .body(stream);
-            }
-            return resourceRegion(resource, contentLength, headers, mediaType);
-        } catch (Exception ex) {
-            log.error(ex.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ex.getMessage());
+    public void transferStream(@PathVariable String streamID, @RequestHeader HttpHeaders headers,
+                               @NotNull HttpServletResponse resp) {
+        StreamContext streamContext = streams.get(streamID);
+        if (streamContext == null) {
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Stream not found");
+            return;
         }
+
+        streamContext.lastRequested = System.currentTimeMillis();
+        MimeType mimeType = streamContext.getMediaType();
+
+        HttpRange range = headers.getRange().isEmpty() ? null : headers.getRange().get(0);
+        Resource resource = streamContext.stream.getResource();
+
+        try {
+            if (isHasResourceRegion(range)) {
+                ResponseEntity<ResourceRegion> response = resourceRegion(resource, resource.contentLength(), headers, mimeType);
+                ResourceRegion resourceRegion = response.getBody();
+                if (resourceRegion != null) {
+                    ServletServerHttpResponse httpResponse = new ServletServerHttpResponse(resp);
+                    new MediaResourceRegionHttpMessageConverter().writeResourceRegionInternal(resourceRegion,
+                            httpResponse, streamContext);
+                }
+            } else {
+                resp.setHeader(CONTENT_TYPE, mimeType.toString());
+                long contentLength = resource.contentLength();
+                if (contentLength > 0) {
+                    resp.setContentLength((int) contentLength);
+                }
+                streamFullContent(resource, streamContext, resp);
+            }
+        } catch (IOException e) {
+            log.error("Error streaming the resource: {}", e.getMessage());
+            resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    private void streamFullContent(Resource resource, StreamContext streamContext, HttpServletResponse resp) throws IOException {
+        try (InputStream inputStream = resource.getInputStream(); ServletOutputStream outputStream = resp.getOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = inputStream.read(buffer)) >= 0) {
+                outputStream.write(buffer, 0, read);
+                outputStream.flush();
+                streamContext.lastRequested = System.currentTimeMillis();
+            }
+        }
+    }
+
+    private static boolean isHasResourceRegion(HttpRange range) {
+        return range != null && !"0-".equals(range.toString());
     }
 
     @SneakyThrows
@@ -349,11 +370,18 @@ public class MediaController implements ContextCreated {
                 path -> path.getFileName() == null ? path.toString() : path.getFileName().toString());
     }*/
 
-    @GetMapping("/audioSpeaker")
-    public Collection<OptionModel> getAudioSpeakers() {
-        Collection<OptionModel> models = new ArrayList<>();
-        for (AudioSpeaker speaker : context.media().getAudioSpeakers().values()) {
-            models.add(OptionModel.of(speaker.getId(), speaker.getLabel()));
+    @GetMapping("/stream")
+    public Collection<OptionModel> getStreamPlayers(@RequestParam(value = "filter", required = false) String filter) {
+        Set<OptionModel> models = new HashSet<>();
+        if (isEmpty(filter) || filter.equals("audio")) {
+            for (AudioPlayer player : context.media().getAudioPlayers().values()) {
+                models.add(OptionModel.of(player.getId(), player.getLabel()));
+            }
+        }
+        if (isEmpty(filter) || filter.equals("video")) {
+            for (VideoPlayer player : context.media().getVideoPlayers().values()) {
+                models.add(OptionModel.of(player.getId(), player.getLabel()));
+            }
         }
         return models;
     }
@@ -389,7 +417,7 @@ public class MediaController implements ContextCreated {
                 60);
     }
 
-    private ResponseEntity<ResourceRegion> resourceRegion(Resource resource, long contentLength, HttpHeaders headers, MediaType mediaType) {
+    private ResponseEntity<ResourceRegion> resourceRegion(Resource resource, long contentLength, HttpHeaders headers, MimeType mimeType) {
         HttpStatus status = HttpStatus.PARTIAL_CONTENT;
         HttpRange range = headers.getRange().isEmpty() ? null : headers.getRange().get(0);
         ResourceRegion region;
@@ -405,7 +433,7 @@ public class MediaController implements ContextCreated {
         return ResponseEntity
                 .status(status)
                 .header("Accept-Ranges", "bytes")
-                .contentType(mediaType)
+                .contentType((MediaType) mimeType)
                 .contentLength(contentLength)
                 .body(region);
     }
@@ -447,7 +475,7 @@ public class MediaController implements ContextCreated {
         String streamId = CommonUtils.generateUUID();
         StreamContext context = new StreamContext(stream, timeoutOnInactiveSeconds);
         streams.put(streamId, context);
-        return "rest/media/audio/" + streamId + "/play";
+        return "rest/media/stream/" + streamId;
     }
 
     private synchronized void removeTimedOutStreams() {
@@ -485,15 +513,21 @@ public class MediaController implements ContextCreated {
             this.lastRequested = System.currentTimeMillis();
         }
 
-        public @NotNull MediaType getMediaType() {
-            String mimeType = stream.getMimeType();
-            if (mimeType != null) {
-                try {
-                    return MediaType.parseMediaType(mimeType);
-                } catch (Exception ignore) {
-                }
+        public @NotNull MimeType getMediaType() {
+            try {
+                return stream.getStreamFormat().getMimeType();
+            } catch (Exception ignore) {
+                return MediaType.APPLICATION_OCTET_STREAM;
             }
-            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+    }
+
+    private static class MediaResourceRegionHttpMessageConverter extends ResourceRegionHttpMessageConverter {
+
+        @SneakyThrows
+        public void writeResourceRegionInternal(ResourceRegion region, ServletServerHttpResponse outputMessage, StreamContext streamContext) {
+            super.writeResourceRegion(region, outputMessage);
+            streamContext.lastRequested = System.currentTimeMillis();
         }
     }
 }

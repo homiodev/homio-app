@@ -40,7 +40,7 @@ public class ChromecastService extends EntityService.ServiceInstance<ChromecastE
     Map<String, ChromecastEndpoint> endpoints = new ConcurrentHashMap<>();
 
     private ChromeCast chromeCast;
-    private ChromecastAudioSpeaker audioSpeaker;
+    private ChromecastPlayer audioSpeaker;
 
     public ChromecastService(@NotNull Context context, @NotNull ChromecastEntity entity) {
         super(context, entity, false, "chromecast");
@@ -133,7 +133,7 @@ public class ChromecastService extends EntityService.ServiceInstance<ChromecastE
     }
 
     @SneakyThrows
-    private void handlePlay() {
+    void handlePlay() {
         sendCommand(entity, () -> {
             Application app = chromeCast.getRunningApp();
             if (app != null) {
@@ -244,7 +244,7 @@ public class ChromecastService extends EntityService.ServiceInstance<ChromecastE
 
     @Override
     public void destroy(boolean forRestart, @Nullable Exception ex) throws Exception {
-        context.media().removeAudioSpeaker(audioSpeaker);
+        context.media().removeAudioPlayer(audioSpeaker);
     }
 
     @Override
@@ -262,8 +262,8 @@ public class ChromecastService extends EntityService.ServiceInstance<ChromecastE
     private void connect() {
         try {
             chromeCast.connect();
-            audioSpeaker = new ChromecastAudioSpeaker(this);
-            context.media().addAudioSpeaker(audioSpeaker);
+            audioSpeaker = new ChromecastPlayer(this);
+            context.media().addAudioPlayer(audioSpeaker);
             entity.setStatusOnline();
         } catch (final IOException | GeneralSecurityException ex) {
             log.debug("Connect failed, trying to reconnect: {}", ex.getMessage());

@@ -6,11 +6,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
-import org.homio.api.stream.audio.*;
 import org.homio.api.service.TextToSpeechEntityService;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.RawType;
 import org.homio.api.state.State;
+import org.homio.api.stream.ContentStream;
+import org.homio.api.stream.StreamFormat;
+import org.homio.api.stream.StreamPlayer;
+import org.homio.api.stream.audio.AudioFormat;
+import org.homio.api.stream.impl.ByteArrayContentStream;
+import org.homio.api.stream.impl.FileContentStream;
+import org.homio.api.stream.impl.ResourceContentStream;
+import org.homio.api.stream.impl.URLContentStream;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.MenuBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
@@ -19,6 +26,7 @@ import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.audio.AudioHeader;
 import org.jaudiotagger.audio.generic.GenericAudioHeader;
 import org.jaudiotagger.audio.mp3.MP3AudioHeader;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -28,51 +36,55 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.File;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 @Log4j2
 @Getter
 @Component
-public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
+public class Scratch3MediaBlocks extends Scratch3ExtensionBlocks {
 
-    private final MenuBlock.ServerMenuBlock audioMenu;
+    private final MenuBlock.ServerMenuBlock mediaMenu;
     private final MenuBlock.ServerMenuBlock ttsMenu;
     // private final MenuBlock.ServerMenuBlock audioSourceMenu;
-    private final MenuBlock.ServerMenuBlock speakerMenu;
+    private final MenuBlock.ServerMenuBlock audioOutputMenu;
     // private final Scratch3Block playSourceCommand;
     private final MenuBlock.StaticMenuBlock<AudioInfo> infoMenu;
+    private final MenuBlock.ServerMenuBlock videoOutputMenu;
+    private final MenuBlock.ServerMenuBlock streamMenu;
 
-    public Scratch3AudioBlocks(Context context) {
-        super("#87B023", context, null, "audio");
+    public Scratch3MediaBlocks(Context context) {
+        super("#87B023", context, null, "media");
         setParent(ScratchParent.media);
 
         // menu
         this.ttsMenu = menuServerServiceItems("tts", TextToSpeechEntityService.class, "Select TTS");
-        this.audioMenu = menuServerFiles(".(mp3|wav|ogg|aac)");
+        this.mediaMenu = menuServerFiles(".(mp3|wav|ogg|aac|webrtc|webm|ogv|flv|avi|mp4|ts|m3u8|mjpeg)");
 
-        this.speakerMenu = menuServer("speakerMenu", "rest/media/audioSpeaker", "Speaker");
+        this.audioOutputMenu = menuServer("aoMenu", "rest/media/stream?filter=audio", "Audio speaker");
+        this.videoOutputMenu = menuServer("voMenu", "rest/media/stream?filter=video", "Video output");
+        this.streamMenu = menuServer("streamMenu", "rest/media/stream", "Output");
         this.infoMenu = menuStatic("infoMenu", AudioInfo.class, AudioInfo.Length);
 
         blockCommand(
                 10,
                 "play",
-                "Play file [FILE] to [SPEAKER]|Volume [VOLUME]",
-                this::playFileCommand,
+                "Play [FILE] to [SPEAKER]|Volume [VOLUME]",
+                workspaceBlock -> playFileCommand(workspaceBlock, resource -> playResource(resource, workspaceBlock, null, null)),
                 block -> {
-                    block.addArgument("FILE", this.audioMenu);
-                    block.addArgument("SPEAKER", this.speakerMenu);
+                    block.addArgument("FILE", mediaMenu);
+                    block.addArgument("SPEAKER", streamMenu);
                     block.addArgument("VOLUME", 100);
                 });
 
         blockCommand(
                 12,
                 "play_part",
-                "Play file [FILE] to [SPEAKER]|Volume [VOLUME], From [FROM]sec. Length [LENGTH]sec.",
+                "Play [FILE] to [SPEAKER]|Volume [VOLUME], From [FROM]sec. Length [LENGTH]sec.",
                 this::playPartFileCommand,
                 block -> {
-                    block.addArgument("FILE", this.audioMenu);
-                    block.addArgument("SPEAKER", this.speakerMenu);
+                    block.addArgument("FILE", mediaMenu);
+                    block.addArgument("SPEAKER", streamMenu);
                     block.addArgument("VOLUME", 100);
                     block.addArgument("FROM", 10);
                     block.addArgument("LENGTH", 10);
@@ -89,14 +101,14 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
                 "stop",
                 "Stop [SPEAKER]",
                 this::stopCommand,
-                block -> block.addArgument("SPEAKER", this.speakerMenu));
+                block -> block.addArgument("SPEAKER", streamMenu));
 
         blockCommand(
                 30,
                 "resume",
                 "Resume [SPEAKER]",
                 this::resumeCommand,
-                block -> block.addArgument("SPEAKER", this.speakerMenu));
+                block -> block.addArgument("SPEAKER", streamMenu));
 
         blockReporter(
                 100,
@@ -104,7 +116,7 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
                 "[FILE] [VALUE]",
                 this::getInfoReporter,
                 block -> {
-                    block.addArgument("FILE", this.audioMenu);
+                    block.addArgument("FILE", this.mediaMenu);
                     block.addArgument(VALUE, this.infoMenu);
                 });
 
@@ -149,21 +161,21 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
     private <T> T handleFile(
             WorkspaceBlock workspaceBlock, ThrowingFunction<Resource, T, Exception> handler)
             throws Exception {
-        Resource resource = workspaceBlock.getFile("FILE", this.audioMenu, true);
+        Resource resource = workspaceBlock.getFile("FILE", this.mediaMenu, true);
         return handler.apply(resource);
     }
 
     private void stopCommand(WorkspaceBlock workspaceBlock) {
-        AudioSpeaker audioSpeaker = getAudioSpeaker(workspaceBlock);
-        if (audioSpeaker != null) {
-            audioSpeaker.pause();
+        StreamPlayer player = getStreamPlayer(workspaceBlock, streamMenu);
+        if (player != null) {
+            player.stop();
         }
     }
 
     private void resumeCommand(WorkspaceBlock workspaceBlock) {
-        AudioSpeaker speaker = getAudioSpeaker(workspaceBlock);
-        if (speaker != null) {
-            speaker.resume();
+        StreamPlayer player = getStreamPlayer(workspaceBlock, streamMenu);
+        if (player != null) {
+            player.resume();
         }
     }
 
@@ -184,7 +196,7 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
                             from *= (int) framesPerSeconds;
                             int to = (int) (from + length * framesPerSeconds);
 
-                            playAudio(resource, workspaceBlock, Math.abs(from), Math.abs(to));
+                            playResource(resource, workspaceBlock, Math.abs(from), Math.abs(to));
                             return null;
                         });
     }
@@ -198,71 +210,65 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         }
     }
 
-    private void playFileCommand(WorkspaceBlock workspaceBlock) throws Exception {
+    private void playFileCommand(WorkspaceBlock workspaceBlock, Consumer<Resource> handler) throws Exception {
         handleFile(
                 workspaceBlock,
                 (ThrowingFunction<Resource, Void, Exception>)
                         resource -> {
-                            playAudio(resource, workspaceBlock, null, null);
+                            handler.accept(resource);
                             return null;
                         });
     }
 
-    private void playAudio(Resource resource, WorkspaceBlock workspaceBlock, Integer from, Integer to) {
-        AudioStream audioStream = getAudioStream(resource);
+    private void playResource(Resource resource, WorkspaceBlock workspaceBlock, Integer from, Integer to) {
+        ContentStream stream = getContentStream(resource);
         Integer volume = workspaceBlock.getInputInteger("VOLUME", null);
-        AudioSpeaker speaker = getAudioSpeaker(workspaceBlock);
-        if (speaker != null) {
-            Integer oldVolume = volume == null ? null : getVolume(speaker);
+        StreamPlayer player = getStreamPlayer(workspaceBlock, streamMenu);
+        if (player != null) {
+            Integer oldVolume = volume == null ? null : getVolume(player);
             if (!Objects.equals(oldVolume, volume)) {
-                setVolume(speaker, volume);
+                setVolume(player, volume);
             }
             try {
-                speaker.play(audioStream, from, to);
+                player.play(stream, from, to);
             } catch (Exception e) {
-                log.warn("Error playing '{}': {}", audioStream, e.getMessage(), e);
+                log.warn("Error playing '{}': {}", stream, e.getMessage(), e);
             } finally {
                 if (!Objects.equals(oldVolume, volume)) {
-                    setVolume(speaker, oldVolume);
+                    setVolume(player, oldVolume);
                 }
             }
         }
     }
 
-    private AudioSpeaker getAudioSpeaker(WorkspaceBlock workspaceBlock) {
-        String speakerId = workspaceBlock.getMenuValue("SPEAKER", this.speakerMenu);
-        Collection<AudioSpeaker> speakers = ((ContextImpl) context).media().getAudioSpeakers().values();
-        for (AudioSpeaker speaker : speakers) {
-            if (speakerId.equals(speaker.getId())) {
-                return speaker;
-            }
-        }
-        return null;
+    private @Nullable StreamPlayer getStreamPlayer(WorkspaceBlock workspaceBlock, MenuBlock.ServerMenuBlock streamMenu) {
+        String speakerId = workspaceBlock.getMenuValue("SPEAKER", streamMenu);
+        return ((ContextImpl) context).media().getPlayer(speakerId);
     }
 
-    private Integer getVolume(AudioSpeaker speaker) {
+    private Integer getVolume(StreamPlayer player) {
         try {
             // get current volume
-            return speaker.getVolume();
+            return player.getVolume();
         } catch (IOException e) {
             log.debug(
                     "An exception occurred while getting the volume of audioSpeaker '{}' : {}",
-                    speaker.getId(),
+                    player.getId(),
                     e.getMessage(),
                     e);
         }
         return null;
     }
 
-    private void setVolume(AudioSpeaker speaker, Integer value) {
+    private void setVolume(StreamPlayer player, Integer value) {
         if (value != null) {
             try {
                 // get current volume
-                speaker.setVolume(value);
+                player.setVolume(value);
             } catch (IOException e) {
                 log.debug(
                         "An exception occurred while setting the volume of audioSpeaker '{}' : {}",
-                        speaker.getId(),
+                        player.getId(),
                         e.getMessage(),
                         e);
             }
@@ -287,21 +293,21 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
     }
 
     @SneakyThrows
-    private AudioStream getAudioStream(Resource resource) {
+    private ContentStream getContentStream(Resource resource) {
+        StreamFormat streamFormat = AudioFormat.MP3;
+        String filename = resource.getFilename();
+        if (filename != null) {
+            streamFormat = StreamFormat.evaluateFormat(filename);
+        }
         if (resource.isFile()) {
-            return new FileAudioStream(resource.getFile());
+            return new FileContentStream(resource.getFile(), streamFormat);
         }
         if (resource instanceof UrlResource url) {
-            return new URLAudioStream(url.getURL(), url.getFilename());
+            return new URLContentStream(url.getURL(), streamFormat);
         }
         if (resource instanceof ByteArrayResource bytes) {
-            String filename = bytes.getFilename();
-            AudioFormat audioFormat = AudioFormat.MP3;
-            if (filename != null) {
-                audioFormat = AudioStream.evaluateFormat(filename);
-            }
-            return new ByteArrayAudioStream(bytes.getByteArray(), audioFormat);
+            return new ByteArrayContentStream(bytes.getByteArray(), streamFormat);
         }
-        return AudioStream.fromUnknownStream(resource.getInputStream(), AudioFormat.MP3);
+        return new ResourceContentStream(resource, streamFormat);
     }
 }

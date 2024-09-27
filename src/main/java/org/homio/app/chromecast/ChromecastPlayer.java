@@ -3,17 +3,21 @@ package org.homio.app.chromecast;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
-import org.homio.api.stream.audio.AudioSpeaker;
-import org.homio.api.stream.audio.AudioStream;
 import org.homio.api.state.DecimalType;
-import org.homio.api.stream.audio.URLAudioStream;
+import org.homio.api.stream.ContentStream;
+import org.homio.api.stream.audio.AudioFormat;
+import org.homio.api.stream.audio.AudioPlayer;
+import org.homio.api.stream.impl.URLContentStream;
+import org.homio.api.stream.video.VideoPlayer;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Objects;
 
 import static org.homio.api.stream.audio.AudioFormat.MP3;
 
 @Log4j2
 @RequiredArgsConstructor
-public class ChromecastAudioSpeaker implements AudioSpeaker {
+public class ChromecastPlayer implements AudioPlayer, VideoPlayer {
     private static final String MIME_TYPE_AUDIO_WAV = "audio/wav";
     private static final String MIME_TYPE_AUDIO_MPEG = "audio/mpeg";
 
@@ -26,7 +30,11 @@ public class ChromecastAudioSpeaker implements AudioSpeaker {
 
     @Override
     public @NotNull String getLabel() {
-        return "Chromecast Audio: " + service.getEntity().getName();
+        String name = Objects.toString(service.getEntity().getName(), "Chromecast");
+        if (!service.getEntity().getChromecastType().name().startsWith(name)) {
+            name = service.getEntity().getChromecastType() + ": " + name;
+        }
+        return name;
     }
 
     @Override
@@ -36,26 +44,26 @@ public class ChromecastAudioSpeaker implements AudioSpeaker {
 
     @Override
     public void pause() {
-        AudioSpeaker.super.pause();
-    }
-
-    @Override
-    public void resume() {
         service.handlePause();
     }
 
     @Override
-    public void play(@NotNull AudioStream audioStream, Integer startFrame, Integer endFrame) throws Exception {
+    public void resume() {
+        service.handlePlay();
+    }
+
+    @Override
+    public void play(@NotNull ContentStream stream, Integer startFrame, Integer endFrame) throws Exception {
         final String url;
-        if (audioStream instanceof URLAudioStream urlAudioStream) {
-            url = urlAudioStream.getURL().toString();
-            IOUtils.closeQuietly(audioStream);
+        if (stream instanceof URLContentStream urlStream) {
+            url = urlStream.getURL().toString();
+            IOUtils.closeQuietly(stream);
         } else {
-            String relativeUrl = service.context().media().createStreamUrl(audioStream, 60);
+            String relativeUrl = service.context().media().createStreamUrl(stream, 60);
             url = service.context().hardware().getServerUrl() + relativeUrl;
         }
         service.playMedia("Notification", url,
-                MP3.isCompatible(audioStream.getFormat()) ? MIME_TYPE_AUDIO_MPEG : MIME_TYPE_AUDIO_WAV);
+                MP3.isCompatible((AudioFormat) stream.getStreamFormat()) ? MIME_TYPE_AUDIO_MPEG : MIME_TYPE_AUDIO_WAV);
     }
 
     @Override

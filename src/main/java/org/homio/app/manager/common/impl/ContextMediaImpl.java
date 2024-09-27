@@ -11,12 +11,14 @@ import org.homio.api.ContextMedia;
 import org.homio.api.ContextUI;
 import org.homio.api.model.OptionModel;
 import org.homio.api.stream.ContentStream;
-import org.homio.api.stream.audio.AudioSpeaker;
-import org.homio.api.stream.audio.MicrophoneInput;
+import org.homio.api.stream.StreamPlayer;
+import org.homio.api.stream.audio.AudioInput;
+import org.homio.api.stream.audio.AudioPlayer;
+import org.homio.api.stream.video.VideoPlayer;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.audio.BuildInMicrophoneInput;
-import org.homio.app.audio.JavaSoundAudioSpeaker;
-import org.homio.app.audio.WebAudioSpeaker;
+import org.homio.app.audio.JavaSoundAudioPlayer;
+import org.homio.app.audio.WebPlayer;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.FirefoxWebDriverEntity;
 import org.homio.app.model.entity.Go2RTCEntity;
@@ -25,6 +27,7 @@ import org.homio.app.rest.MediaController;
 import org.homio.app.video.ffmpeg.FFMPEGImpl;
 import org.homio.app.video.ffmpeg.FfmpegHardwareRepository;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
@@ -53,9 +56,11 @@ public class ContextMediaImpl implements ContextMedia {
             CommonUtils.getInstallPath().resolve("ffmpeg").resolve("ffmpeg.exe").toString();
 
     @Getter
-    private final Map<String, AudioSpeaker> audioSpeakers = new HashMap<>();
+    private final Map<String, AudioPlayer> audioPlayers = new HashMap<>();
     @Getter
-    private final Map<String, MicrophoneInput> microphoneInputs = new HashMap<>();
+    private final Map<String, VideoPlayer> videoPlayers = new HashMap<>();
+    @Getter
+    private final Map<String, AudioInput> audioInputs = new HashMap<>();
 
     @Override
     public void fireSeleniumFirefox(@NotNull ThrowingConsumer<WebDriver, Exception> driverHandler) {
@@ -127,23 +132,42 @@ public class ContextMediaImpl implements ContextMedia {
     }
 
     @Override
-    public void addAudioSpeaker(@NotNull AudioSpeaker audioSpeaker) {
-        audioSpeakers.put(audioSpeaker.getId(), audioSpeaker);
+    public void addAudioPlayer(@NotNull AudioPlayer player) {
+        audioPlayers.put(player.getId(), player);
+    }
+
+    public void addStreamPlayer(@NotNull StreamPlayer player) {
+        if (player instanceof VideoPlayer videoPlayer) {
+            videoPlayers.put(player.getId(), videoPlayer);
+        }
+        if (player instanceof AudioPlayer audioPlayer) {
+            audioPlayers.put(player.getId(), audioPlayer);
+        }
     }
 
     @Override
-    public void removeAudioSpeaker(@NotNull AudioSpeaker audioSpeaker) {
-        audioSpeakers.remove(audioSpeaker.getId());
+    public void removeAudioPlayer(@NotNull AudioPlayer player) {
+        audioPlayers.remove(player.getId());
     }
 
     @Override
-    public void addMicrophoneInput(@NotNull MicrophoneInput microphoneInput) {
-        microphoneInputs.put(microphoneInput.getId(), microphoneInput);
+    public void addVideoPlayer(@NotNull VideoPlayer player) {
+        videoPlayers.put(player.getId(), player);
     }
 
     @Override
-    public void removeMicrophoneInput(@NotNull MicrophoneInput microphoneInput) {
-        microphoneInputs.remove(microphoneInput.getId());
+    public void removeVideoPlayer(@NotNull VideoPlayer player) {
+        videoPlayers.remove(player.getId());
+    }
+
+    @Override
+    public void addAudioInput(@NotNull AudioInput input) {
+        audioInputs.put(input.getId(), input);
+    }
+
+    @Override
+    public void removeAudioInput(@NotNull AudioInput input) {
+        audioInputs.remove(input.getId());
     }
 
     @Override
@@ -176,17 +200,25 @@ public class ContextMediaImpl implements ContextMedia {
     }
 
     public void onContextCreated() {
-        addMicrophoneInput(new BuildInMicrophoneInput());
-        addAudioSpeaker(new WebAudioSpeaker(context));
+        addAudioInput(new BuildInMicrophoneInput());
+        addStreamPlayer(new WebPlayer(context));
         for (Mixer.Info info : AudioSystem.getMixerInfo()) {
             Mixer mixer = AudioSystem.getMixer(info);
             if (mixer.isLineSupported(Port.Info.SPEAKER)) {
-                addAudioSpeaker(new JavaSoundAudioSpeaker(context, mixer));
+                addAudioPlayer(new JavaSoundAudioPlayer(context, mixer));
             }
         }
     }
 
-    public AudioSpeaker getWebAudioSpeaker() {
-        return audioSpeakers.get(WebAudioSpeaker.ID);
+    public AudioPlayer getWebAudioPlayer() {
+        return audioPlayers.get(WebPlayer.ID);
+    }
+
+    public @Nullable StreamPlayer getPlayer(String speakerId) {
+        StreamPlayer player = audioPlayers.get(speakerId);
+        if (player == null) {
+            return videoPlayers.get(speakerId);
+        }
+        return player;
     }
 }

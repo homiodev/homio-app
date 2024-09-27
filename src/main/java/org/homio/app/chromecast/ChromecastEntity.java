@@ -58,7 +58,7 @@ public class ChromecastEntity extends MediaEntity implements
 
     @Override
     public @Nullable String getDefaultName() {
-        return "Chromecast";
+        return getChromecastType().name();
     }
 
     @UIField(order = 10, label = "chromecastRefreshRate")

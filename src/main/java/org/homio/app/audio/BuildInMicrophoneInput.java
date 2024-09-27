@@ -1,9 +1,10 @@
 package org.homio.app.audio;
 
+import org.homio.api.stream.ContentStream;
 import org.homio.api.stream.audio.AudioFormat;
-import org.homio.api.stream.audio.AudioStream;
+import org.homio.api.stream.audio.AudioInput;
 import org.homio.api.stream.audio.JavaSoundInputStream;
-import org.homio.api.stream.audio.MicrophoneInput;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.sound.sampled.AudioSystem;
@@ -12,7 +13,7 @@ import javax.sound.sampled.TargetDataLine;
 import java.util.Collections;
 import java.util.Set;
 
-public class BuildInMicrophoneInput implements MicrophoneInput {
+public class BuildInMicrophoneInput implements AudioInput {
 
     /**
      * Java Sound audio format
@@ -31,25 +32,25 @@ public class BuildInMicrophoneInput implements MicrophoneInput {
     private @Nullable TargetDataLine microphone;
 
     @Override
-    public synchronized AudioStream getInputStream(AudioFormat expectedFormat) {
-        if (!expectedFormat.isCompatible(audioFormat)) {
+    public @NotNull String getId() {
+        return "BuildInMicrophone";
+    }
+
+    @Override
+    public @NotNull Set<AudioFormat> getSupportedFormats() {
+        return Collections.singleton(audioFormat);
+    }
+
+    @Override
+    public @Nullable ContentStream getResource() {
+        /*if (!expectedFormat.isCompatible(audioFormat)) {
             throw new IllegalStateException("Cannot produce streams in format " + expectedFormat);
-        }
+        }*/
         TargetDataLine mic = this.microphone;
         if (mic == null) {
             mic = initMicrophone(format);
         }
         return new JavaSoundInputStream(mic, audioFormat);
-    }
-
-    @Override
-    public String getId() {
-        return "BuildInMicrophone";
-    }
-
-    @Override
-    public Set<AudioFormat> getSupportedFormats() {
-        return Collections.singleton(audioFormat);
     }
 
     private static AudioFormat convertAudioFormat(javax.sound.sampled.AudioFormat audioFormat) {

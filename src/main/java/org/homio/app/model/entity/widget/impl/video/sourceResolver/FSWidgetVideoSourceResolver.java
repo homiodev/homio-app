@@ -28,8 +28,9 @@ public class FSWidgetVideoSourceResolver implements WidgetVideoSourceResolver {
         if (selection.getMetadata().path("type").asText().equals("file")) {
             String resource = selection.getValue();
             String fs = selection.getMetadata().path("fs").asText();
+            int alias = selection.getMetadata().path("alias").asInt(0);
 
-            FileSystemProvider fileSystem = fileSystemService.getFileSystem(fs, selection.getMetadata().path("alias").asInt(0));
+            FileSystemProvider fileSystem = fileSystemService.getFileSystem(fs, alias);
             if (fileSystem != null && fileSystem.exists(resource)) {
                 String extension = Objects.toString(FilenameUtils.getExtension(resource), "");
                 String videoType = MediaUtils.getVideoType(resource);
