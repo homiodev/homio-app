@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -29,6 +30,7 @@ import org.homio.api.stream.audio.AudioPlayer;
 import org.homio.api.stream.video.VideoPlayer;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader.DynamicOptionLoaderParameters;
 import org.homio.api.util.CommonUtils;
+import org.homio.app.chromecast.ChromecastEntity;
 import org.homio.app.manager.AddonService;
 import org.homio.app.manager.ImageService;
 import org.homio.app.manager.ImageService.ImageResponse;
@@ -55,6 +57,7 @@ import org.springframework.util.MimeType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -69,6 +72,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
@@ -126,6 +130,35 @@ public class MediaController implements ContextCreated {
     }
 
     @SneakyThrows
+    @GetMapping("/stream/{streamID}/download")
+    public ResponseEntity<InputStreamResource> downloadStream(@PathVariable String streamID,
+                                                              @RequestParam(value = "start", defaultValue = "-1") double start,
+                                                              @RequestParam(value = "end", defaultValue = "-1") double end) {
+        StreamContext streamContext = streams.get(streamID);
+        if (streamContext == null) {
+            return ResponseEntity.notFound().build();
+        }
+        MimeType mimeType = streamContext.getMediaType();
+        MediaType mediaType = new MediaType(mimeType);
+        Resource resource = streamContext.stream.getResource();
+
+        InputStream inputStream;
+        Integer contentLength = null;
+        if ((end > 0 || start > 0) && mimeType.getType().equals("video")) {
+            inputStream = getTrimVideoInputStream(resource, start, end, mediaType);
+            if (inputStream == null) {
+                return ResponseEntity.internalServerError().build();
+            }
+        } else {
+            contentLength = Math.toIntExact(resource.contentLength());
+            inputStream = resource.getInputStream();
+        }
+
+        return CommonUtils.inputStreamToResource(inputStream, mediaType,
+                null, resource.getFilename(), contentLength);
+    }
+
+    @SneakyThrows
     @GetMapping("/stream/{streamID}")
     public void transferStream(@PathVariable String streamID, @RequestHeader HttpHeaders headers,
                                @NotNull HttpServletResponse resp) {
@@ -165,7 +198,8 @@ public class MediaController implements ContextCreated {
     }
 
     private void streamFullContent(Resource resource, StreamContext streamContext, HttpServletResponse resp) throws IOException {
-        try (InputStream inputStream = resource.getInputStream(); ServletOutputStream outputStream = resp.getOutputStream()) {
+        try (InputStream inputStream = resource.getInputStream();
+             ServletOutputStream outputStream = resp.getOutputStream()) {
             byte[] buffer = new byte[8192];
             int read;
             while ((read = inputStream.read(buffer)) >= 0) {
@@ -198,6 +232,12 @@ public class MediaController implements ContextCreated {
         var parameters = new DynamicOptionLoaderParameters(baseEntity, context, new String[0], null);
         List<OptionModel> models = new VideoSeriesDataSourceDynamicOptionLoader().loadOptions(parameters);
         return models.isEmpty() ? models : models.get(0).getChildren();
+    }
+
+    @PostMapping("/chromecast")
+    public void startChromecast(@RequestBody ChromecastRequest request) {
+        ChromecastEntity entity = context.db().getRequire(request.entityID);
+        entity.getService().playMedia(request.title, request.url, request.mimeType);
     }
 
     @PostMapping("/{entityID}/go2rtc/video.webrtc")
@@ -325,7 +365,7 @@ public class MediaController implements ContextCreated {
         if (StringUtils.isNotEmpty(fs)) {
             return fileSystemController.download(fs, new NodeRequest(entityID));
         }
-        return toResponse(imageService.getImage(entityID), eTag);
+        return toResponse(imageService.getImage(entityID), eTag, entityID);
     }
 
     @GetMapping("/workspace/extension/{addonID}.png")
@@ -342,7 +382,7 @@ public class MediaController implements ContextCreated {
         if (stream == null) {
             throw new NotFoundException("Unable to find workspace extension addon image for addon: " + addonID);
         }
-        return toResponse(new ImageResponse(stream, MediaType.IMAGE_PNG), eTag);
+        return toResponse(new ImageResponse(stream, MediaType.IMAGE_PNG), eTag, addonID);
     }
 
     @SneakyThrows
@@ -355,7 +395,7 @@ public class MediaController implements ContextCreated {
         if (webRequest.checkNotModified(eTag)) {
             return null;
         }
-        return toResponse(imageService.getAddonImage(addonID, imageID), eTag);
+        return toResponse(imageService.getAddonImage(addonID, imageID), eTag, addonID);
     }
 
     /* TODO: @GetMapping("/audio")
@@ -438,13 +478,15 @@ public class MediaController implements ContextCreated {
                 .body(region);
     }
 
-    private ResponseEntity<InputStreamResource> toResponse(ImageResponse response, String eTag) {
+    @SneakyThrows
+    private ResponseEntity<InputStreamResource> toResponse(ImageResponse response, String eTag, String fileName) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(new MediaType("image", "jpeg"));
         headers.add(CACHE_CONTROL, "max-age=31536000, public");
         headers.add(ETAG, eTag);
         headers.add(LAST_MODIFIED, new Date(System.currentTimeMillis()).toString());
-        return CommonUtils.inputStreamToResource(response.stream(), response.mediaType(), headers);
+        InputStream inputStream = response.stream();
+        return CommonUtils.inputStreamToResource(inputStream, response.mediaType(), headers, fileName, inputStream.available());
     }
 
     private ResponseEntity<?> proxyUrl(ProxyExchange<byte[]> proxy, int port, String entityID, String path,
@@ -491,6 +533,33 @@ public class MediaController implements ContextCreated {
         });
     }
 
+    @SneakyThrows
+    private InputStream getTrimVideoInputStream(Resource resource, double start, double end, MediaType mediaType) {
+        Path trimFile = CommonUtils.getTmpPath().resolve("trim_stream." + mediaType.getSubtype());
+        File fullFile = null;
+        boolean deleteFile = false;
+        Files.deleteIfExists(trimFile);
+        try {
+            if (resource.isFile()) {
+                fullFile = resource.getFile();
+            } else {
+                fullFile = CommonUtils.getTmpPath().resolve("stream." + mediaType.getSubtype()).toFile();
+                deleteFile = true;
+                Files.copy(resource.getInputStream(), fullFile.toPath(), REPLACE_EXISTING);
+            }
+            context.media().fireFfmpeg("",
+                    fullFile.getAbsolutePath(), "-ss " + start + " -to " + end + " -c:v copy -c:a copy \"" + trimFile + "\"", 600);
+            if (Files.exists(trimFile) && Files.size(trimFile) > 0) {
+                return Files.newInputStream(trimFile);
+            }
+        } finally {
+            if (deleteFile) {
+                FileUtils.deleteQuietly(fullFile);
+            }
+        }
+        return null;
+    }
+
     @Getter
     @Setter
     public static class ThumbnailRequest {
@@ -529,5 +598,14 @@ public class MediaController implements ContextCreated {
             super.writeResourceRegion(region, outputMessage);
             streamContext.lastRequested = System.currentTimeMillis();
         }
+    }
+
+    @Getter
+    @Setter
+    public static class ChromecastRequest {
+        private String url;
+        private String mimeType;
+        private String entityID;
+        private String title;
     }
 }

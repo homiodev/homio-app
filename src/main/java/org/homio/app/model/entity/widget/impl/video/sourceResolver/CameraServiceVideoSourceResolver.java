@@ -16,7 +16,7 @@ public class CameraServiceVideoSourceResolver implements WidgetVideoSourceResolv
     private final Context context;
 
     @Override
-    public VideoEntityResponse resolveDataSource(String valueDataSource) {
+    public VideoEntityResponse resolveDataSource(String valueDataSource, Context context) {
         String ds = DataSourceUtil.getSelection(valueDataSource).getValue();
         String[] keys = ds.split("-->");
         String entityID = keys[0];

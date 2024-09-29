@@ -277,7 +277,7 @@ public class ContextWidgetImpl implements ContextWidget {
 
     @Override
     public @NotNull List<OptionModel> getDashboardTabs() {
-        return OptionModel.entityList(context.db().findAll(WidgetTabEntity.class), context);
+        return OptionModel.entityList(WidgetTabEntity.class, context);
     }
 
     @NotNull

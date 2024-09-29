@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.homio.api.Context;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 import org.jetbrains.annotations.NotNull;
@@ -20,10 +21,10 @@ public interface WidgetVideoSourceResolver {
     Pattern IMAGE_FORMATS = Pattern.compile("jpg|png|gif");
 
     default VideoEntityResponse resolveDataSource(WidgetVideoSeriesEntity item) {
-        return resolveDataSource(item.getValueDataSource());
+        return resolveDataSource(item.getValueDataSource(), item.context());
     }
 
-    VideoEntityResponse resolveDataSource(String valueDataSource);
+    VideoEntityResponse resolveDataSource(String valueDataSource, Context context);
 
     @Getter
     @RequiredArgsConstructor

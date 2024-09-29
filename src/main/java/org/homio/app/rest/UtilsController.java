@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
@@ -28,10 +30,13 @@ import org.homio.app.model.entity.widget.impl.extra.WidgetFrameEntity;
 import org.homio.app.model.rest.DynamicUpdateRequest;
 import org.homio.hquery.Curl;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -46,9 +51,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.List;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
@@ -67,6 +71,7 @@ public class UtilsController {
     private final ContextImpl context;
     private final ScriptService scriptService;
     private final CodeParser codeParser;
+    private final Map<String, OneTimeRequest> requests = new ConcurrentHashMap<>();
 
     private static final LoadingCache<String, GitHubReadme> readmeCache =
             CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
@@ -74,6 +79,28 @@ public class UtilsController {
                     return new GitHubReadme(url, Curl.get(url + "/raw/master/README.md", String.class));
                 }
             });
+
+    @SneakyThrows
+    @GetMapping("/access/get/{requestId}")
+    public void getOneTimeAccessUrl(@PathVariable("requestId") String requestId,
+                                    HttpServletRequest request,
+                                    HttpServletResponse response) {
+        OneTimeRequest oneTimeRequest = requests.remove(requestId);
+        if (oneTimeRequest != null) {
+            SecurityContextHolder.getContext().setAuthentication(oneTimeRequest.authentication);
+            request.getRequestDispatcher("/" + oneTimeRequest.url).forward(request, response);
+        } else {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        }
+    }
+
+    @PutMapping("/access")
+    public OneTimeUrlResponse createOneTimeAccessLink(@RequestBody OneTimeUrlRequest request) {
+        String requestId = CommonUtils.generateUUID();
+        requests.put(requestId, new OneTimeRequest(request.url,
+                SecurityContextHolder.getContext().getAuthentication()));
+        return new OneTimeUrlResponse(requestId);
+    }
 
     @PutMapping("/multiDynamicUpdates")
     public void multiDynamicUpdates(@Valid @RequestBody List<DynamicRequestItem> request) {
@@ -239,5 +266,22 @@ public class UtilsController {
         private String log;
         private String error;
         private String logUrl;
+    }
+
+    @Getter
+    public static class OneTimeUrlRequest {
+        private String url;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class OneTimeUrlResponse {
+        private final String id;
+    }
+
+    @RequiredArgsConstructor
+    private static class OneTimeRequest {
+        private final String url;
+        private final Authentication authentication;
     }
 }

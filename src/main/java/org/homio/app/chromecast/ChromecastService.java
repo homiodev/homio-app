@@ -180,6 +180,7 @@ public class ChromecastService extends EntityService.ServiceInstance<ChromecastE
         }
     }
 
+    @SneakyThrows
     public void startApp(@Nullable String appId) {
         if (appId == null) {
             return;
@@ -195,7 +196,8 @@ public class ChromecastService extends EntityService.ServiceInstance<ChromecastE
             }
             entity.setStatusOnline();
         } catch (IOException e) {
-            log.warn("Failed starting app: {}. Message: {}", appId, e.getMessage());
+            closeApp(appId);
+            chromeCast.launchApp(appId);
         }
     }
 

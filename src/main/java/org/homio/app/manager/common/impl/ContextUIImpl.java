@@ -651,6 +651,7 @@ public class ContextUIImpl implements ContextUI {
         // send audio to play on ui
         audio,
         video,
+        stream,
         // next generation
         dynamicUpdate
     }

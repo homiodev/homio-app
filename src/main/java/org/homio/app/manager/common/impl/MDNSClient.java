@@ -57,13 +57,14 @@ public class MDNSClient {
     }
 
     public void start(ContextImpl context) {
+        String serviceName = "homio";
         for (InetAddress address : getAllInetAddresses()) {
-            createJmDNSByAddress(address);
+            createJmDNSByAddress(address, serviceName);
         }
 
         int port = context.getBean(Environment.class).getRequiredProperty("server.port", Integer.class);
         Set<ServiceDescription> services = Set.of(
-                new ServiceDescription("_homio-server._tcp.local.", "homio", port, Map.of(
+                new ServiceDescription("_homio-server._tcp.local.", serviceName, port, Map.of(
                         "id", HardwareUtils.APP_ID,
                         "run", String.valueOf(HardwareUtils.RUN_COUNT),
                         "version", System.getProperty("server.version"))));
@@ -140,9 +141,9 @@ public class MDNSClient {
         }
     }
 
-    private void createJmDNSByAddress(InetAddress address) {
+    private void createJmDNSByAddress(InetAddress address, String serviceName) {
         try {
-            JmDNS jmdns = JmDNS.create(address, null);
+            JmDNS jmdns = JmDNS.create(address, serviceName + ".local");
             jmdnsInstances.put(address, jmdns);
             log.debug("mDNS service has been started ({} for IP {})", jmdns.getName(), address.getHostAddress());
         } catch (IOException e) {

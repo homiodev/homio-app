@@ -49,7 +49,6 @@ import java.util.stream.Stream;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.homio.api.ui.field.selection.UIFieldTreeNodeSelection.LOCAL_FS;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.hquery.Curl.ONE_MB;
 
 @Log4j2
@@ -94,6 +93,7 @@ public class FileSystemController {
         return fileSystemService.getFileSystem(request.sourceFs, request.alias).delete(request.sourceFileIds);
     }
 
+    @SneakyThrows
     @PostMapping("/{sourceFs}/download")
     public ResponseEntity<InputStreamResource> download(
             @PathVariable("sourceFs") String sourceFs,
@@ -107,7 +107,7 @@ public class FileSystemController {
         }
         InputStream inputStream = fileSystem.getEntryInputStream(treeNode.getId());
         MediaType mediaType = findMediaType(treeNode);
-        return CommonUtils.inputStreamToResource(inputStream, mediaType, null);
+        return CommonUtils.inputStreamToResource(inputStream, mediaType, null, treeNode.getName(), inputStream.available());
     }
 
     @SneakyThrows
@@ -133,51 +133,6 @@ public class FileSystemController {
     }
 
     @SneakyThrows
-    @GetMapping("/{jsonContent}/download")
-    public ResponseEntity<InputStreamResource> download(@PathVariable("jsonContent") String jsonContent,
-                                                        @RequestParam(value = "start", required = false) double start,
-                                                        @RequestParam(value = "end", required = false) double end) {
-        UserGuestEntity.assertFileManagerReadAccess(context);
-
-        byte[] content = Base64.getDecoder().decode(jsonContent.getBytes());
-        NodeRequest nodeRequest = OBJECT_MAPPER.readValue(content, NodeRequest.class);
-        if (end > 0) {
-            return downloadWithCut(nodeRequest, start, end);
-        }
-        return download(nodeRequest.getSourceFs(), nodeRequest);
-    }
-
-    private ResponseEntity<InputStreamResource> downloadWithCut(NodeRequest request, double start, double end) {
-        FileSystemProvider fileSystem = fileSystemService.getFileSystem(request.sourceFs, request.alias);
-        InputStream io = getTrimVideoInputStream(fileSystem, request.sourceFileId, start, end);
-        if (io == null) {
-            throw new IllegalStateException("Unable to trim video. IO is null");
-        }
-        TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileId);
-        MediaType mediaType = findMediaType(treeNode);
-        return CommonUtils.inputStreamToResource(io, mediaType, null);
-    }
-
-    @SneakyThrows
-    private InputStream getTrimVideoInputStream(FileSystemProvider fileSystem, String sourceFileId, double start, double end) {
-        TreeNode treeNode = fileSystem.toTreeNode(sourceFileId);
-        String fn = treeNode.getName();
-        Path trimFile = CommonUtils.getTmpPath().resolve(fn);
-        Files.deleteIfExists(trimFile);
-        if (fileSystem instanceof LocalFileSystemProvider fsl) {
-            File videoFile = fsl.getFile(sourceFileId);
-            context.media().fireFfmpeg("-ss " + start,
-                    videoFile.getAbsolutePath(), "-to " + end + " -c:v copy -c:a copy \"" + trimFile + "\"", 600);
-        } else {
-            Files.copy(fileSystem.getEntryInputStream(sourceFileId), trimFile, REPLACE_EXISTING);
-        }
-        if (Files.exists(trimFile) && Files.size(trimFile) > 0) {
-            return Files.newInputStream(trimFile);
-        }
-        return null;
-    }
-
-    @SneakyThrows
     @PostMapping("/{sourceFs}/preview")
     public ResponseEntity<InputStreamResource> preview(
             @PathVariable("sourceFs") String sourceFs,
@@ -196,7 +151,8 @@ public class FileSystemController {
         String content = WidgetFMNodeValue.getThumbnail(node.treeNode(), width, height, drawTextAsImage);
 
         MediaType mediaType = findMediaType(treeNode);
-        return CommonUtils.inputStreamToResource(new ByteArrayInputStream(content.getBytes()), mediaType, null);
+        ByteArrayInputStream stream = new ByteArrayInputStream(content.getBytes());
+        return CommonUtils.inputStreamToResource(stream, mediaType, null, treeNode.getName(), stream.available());
     }
 
     @NotNull
@@ -220,7 +176,8 @@ public class FileSystemController {
         Path zipFile = archiveSource(request.sourceFs, request.alias, "zip", request.sourceFileIds,
                 "downloadContent", null, null);
         return CommonUtils.inputStreamToResource(
-                Files.newInputStream(zipFile), new MediaType("application", "zip"), null);
+                Files.newInputStream(zipFile), new MediaType("application", "zip"), null,
+                zipFile.getFileName().toString(), (int) zipFile.toFile().length());
     }
 
     @PostMapping("/create")

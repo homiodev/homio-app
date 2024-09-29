@@ -195,7 +195,7 @@ public class WidgetController {
     @PostMapping("/videoSource")
     public WidgetVideoSourceResolver.VideoEntityResponse getVideoSource(@RequestBody VideoSourceRequest request) {
         for (WidgetVideoSourceResolver videoSourceResolver : videoSourceResolvers) {
-            WidgetVideoSourceResolver.VideoEntityResponse response = videoSourceResolver.resolveDataSource(request.source);
+            WidgetVideoSourceResolver.VideoEntityResponse response = videoSourceResolver.resolveDataSource(request.source, context);
             if (response != null) {
                 return response;
             }

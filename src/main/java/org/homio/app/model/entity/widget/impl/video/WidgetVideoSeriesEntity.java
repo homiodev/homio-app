@@ -35,6 +35,15 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
         setJsonData("ap", value);
     }
 
+    @UIField(order = 12)
+    public boolean isShowName() {
+        return getJsonData("sn", false);
+    }
+
+    public void setShowName(boolean value) {
+        setJsonData("sn", value);
+    }
+
     @Override
     @UIField(order = 14, required = true, label = "widget.video_dataSource")
     @UIFieldDynamicSelection(value = VideoSeriesDataSourceDynamicOptionLoader.class, icon = "fas fa-film", iconColor = "#7899D0")

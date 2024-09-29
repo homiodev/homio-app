@@ -79,12 +79,13 @@ public class SecurityConfiguration {
                         "/rest/auth/login",
                         "/rest/auth/register",
                         "/rest/frame/**",
+                        "/rest/access/get/**",
                         "rest/resource/**",
                         "/rest/media/stream/**",
+                        "/rest/media/image/**",
                         "/rest/media/video/**",
                         "/rest/media/video/playback/**",
                         "/rest/addon/image/**",
-                        "/rest/media/image/**",
                         "/rest/route/proxy/**",
                         "/rest/device/**").permitAll();
                 // allow preflight requests

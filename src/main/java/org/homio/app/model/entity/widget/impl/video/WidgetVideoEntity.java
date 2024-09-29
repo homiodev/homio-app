@@ -1,11 +1,15 @@
 package org.homio.app.model.entity.widget.impl.video;
 
 import jakarta.persistence.Entity;
+import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.validation.MaxItems;
+import org.homio.api.model.OptionModel;
+import org.homio.app.chromecast.ChromecastEntity;
 import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -35,6 +39,10 @@ public class WidgetVideoEntity
     @Override
     protected @NotNull String getWidgetPrefix() {
         return "video";
+    }
+
+    public List<OptionModel> getCast() {
+        return OptionModel.entityList(ChromecastEntity.class, context());
     }
 
     public WidgetVideoEntity() {

@@ -37,22 +37,21 @@ public class WebPlayer implements AudioPlayer, VideoPlayer {
     @Override
     public void play(@NotNull ContentStream stream, @Nullable Integer startFrame, @Nullable Integer endFrame) {
         log.debug("Received audio stream of format {}", stream.getStreamFormat());
-        boolean audio = stream.getStreamFormat() instanceof AudioFormat;
         if (stream instanceof URLContentStream urlContentStream) {
             // it is an external URL, so we can directly pass this on.
-            sendStreamToWeb(urlContentStream.getURL().toString(), stream.getStreamFormat().getMimeType(), audio);
+            sendStreamToWeb(urlContentStream.getURL().toString(), stream.getStreamFormat().getMimeType());
         } else {
-            String url = context.media().createStreamUrl(stream, 60);
-            sendStreamToWeb(url, stream.getStreamFormat().getMimeType(), audio);
+            String url = "$DEVICE_URL/" + context.media().createStreamUrl(stream, 60);
+            sendStreamToWeb(url, stream.getStreamFormat().getMimeType());
         }
     }
 
-    private void sendStreamToWeb(@NotNull String url, @NotNull MimeType mimeType, boolean audio) {
+    private void sendStreamToWeb(@NotNull String url, @NotNull MimeType mimeType) {
         ObjectNode params = OBJECT_MAPPER.createObjectNode()
                 .put("volume", volume)
-                .put("mimeType", mimeType.toString());
-        context.ui().sendGlobal(audio ? ContextUIImpl.GlobalSendType.audio : ContextUIImpl.GlobalSendType.video,
-                String.valueOf(url.hashCode()), url, null, params);
+                .put("mimeType", mimeType.getType())
+                .put("mimeSubType", mimeType.getSubtype());
+        context.ui().sendGlobal(ContextUIImpl.GlobalSendType.stream, String.valueOf(url.hashCode()), url, null, params);
     }
 
     @Override
