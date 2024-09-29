@@ -9,17 +9,13 @@ import org.homio.api.stream.impl.ResourceContentStream;
 import org.homio.api.stream.video.VideoFormat;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.api.util.DataSourceUtil.SelectionSource;
-import org.homio.app.rest.FileSystemController.NodeRequest;
 import org.homio.app.service.FileSystemService;
 import org.homio.app.utils.MediaUtils;
-import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 
-import java.util.Base64;
+import java.time.Duration;
 import java.util.Objects;
-
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 @Component
 @RequiredArgsConstructor
@@ -59,6 +55,6 @@ public class FSWidgetVideoSourceResolver implements WidgetVideoSourceResolver {
         var resource = fileSystem.getEntryResource(id);
         var format = new VideoFormat(MediaType.parseMediaType(videoType));
         var stream = new ResourceContentStream(resource, format);
-        return "$DEVICE_URL/" + context.media().createStreamUrl(stream, Integer.MAX_VALUE);
+        return "$DEVICE_URL/" + context.media().createStreamUrl(stream, Duration.ofDays(31));
     }
 }

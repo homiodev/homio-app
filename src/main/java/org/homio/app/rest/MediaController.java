@@ -4,9 +4,7 @@ import dev.failsafe.ExecutionContext;
 import dev.failsafe.Failsafe;
 import dev.failsafe.Fallback;
 import dev.failsafe.RetryPolicy;
-import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -23,7 +21,6 @@ import org.homio.api.AddonEntrypoint;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
-import org.homio.api.fs.FileSystemProvider;
 import org.homio.api.model.OptionModel;
 import org.homio.api.stream.ContentStream;
 import org.homio.api.stream.audio.AudioPlayer;
@@ -39,9 +36,7 @@ import org.homio.app.model.entity.Go2RTCEntity;
 import org.homio.app.model.entity.MediaMTXEntity;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity.VideoSeriesDataSourceDynamicOptionLoader;
 import org.homio.app.rest.FileSystemController.NodeRequest;
-import org.homio.app.service.FileSystemService;
 import org.homio.app.spring.ContextCreated;
-import org.homio.app.utils.MediaUtils;
 import org.homio.app.video.ffmpeg.FfmpegHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.cloud.gateway.mvc.ProxyExchange;
@@ -51,8 +46,6 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.*;
-import org.springframework.http.converter.ResourceRegionHttpMessageConverter;
-import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.util.MimeType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
@@ -76,9 +69,10 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION;
 import static org.springframework.http.HttpHeaders.*;
+import static org.springframework.http.HttpStatus.OK;
+import static org.springframework.http.HttpStatus.PARTIAL_CONTENT;
 
 @Log4j2
 @RestController
@@ -86,7 +80,6 @@ import static org.springframework.http.HttpHeaders.*;
 @RequiredArgsConstructor
 public class MediaController implements ContextCreated {
 
-    private final FileSystemService fileSystemService;
     private final ImageService imageService;
     private final ContextImpl context;
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
@@ -125,7 +118,7 @@ public class MediaController implements ContextCreated {
         });
 
         context.bgp().builder("audio-stream-cleanup")
-                .intervalWithDelay(Duration.ofSeconds(60))
+                .intervalWithDelay(Duration.ofMinutes(60))
                 .execute(this::removeTimedOutStreams);
     }
 
@@ -160,70 +153,22 @@ public class MediaController implements ContextCreated {
 
     @SneakyThrows
     @GetMapping("/stream/{streamID}")
-    public void transferStream(@PathVariable String streamID, @RequestHeader HttpHeaders headers,
-                               @NotNull HttpServletResponse resp) {
+    public ResponseEntity<ResourceRegion> transferStream(@PathVariable String streamID, @RequestHeader HttpHeaders headers) {
         StreamContext streamContext = streams.get(streamID);
         if (streamContext == null) {
-            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Stream not found");
-            return;
+            return ResponseEntity.notFound().build();
         }
 
         streamContext.lastRequested = System.currentTimeMillis();
         MimeType mimeType = streamContext.getMediaType();
-
-        HttpRange range = headers.getRange().isEmpty() ? null : headers.getRange().get(0);
         Resource resource = streamContext.stream.getResource();
 
         try {
-            if (isHasResourceRegion(range)) {
-                ResponseEntity<ResourceRegion> response = resourceRegion(resource, resource.contentLength(), headers, mimeType);
-                ResourceRegion resourceRegion = response.getBody();
-                if (resourceRegion != null) {
-                    ServletServerHttpResponse httpResponse = new ServletServerHttpResponse(resp);
-                    new MediaResourceRegionHttpMessageConverter().writeResourceRegionInternal(resourceRegion,
-                            httpResponse, streamContext);
-                }
-            } else {
-                resp.setHeader(CONTENT_TYPE, mimeType.toString());
-                long contentLength = resource.contentLength();
-                if (contentLength > 0) {
-                    resp.setContentLength((int) contentLength);
-                }
-                streamFullContent(resource, streamContext, resp);
-            }
+            return resourceRegion(resource, resource.contentLength(), headers, mimeType);
         } catch (IOException e) {
             log.error("Error streaming the resource: {}", e.getMessage());
-            resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
         }
-    }
-
-    private void streamFullContent(Resource resource, StreamContext streamContext, HttpServletResponse resp) throws IOException {
-        try (InputStream inputStream = resource.getInputStream();
-             ServletOutputStream outputStream = resp.getOutputStream()) {
-            byte[] buffer = new byte[8192];
-            int read;
-            while ((read = inputStream.read(buffer)) >= 0) {
-                outputStream.write(buffer, 0, read);
-                outputStream.flush();
-                streamContext.lastRequested = System.currentTimeMillis();
-            }
-        }
-    }
-
-    private static boolean isHasResourceRegion(HttpRange range) {
-        return range != null && !"0-".equals(range.toString());
-    }
-
-    @SneakyThrows
-    @GetMapping("/video/{jsonContent}/play")
-    public ResponseEntity<ResourceRegion> playFile(@PathVariable("jsonContent") String jsonContent, @RequestHeader HttpHeaders headers) {
-        byte[] content = Base64.getDecoder().decode(jsonContent.getBytes());
-        NodeRequest nodeRequest = OBJECT_MAPPER.readValue(content, NodeRequest.class);
-        FileSystemProvider fileSystem = fileSystemService.getFileSystem(nodeRequest.sourceFs, nodeRequest.alias);
-        Resource resource = fileSystem.getEntryResource(nodeRequest.getSourceFileId());
-        String videoType = MediaUtils.getVideoType(fileSystem.toTreeNode(nodeRequest.getSourceFileId()).getName());
-        MediaType type = MediaType.parseMediaType(videoType);
-        return resourceRegion(resource, resource.contentLength(), headers, type);
+        return ResponseEntity.internalServerError().build();
     }
 
     @GetMapping("/video/{entityID}/sources")
@@ -307,7 +252,7 @@ public class MediaController implements ContextCreated {
             }
         }
 
-        return new ResponseEntity<>(result, HttpStatus.OK);
+        return new ResponseEntity<>(result, OK);
     }
 
     @GetMapping(value = "/video/playback/{entityID}/{fileId}/thumbnail/jpg",
@@ -318,7 +263,7 @@ public class MediaController implements ContextCreated {
             @RequestParam(value = "size", defaultValue = "800x600") String size)
             throws Exception {
         Path path = getPlaybackThumbnailPath(entityID, fileId, size);
-        return new ResponseEntity<>(path == null ? new byte[0] : Files.readAllBytes(path), HttpStatus.OK);
+        return new ResponseEntity<>(path == null ? new byte[0] : Files.readAllBytes(path), OK);
     }
 
     @GetMapping("/video/playback/{entityID}/{fileId}/download")
@@ -458,11 +403,21 @@ public class MediaController implements ContextCreated {
     }
 
     private ResponseEntity<ResourceRegion> resourceRegion(Resource resource, long contentLength, HttpHeaders headers, MimeType mimeType) {
-        HttpStatus status = HttpStatus.PARTIAL_CONTENT;
         HttpRange range = headers.getRange().isEmpty() ? null : headers.getRange().get(0);
         ResourceRegion region;
+        HttpStatusCode statusCode = PARTIAL_CONTENT;
         if (range == null) {
+            statusCode = OK;
             region = new ResourceRegion(resource, 0, contentLength);
+        } else if (range.toString().equals("0-1")) {
+            return ResponseEntity
+                    .status(PARTIAL_CONTENT)
+                    .eTag("a03275-5b2180c08fb1f")
+                    .header(ACCEPT_RANGES, "bytes")
+                    .header(CONTENT_RANGE, "bytes 0-" + (contentLength - 1) + '/' + contentLength)
+                    .contentType((MediaType) mimeType)
+                    .contentLength(contentLength)
+                    .build();
         } else {
             long start = range.getRangeStart(contentLength);
             long end = range.getRangeEnd(contentLength);
@@ -471,8 +426,9 @@ public class MediaController implements ContextCreated {
         }
 
         return ResponseEntity
-                .status(status)
-                .header("Accept-Ranges", "bytes")
+                .status(statusCode)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
+                .header(ACCEPT_RANGES, "bytes")
                 .contentType((MediaType) mimeType)
                 .contentLength(contentLength)
                 .body(region);
@@ -515,6 +471,9 @@ public class MediaController implements ContextCreated {
 
     public String createStreamUrl(ContentStream stream, int timeoutOnInactiveSeconds) {
         String streamId = CommonUtils.generateUUID();
+        if (stream.getStreamFormat().getMimeType().toString().equals("application/x-mpegurl")) {
+            streamId += ".m3u8";
+        }
         StreamContext context = new StreamContext(stream, timeoutOnInactiveSeconds);
         streams.put(streamId, context);
         return "rest/media/stream/" + streamId;
@@ -588,15 +547,6 @@ public class MediaController implements ContextCreated {
             } catch (Exception ignore) {
                 return MediaType.APPLICATION_OCTET_STREAM;
             }
-        }
-    }
-
-    private static class MediaResourceRegionHttpMessageConverter extends ResourceRegionHttpMessageConverter {
-
-        @SneakyThrows
-        public void writeResourceRegionInternal(ResourceRegion region, ServletServerHttpResponse outputMessage, StreamContext streamContext) {
-            super.writeResourceRegion(region, outputMessage);
-            streamContext.lastRequested = System.currentTimeMillis();
         }
     }
 

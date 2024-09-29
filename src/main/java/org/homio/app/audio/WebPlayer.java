@@ -19,6 +19,7 @@ import org.springframework.util.MimeType;
 
 import javax.sound.sampled.*;
 import java.io.InputStream;
+import java.time.Duration;
 
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
@@ -41,7 +42,7 @@ public class WebPlayer implements AudioPlayer, VideoPlayer {
             // it is an external URL, so we can directly pass this on.
             sendStreamToWeb(urlContentStream.getURL().toString(), stream.getStreamFormat().getMimeType());
         } else {
-            String url = "$DEVICE_URL/" + context.media().createStreamUrl(stream, 60);
+            String url = "$DEVICE_URL/" + context.media().createStreamUrl(stream, Duration.ofSeconds(60));
             sendStreamToWeb(url, stream.getStreamFormat().getMimeType());
         }
     }

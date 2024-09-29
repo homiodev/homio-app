@@ -34,6 +34,7 @@ import org.homio.app.repository.widget.WidgetRepository;
 import org.homio.app.repository.widget.WidgetSeriesRepository;
 import org.homio.app.rest.ConsoleController;
 import org.homio.app.rest.ItemController;
+import org.homio.app.rest.MediaController;
 import org.homio.app.rest.SettingController;
 import org.homio.app.service.FileSystemService;
 import org.homio.app.service.cloud.CloudService;
@@ -96,6 +97,7 @@ public class ContextImpl implements Context {
         BEAN_CONTEXT_CREATED.add(JwtTokenProvider.class);
         BEAN_CONTEXT_CREATED.add(CloudService.class);
         BEAN_CONTEXT_CREATED.add(ConsoleController.class);
+        BEAN_CONTEXT_CREATED.add(MediaController.class);
 
         BEAN_CONTEXT_REFRESH.add(FileSystemService.class);
         BEAN_CONTEXT_REFRESH.add(AddonService.class);

@@ -97,7 +97,7 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
                                 .setIcon(new Icon("fas fa-arrow-right-arrow-left", "#3796B0"))
                                 .setUnit("KB/s").setColor("#3796B0"));
 
-        this.cpuTemp = context.var().createVariable("hardware", "sys_cpu_temp", "sys_cpu_temp",
+        this.cpuTemp = context.var().createVariable("hardware", "sys_cpu_temp", "sys.cpu_temp",
                 VariableType.Float, builder ->
                         builder.setDescription("sys.cpu_temp_description")
                                 .setIcon(new Icon("fas fa-thermometer", "#3796B0"))

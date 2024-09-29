@@ -30,6 +30,7 @@ import org.homio.api.util.Lang;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.ContextImpl.ItemAction;
 import org.homio.app.model.entity.user.UserGuestEntity;
+import org.homio.app.model.var.WorkspaceGroup;
 import org.homio.app.model.var.WorkspaceVariable;
 import org.homio.app.service.mem.InMemoryDB;
 import org.jetbrains.annotations.NotNull;
@@ -381,6 +382,9 @@ public class ContextEventImpl implements ContextEvent {
             // corner case if save/update WorkspaceVariable
             if (entity instanceof WorkspaceVariable wv) {
                 entity = wv.getTopGroup();
+            } else if(entity instanceof WorkspaceGroup wg && wg.getParent() != null) {
+                persist = false;
+                entity = context.db().get(wg.getParent());
             }
             context.sendEntityUpdateNotification(entity, persist ? ItemAction.Insert : ItemAction.Update);
         }

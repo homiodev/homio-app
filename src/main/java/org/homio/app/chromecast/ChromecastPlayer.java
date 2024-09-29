@@ -11,6 +11,7 @@ import org.homio.api.stream.video.VideoPlayer;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.util.MimeType;
 
+import java.time.Duration;
 import java.util.Objects;
 
 @Log4j2
@@ -55,7 +56,7 @@ public class ChromecastPlayer implements AudioPlayer, VideoPlayer {
             url = urlStream.getURL().toString();
             IOUtils.closeQuietly(stream);
         } else {
-            String relativeUrl = service.context().media().createStreamUrl(stream, 60);
+            String relativeUrl = service.context().media().createStreamUrl(stream, Duration.ofHours(1));
             url = service.context().hardware().getServerUrl() + relativeUrl;
         }
         MimeType mimeType = stream.getStreamFormat().getMimeType();

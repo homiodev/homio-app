@@ -1,6 +1,9 @@
 package org.homio.app.rest.widget;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import jakarta.validation.Valid;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
@@ -59,6 +62,8 @@ import org.json.JSONObject;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -76,6 +81,21 @@ public class WidgetController {
     private final WidgetService widgetService;
     private final List<WidgetVideoSourceResolver> videoSourceResolvers;
     private final TimeSeriesUtil timeSeriesUtil;
+
+    private final LoadingCache<String, WidgetVideoSourceResolver.VideoEntityResponse> videoResolvers =
+            CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
+
+                @Override
+                public @NotNull VideoEntityResponse load(@NotNull String key) {
+                    for (WidgetVideoSourceResolver resolver : videoSourceResolvers) {
+                        WidgetVideoSourceResolver.VideoEntityResponse response = resolver.resolveDataSource(key, context);
+                        if (response != null) {
+                            return response;
+                        }
+                    }
+                    throw new ServerException("W.ERROR.NO_VIDEO_FOUND");
+                }
+            });
 
     public WidgetController(
             ObjectMapper objectMapper,
@@ -193,14 +213,8 @@ public class WidgetController {
     }
 
     @PostMapping("/videoSource")
-    public WidgetVideoSourceResolver.VideoEntityResponse getVideoSource(@RequestBody VideoSourceRequest request) {
-        for (WidgetVideoSourceResolver videoSourceResolver : videoSourceResolvers) {
-            WidgetVideoSourceResolver.VideoEntityResponse response = videoSourceResolver.resolveDataSource(request.source, context);
-            if (response != null) {
-                return response;
-            }
-        }
-        throw new ServerException("W.ERROR.NO_VIDEO_FOUND");
+    public WidgetVideoSourceResolver.VideoEntityResponse getVideoSource(@RequestBody VideoSourceRequest request) throws ExecutionException {
+        return videoResolvers.get(request.source);
     }
 
     @GetMapping("/video/{entityID}")
@@ -208,15 +222,16 @@ public class WidgetController {
         WidgetVideoEntity entity = getEntity(entityID);
         context.user().getLoggedInUserRequire().assertViewAccess(entity);
 
+        // TODO:
+        videoResolvers.invalidateAll();
+
         List<WidgetVideoSourceResolver.VideoEntityResponse> result = new ArrayList<>();
         for (WidgetVideoSeriesEntity item : entity.getSeries()) {
-            for (WidgetVideoSourceResolver videoSourceResolver : videoSourceResolvers) {
-                WidgetVideoSourceResolver.VideoEntityResponse response = videoSourceResolver.resolveDataSource(item);
-                if (response != null) {
-                    result.add(response);
-                    handlePoster(item, response);
-                    break;
-                }
+            try {
+                var response = videoResolvers.get(item.getValueDataSource());
+                result.add(response);
+                handlePoster(item, response);
+            } catch (Exception ignore) {
             }
         }
         return result;

@@ -171,8 +171,9 @@ public class ContextMediaImpl implements ContextMedia {
     }
 
     @Override
-    public @NotNull String createStreamUrl(@NotNull ContentStream stream, int timeoutOnInactiveSeconds) {
-        return context.getBean(MediaController.class).createStreamUrl(stream, timeoutOnInactiveSeconds);
+    public @NotNull String createStreamUrl(@NotNull ContentStream stream, @Nullable Duration ttl) {
+        return context.getBean(MediaController.class).createStreamUrl(stream,
+                ttl == null ? Integer.MAX_VALUE : (int) ttl.getSeconds());
     }
 
     @Override
