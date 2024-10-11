@@ -109,6 +109,159 @@ public class WidgetController {
         this.timeSeriesUtil = new TimeSeriesUtil(context);
     }
 
+    @NotNull
+    private static Set<TreeNode> findVisibleNodes(WidgetFMEntity entity, String parentId, FileSystemProvider fileSystem) {
+        List<Pattern> filters = entity
+                .getFileFilters()
+                .stream()
+                .map(regex -> {
+                    if (regex.startsWith("*")) {
+                        regex = "." + regex;
+                    } else if (!regex.startsWith(".*")) {
+                        regex = ".*" + regex;
+                    }
+                    try {
+                        return Pattern.compile(regex);
+                    } catch (Exception ignore) {
+                    }
+                    return null;
+                }).filter(Objects::nonNull)
+                .toList();
+        Set<TreeNode> allNodes = fileSystem.getChildren(parentId);
+        return allNodes
+                .stream()
+                .filter(n -> filterFile(n, entity, filters))
+                .collect(Collectors.toSet());
+    }
+
+    private static void handlePoster(WidgetVideoSeriesEntity item, VideoEntityResponse response) {
+        if (StringUtils.isNotEmpty(item.getPosterDataSource())) {
+            SelectionSource poster = DataSourceUtil.getSelection(item.getPosterDataSource());
+            String posterUrl = poster.getValue();
+            if (StringUtils.isNotEmpty(posterUrl)) {
+                String type = poster.getMetadata().path("type").asText();
+                if ("file".equals(type)) {
+                    posterUrl = "$DEVICE_URL/rest/media/image/%s".formatted(posterUrl);
+                }
+            }
+            response.setPoster(posterUrl);
+        }
+    }
+
+    private static boolean filterFile(TreeNode n, WidgetFMEntity entity, List<Pattern> filters) {
+        if (!entity.getShowDirectories() && n.getAttributes().isDir()) {
+            return false;
+        }
+        if (!filters.isEmpty()) {
+            for (Pattern filter : filters) {
+                if (filter.matcher(defaultIfEmpty(n.getId(), n.getId())).matches()) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return true;
+    }
+
+    private static void findMatrixFreePosition(WidgetEntity<?> widget, boolean[][] matrix, ScreenLayout sl,
+                                               int bw, int bh, AtomicBoolean processed) {
+        boolean satisfyPosition = isSatisfyPosition(matrix, widget.getXb(), widget.getYb(), bw, bh, sl.getHb(), sl.getVb());
+        if (!satisfyPosition) {
+            Pair<Integer, Integer> freePosition = findMatrixFreePosition(matrix, bw, bh, sl.getHb(), sl.getVb());
+            if (freePosition == null) {
+                // try decrease widget bw/bh
+                if (bw >= bh && bw > 1) {
+                    findMatrixFreePosition(widget, matrix, sl, bw - 1, bh, processed);
+                    if (processed.get()) {
+                        return;
+                    }
+                }
+                if (bh >= bw && bh > 1) {
+                    findMatrixFreePosition(widget, matrix, sl, bw, bh - 1, processed);
+                    if (processed.get()) {
+                        return;
+                    }
+                }
+
+                if (!processed.get()) {
+                    widget.setXb(-1, sl.getKey());
+                    widget.setYb(-1, sl.getKey());
+                }
+            } else {
+                widget.setBw(bw, sl.getKey());
+                widget.setBh(bh, sl.getKey());
+                widget.setXb(freePosition.getKey(), sl.getKey());
+                widget.setYb(freePosition.getValue(), sl.getKey());
+                processed.set(true);
+            }
+        } else {
+            widget.setXb(widget.getXb(), sl.getKey());
+            widget.setYb(widget.getYb(), sl.getKey());
+            widget.setBw(bw, sl.getKey());
+            widget.setBh(bh, sl.getKey());
+            processed.set(true);
+        }
+    }
+
+    /**
+     * Check if matrix has free slot for specific width/height and return first available position
+     */
+    private static Pair<Integer, Integer> findMatrixFreePosition(boolean[][] matrix, int bw, int bh, int hBlockCount, int vBlockCount) {
+        for (int j = 0; j < hBlockCount; j++) {
+            for (int i = 0; i < vBlockCount; i++) {
+                if (isSatisfyPosition(matrix, i, j, bw, bh, hBlockCount, vBlockCount)) {
+                    return Pair.of(i, j);
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean isSatisfyPosition(boolean[][] matrix, int xPos, int yPos, int width, int height, int hBlockCount, int vBlockCount) {
+        for (int j = xPos; j < xPos + width; j++) {
+            for (int i = yPos; i < yPos + height; i++) {
+                if (j >= vBlockCount || i >= hBlockCount || matrix[j][i]) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static boolean[][] initMatrix(List<WidgetEntity> widgets, ScreenLayout sl) {
+        boolean[][] matrix = new boolean[sl.getVb()][sl.getHb()];
+        for (int j = 0; j < sl.getVb(); j++) {
+            matrix[j] = new boolean[sl.getHb()];
+        }
+
+        List<WidgetEntity> copyWidgets = new ArrayList<>(widgets);
+        for (WidgetEntity model : copyWidgets) {
+            try {
+                fillMatrixWidget(matrix, sl, model);
+            } catch (Exception ignore) {
+                // for now we ignore widget if it's unable to insert into matrix
+                copyWidgets.remove(model);
+                return initMatrix(copyWidgets, sl);
+            }
+        }
+        return matrix;
+    }
+
+    private static void fillMatrixWidget(boolean[][] matrix, ScreenLayout sl, WidgetEntity model) {
+        if (isEmpty(model.getParent())) {
+            int x = model.getXb(sl.getKey());
+            int y = model.getYb(sl.getKey());
+            if (x < 0 || y < 0) {
+                return;
+            }
+            for (int j = x; j < x + model.getBw(sl.getKey()); j++) {
+                for (int i = y; i < y + model.getBh(sl.getKey()); i++) {
+                    matrix[i][j] = true;
+                }
+            }
+        }
+    }
+
     @PostMapping("/sources")
     public Map<String, Object> getSources(@Valid @RequestBody WidgetController.SourcesRequest request) {
         Map<String, Object> result = new HashMap<>();
@@ -187,31 +340,6 @@ public class WidgetController {
         return items;
     }
 
-    @NotNull
-    private static Set<TreeNode> findVisibleNodes(WidgetFMEntity entity, String parentId, FileSystemProvider fileSystem) {
-        List<Pattern> filters = entity
-                .getFileFilters()
-                .stream()
-                .map(regex -> {
-                    if (regex.startsWith("*")) {
-                        regex = "." + regex;
-                    } else if (!regex.startsWith(".*")) {
-                        regex = ".*" + regex;
-                    }
-                    try {
-                        return Pattern.compile(regex);
-                    } catch (Exception ignore) {
-                    }
-                    return null;
-                }).filter(Objects::nonNull)
-                .toList();
-        Set<TreeNode> allNodes = fileSystem.getChildren(parentId);
-        return allNodes
-                .stream()
-                .filter(n -> filterFile(n, entity, filters))
-                .collect(Collectors.toSet());
-    }
-
     @PostMapping("/videoSource")
     public WidgetVideoSourceResolver.VideoEntityResponse getVideoSource(@RequestBody VideoSourceRequest request) throws ExecutionException {
         return videoResolvers.get(request.source);
@@ -235,20 +363,6 @@ public class WidgetController {
             }
         }
         return result;
-    }
-
-    private static void handlePoster(WidgetVideoSeriesEntity item, VideoEntityResponse response) {
-        if (StringUtils.isNotEmpty(item.getPosterDataSource())) {
-            SelectionSource poster = DataSourceUtil.getSelection(item.getPosterDataSource());
-            String posterUrl = poster.getValue();
-            if (StringUtils.isNotEmpty(posterUrl)) {
-                String type = poster.getMetadata().path("type").asText();
-                if ("file".equals(type)) {
-                    posterUrl = "$DEVICE_URL/rest/media/image/%s".formatted(posterUrl);
-                }
-            }
-            response.setPoster(posterUrl);
-        }
     }
 
     @PostMapping("/video/action")
@@ -772,21 +886,6 @@ public class WidgetController {
                 value));
     }
 
-    private static boolean filterFile(TreeNode n, WidgetFMEntity entity, List<Pattern> filters) {
-        if (!entity.getShowDirectories() && n.getAttributes().isDir()) {
-            return false;
-        }
-        if (!filters.isEmpty()) {
-            for (Pattern filter : filters) {
-                if (filter.matcher(defaultIfEmpty(n.getId(), n.getId())).matches()) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        return true;
-    }
-
     /**
      * Find free space in matrix for new item
      */
@@ -813,105 +912,6 @@ public class WidgetController {
                 processed.set(false);
             }
 
-        }
-    }
-
-    private static void findMatrixFreePosition(WidgetEntity<?> widget, boolean[][] matrix, ScreenLayout sl,
-                                               int bw, int bh, AtomicBoolean processed) {
-        boolean satisfyPosition = isSatisfyPosition(matrix, widget.getXb(), widget.getYb(), bw, bh, sl.getHb(), sl.getVb());
-        if (!satisfyPosition) {
-            Pair<Integer, Integer> freePosition = findMatrixFreePosition(matrix, bw, bh, sl.getHb(), sl.getVb());
-            if (freePosition == null) {
-                // try decrease widget bw/bh
-                if (bw >= bh && bw > 1) {
-                    findMatrixFreePosition(widget, matrix, sl, bw - 1, bh, processed);
-                    if (processed.get()) {
-                        return;
-                    }
-                }
-                if (bh >= bw && bh > 1) {
-                    findMatrixFreePosition(widget, matrix, sl, bw, bh - 1, processed);
-                    if (processed.get()) {
-                        return;
-                    }
-                }
-
-                if (!processed.get()) {
-                    widget.setXb(-1, sl.getKey());
-                    widget.setYb(-1, sl.getKey());
-                }
-            } else {
-                widget.setBw(bw, sl.getKey());
-                widget.setBh(bh, sl.getKey());
-                widget.setXb(freePosition.getKey(), sl.getKey());
-                widget.setYb(freePosition.getValue(), sl.getKey());
-                processed.set(true);
-            }
-        } else {
-            widget.setXb(widget.getXb(), sl.getKey());
-            widget.setYb(widget.getYb(), sl.getKey());
-            widget.setBw(bw, sl.getKey());
-            widget.setBh(bh, sl.getKey());
-            processed.set(true);
-        }
-    }
-
-    /**
-     * Check if matrix has free slot for specific width/height and return first available position
-     */
-    private static Pair<Integer, Integer> findMatrixFreePosition(boolean[][] matrix, int bw, int bh, int hBlockCount, int vBlockCount) {
-        for (int j = 0; j < hBlockCount; j++) {
-            for (int i = 0; i < vBlockCount; i++) {
-                if (isSatisfyPosition(matrix, i, j, bw, bh, hBlockCount, vBlockCount)) {
-                    return Pair.of(i, j);
-                }
-            }
-        }
-        return null;
-    }
-
-    private static boolean isSatisfyPosition(boolean[][] matrix, int xPos, int yPos, int width, int height, int hBlockCount, int vBlockCount) {
-        for (int j = xPos; j < xPos + width; j++) {
-            for (int i = yPos; i < yPos + height; i++) {
-                if (j >= vBlockCount || i >= hBlockCount || matrix[j][i]) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    private static boolean[][] initMatrix(List<WidgetEntity> widgets, ScreenLayout sl) {
-        boolean[][] matrix = new boolean[sl.getVb()][sl.getHb()];
-        for (int j = 0; j < sl.getVb(); j++) {
-            matrix[j] = new boolean[sl.getHb()];
-        }
-
-        List<WidgetEntity> copyWidgets = new ArrayList<>(widgets);
-        for (WidgetEntity model : copyWidgets) {
-            try {
-                fillMatrixWidget(matrix, sl, model);
-            } catch (Exception ignore) {
-                // for now we ignore widget if it's unable to insert into matrix
-                copyWidgets.remove(model);
-                return initMatrix(copyWidgets, sl);
-            }
-        }
-        return matrix;
-    }
-
-    private static void fillMatrixWidget(boolean[][] matrix, ScreenLayout sl, WidgetEntity model) {
-        if (isEmpty(model.getParent())) {
-            int x = model.getXb(sl.getKey());
-            int y = model.getYb(sl.getKey());
-            if (x < 0 || y < 0) {
-                return;
-            }
-            for (int j = x; j < x + model.getBw(sl.getKey()); j++) {
-                for (int i = y; i < y + model.getBh(sl.getKey()); i++) {
-                    matrix[i][j] = true;
-                }
-            }
         }
     }
 

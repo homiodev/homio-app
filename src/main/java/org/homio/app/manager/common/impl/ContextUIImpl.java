@@ -10,7 +10,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.homio.api.ContextUI;
-import org.homio.api.stream.ContentStream;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.console.ConsolePluginTable;
 import org.homio.api.entity.BaseEntity;
@@ -27,6 +26,8 @@ import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.service.EntityService;
 import org.homio.api.setting.SettingPluginButton;
+import org.homio.api.state.ObjectType;
+import org.homio.api.stream.ContentStream;
 import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.dialog.DialogModel;
@@ -38,6 +39,8 @@ import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
 import org.homio.api.util.NotificationLevel;
+import org.homio.api.widget.CustomWidgetConfigurableEntity;
+import org.homio.api.widget.CustomWidgetDataStore;
 import org.homio.app.builder.ui.UIInputBuilderImpl;
 import org.homio.app.builder.ui.UIInputEntityActionHandler;
 import org.homio.app.config.WebSocketConfig;
@@ -184,8 +187,8 @@ public class ContextUIImpl implements ContextUI {
     }
 
     private void updateConsoleUI(String key, ConsolePlugin<?> p) {
-        if(isUpdateRegistered(key)) {
-            if(p instanceof ConsolePluginTable<?> table) {
+        if (isUpdateRegistered(key)) {
+            if (p instanceof ConsolePluginTable<?> table) {
                 sendDynamicUpdateSupplied(new DynamicUpdateRequest(key, null),
                         () -> OBJECT_MAPPER.createObjectNode().putPOJO("value", table.getUpdatableValues()));
             }
@@ -195,12 +198,23 @@ public class ContextUIImpl implements ContextUI {
     public void registerForUpdates(DynamicUpdateRequest request) {
         DynamicUpdateContext duc = dynamicUpdateRegisters.get(request);
         if (duc == null) {
+            if (request.getEntityID() != null) {
+                BaseEntity entity = context.db().get(request.getEntityID());
+                if (entity instanceof CustomWidgetConfigurableEntity cwce) {
+                    cwce.setWidgetDataStore(new CustomWidgetDataStore() {
+                        @Override
+                        public void update(Object data) {
+                            context.event().fireEvent(request.getDynamicUpdateId(), new ObjectType(data));
+                        }
+                    });
+                }
+            }
             dynamicUpdateRegisters.put(request, new DynamicUpdateContext());
         } else {
             duc.timeout = System.currentTimeMillis(); // refresh timer
             duc.registerCounter.incrementAndGet();
         }
-        context.event().addEventListener(request.getDynamicUpdateId(), value ->
+        context.event().addEventBehaviourListener(request.getDynamicUpdateId(), value ->
                 sendDynamicUpdateSupplied(request, () -> value));
     }
 
@@ -954,10 +968,21 @@ public class ContextUIImpl implements ContextUI {
 
         @Override
         public MirrorImageDialog topImageDialog(@NotNull String title, @NotNull String icon, @NotNull String iconColor) {
+            return buildMirrorDialog(title, icon, iconColor, null);
+        }
+
+        public @NotNull MirrorImageDialog buildMirrorDialog(
+                @NotNull String title,
+                @NotNull String icon,
+                @NotNull String iconColor,
+                @Nullable Consumer<ObjectNode> postProcessor) {
             ObjectNode content = OBJECT_MAPPER.createObjectNode();
             content.put("icon", icon);
             content.put("iconColor", iconColor);
             content.put("title", title);
+            if (postProcessor != null) {
+                postProcessor.accept(content);
+            }
             content.put("type", "image");
             ObjectNode objectNode = OBJECT_MAPPER.createObjectNode();
             objectNode.put("type", "image");

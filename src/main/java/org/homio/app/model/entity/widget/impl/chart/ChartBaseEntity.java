@@ -68,7 +68,7 @@ public abstract class ChartBaseEntity<T extends WidgetEntityAndSeries, S extends
         setJsonData("sfsb", value);
     }
 
-    @UIField(order = 10)
+    @UIField(order = 9)
     @UIFieldReadDefaultValue
     @UIFieldSlider(min = 10, max = 600)
     @UIFieldGroup("CHART_UI")
@@ -78,5 +78,17 @@ public abstract class ChartBaseEntity<T extends WidgetEntityAndSeries, S extends
 
     public void setFetchDataFromServerInterval(int value) {
         setJsonData("fsfsi", value);
+    }
+
+    @UIField(order = 10)
+    @UIFieldGroup("CHART_UI")
+    @UIFieldColorPicker(allowThreshold = true)
+    @UIFieldReadDefaultValue
+    public String getChartBackground() {
+        return getJsonData("chartBG", "transparent");
+    }
+
+    public void setChartBackground(String value) {
+        setJsonData("chartBG", value);
     }
 }

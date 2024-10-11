@@ -1,7 +1,6 @@
 package org.homio.addon.ibkr;
 
 import jakarta.persistence.Entity;
-import lombok.SneakyThrows;
 import org.homio.api.Context;
 import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.entity.HasJsonData;
@@ -11,15 +10,16 @@ import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.UpdatableValue;
 import org.homio.api.service.EntityService;
-import org.homio.api.ui.UI;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldPort;
 import org.homio.api.ui.field.action.HasDynamicUIFields;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.SecureString;
 import org.homio.api.widget.CustomWidgetConfigurableEntity;
+import org.homio.api.widget.CustomWidgetDataStore;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,6 +30,19 @@ import java.util.Set;
 @UISidebarChildren(icon = "fas fa-square-rss", color = "#B33F30", allowCreateItem = false)
 public class IbkrEntity extends MiscEntity implements EntityService<IbkrService>,
         HasStatusAndMsg, CustomWidgetConfigurableEntity {
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+        if (getUser().isEmpty()) {
+            fields.add("user");
+        }
+        if (getPassword().isEmpty()) {
+            fields.add("password");
+        }
+        if (!context().media().isWebDriverAvailable()) {
+            fields.add("webDriver");
+        }
+    }
 
     @UIField(order = 1, inlineEditWhenEmpty = true)
     @UIFieldGroup(order = 15, value = "SECURITY", borderColor = "#23ADAB")
@@ -68,6 +81,7 @@ public class IbkrEntity extends MiscEntity implements EntityService<IbkrService>
     }
 
     @UIField(order = 25)
+    @UIFieldPort(min = 1025)
     @UIFieldGroup("GENERAL")
     public int getPort() {
         return getJsonData("port", 5000);
@@ -85,11 +99,6 @@ public class IbkrEntity extends MiscEntity implements EntityService<IbkrService>
     @Override
     public @Nullable String getDefaultName() {
         return "IBKR";
-    }
-
-    @Override
-    public @Nullable Set<String> getConfigurationErrors() {
-        return null;
     }
 
     @Override
@@ -112,17 +121,6 @@ public class IbkrEntity extends MiscEntity implements EntityService<IbkrService>
         return true;
     }
 
-    @SneakyThrows
-    @UIContextMenuAction(value = "RESTART",
-            confirmMessage = "W.CONFIRM.RESTART_IBKR",
-            confirmMessageDialogColor = UI.Color.ERROR_DIALOG,
-            icon = "fas fa-power-off",
-            iconColor = "#91293E")
-    public ActionResponseModel restart() {
-        getOrCreateService(context()).ifPresent(ServiceInstance::restartService);
-        return ActionResponseModel.success();
-    }
-
     @UIContextMenuAction(value = "CREATE_IBKR_WIDGET",
             icon = "fas fa-table-list",
             iconColor = "#91293E")
@@ -143,6 +141,12 @@ public class IbkrEntity extends MiscEntity implements EntityService<IbkrService>
     public void assembleUIFields(@NotNull HasDynamicUIFields.UIFieldBuilder uiFieldBuilder, @NotNull HasJsonData sourceEntity) {
         UpdatableValue<String> sort = UpdatableValue.wrap(sourceEntity, Sort.positions.name(), "sort");
         uiFieldBuilder.addSelect(1, sort, OptionModel.enumList(Sort.class));
+    }
+
+    @Override
+    public void setWidgetDataStore(CustomWidgetDataStore customWidgetDataStore) {
+        getService().setWidgetDataStore(customWidgetDataStore);
+
     }
 
     public enum Sort {

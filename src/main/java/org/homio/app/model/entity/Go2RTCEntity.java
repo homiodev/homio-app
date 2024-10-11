@@ -37,7 +37,6 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
@@ -118,11 +117,6 @@ public class Go2RTCEntity extends MediaEntity implements HasEntityLog,
     @Override
     public Go2RTCService createService(@NotNull Context context) {
         return new Go2RTCService(context, this);
-    }
-
-    @Override
-    public @Nullable Set<String> getConfigurationErrors() {
-        return null;
     }
 
     @Override
@@ -266,19 +260,19 @@ public class Go2RTCEntity extends MediaEntity implements HasEntityLog,
             this.description = node.get("producers").path(0).path("url").asText();
         }
 
+        private static Icon createIcon(String sourceType) {
+            if (sourceType.startsWith("rtsp://")) {
+                return new Icon("fas fa-blog", "#399AAA");
+            }
+            return new Icon("fas fa-film", "#767873");
+        }
+
         @Override
         public UIInputBuilder createTriggerActionBuilder(@NotNull UIInputBuilder uiInputBuilder) {
             uiInputBuilder.addButton(getEntityID(), null, (context, params) ->
                             ActionResponseModel.showJson("TITLE.NODE_INFO", node))
                     .setText(getValue().toString());
             return uiInputBuilder;
-        }
-
-        private static Icon createIcon(String sourceType) {
-            if (sourceType.startsWith("rtsp://")) {
-                return new Icon("fas fa-blog", "#399AAA");
-            }
-            return new Icon("fas fa-film", "#767873");
         }
 
         @Override

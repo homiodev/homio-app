@@ -19,15 +19,17 @@ import org.homio.addon.camera.entity.CameraPlaybackStorage;
 import org.homio.addon.camera.entity.CameraPlaybackStorage.DownloadFile;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.video.BaseStreamEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.OptionModel;
 import org.homio.api.stream.ContentStream;
+import org.homio.api.stream.StreamFormat;
 import org.homio.api.stream.audio.AudioPlayer;
+import org.homio.api.stream.impl.URLContentStream;
 import org.homio.api.stream.video.VideoPlayer;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader.DynamicOptionLoaderParameters;
 import org.homio.api.util.CommonUtils;
-import org.homio.app.chromecast.ChromecastEntity;
 import org.homio.app.manager.AddonService;
 import org.homio.app.manager.ImageService;
 import org.homio.app.manager.ImageService.ImageResponse;
@@ -54,6 +56,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -179,10 +182,20 @@ public class MediaController implements ContextCreated {
         return models.isEmpty() ? models : models.get(0).getChildren();
     }
 
-    @PostMapping("/chromecast")
+    @SneakyThrows
+    @PostMapping("/streamCast")
     public void startChromecast(@RequestBody ChromecastRequest request) {
-        ChromecastEntity entity = context.db().getRequire(request.entityID);
-        entity.getService().playMedia(request.title, request.url, request.mimeType);
+        BaseStreamEntity entity = context.db().getRequire(request.entityID);
+        StreamFormat streamFormat = StreamFormat.evaluateFormat(request.mimeType);
+        ContentStream stream = new URLContentStream(new URL(request.url), streamFormat);
+        entity.getStreamPlayer().play(stream, null, null);
+        // entity.getService().playMedia(request.title, request.url, request.mimeType);
+    }
+
+    @DeleteMapping("/streamCast")
+    public void stopChromecast(@RequestBody ChromecastRequest request) {
+        BaseStreamEntity entity = context.db().getRequire(request.entityID);
+        entity.getStreamPlayer().stop();
     }
 
     @PostMapping("/{entityID}/go2rtc/video.webrtc")

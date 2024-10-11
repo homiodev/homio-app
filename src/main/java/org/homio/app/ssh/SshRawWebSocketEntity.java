@@ -55,14 +55,6 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
     }
 
     @Override
-    public @Nullable Set<String> getConfigurationErrors() {
-        if (getRawWebSocketAddress().isEmpty()) {
-            return Set.of("W.ERROR.NO_SOCKET");
-        }
-        return null;
-    }
-
-    @Override
     public long getEntityServiceHashCode() {
         return getRawWebSocketAddress().hashCode();
     }
@@ -75,6 +67,13 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
     @Override
     public @Nullable RawWebSocketService createService(@NotNull Context context) {
         return new RawWebSocketService(context, this);
+    }
+
+    @Override
+    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+        if (getRawWebSocketAddress().isEmpty()) {
+            fields.add("socket");
+        }
     }
 
     public static class RawWebSocketService extends ServiceInstance<SshRawWebSocketEntity> implements SshProviderService<SshRawWebSocketEntity> {
@@ -158,13 +157,6 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
         @Override
         public void closeSshSession(@Nullable SshSession<SshRawWebSocketEntity> sshSession) {
             // no need to close session due it's raw ws address
-        }
-    }
-
-    @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-        if (getRawWebSocketAddress().isEmpty()) {
-            fields.add("rawWebSocketAddress");
         }
     }
 }

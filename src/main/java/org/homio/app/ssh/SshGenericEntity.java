@@ -6,7 +6,6 @@ import com.sshtools.common.publickey.*;
 import com.sshtools.common.ssh.components.SshKeyPair;
 import jakarta.persistence.Entity;
 import lombok.SneakyThrows;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
@@ -41,6 +40,72 @@ import static org.homio.api.ui.field.action.UIActionInput.Type.*;
 @UISidebarChildren(icon = "fas fa-terminal", color = "#0088CC")
 public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWebSocketService>
         implements BaseFileSystemEntity<SshGenericFileSystem> {
+
+    @SneakyThrows
+    public static ActionResponseModel execUploadPrivateKey(IdentityEntity entity, Context context, JSONObject params) {
+        if (entity.getJsonData().has("prv_key")) {
+            return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_ALREADY_EXISTS");
+        }
+        String privateKey = params.getString("privateKey");
+        String passphrase = trimToNull(params.optString("passphrase"));
+        SshPrivateKeyFile kf = SshPrivateKeyFileFactory.parse(privateKey.getBytes());
+        updateSSHData(entity, passphrase, kf);
+
+        context.db().save((BaseEntity) entity);
+        return ActionResponseModel.showSuccess("ACTION.SUCCESS");
+    }
+
+    @SneakyThrows
+    public static void updateSSHData(IdentityEntity entity, String passphrase, SshPrivateKeyFile kf) {
+        if (kf.isPassphraseProtected() && passphrase == null) {
+            throw new IllegalArgumentException("Key protected with password");
+        }
+        SshKeyPair keyPair = kf.toKeyPair(passphrase);
+
+        entity.setJsonData("key_pwd", passphrase);
+        entity.setJsonData("prv_key", new String(kf.getFormattedKey()));
+
+        SshPublicKeyFile publicKeyFile = SshPublicKeyFileFactory.create(keyPair.getPublicKey(),
+                kf.getComment(), SshPublicKeyFileFactory.OPENSSH_FORMAT);
+
+        entity.setJsonData("pub_key", new String(publicKeyFile.getFormattedKey()));
+        entity.setJsonData("pub_cmn", kf.getComment());
+        entity.setJsonData("fp", keyPair.getPublicKey().getFingerprint());
+        entity.setJsonData("alg", keyPair.getPrivateKey().getAlgorithm());
+        entity.setJsonData("kt", kf.getType());
+    }
+
+    public static ActionResponseModel execDeletePrivateKey(IdentityEntity entity, Context context, JSONObject params) {
+        if (!entity.getJsonData().has("prv_key")) {
+            return ActionResponseModel.showError("ERROR.PRIVATE_KEY_NOT_FOUND");
+        }
+        String passphrase = trimToNull(params.optString("passphrase"));
+        if (!Objects.equals(passphrase, trimToNull(entity.getJsonData("key_pwd")))) {
+            throw new IllegalArgumentException("Provided passphrase not match");
+        }
+        entity.setJsonData("key_pwd", null);
+        entity.setJsonData("prv_key", null);
+        entity.setJsonData("pub_key", null);
+        entity.setJsonData("fp", null);
+        entity.setJsonData("alg", null);
+        entity.setJsonData("kt", null);
+        entity.setJsonData("pub_cmn", null);
+        context.db().save(entity);
+        return ActionResponseModel.showSuccess("ACTION.SUCCESS");
+    }
+
+    @SneakyThrows
+    public static SshKeyPair buildSshKeyPair(IdentityEntity entity) {
+        String passphrase = trimToNull(entity.getJsonData("key_pwd"));
+        String privateKey = entity.getJsonData("prv_key");
+        SshPrivateKeyFile keyFile = SshPrivateKeyFileFactory.parse(privateKey.getBytes());
+        SshKeyPair keyPair = keyFile.toKeyPair(passphrase);
+        return switch (entity.getJsonDataEnum("pk_sign", PublicKeyAuthSign.SHA256)) {
+            case SHA256 -> SshKeyUtils.makeRSAWithSHA256Signature(keyPair);
+            case SHA512 -> SshKeyUtils.makeRSAWithSHA512Signature(keyPair);
+            default -> keyPair;
+        };
+    }
 
     @Override
     public void configureOptionModel(@NotNull OptionModel optionModel, @NotNull Context context) {
@@ -237,40 +302,6 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @SneakyThrows
-    public static ActionResponseModel execUploadPrivateKey(IdentityEntity entity, Context context, JSONObject params) {
-        if (entity.getJsonData().has("prv_key")) {
-            return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_ALREADY_EXISTS");
-        }
-        String privateKey = params.getString("privateKey");
-        String passphrase = trimToNull(params.optString("passphrase"));
-        SshPrivateKeyFile kf = SshPrivateKeyFileFactory.parse(privateKey.getBytes());
-        updateSSHData(entity, passphrase, kf);
-
-        context.db().save((BaseEntity) entity);
-        return ActionResponseModel.showSuccess("ACTION.SUCCESS");
-    }
-
-    @SneakyThrows
-    public static void updateSSHData(IdentityEntity entity, String passphrase, SshPrivateKeyFile kf) {
-        if (kf.isPassphraseProtected() && passphrase == null) {
-            throw new IllegalArgumentException("Key protected with password");
-        }
-        SshKeyPair keyPair = kf.toKeyPair(passphrase);
-
-        entity.setJsonData("key_pwd", passphrase);
-        entity.setJsonData("prv_key", new String(kf.getFormattedKey()));
-
-        SshPublicKeyFile publicKeyFile = SshPublicKeyFileFactory.create(keyPair.getPublicKey(),
-                kf.getComment(), SshPublicKeyFileFactory.OPENSSH_FORMAT);
-
-        entity.setJsonData("pub_key", new String(publicKeyFile.getFormattedKey()));
-        entity.setJsonData("pub_cmn", kf.getComment());
-        entity.setJsonData("fp", keyPair.getPublicKey().getFingerprint());
-        entity.setJsonData("alg", keyPair.getPrivateKey().getAlgorithm());
-        entity.setJsonData("kt", kf.getType());
-    }
-
-    @SneakyThrows
     @UIContextMenuAction(value = "TEST_CONNECTION", icon = "fas fa-flask-vial")
     public ActionResponseModel testConnection(Context context, JSONObject params) {
         getService().testServiceWithSetStatus();
@@ -294,38 +325,6 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     })
     public ActionResponseModel deletePrivateKey(Context context, JSONObject params) {
         return execDeletePrivateKey(this, context, params);
-    }
-
-    public static ActionResponseModel execDeletePrivateKey(IdentityEntity entity, Context context, JSONObject params) {
-        if (!entity.getJsonData().has("prv_key")) {
-            return ActionResponseModel.showError("ERROR.PRIVATE_KEY_NOT_FOUND");
-        }
-        String passphrase = trimToNull(params.optString("passphrase"));
-        if (!Objects.equals(passphrase, trimToNull(entity.getJsonData("key_pwd")))) {
-            throw new IllegalArgumentException("Provided passphrase not match");
-        }
-        entity.setJsonData("key_pwd", null);
-        entity.setJsonData("prv_key", null);
-        entity.setJsonData("pub_key", null);
-        entity.setJsonData("fp", null);
-        entity.setJsonData("alg", null);
-        entity.setJsonData("kt", null);
-        entity.setJsonData("pub_cmn", null);
-        context.db().save(entity);
-        return ActionResponseModel.showSuccess("ACTION.SUCCESS");
-    }
-
-    @SneakyThrows
-    public static SshKeyPair buildSshKeyPair(IdentityEntity entity) {
-        String passphrase = trimToNull(entity.getJsonData("key_pwd"));
-        String privateKey = entity.getJsonData("prv_key");
-        SshPrivateKeyFile keyFile = SshPrivateKeyFileFactory.parse(privateKey.getBytes());
-        SshKeyPair keyPair = keyFile.toKeyPair(passphrase);
-        return switch (entity.getJsonDataEnum("pk_sign", PublicKeyAuthSign.SHA256)) {
-            case SHA256 -> SshKeyUtils.makeRSAWithSHA256Signature(keyPair);
-            case SHA512 -> SshKeyUtils.makeRSAWithSHA512Signature(keyPair);
-            default -> keyPair;
-        };
     }
 
     @Override
@@ -388,14 +387,6 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     @Override
     public @Nullable GenericWebSocketService createService(@NotNull Context context) {
         return new GenericWebSocketService(context, this);
-    }
-
-    @Override
-    public @Nullable Set<String> getConfigurationErrors() {
-        if (getHost().isEmpty()) {
-            return Set.of("ERROR.NO_HOST");
-        }
-        return null;
     }
 
     @Override

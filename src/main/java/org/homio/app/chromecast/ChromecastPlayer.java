@@ -35,6 +35,11 @@ public class ChromecastPlayer implements AudioPlayer, VideoPlayer {
     }
 
     @Override
+    public boolean isPlaying() {
+        return service.isPlaying();
+    }
+
+    @Override
     public void stop() {
         service.closeApp(null);
     }
@@ -50,7 +55,7 @@ public class ChromecastPlayer implements AudioPlayer, VideoPlayer {
     }
 
     @Override
-    public void play(@NotNull ContentStream stream, Integer startFrame, Integer endFrame) throws Exception {
+    public void play(@NotNull ContentStream stream, Integer startFrame, Integer endFrame) {
         final String url;
         if (stream instanceof URLContentStream urlStream) {
             url = urlStream.getURL().toString();

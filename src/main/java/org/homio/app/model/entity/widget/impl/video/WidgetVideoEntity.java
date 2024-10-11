@@ -1,20 +1,27 @@
 package org.homio.app.model.entity.widget.impl.video;
 
 import jakarta.persistence.Entity;
-import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.validation.MaxItems;
+import org.homio.api.entity.video.BaseStreamEntity;
 import org.homio.api.model.OptionModel;
-import org.homio.app.chromecast.ChromecastEntity;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 @Entity
 public class WidgetVideoEntity
         extends WidgetEntityAndSeries<WidgetVideoEntity, WidgetVideoSeriesEntity> {
+
+    public WidgetVideoEntity() {
+        setBw(3);
+        setBh(3);
+    }
 
     @Override
     public WidgetGroup getGroup() {
@@ -42,11 +49,20 @@ public class WidgetVideoEntity
     }
 
     public List<OptionModel> getCast() {
-        return OptionModel.entityList(ChromecastEntity.class, context());
-    }
+        List<OptionModel> models = new ArrayList<>();
+        List<BaseStreamEntity> services = ((ContextImpl) context()).getEntityServices(BaseStreamEntity.class);
 
-    public WidgetVideoEntity() {
-        setBw(3);
-        setBh(3);
+        for (BaseStreamEntity streamService : services) {
+            OptionModel model = OptionModel.entity(streamService.getStreamEntity(), null, context());
+            if (!Objects.toString(model.getTitle(), "").toLowerCase().startsWith("chromecast")) {
+                model.setTitle("Chromecast: " + model.getTitle());
+            }
+            if (streamService.getStreamPlayer().isPlaying()) {
+                model.setTitle(model.getTitle() + " (Playing)");
+                model.json(jsonNodes -> jsonNodes.put("playing", true));
+            }
+            models.add(model);
+        }
+        return models;
     }
 }

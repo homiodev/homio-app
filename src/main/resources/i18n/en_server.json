@@ -31,6 +31,7 @@
   "INTERNET_STATUS_UP": "Internet status: UP",
   "INTERNET_STATUS_DOWN": "Internet status: DOWN",
   "ERROR": {
+    "NO_WEBDRIVER": "No WebDriver found",
     "NO_FONT_FOUND": "No font name {{VALUE}} found",
     "PRIVATE_KEY_NOT_FOUND": "Private key not found",
     "NO_TG_BOT_NAME": "Bot name not specified",

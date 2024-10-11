@@ -67,16 +67,17 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
     private static final org.apache.logging.log4j.Logger maverickLogger = LogManager.getLogger("com.ssh.maverick");
 
     private static final GlobalAppender globalAppender = new GlobalAppender();
-    private static final Set<String> excludeDebugPackages =
+    /*private static final Set<String> excludeDebugPackages =
             Set.of(
+                    "org.jmdns",
+                    "su.litvak.chromecast",
+                    "org.homio.app.auth.AccessFilter",
                     "org.springframework",
                     "com.mongodb",
                     "de.bwaldvogel",
                     "org.mongodb",
                     "com.zaxxer",
-                    "org.hibernate");
-
-    private final Map<String, Map<String, FileLoggerImpl>> fileLoggers = new ConcurrentHashMap<>();
+                    "org.hibernate");*/
     private static final BlockingQueue<LogEvent> eventQueue = new LinkedBlockingQueue<>();
 
     static {
@@ -113,61 +114,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
         }, "EntityLogHandler").start();
     }
 
-    public Set<String> getTabs() {
-        return globalAppender.definedAppender.keySet();
-    }
-
-    @SneakyThrows
-    public List<String> getLogs(String tab) {
-        DefinedAppenderConsumer definedAppender = globalAppender.definedAppender.get(tab);
-        if (definedAppender != null) {
-            return FileUtils.readLines(
-                    new File(definedAppender.fileName), Charset.defaultCharset());
-        }
-        return null;
-    }
-
-    @Override
-    public void onApplicationEvent(@NotNull ApplicationEnvironmentPreparedEvent ignore) {
-        initLogAppender();
-    }
-
-    @Override
-    public void onContextCreated(ContextImpl context) throws Exception {
-        LogService.scanEntityLogs(context);
-        globalAppender.setContext(context);
-    }
-
-    public @Nullable Path getEntityLogsFile(BaseEntity baseEntity) {
-        LogConsumer logConsumer = globalAppender.logConsumers.get(baseEntity.getEntityID());
-        return logConsumer == null ? null : logConsumer.logFile;
-    }
-
-    public void deleteEntityLogsFile(BaseEntity baseEntity) {
-        LogConsumer logConsumer = globalAppender.logConsumers.get(baseEntity.getEntityID());
-        if (logConsumer != null) {
-            try {
-                Files.deleteIfExists(logConsumer.logFile);
-            } catch (IOException ex) {
-                log.error("Unable to delete entity log file: {}", CommonUtils.getErrorMessage(ex));
-            }
-        }
-        Map<String, FileLoggerImpl> entityLoggers = fileLoggers.remove(baseEntity.getEntityID());
-        if (entityLoggers != null) {
-            for (FileLoggerImpl fileLogger : entityLoggers.values()) {
-                try {
-                    Files.deleteIfExists(fileLogger.logPath);
-                } catch (IOException ex) {
-                    log.error("Unable to delete entity file log handler: {}", CommonUtils.getErrorMessage(ex));
-                }
-            }
-        }
-    }
-
-    public FileLogger getFileLogger(BaseEntity baseEntity, String suffix) {
-        return fileLoggers.computeIfAbsent(baseEntity.getEntityID(), s -> new ConcurrentHashMap<>())
-                .computeIfAbsent(suffix, file -> new FileLoggerImpl(suffix, baseEntity));
-    }
+    private final Map<String, Map<String, FileLoggerImpl>> fileLoggers = new ConcurrentHashMap<>();
 
     @SneakyThrows
     private static void initLogAppender() {
@@ -223,12 +170,13 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
     }
 
     private static boolean disabledDebugPackage(String name) {
-        for (String excludeDebugPackage : excludeDebugPackages) {
+        /*for (String excludeDebugPackage : excludeDebugPackages) {
             if (name.startsWith(excludeDebugPackage)) {
                 return true;
             }
         }
-        return false;
+        return false;*/
+        return true;
     }
 
     private static void scanEntityLogs(ContextImpl context) {
@@ -325,6 +273,62 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
             }
         }
         return prefixSet;
+    }
+
+    public Set<String> getTabs() {
+        return globalAppender.definedAppender.keySet();
+    }
+
+    @SneakyThrows
+    public List<String> getLogs(String tab) {
+        DefinedAppenderConsumer definedAppender = globalAppender.definedAppender.get(tab);
+        if (definedAppender != null) {
+            return FileUtils.readLines(
+                    new File(definedAppender.fileName), Charset.defaultCharset());
+        }
+        return null;
+    }
+
+    @Override
+    public void onApplicationEvent(@NotNull ApplicationEnvironmentPreparedEvent ignore) {
+        initLogAppender();
+    }
+
+    @Override
+    public void onContextCreated(ContextImpl context) throws Exception {
+        LogService.scanEntityLogs(context);
+        globalAppender.setContext(context);
+    }
+
+    public @Nullable Path getEntityLogsFile(BaseEntity baseEntity) {
+        LogConsumer logConsumer = globalAppender.logConsumers.get(baseEntity.getEntityID());
+        return logConsumer == null ? null : logConsumer.logFile;
+    }
+
+    public void deleteEntityLogsFile(BaseEntity baseEntity) {
+        LogConsumer logConsumer = globalAppender.logConsumers.get(baseEntity.getEntityID());
+        if (logConsumer != null) {
+            try {
+                Files.deleteIfExists(logConsumer.logFile);
+            } catch (IOException ex) {
+                log.error("Unable to delete entity log file: {}", CommonUtils.getErrorMessage(ex));
+            }
+        }
+        Map<String, FileLoggerImpl> entityLoggers = fileLoggers.remove(baseEntity.getEntityID());
+        if (entityLoggers != null) {
+            for (FileLoggerImpl fileLogger : entityLoggers.values()) {
+                try {
+                    Files.deleteIfExists(fileLogger.logPath);
+                } catch (IOException ex) {
+                    log.error("Unable to delete entity file log handler: {}", CommonUtils.getErrorMessage(ex));
+                }
+            }
+        }
+    }
+
+    public FileLogger getFileLogger(BaseEntity baseEntity, String suffix) {
+        return fileLoggers.computeIfAbsent(baseEntity.getEntityID(), s -> new ConcurrentHashMap<>())
+                .computeIfAbsent(suffix, file -> new FileLoggerImpl(suffix, baseEntity));
     }
 
     public static class GlobalAppender extends CountingNoOpAppender {

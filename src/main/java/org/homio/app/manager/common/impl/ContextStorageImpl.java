@@ -18,6 +18,7 @@ import org.homio.api.entity.HasJsonData;
 import org.homio.api.entity.HasPlace;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.device.DeviceBaseEntity;
+import org.homio.api.entity.device.DeviceContract;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Status;
 import org.homio.api.storage.DataStorageEntity;
@@ -56,6 +57,7 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class ContextStorageImpl implements ContextStorage {
 
+    public static final Map<String, EntityMemoryData> ENTITY_MEMORY_MAP = new ConcurrentHashMap<>();
     private final @Getter
     @Accessors(fluent = true) ContextImpl context;
     private final TransactionManagerContext transactionManagerContext;
@@ -64,8 +66,6 @@ public class ContextStorageImpl implements ContextStorage {
     private final CacheService cacheService;
     private final WidgetRepository widgetRepository;
     private final WidgetSeriesRepository widgetSeriesRepository;
-
-    public static final Map<String, EntityMemoryData> ENTITY_MEMORY_MAP = new ConcurrentHashMap<>();
 
     {
         ContextSetting.MEM_HANDLER.set(new MemSetterHandler() {
@@ -80,6 +80,35 @@ public class ContextStorageImpl implements ContextStorage {
                 return data.VALUE_MAP.getOrDefault(key, defaultValue);
             }
         });
+    }
+
+    @NotNull
+    private static BaseEntity buildInitialCopyEntity(BaseEntity entity) {
+        BaseEntity newEntity = CommonUtils.newInstance(entity.getClass());
+        newEntity.setName(entity.getName());
+
+        if (entity instanceof HasJsonData entityData) {
+            HasJsonData newEntityData = (HasJsonData) newEntity;
+            for (String key : entityData.getJsonData().keySet()) {
+                newEntityData.setJsonData(key, entityData.getJsonData().get(key));
+            }
+        }
+
+        if (entity instanceof WidgetEntity widgetEntity) {
+            WidgetEntity newWidgetData = (WidgetEntity) newEntity;
+            newWidgetData.setWidgetTabEntity(widgetEntity.getWidgetTabEntity());
+        }
+
+        if (entity instanceof DeviceBaseEntity deviceEntity) {
+            DeviceBaseEntity newDeviceData = (DeviceBaseEntity) newEntity;
+            newDeviceData.setIeeeAddress(deviceEntity.getIeeeAddress());
+            newDeviceData.setImageIdentifier(deviceEntity.getImageIdentifier());
+        }
+        if (entity instanceof HasPlace placeEntity) {
+            HasPlace newDeviceData = (HasPlace) newEntity;
+            newDeviceData.setPlace(placeEntity.getPlace());
+        }
+        return newEntity;
     }
 
     @Override
@@ -291,35 +320,6 @@ public class ContextStorageImpl implements ContextStorage {
         return newEntity;
     }
 
-    @NotNull
-    private static BaseEntity buildInitialCopyEntity(BaseEntity entity) {
-        BaseEntity newEntity = CommonUtils.newInstance(entity.getClass());
-        newEntity.setName(entity.getName());
-
-        if (entity instanceof HasJsonData entityData) {
-            HasJsonData newEntityData = (HasJsonData) newEntity;
-            for (String key : entityData.getJsonData().keySet()) {
-                newEntityData.setJsonData(key, entityData.getJsonData().get(key));
-            }
-        }
-
-        if (entity instanceof WidgetEntity widgetEntity) {
-            WidgetEntity newWidgetData = (WidgetEntity) newEntity;
-            newWidgetData.setWidgetTabEntity(widgetEntity.getWidgetTabEntity());
-        }
-
-        if (entity instanceof DeviceBaseEntity deviceEntity) {
-            DeviceBaseEntity newDeviceData = (DeviceBaseEntity) newEntity;
-            newDeviceData.setIeeeAddress(deviceEntity.getIeeeAddress());
-            newDeviceData.setImageIdentifier(deviceEntity.getImageIdentifier());
-        }
-        if (entity instanceof HasPlace placeEntity) {
-            HasPlace newDeviceData = (HasPlace) newEntity;
-            newDeviceData.setPlace(placeEntity.getPlace());
-        }
-        return newEntity;
-    }
-
     @Override
     public <T extends DataStorageEntity> DataStorageService<T> getOrCreateInMemoryService(@NotNull Class<T> pojoClass, @NotNull String uniqueId,
                                                                                           @Nullable Long quota) {
@@ -356,9 +356,9 @@ public class ContextStorageImpl implements ContextStorage {
 
         if (sendUpdateToUI) {
             context.ui().updateItem((BaseEntity) entity, key, value);
-            /*if (key.equals("status") && entity instanceof DeviceBaseEntity device) {
+            if (key.equals("status") && entity instanceof DeviceContract device) {
                 context.ui().updateItem((BaseEntity) entity, "entityStatus", device.getEntityStatus());
-            }*/
+            }
         }
     }
 

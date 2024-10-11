@@ -1,7 +1,6 @@
 package org.homio.app.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import jakarta.annotation.Nullable;
@@ -58,7 +57,6 @@ import org.homio.app.model.UIHideEntityIfFieldNotNull;
 import org.homio.app.model.entity.DeviceFallbackEntity;
 import org.homio.app.model.entity.user.UserGuestEntity;
 import org.homio.app.model.entity.widget.impl.WidgetFallbackEntity;
-import org.homio.app.model.entity.widget.impl.extra.WidgetCustomEntity;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.repository.AbstractRepository;
 import org.homio.app.rest.UIFieldBuilderImpl.FieldBuilderImpl;
@@ -105,7 +103,6 @@ import java.util.stream.Stream;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 @Log4j2
 @RestController
@@ -127,11 +124,41 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     private final ReentrantLock putItemsLock = new ReentrantLock();
     private final ReentrantLock updateItemLock = new ReentrantLock();
-
-    private Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses = new HashMap<>();
-
     private final Cache<String, Consumer<String>> fileSaveMapping = CacheBuilder
             .newBuilder().expireAfterAccess(Duration.ofMinutes(5)).build();
+    private Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses = new HashMap<>();
+
+    private static void updateDynamicUIFieldValues(BaseEntity entity, JSONObject entityFields) {
+        if (entity instanceof HasDynamicUIFields df) {
+            UIFieldBuilderImpl builder = new UIFieldBuilderImpl();
+            df.assembleUIFields(builder);
+            for (String fieldName : entityFields.keySet()) {
+                FieldBuilderImpl fieldBuilder = builder.getFields().get(fieldName);
+                if (fieldBuilder != null) {
+                    fieldBuilder.getValue().update(entityFields.get(fieldName));
+                }
+            }
+        }
+    }
+
+    @SneakyThrows
+    static ActionResponseModel executeMethodAction(Method method, Object actionHolder, Context context,
+                                                   BaseEntity actionEntity, JSONObject params) {
+        List<Object> objects = new ArrayList<>();
+        for (AnnotatedType parameterType : method.getAnnotatedParameterTypes()) {
+            if (actionHolder.getClass().isAssignableFrom((Class) parameterType.getType())) {
+                objects.add(actionHolder);
+            } else if (BaseEntity.class.isAssignableFrom((Class) parameterType.getType())) {
+                objects.add(actionEntity);
+            } else if (JSONObject.class.isAssignableFrom((Class<?>) parameterType.getType())) {
+                objects.add(params);
+            } else {
+                objects.add(context.getBean((Class) parameterType.getType()));
+            }
+        }
+        method.setAccessible(true);
+        return (ActionResponseModel) method.invoke(actionHolder, objects.toArray());
+    }
 
     @PostConstruct
     public void postConstruct() {
@@ -182,7 +209,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             @PathVariable("fieldName") String fieldName,
             @RequestBody GetOptionsRequest optionsRequest) {
         Object classEntity = context.db().get(entityID);
-        if(classEntity instanceof BaseEntity baseEntity) {
+        if (classEntity instanceof BaseEntity baseEntity) {
             context.user().getLoggedInUserRequire().assertViewAccess(baseEntity);
         }
         if (classEntity == null) {
@@ -320,43 +347,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             }
         }
         return list;
-    }
-
-    @SneakyThrows
-    @PostMapping(value = "/{entityID}/call/{methodName}")
-    public Object callService(@PathVariable("entityID") String entityID,
-                              @PathVariable("methodName") String methodName,
-                              @RequestBody(required = false) String body) {
-        WidgetCustomEntity widgetEntity = context.db().getRequire(entityID);
-        context.user().getLoggedInUserRequire().assertViewAccess(widgetEntity);
-
-        BaseEntity entity = context.db().getRequire(widgetEntity.getParameterEntity());
-        context.user().getLoggedInUserRequire().assertViewAccess(entity);
-
-        if (entity instanceof EntityService serviceEntity) {
-            EntityService.ServiceInstance service = serviceEntity.getService();
-            Method method = service.getClass().getDeclaredMethod(methodName);
-            List<Object> objects = new ArrayList<>();
-            for (AnnotatedType parameterType : method.getAnnotatedParameterTypes()) {
-                if (ObjectNode.class.isAssignableFrom((Class) parameterType.getType())) {
-                    objects.add(OBJECT_MAPPER.readValue(body, ObjectNode.class));
-                }
-                if (String.class.isAssignableFrom((Class) parameterType.getType())) {
-                    objects.add(body);
-                }
-                if (Integer.class.isAssignableFrom((Class) parameterType.getType())) {
-                    objects.add(Integer.parseInt(body));
-                } else {
-                    throw new IllegalArgumentException("Unable to call " + entity.getTitle() + "." + methodName + ": Unknown parameter" + parameterType.getType());
-                }
-            }
-            try {
-                return method.invoke(service, objects.toArray());
-            } catch (Exception ex) {
-                throw new RuntimeException(service.getName() + " error: " + CommonUtils.getErrorMessage(ex));
-            }
-        }
-        throw new IllegalArgumentException("Service not found for entity: " + entity.getTitle());
     }
 
     @GetMapping(value = "/{entityID}/logs/source")
@@ -530,19 +520,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
     }
 
-    private static void updateDynamicUIFieldValues(BaseEntity entity, JSONObject entityFields) {
-        if (entity instanceof HasDynamicUIFields df) {
-            UIFieldBuilderImpl builder = new UIFieldBuilderImpl();
-            df.assembleUIFields(builder);
-            for (String fieldName : entityFields.keySet()) {
-                FieldBuilderImpl fieldBuilder = builder.getFields().get(fieldName);
-                if (fieldBuilder != null) {
-                    fieldBuilder.getValue().update(entityFields.get(fieldName));
-                }
-            }
-        }
-    }
-
     @GetMapping("/{type}/list")
     public List<BaseEntity> getItems(@PathVariable("type") String type) {
         putTypeToEntityIfNotExists(type);
@@ -657,17 +634,17 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         return entity;
     }
 
+    /*@PostMapping("/{entityID}/image")
+    public DeviceBaseEntity updateItemImage(@PathVariable("entityID") String entityID, @RequestBody ImageEntity imageEntity) {
+        return updateItem(entityID, true, baseEntity -> baseEntity.setImageEntity(imageEntity));
+    }*/
+
     @SneakyThrows
     @DeleteMapping("/{entityID}/series/{entityToRemove}")
     public BaseEntity removeFromItem(@PathVariable("entityID") String entityID, @PathVariable("entityToRemove") String entityToRemove) {
         context.db().delete(entityToRemove);
         return context.db().get(entityID);
     }
-
-    /*@PostMapping("/{entityID}/image")
-    public DeviceBaseEntity updateItemImage(@PathVariable("entityID") String entityID, @RequestBody ImageEntity imageEntity) {
-        return updateItem(entityID, true, baseEntity -> baseEntity.setImageEntity(imageEntity));
-    }*/
 
     @GetMapping("/{entityID}/{fieldName}/{selectedEntityID}/dynamicParameterOptions")
     public Collection<OptionModel> getDynamicParameterOptions(
@@ -693,6 +670,17 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
         return OptionUtil.loadOptions(dynamicParameterFields, context, fieldName, selectedClassEntity, null, null);
     }
+
+    /*@PostMapping("/{entityID}/uploadImageBase64")
+    public ImageEntity uploadImageBase64(@PathVariable("entityID") String entityID, @RequestBody BufferedImage bufferedImage) {
+        try {
+            return imageService.upload(entityID, bufferedImage);
+        } catch (Exception e) {
+
+            log.error(e.getMessage(), e);
+            throw new ServerException(e);
+        }
+    }*/
 
     // get all device that able to get status
     @GetMapping("/deviceWithStatus")
@@ -726,36 +714,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
         Collections.sort(models);
         return models;
-    }
-
-    /*@PostMapping("/{entityID}/uploadImageBase64")
-    public ImageEntity uploadImageBase64(@PathVariable("entityID") String entityID, @RequestBody BufferedImage bufferedImage) {
-        try {
-            return imageService.upload(entityID, bufferedImage);
-        } catch (Exception e) {
-
-            log.error(e.getMessage(), e);
-            throw new ServerException(e);
-        }
-    }*/
-
-    @SneakyThrows
-    static ActionResponseModel executeMethodAction(Method method, Object actionHolder, Context context,
-                                                   BaseEntity actionEntity, JSONObject params) {
-        List<Object> objects = new ArrayList<>();
-        for (AnnotatedType parameterType : method.getAnnotatedParameterTypes()) {
-            if (actionHolder.getClass().isAssignableFrom((Class) parameterType.getType())) {
-                objects.add(actionHolder);
-            } else if (BaseEntity.class.isAssignableFrom((Class) parameterType.getType())) {
-                objects.add(actionEntity);
-            } else if (JSONObject.class.isAssignableFrom((Class<?>) parameterType.getType())) {
-                objects.add(params);
-            } else {
-                objects.add(context.getBean((Class) parameterType.getType()));
-            }
-        }
-        method.setAccessible(true);
-        return (ActionResponseModel) method.invoke(actionHolder, objects.toArray());
     }
 
     private ActionResponseModel executeActionInternal(ActionModelRequest request, Object actionHolder, BaseEntity actionEntity) throws Exception {

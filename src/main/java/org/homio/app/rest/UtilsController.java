@@ -6,7 +6,6 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -27,10 +26,8 @@ import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.ScriptEntity;
 import org.homio.app.model.entity.user.UserGuestEntity;
 import org.homio.app.model.entity.widget.impl.extra.WidgetFrameEntity;
-import org.homio.app.model.rest.DynamicUpdateRequest;
 import org.homio.hquery.Curl;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -51,7 +48,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.*;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
@@ -68,17 +67,16 @@ import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 @Validated
 public class UtilsController {
 
-    private final ContextImpl context;
-    private final ScriptService scriptService;
-    private final CodeParser codeParser;
-    private final Map<String, OneTimeRequest> requests = new ConcurrentHashMap<>();
-
     private static final LoadingCache<String, GitHubReadme> readmeCache =
             CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
                 public @NotNull GitHubReadme load(@NotNull String url) {
                     return new GitHubReadme(url, Curl.get(url + "/raw/master/README.md", String.class));
                 }
             });
+    private final ContextImpl context;
+    private final ScriptService scriptService;
+    private final CodeParser codeParser;
+    private final Map<String, OneTimeRequest> requests = new ConcurrentHashMap<>();
 
     @SneakyThrows
     @GetMapping("/access/get/{requestId}")
@@ -100,18 +98,6 @@ public class UtilsController {
         requests.put(requestId, new OneTimeRequest(request.url,
                 SecurityContextHolder.getContext().getAuthentication()));
         return new OneTimeUrlResponse(requestId);
-    }
-
-    @PutMapping("/multiDynamicUpdates")
-    public void multiDynamicUpdates(@Valid @RequestBody List<DynamicRequestItem> request) {
-        for (DynamicRequestItem requestItem : request) {
-            context.ui().registerForUpdates(new DynamicUpdateRequest(requestItem.did, requestItem.eid));
-        }
-    }
-
-    @DeleteMapping("/dynamicUpdates")
-    public void unregisterForUpdates(@Valid @RequestBody DynamicUpdateRequest request) {
-        context.ui().unRegisterForUpdates(request);
     }
 
     @GetMapping("/frame/{entityID}")
@@ -224,14 +210,6 @@ public class UtilsController {
     @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
     public void discardDialog(@PathVariable("entityID") String entityID) {
         context.ui().handleDialog(entityID, ContextUI.DialogResponseType.Cancelled, null, null);
-    }
-
-    @Getter
-    @Setter
-    public static class DynamicRequestItem {
-
-        private String eid;
-        private String did;
     }
 
     @Getter

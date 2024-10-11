@@ -30,7 +30,8 @@ import java.util.function.Supplier;
 import static java.util.Optional.ofNullable;
 import static org.homio.api.model.endpoint.DeviceEndpoint.ENDPOINT_DEVICE_STATUS;
 
-public class ChromecastService extends EntityService.ServiceInstance<ChromecastEntity> implements ChromeCastSpontaneousEventListener, ChromeCastConnectionEventListener {
+public class ChromecastService extends EntityService.ServiceInstance<ChromecastEntity> implements
+        ChromeCastSpontaneousEventListener, ChromeCastConnectionEventListener {
     public static final ConfigDeviceDefinitionService CONFIG_DEVICE_SERVICE =
             new ConfigDeviceDefinitionService("chromecast-devices.json");
 
@@ -40,7 +41,9 @@ public class ChromecastService extends EntityService.ServiceInstance<ChromecastE
     Map<String, ChromecastEndpoint> endpoints = new ConcurrentHashMap<>();
 
     private ChromeCast chromeCast;
-    private ChromecastPlayer audioSpeaker;
+
+    @Getter
+    private ChromecastPlayer streamPlayer;
 
     public ChromecastService(@NotNull Context context, @NotNull ChromecastEntity entity) {
         super(context, entity, false, "chromecast");
@@ -246,7 +249,7 @@ public class ChromecastService extends EntityService.ServiceInstance<ChromecastE
 
     @Override
     public void destroy(boolean forRestart, @Nullable Exception ex) throws Exception {
-        context.media().removeAudioPlayer(audioSpeaker);
+        context.media().removeAudioPlayer(streamPlayer);
     }
 
     @Override
@@ -264,8 +267,8 @@ public class ChromecastService extends EntityService.ServiceInstance<ChromecastE
     private void connect() {
         try {
             chromeCast.connect();
-            audioSpeaker = new ChromecastPlayer(this);
-            context.media().addAudioPlayer(audioSpeaker);
+            streamPlayer = new ChromecastPlayer(this);
+            context.media().addAudioPlayer(streamPlayer);
             entity.setStatusOnline();
         } catch (final IOException | GeneralSecurityException ex) {
             log.debug("Connect failed, trying to reconnect: {}", ex.getMessage());
@@ -323,6 +326,14 @@ public class ChromecastService extends EntityService.ServiceInstance<ChromecastE
         } else {
             entity.setStatus(Status.OFFLINE);
             scheduleConnect();
+        }
+    }
+
+    public boolean isPlaying() {
+        try {
+            return chromeCast.isAppRunning(MEDIA_PLAYER);
+        } catch (Exception ignored) {
+            return false;
         }
     }
 }

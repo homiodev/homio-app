@@ -27,7 +27,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Set;
 
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
@@ -99,11 +98,6 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
     @Override
     public String getDescriptionImpl() {
         return Lang.getServerMessage("TMATE_DESCRIPTION");
-    }
-
-    @Override
-    public @Nullable Set<String> getConfigurationErrors() {
-        return null;
     }
 
     @Override

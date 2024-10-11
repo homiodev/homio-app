@@ -3,13 +3,16 @@ package org.homio.app.chromecast;
 import jakarta.persistence.Entity;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.Context;
+import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasPlace;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
 import org.homio.api.entity.types.MediaEntity;
 import org.homio.api.entity.version.HasFirmwareVersion;
+import org.homio.api.entity.video.BaseStreamEntity;
 import org.homio.api.model.device.ConfigDeviceDefinition;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.service.EntityService;
+import org.homio.api.stream.StreamPlayer;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldSlider;
@@ -19,13 +22,13 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 
 @Entity
 @UISidebarChildren(icon = "fab fa-chromecast", color = "#3C69A3", allowCreateItem = false)
 public class ChromecastEntity extends MediaEntity implements
+        BaseStreamEntity,
         DeviceEndpointsBehaviourContract,
         EntityService<ChromecastService>,
         HasPlace,
@@ -46,9 +49,17 @@ public class ChromecastEntity extends MediaEntity implements
         return getJsonData("host");
     }
 
+    public void setHost(String host) {
+        setJsonData("host", host);
+    }
+
     @UIField(order = 2, disableEdit = true)
     public int getPort() {
         return getJsonData("port", 22);
+    }
+
+    public void setPort(int port) {
+        setJsonData("port", port);
     }
 
     @Override
@@ -67,13 +78,17 @@ public class ChromecastEntity extends MediaEntity implements
         return getJsonData("rate", 10);
     }
 
+    public void setRefreshRate(int value) {
+        setJsonData("rate", value);
+    }
+
     @UIField(order = 20, disableEdit = true)
     public @NotNull ChromecastType getChromecastType() {
         return getJsonDataEnum("type", ChromecastType.Chromecast);
     }
 
-    public void setRefreshRate(int value) {
-        setJsonData("rate", value);
+    public void setChromecastType(ChromecastType type) {
+        setJsonData("type", type.toString());
     }
 
     @Override
@@ -87,11 +102,6 @@ public class ChromecastEntity extends MediaEntity implements
                 getTitle(),
                 getIeeeAddress(),
                 defaultIfEmpty(getPlace(), "W.ERROR.PLACE_NOT_SET"));
-    }
-
-    @Override
-    public @Nullable Set<String> getConfigurationErrors() {
-        return Set.of();
     }
 
     @Override
@@ -112,14 +122,6 @@ public class ChromecastEntity extends MediaEntity implements
         return "firmware";
     }
 
-    public void setPort(int port) {
-        setJsonData("port", port);
-    }
-
-    public void setHost(String host) {
-        setJsonData("host", host);
-    }
-
     @Override
     public @NotNull List<ConfigDeviceDefinition> findMatchDeviceConfigurations() {
         return List.of();
@@ -130,8 +132,19 @@ public class ChromecastEntity extends MediaEntity implements
         return optService().map(ChromecastService::getEndpoints).orElse(Map.of());
     }
 
-    public void setChromecastType(ChromecastType type) {
-        setJsonData("type", type.toString());
+    @Override
+    public @NotNull StreamPlayer getStreamPlayer() {
+        return getService().getStreamPlayer();
+    }
+
+    @Override
+    public @NotNull BaseEntity getStreamEntity() {
+        return this;
+    }
+
+    @Override
+    public void beforePersist() {
+        setImageIdentifier(getType() + getChromecastType() + ".png");
     }
 
     @RequiredArgsConstructor
@@ -145,10 +158,5 @@ public class ChromecastEntity extends MediaEntity implements
                 default -> ChromecastType.Chromecast;
             };
         }
-    }
-
-    @Override
-    public void beforePersist() {
-        setImageIdentifier(getType() + getChromecastType() + ".png");
     }
 }

@@ -55,6 +55,21 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
         this.usbListener = new LocalBoardUsbListener(context);
     }
 
+    @SneakyThrows
+    private static Map<String, NetworkStat> getNetworkBytes() {
+        Path net = Paths.get("/proc/net/dev");
+        Map<String, NetworkStat> stats = new HashMap<>();
+        for (String line : Files.readAllLines(net)) {
+            line = line.trim();
+            String[] items = line.split(":");
+            if (items.length == 2) {
+                String[] data = items[1].trim().split("\\s+");
+                stats.put(items[0].trim(), new NetworkStat(parseLong(data[0]), parseLong(data[8])));
+            }
+        }
+        return stats;
+    }
+
     public Set<DiskInfo> getUsbDevices() {
         return usbListener.getUsbDevices();
     }
@@ -124,7 +139,10 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
                         javaCpuUsageVar.set(round100((float) (osBean.getProcessCpuLoad() * 100F)));
                         memoryVar.set(round100((TOTAL_MEMORY - osBean.getFreeMemorySize()) / (float) TOTAL_MEMORY * 100F));
                         if (ableToFetchCpuTemperature) {
-                            cpuTemp.set(hardwareRepo.getCpuTemperature());
+                            try {
+                                cpuTemp.set(hardwareRepo.getCpuTemperature());
+                            } catch (Exception ignored) {
+                            }
                         }
                     });
 
@@ -161,21 +179,6 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
             }
         }
         return value;
-    }
-
-    @SneakyThrows
-    private static Map<String, NetworkStat> getNetworkBytes() {
-        Path net = Paths.get("/proc/net/dev");
-        Map<String, NetworkStat> stats = new HashMap<>();
-        for (String line : Files.readAllLines(net)) {
-            line = line.trim();
-            String[] items = line.split(":");
-            if (items.length == 2) {
-                String[] data = items[1].trim().split("\\s+");
-                stats.put(items[0].trim(), new NetworkStat(parseLong(data[0]), parseLong(data[8])));
-            }
-        }
-        return stats;
     }
 
     private float round100(float input) {

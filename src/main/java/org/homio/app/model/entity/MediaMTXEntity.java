@@ -41,7 +41,6 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
@@ -136,11 +135,6 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     @Override
     public MediaMTXService createService(@NotNull Context context) {
         return new MediaMTXService(context, this);
-    }
-
-    @Override
-    public @Nullable Set<String> getConfigurationErrors() {
-        return null;
     }
 
     @Override
@@ -294,14 +288,6 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
             this.description = node.path("conf").path("source").asText();
         }
 
-        @Override
-        public UIInputBuilder createTriggerActionBuilder(@NotNull UIInputBuilder uiInputBuilder) {
-            uiInputBuilder.addButton(getEntityID(), null, (context, params) ->
-                            ActionResponseModel.showJson("TITLE.NODE_INFO", node))
-                    .setText(getValue().toString());
-            return uiInputBuilder;
-        }
-
         private static Icon createIcon(String sourceType) {
             return switch (sourceType) {
                 case "srtSource" -> new Icon("fas fa-disease", "#6259B8");
@@ -313,6 +299,14 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
                 case "udpSource" -> new Icon("fas fa-kip-sign", "#3AB2BA");
                 default -> new Icon("fas fa-film", "#767873");
             };
+        }
+
+        @Override
+        public UIInputBuilder createTriggerActionBuilder(@NotNull UIInputBuilder uiInputBuilder) {
+            uiInputBuilder.addButton(getEntityID(), null, (context, params) ->
+                            ActionResponseModel.showJson("TITLE.NODE_INFO", node))
+                    .setText(getValue().toString());
+            return uiInputBuilder;
         }
 
         @Override

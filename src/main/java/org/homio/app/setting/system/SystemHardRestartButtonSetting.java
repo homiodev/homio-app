@@ -8,37 +8,20 @@ import org.homio.api.entity.UserEntity;
 import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPluginButton;
 import org.homio.api.ui.UI.Color;
-import org.homio.app.LogService;
-import org.homio.app.config.AppConfig;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.user.UserGuestEntity;
 import org.homio.app.setting.CoreSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
-import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.context.ConfigurableApplicationContext;
 
 @Log4j2
-public class SystemSoftRestartButtonSetting
+public class SystemHardRestartButtonSetting
         implements CoreSettingPlugin<JSONObject>, SettingPluginButton {
 
     public static void restart(ContextImpl context) {
-        log.info("Fire homio app soft restarting...");
-        ConfigurableApplicationContext appContext = context.getBean(ConfigurableApplicationContext.class);
-        Thread thread = new Thread(() -> safeRestart(appContext));
-        thread.setDaemon(false);
-        thread.start();
-    }
-
-    private static void safeRestart(ConfigurableApplicationContext context) {
-        try {
-            context.close();
-            new SpringApplicationBuilder(AppConfig.class).listeners(new LogService()).run();
-            log.info("Homio app context restarted");
-        } catch (Exception ex) {
-            log.info("Could not doRestart: {}", ex.getMessage());
-        }
+        log.info("Fire device restarting");
+        context.hardware().reboot();
     }
 
     @Override
@@ -48,12 +31,12 @@ public class SystemSoftRestartButtonSetting
 
     @Override
     public @NotNull Icon getIcon() {
-        return new Icon("fas fa-power-off");
+        return new Icon("fas fa-computer");
     }
 
     @Override
     public String getConfirmMsg() {
-        return "W.CONFIRM.SYS_RESTART";
+        return "W.CONFIRM.SYS_HARD_RESTART";
     }
 
     @Override
@@ -63,7 +46,7 @@ public class SystemSoftRestartButtonSetting
 
     @Override
     public int order() {
-        return 200;
+        return 210;
     }
 
     @Override

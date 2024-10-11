@@ -12,12 +12,10 @@ import org.springframework.lang.Nullable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.nio.file.DirectoryNotEmptyException;
-import java.util.Objects;
 
 @Log4j2
 @RestControllerAdvice
@@ -66,7 +64,7 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
 
     @ExceptionHandler({Exception.class})
     public ResponseEntity<Object> handleUnknownException(Exception ex, WebRequest request) {
-        return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR, request);
+        return handleExceptionInternal(ex, null, null, HttpStatus.INTERNAL_SERVER_ERROR, request);
     }
 
     @Override
@@ -93,8 +91,14 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
         } else {
             log.error("Error <{}>", msg, ex);
         }
-        Objects.requireNonNull(((ServletWebRequest) request).getResponse())
-                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+        if (headers == null) {
+            headers = new HttpHeaders();
+        }
+        try {
+            // for readonly HttpHeaders
+            headers.setContentType(MediaType.APPLICATION_JSON);
+        } catch (Exception ignored) {
+        }
         return new ResponseEntity<>(new ErrorHolderModel("ERROR", msg, ex), headers, statusCode);
     }
 }

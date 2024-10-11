@@ -54,6 +54,10 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
         implements EntityService<LocalBoardService>,
         BaseFileSystemEntity<LocalFileSystemProvider> {
 
+    public static LocalBoardEntity getEntity(Context context) {
+        return context.db().get(LocalBoardEntity.class, PRIMARY_DEVICE);
+    }
+
     @Override
     public String getDefaultName() {
         return "Local device";
@@ -64,14 +68,18 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
         return getJsonDataRequire("fs_root", CommonUtils.getRootPath().toString());
     }
 
+    public void setFileSystemRoot(String value) {
+        setJsonData("fs_root", value);
+    }
+
     @UIField(order = 250)
     @UIFieldSlider(min = 1, max = 60)
     public int getCpuFetchInterval() {
         return getJsonData("cpu_interval", 10);
     }
 
-    public void setFileSystemRoot(String value) {
-        setJsonData("fs_root", value);
+    public void setCpuFetchInterval(@Min(0) @Max(60) int value) {
+        setJsonData("cpu_interval", value);
     }
 
     @Override
@@ -137,11 +145,6 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
     }
 
     @Override
-    public @Nullable Set<String> getConfigurationErrors() {
-        return null;
-    }
-
-    @Override
     public long getEntityServiceHashCode() {
         return getJsonDataHashCode("cpu_interval", "fs_root");
     }
@@ -159,14 +162,6 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
     @Override
     protected @NotNull String getDevicePrefix() {
         return "board";
-    }
-
-    public void setCpuFetchInterval(@Min(0) @Max(60) int value) {
-        setJsonData("cpu_interval", value);
-    }
-
-    public static LocalBoardEntity getEntity(Context context) {
-        return context.db().get(LocalBoardEntity.class, PRIMARY_DEVICE);
     }
 
     @Override
