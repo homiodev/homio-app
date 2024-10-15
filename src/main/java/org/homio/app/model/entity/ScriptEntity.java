@@ -34,7 +34,10 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-@UISidebarMenu(icon = "fab fa-js-square", order = 1, bg = "#9e7d18", allowCreateNewItems = true,
+@UISidebarMenu(order = 1100,
+        icon = "fab fa-js-square",
+        bg = "#9e7d18",
+        allowCreateNewItems = true,
         overridePath = "scripts")
 @Accessors(chain = true)
 public class ScriptEntity extends BaseEntity implements HasJsonData {

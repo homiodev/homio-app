@@ -10,7 +10,6 @@ import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
-import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -22,8 +21,7 @@ public class WidgetFMEntity extends WidgetEntity<WidgetFMEntity>
         implements
         HasDynamicContextMenuActions,
         HasLayout,
-        HasSingleValueDataSource,
-        HasSourceServerUpdates {
+        HasSingleValueDataSource {
 
     @Override
     protected @NotNull String getWidgetPrefix() {

@@ -45,18 +45,6 @@ public class SliderBuilderImpl extends WidgetBaseBuilderImpl<SliderWidgetBuilder
         widget.setLayout(value);
         return this;
     }
-
-    @Override
-    public @NotNull SliderWidgetBuilder setListenSourceUpdates(@Nullable Boolean value) {
-        widget.setListenSourceUpdates(value);
-        return this;
-    }
-
-    @Override
-    public @NotNull SliderWidgetBuilder setShowLastUpdateTimer(@Nullable Boolean value) {
-        widget.setShowLastUpdateTimer(value);
-        return this;
-    }
 }
 
 @RequiredArgsConstructor

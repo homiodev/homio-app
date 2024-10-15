@@ -2,7 +2,6 @@ package org.homio.app.rest.widget;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
@@ -58,7 +57,7 @@ public class WidgetChartsController {
             chartData = timeSeriesUtil.buildTimeSeriesFullData(
                     entity.getEntityID(),
                     entity.buildTimePeriod(),
-                    entity.getListenSourceUpdates(),
+                    true,
                     Collections.singleton(entity));
         }
 
@@ -72,7 +71,7 @@ public class WidgetChartsController {
         return timeSeriesUtil.buildTimeSeriesFullData(
                 entity.getEntityID(),
                 entity.buildTimePeriod(),
-                entity.getListenSourceUpdates(),
+                true,
                 entity.getSeries());
     }
 
@@ -84,7 +83,7 @@ public class WidgetChartsController {
         return timeSeriesUtil.buildTimeSeriesFullData(
                 entity.getEntityID(),
                 entity.buildTimePeriod(),
-                entity.getListenSourceUpdates(),
+                true,
                 entity.getSeries());
     }
 
@@ -143,11 +142,7 @@ public class WidgetChartsController {
     public record SingleValueData(Object value, String seriesEntityID) {
     }
 
-    @Getter
-    @AllArgsConstructor
-    public static class DisplayDataResponse {
+    public record DisplayDataResponse(List<Object> values, TimeSeriesChartData<ChartDataset> chart) {
 
-        private final List<Object> values;
-        private final TimeSeriesChartData<ChartDataset> chart;
     }
 }

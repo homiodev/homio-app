@@ -50,18 +50,6 @@ public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuild
     }
 
     @Override
-    public @NotNull DisplayWidgetBuilder setListenSourceUpdates(@Nullable Boolean value) {
-        widget.setListenSourceUpdates(value);
-        return this;
-    }
-
-    @Override
-    public @NotNull DisplayWidgetBuilder setShowLastUpdateTimer(@Nullable Boolean value) {
-        widget.setShowLastUpdateTimer(value);
-        return this;
-    }
-
-    @Override
     public @NotNull DisplayWidgetBuilder setChartHeight(int value) {
         widget.setChartHeight(value);
         return this;

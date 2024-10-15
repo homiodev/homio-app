@@ -5,11 +5,10 @@ import org.homio.api.ui.field.*;
 import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
-import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 
 @Entity
 public abstract class ChartBaseEntity<T extends WidgetEntityAndSeries, S extends WidgetSeriesEntity<T>>
-        extends WidgetEntityAndSeries<T, S> implements HasLegend, HasSourceServerUpdates {
+        extends WidgetEntityAndSeries<T, S> implements HasLegend {
 
     @Override
     public WidgetGroup getGroup() {

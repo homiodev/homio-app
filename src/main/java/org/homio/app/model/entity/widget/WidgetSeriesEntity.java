@@ -62,8 +62,16 @@ public abstract class WidgetSeriesEntity<T extends WidgetEntityAndSeries>
 
     @Override
     public void afterUpdate() {
-        super.afterUpdate();
-        ((ContextImpl) context()).event().removeEvents(widgetEntity.getEntityID() + getEntityID());
+        removeEvents();
     }
 
+    @Override
+    public void afterDelete() {
+        removeEvents();
     }
+
+    private void removeEvents() {
+        ((ContextImpl) context()).event().removeEvents(widgetEntity.getEntityID() + getEntityID());
+        ((ContextImpl) context()).event().removeEvents(getEntityID());
+    }
+}

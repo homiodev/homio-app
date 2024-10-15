@@ -32,6 +32,8 @@ public class Scratch3IBKRBlocks extends Scratch3ExtensionBlocks {
                 new JsonType(getService(context).getBuyOrders()));
         blockReporter(40, "sellOrders", "Sell orders", workspaceBlock ->
                 new JsonType(getService(context).getSellOrders()));
+        blockReporter(45, "dayPnl", "Day P&L", workspaceBlock ->
+                new JsonType(getService(context).getDayPNL()));
     }
 
     private IbkrService getService(Context context) {

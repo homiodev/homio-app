@@ -30,12 +30,14 @@ import org.homio.api.util.Lang;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.ContextImpl.ItemAction;
 import org.homio.app.model.entity.user.UserGuestEntity;
+import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.var.WorkspaceGroup;
 import org.homio.app.model.var.WorkspaceVariable;
 import org.homio.app.service.mem.InMemoryDB;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
@@ -78,24 +80,46 @@ public class ContextEventImpl implements ContextEvent {
     private final BlockingQueue<EntityUpdate> entityUpdatesQueue = new LinkedBlockingQueue<>();
     private final BlockingQueue<Event> eventQueue = new LinkedBlockingQueue<>();
 
+    private final Map<String, EventTTL> eventsTTL = new ConcurrentHashMap<>();
+
+    private record EventTTL(String key, String discriminator, Duration ttl, long created) {
+    }
+
     public ContextEventImpl(ContextImpl context, EntityManagerFactory entityManagerFactory) {
         this.context = context;
         registerEntityListeners(entityManagerFactory);
+        context.bgp().addLowPriorityRequest("remove-ttl-events", () -> {
+            for (EventTTL event : eventsTTL.values()) {
+                if (System.currentTimeMillis() > (event.created + event.ttl.toMillis())) {
+                    removeEventListener(event.discriminator, event.key);
+                }
+            }
+        });
     }
 
     @Override
-    public synchronized void removeEvents(String discriminator, String... additionalKeys) {
-        eventListeners.remove(discriminator);
-        lastValues.remove(discriminator);
+    public synchronized void removeEvents(@NotNull String discriminator, String... additionalKeys) {
+        removeEventListener(discriminator);
         for (String additionalKey : additionalKeys) {
-            eventListeners.remove(additionalKey);
-            lastValues.remove(additionalKey);
+            removeEventListener(additionalKey);
+        }
+    }
+
+    private void removeEventListener(String discriminator) {
+        Map<String, Consumer<State>> removedEvents = eventListeners.remove(discriminator);
+        lastValues.remove(discriminator);
+        if (removedEvents != null) {
+            for (String key : removedEvents.keySet()) {
+                eventsTTL.remove(discriminator + key);
+            }
         }
     }
 
     @Override
-    public synchronized void removeEventListener(String discriminator, String key) {
+    public synchronized void removeEventListener(@Nullable String discriminator, @NotNull String key) {
+        discriminator = discriminator == null ? "" : discriminator;
         Map<String, Consumer<State>> map = eventListeners.get(discriminator);
+        eventsTTL.remove(discriminator + key);
         if (map != null) {
             map.remove(key);
             if (map.isEmpty()) {
@@ -105,27 +129,34 @@ public class ContextEventImpl implements ContextEvent {
     }
 
     @Override
-    public ContextEvent addEventBehaviourListener(String key, String discriminator, Consumer<State> listener) {
+    public @NotNull ContextEvent addEventBehaviourListener(@NotNull String key, @Nullable String discriminator,
+                                                           @Nullable Duration ttl,
+                                                           @NotNull Consumer<State> listener) {
         if (lastValues.containsKey(key)) {
             listener.accept(lastValues.get(key));
         }
-        addEventListener(key, discriminator, listener);
+        addEventListener(key, discriminator, ttl, listener);
         return this;
     }
 
     @Override
-    public ContextEvent addEventListener(String key, String discriminator, Consumer<State> listener) {
+    public @NotNull ContextEvent addEventListener(@NotNull String key, @Nullable String discriminator, @Nullable Duration ttl, @NotNull Consumer<State> listener) {
+        discriminator = discriminator == null ? "" : discriminator;
+        if (ttl != null) {
+            eventsTTL.put(discriminator + key, new EventTTL(key, discriminator, ttl, System.currentTimeMillis()));
+        }
         eventListeners.computeIfAbsent(discriminator, d -> new ConcurrentHashMap<>()).put(key, listener);
         return this;
     }
 
     @Override
-    public ContextEvent addEventBehaviourListener(Pattern regexp, String discriminator, BiConsumer<String, State> listener) {
+    public @NotNull ContextEvent addEventBehaviourListener(@NotNull Pattern regexp, @Nullable String discriminator, @NotNull BiConsumer<String, State> listener) {
         for (Entry<String, State> entry : lastValues.entrySet()) {
             if (regexp.matcher(entry.getKey()).matches()) {
                 listener.accept(entry.getKey(), lastValues.get(entry.getKey()));
             }
         }
+        discriminator = discriminator == null ? "" : discriminator;
         eventRegexpListeners.computeIfAbsent(discriminator, d -> new ConcurrentHashMap<>()).put(regexp, listener);
         return this;
     }
@@ -136,17 +167,12 @@ public class ContextEventImpl implements ContextEvent {
     }
 
     @Override
-    public ContextEvent fireEvent(@NotNull String key, @Nullable State value) {
+    public @NotNull ContextEvent fireEvent(@NotNull String key, @Nullable State value) {
         return fireEvent(key, value, false);
     }
 
-    public void addEvent(String key) {
-        OptionModel optionModel = OptionModel.of(key, Lang.getServerMessage(key));
-        this.events.add(optionModel);
-    }
-
     @Override
-    public ContextEvent removeEntityUpdateListener(String entityID, String key) {
+    public @NotNull ContextEvent removeEntityUpdateListener(@NotNull String entityID, @NotNull String key) {
         if (this.entityUpdateListeners.idListeners.containsKey(entityID)) {
             this.entityUpdateListeners.idListeners.get(entityID).remove(key);
         }
@@ -157,7 +183,7 @@ public class ContextEventImpl implements ContextEvent {
     }
 
     @Override
-    public ContextEvent removeEntityRemoveListener(String entityID, String key) {
+    public @NotNull ContextEvent removeEntityRemoveListener(@NotNull String entityID, @NotNull String key) {
         if (this.entityRemoveListeners.idListeners.containsKey(entityID)) {
             this.entityRemoveListeners.idListeners.get(entityID).remove(key);
         }
@@ -175,56 +201,64 @@ public class ContextEventImpl implements ContextEvent {
     }
 
     @Override
-    public <T extends BaseEntityIdentifier> ContextEvent addEntityStatusUpdateListener(String entityID, String key, Consumer<T> listener) {
+    public <T extends BaseEntityIdentifier> @NotNull ContextEvent addEntityStatusUpdateListener(
+            @NotNull String entityID, @NotNull String key, @NotNull Consumer<T> listener) {
         this.entityUpdateStatusListeners.idListeners.putIfAbsent(entityID, new HashMap<>());
         this.entityUpdateStatusListeners.idListeners.get(entityID).put(key, listener);
         return this;
     }
 
     @Override
-    public <T extends BaseEntityIdentifier> ContextEvent addEntityUpdateListener(String entityID, String key, Consumer<T> listener) {
+    public <T extends BaseEntityIdentifier> @NotNull ContextEvent addEntityUpdateListener(
+            @NotNull String entityID, @NotNull String key, @NotNull Consumer<T> listener) {
         this.entityUpdateListeners.idListeners.putIfAbsent(entityID, new HashMap<>());
         this.entityUpdateListeners.idListeners.get(entityID).put(key, listener);
         return this;
     }
 
     @Override
-    public <T extends BaseEntityIdentifier> ContextEvent addEntityUpdateListener(String entityID, String key, EntityUpdateListener<T> listener) {
+    public <T extends BaseEntityIdentifier> @NotNull ContextEvent addEntityUpdateListener(
+            @NotNull String entityID, @NotNull String key, @NotNull EntityUpdateListener<T> listener) {
         this.entityUpdateListeners.idBiListeners.putIfAbsent(entityID, new HashMap<>());
         this.entityUpdateListeners.idBiListeners.get(entityID).put(key, listener);
         return this;
     }
 
     @Override
-    public <T extends BaseEntityIdentifier> ContextEvent addEntityUpdateListener(Class<T> entityClass, String key, Consumer<T> listener) {
+    public <T extends BaseEntityIdentifier> @NotNull ContextEvent addEntityUpdateListener(
+            @NotNull Class<T> entityClass, @NotNull String key, @NotNull Consumer<T> listener) {
         this.entityUpdateListeners.typeListeners.putIfAbsent(entityClass.getName(), new HashMap<>());
         this.entityUpdateListeners.typeListeners.get(entityClass.getName()).put(key, listener);
         return this;
     }
 
     @Override
-    public <T extends BaseEntityIdentifier> ContextEvent addEntityUpdateListener(Class<T> entityClass, String key, EntityUpdateListener<T> listener) {
+    public <T extends BaseEntityIdentifier> @NotNull ContextEvent addEntityUpdateListener(
+            @NotNull Class<T> entityClass, @NotNull String key, @NotNull EntityUpdateListener<T> listener) {
         this.entityUpdateListeners.typeBiListeners.putIfAbsent(entityClass.getName(), new HashMap<>());
         this.entityUpdateListeners.typeBiListeners.get(entityClass.getName()).put(key, listener);
         return this;
     }
 
     @Override
-    public <T extends BaseEntityIdentifier> ContextEvent addEntityCreateListener(Class<T> entityClass, String key, Consumer<T> listener) {
+    public <T extends BaseEntityIdentifier> @NotNull ContextEvent addEntityCreateListener(
+            @NotNull Class<T> entityClass, @NotNull String key, @NotNull Consumer<T> listener) {
         this.entityCreateListeners.typeListeners.putIfAbsent(entityClass.getName(), new HashMap<>());
         this.entityCreateListeners.typeListeners.get(entityClass.getName()).put(key, listener);
         return this;
     }
 
     @Override
-    public <T extends BaseEntityIdentifier> ContextEvent addEntityRemovedListener(String entityID, String key, Consumer<T> listener) {
+    public <T extends BaseEntityIdentifier> @NotNull ContextEvent addEntityRemovedListener(
+            @NotNull String entityID, @NotNull String key, @NotNull Consumer<T> listener) {
         this.entityRemoveListeners.idListeners.putIfAbsent(entityID, new HashMap<>());
         this.entityRemoveListeners.idListeners.get(entityID).put(key, listener);
         return this;
     }
 
     @Override
-    public <T extends BaseEntityIdentifier> ContextEvent addEntityRemovedListener(Class<T> entityClass, String key, Consumer<T> listener) {
+    public <T extends BaseEntityIdentifier> @NotNull ContextEvent addEntityRemovedListener(
+            @NotNull Class<T> entityClass, @NotNull String key, @NotNull Consumer<T> listener) {
         this.entityRemoveListeners.typeListeners.putIfAbsent(entityClass.getName(), new HashMap<>());
         this.entityRemoveListeners.typeListeners.get(entityClass.getName()).put(key, listener);
         return this;
@@ -305,6 +339,9 @@ public class ContextEventImpl implements ContextEvent {
     private void registerEntityListeners(EntityManagerFactory entityManagerFactory) {
         SessionFactoryImpl sessionFactory = entityManagerFactory.unwrap(SessionFactoryImpl.class);
         EventListenerRegistry registry = sessionFactory.getServiceRegistry().getService(EventListenerRegistry.class);
+        if (registry == null) {
+            throw new IllegalStateException("Unable to find EventListenerRegistry.class");
+        }
 
         registry.getEventListenerGroup(EventType.POST_LOAD).appendListener(event -> {
             Object entity = event.getEntity();
@@ -382,9 +419,11 @@ public class ContextEventImpl implements ContextEvent {
             // corner case if save/update WorkspaceVariable
             if (entity instanceof WorkspaceVariable wv) {
                 entity = wv.getTopGroup();
-            } else if(entity instanceof WorkspaceGroup wg && wg.getParent() != null) {
+            } else if (entity instanceof WorkspaceGroup wg && wg.getParent() != null) {
                 persist = false;
                 entity = context.db().get(wg.getParent());
+            } else if (entity instanceof WidgetEntity<?> we) {
+                we.afterUpdate();
             }
             context.sendEntityUpdateNotification(entity, persist ? ItemAction.Insert : ItemAction.Update);
         }

@@ -9,8 +9,6 @@ import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.attributes.*;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Set;
-
 @Entity
 public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
         implements HasSingleValueDataSource,
@@ -18,8 +16,7 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
         HasValueConverter,
         HasTextConverter,
         HasName,
-        HasValueTemplate,
-        HasSourceServerUpdates {
+        HasValueTemplate {
 
     @UIField(order = 1)
     @UIFieldGroup("UI")

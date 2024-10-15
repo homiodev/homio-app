@@ -7,6 +7,7 @@ import org.homio.api.entity.HasJsonData;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.types.MiscEntity;
 import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.UpdatableValue;
 import org.homio.api.service.EntityService;
@@ -20,8 +21,10 @@ import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.SecureString;
 import org.homio.api.widget.CustomWidgetConfigurableEntity;
 import org.homio.api.widget.CustomWidgetDataStore;
+import org.homio.app.model.entity.widget.impl.extra.WidgetCustomEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONObject;
 
 import java.util.Set;
 
@@ -135,12 +138,43 @@ public class IbkrEntity extends MiscEntity implements EntityService<IbkrService>
 
     @Override
     public void assembleActions(UIInputBuilder uiInputBuilder) {
+        uiInputBuilder.addSelectableButton("VIEW_AS_TABLE", new Icon("fas fa-table"), (context, params) ->
+                updateWidgetView(context, params, View.table));
+
+        uiInputBuilder.addSelectableButton("VIEW_AS_BLOCKS", new Icon("fas fa-border-none"), (context, params) ->
+                updateWidgetView(context, params, View.block));
+    }
+
+    private ActionResponseModel updateWidgetView(Context context, JSONObject params, View view) {
+        String widgetEntityID = params.getString("entityID");
+        WidgetCustomEntity widget = context.db().getRequire(widgetEntityID);
+        String currentView = widget.getJsonData("view", View.table.name());
+        if (!view.name().equals(currentView)) {
+            widget.setJsonData("view", view);
+            context.db().save(widget);
+        }
+        return null;
     }
 
     @Override
     public void assembleUIFields(@NotNull HasDynamicUIFields.UIFieldBuilder uiFieldBuilder, @NotNull HasJsonData sourceEntity) {
-        UpdatableValue<String> sort = UpdatableValue.wrap(sourceEntity, Sort.positions.name(), "sort");
+        UpdatableValue<String> sort = UpdatableValue.wrap(sourceEntity, Sort.positions.name(), "defaultSort");
         uiFieldBuilder.addSelect(1, sort, OptionModel.enumList(Sort.class));
+
+        UpdatableValue<Boolean> showSummary = UpdatableValue.wrap(sourceEntity, false, "showSummary");
+        uiFieldBuilder.addSwitch(2, showSummary);
+
+        UpdatableValue<Boolean> showTrades = UpdatableValue.wrap(sourceEntity, false, "showTrades");
+        uiFieldBuilder.addSwitch(3, showTrades);
+
+        UpdatableValue<String> tableBackground = UpdatableValue.wrap(sourceEntity, "#424242", "tableBackground");
+        uiFieldBuilder.addColorPicker(4, tableBackground);
+
+        UpdatableValue<String> tableBackgroundOdd = UpdatableValue.wrap(sourceEntity, "#5c5c5c", "tableBackgroundOdd");
+        uiFieldBuilder.addColorPicker(5, tableBackgroundOdd);
+
+        UpdatableValue<String> view = UpdatableValue.wrap(sourceEntity, View.table.name(), "view");
+        uiFieldBuilder.addSelect(10, view, OptionModel.enumList(View.class));
     }
 
     @Override
@@ -151,5 +185,9 @@ public class IbkrEntity extends MiscEntity implements EntityService<IbkrService>
 
     public enum Sort {
         price, positions
+    }
+
+    public enum View {
+        table, block
     }
 }

@@ -3,8 +3,13 @@ package org.homio.app.model.entity.widget.impl.slider;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import org.apache.commons.lang3.NotImplementedException;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.widget.ability.HasGetStatusValue;
+import org.homio.api.entity.widget.ability.HasSetStatusValue;
+import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.*;
+import org.homio.app.model.entity.widget.HasOptionsForEntityByClassFilter;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.*;
 
@@ -17,7 +22,8 @@ public class WidgetSliderSeriesEntity
         HasValueTemplate,
         HasName,
         HasPadding,
-        HasTextConverter {
+        HasTextConverter,
+        HasOptionsForEntityByClassFilter {
 
     @UIField(order = 1)
     @UIFieldGroup(order = 2, value = "SLIDER", borderColor = "#6AA427")
@@ -88,5 +94,20 @@ public class WidgetSliderSeriesEntity
         if (!getJsonData().has("sc")) {
             setSliderColor(UI.Color.random());
         }
+    }
+
+    @Override
+    public boolean isExclude(Class<? extends HasEntityIdentifier> sourceClassType, BaseEntity baseEntity) {
+        if (baseEntity instanceof HasGetStatusValue) {
+            HasGetStatusValue.ValueType valueType = ((HasGetStatusValue) baseEntity).getValueType();
+            return valueType != HasGetStatusValue.ValueType.Unknown && valueType != HasGetStatusValue.ValueType.Float;
+        }
+
+        if (baseEntity instanceof HasSetStatusValue) {
+            HasGetStatusValue.ValueType valueType = ((HasSetStatusValue) baseEntity).getValueType();
+            return valueType != HasGetStatusValue.ValueType.Unknown && valueType != HasGetStatusValue.ValueType.Float;
+        }
+
+        return false;
     }
 }

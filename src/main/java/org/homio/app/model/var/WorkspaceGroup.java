@@ -9,19 +9,25 @@ import lombok.experimental.Accessors;
 import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
+import org.homio.api.ContextVar;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.JSON;
+import org.homio.api.model.OptionModel;
 import org.homio.api.state.DecimalType;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.UIFieldProgress.Progress;
+import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.UIActionInput;
 import org.homio.api.ui.field.action.UIActionInput.Type;
 import org.homio.api.ui.field.action.UIContextMenuAction;
+import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
+import org.homio.api.ui.field.action.v1.layout.dialog.UIDialogLayoutBuilder;
 import org.homio.api.ui.field.color.UIFieldColorBgRef;
 import org.homio.api.ui.field.color.UIFieldColorRef;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
@@ -29,6 +35,7 @@ import org.homio.api.ui.field.inline.UIFieldInlineEntities;
 import org.homio.api.ui.field.inline.UIFieldInlineEntityWidth;
 import org.homio.api.ui.field.inline.UIFieldInlineGroup;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent.SelectionParent;
+import org.homio.api.util.Lang;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.impl.ContextVarImpl;
 import org.homio.app.model.UIFieldClickToEdit;
@@ -42,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
@@ -52,9 +60,8 @@ import static org.homio.app.utils.UIFieldUtils.nullIfFalse;
 @Setter
 @Getter
 @Accessors(chain = true)
-@UISidebarMenu(
+@UISidebarMenu(order = 20,
         icon = "fas fa-boxes-stacked",
-        order = 200,
         bg = "#54AD24",
         allowCreateNewItems = true,
         overridePath = "variable")
@@ -62,7 +69,7 @@ import static org.homio.app.utils.UIFieldUtils.nullIfFalse;
 @UIHideEntityIfFieldNotNull("parent")
 @NoArgsConstructor
 public class WorkspaceGroup extends BaseEntity
-        implements HasJsonData, SelectionParent {
+        implements HasJsonData, SelectionParent, HasDynamicContextMenuActions {
 
     public static final String PREFIX = "group_";
 
@@ -259,6 +266,56 @@ public class WorkspaceGroup extends BaseEntity
         return ActionResponseModel.showInfo("W.ERROR.NO_VARIABLES_TO_DELETE");
     }
 
+    @Override
+    public void assembleActions(UIInputBuilder uiInputBuilder) {
+        uiInputBuilder.addOpenDialogSelectableButton("ADD_GROUP", new Icon("fas fa-layer-group"), null,
+                        (context, params) -> ((ContextImpl) context).var().createSubGroup(params, getEntityID()))
+                .editDialog(dialogBuilder -> addCommonFields(dialogBuilder, "field.GROUP_NAME", builder -> {
+                }));
+
+        if (this.getEntityID().equals("group_broadcast")) {
+            uiInputBuilder.addOpenDialogSelectableButton("ADD_BROADCAST_VARIABLE", new Icon("fas fa-rss"), null,
+                            (context, params) -> createVar(context, params, ContextVar.VariableType.Json, true))
+                    .editDialog(dialogBuilder ->
+                            addCommonFields(dialogBuilder, "field.BROADCAST_NAME", builder ->
+                                    builder.addSelectBox("parentGroup")
+                                            .setOptions(OptionModel.entityList(this.getChildrenGroups(), null, context()))));
+        } else {
+            uiInputBuilder.addOpenDialogSelectableButton("ADD_VARIABLE", new Icon("fas fa-rss"), null,
+                            (context, params) -> createVar(context, params, params.getEnum(ContextVar.VariableType.class, "type"), false))
+                    .editDialog(dialogBuilder ->
+                            addCommonFields(dialogBuilder, "field.BROADCAST_NAME", builder -> {
+                                builder.addSelectBox("type")
+                                        .setValue(ContextVar.VariableType.Float.name())
+                                        .setOptions(OptionModel.enumList(ContextVar.VariableType.class));
+                                builder.addSelectBox("parentGroup")
+                                        .setOptions(OptionModel.entityList(this.getChildrenGroups(), null, context()));
+                            }));
+        }
+    }
+
+    private void addCommonFields(UIDialogLayoutBuilder dialogBuilder, String nameFieldKey, Consumer<UIFlexLayoutBuilder> builder) {
+        dialogBuilder.addFlex("main", flex -> {
+            flex.addTextInput("name", Lang.getServerMessage(nameFieldKey), true);
+            flex.addTextInput("description", "", false);
+            flex.addIconPicker("icon", "fas fa-cloud");
+            flex.addColorPicker("color", "#999999");
+            builder.accept(flex);
+        });
+    }
+
+    public @NotNull ActionResponseModel createVar(Context context, JSONObject params, ContextVar.VariableType variableType, boolean readOnly) {
+        String name = params.getString("name");
+        String group = params.getString("parentGroup");
+        context.var().createVariable(group, name, name,
+                variableType, builder ->
+                        builder.setWritable(!readOnly)
+                                .setDescription(params.optString("description"))
+                                .setIcon(new Icon(params.getString("icon"),
+                                        StringUtils.defaultIfEmpty(params.optString("color"), "#999999"))));
+        return ActionResponseModel.success();
+    }
+
     @Getter
     @NoArgsConstructor
     public static class WorkspaceVariableEntity {
@@ -304,10 +361,13 @@ public class WorkspaceGroup extends BaseEntity
 
         private Boolean backup;
 
+        private String rawName;
+
         public WorkspaceVariableEntity(WorkspaceGroup childrenGroup) {
             this.entityID = childrenGroup.getEntityID();
             this.groupName = format("<div class=\"it-group\"><i class=\"%s\"></i>%s</div>",
                     childrenGroup.getIcon(), childrenGroup.getName());
+            this.rawName = childrenGroup.getName();
             this.color = childrenGroup.getIconColor();
         }
 

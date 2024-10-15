@@ -1,20 +1,18 @@
 package org.homio.app.model.entity.widget.impl.toggle;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import org.apache.commons.lang3.NotImplementedException;
 import org.homio.api.ContextWidget.ToggleType;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.app.model.entity.widget.WidgetEntity;
-import org.homio.app.model.entity.widget.attributes.*;
+import org.homio.app.model.entity.widget.attributes.HasAlign;
+import org.homio.app.model.entity.widget.attributes.HasBackground;
+import org.homio.app.model.entity.widget.attributes.HasPadding;
+import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.Set;
 
 @Entity
 public class WidgetSimpleToggleEntity extends WidgetEntity<WidgetSimpleToggleEntity>
-        implements HasBackground, HasSourceServerUpdates, HasSingleValueDataSource, HasToggle, HasAlign, HasPadding {
+        implements HasBackground, HasSingleValueDataSource, HasToggle, HasAlign, HasPadding {
 
     @Override
     public boolean isVisible() {
@@ -43,13 +41,6 @@ public class WidgetSimpleToggleEntity extends WidgetEntity<WidgetSimpleToggleEnt
 
     public void setDisplayType(ToggleType value) {
         setJsonData("displayType", value);
-    }
-
-    @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public Boolean getShowLastUpdateTimer() {
-        throw new NotImplementedException();
     }
 
     @Override

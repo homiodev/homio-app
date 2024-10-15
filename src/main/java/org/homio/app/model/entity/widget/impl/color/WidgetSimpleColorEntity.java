@@ -1,24 +1,20 @@
 package org.homio.app.model.entity.widget.impl.color;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import org.apache.commons.lang3.NotImplementedException;
 import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.UIFieldKeyValue.KeyValueType;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.attributes.HasAlign;
 import org.homio.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
-import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Entity
 public class WidgetSimpleColorEntity extends WidgetEntity<WidgetSimpleColorEntity>
-        implements HasSourceServerUpdates, HasAlign, HasSingleValueDataSource, HasSetSingleValueDataSource {
+        implements HasAlign, HasSingleValueDataSource, HasSetSingleValueDataSource {
 
     @Override
     public boolean isVisible() {
@@ -77,15 +73,7 @@ public class WidgetSimpleColorEntity extends WidgetEntity<WidgetSimpleColorEntit
     }
 
     @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public Boolean getShowLastUpdateTimer() {
-        throw new NotImplementedException();
-    }
-
-    @Override
     public void beforePersist() {
-        super.beforePersist();
         if (!getJsonData().has("colors")) {
             setColors(Stream.of("#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FFFFFF")
                     .map(color -> String.format("{\"key\":\"0\",\"value\":\"%s\"}", color))

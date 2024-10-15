@@ -21,7 +21,10 @@ import org.jetbrains.annotations.NotNull;
 @Setter
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@UISidebarMenu(icon = "fas fa-tachometer-alt", bg = "#107d6b", overridePath = "widgets")
+@UISidebarMenu(order = 1200,
+        icon = "fas fa-tachometer-alt",
+        bg = "#107d6b",
+        overridePath = "widgets")
 @Accessors(chain = true)
 @NoArgsConstructor
 public abstract class WidgetEntity<T extends WidgetEntity> extends BaseEntity
@@ -82,7 +85,11 @@ public abstract class WidgetEntity<T extends WidgetEntity> extends BaseEntity
 
     @Override
     public void afterUpdate() {
-        super.afterUpdate();
+        ((ContextImpl) context()).event().removeEvents(getEntityID());
+    }
+
+    @Override
+    public void afterDelete() {
         ((ContextImpl) context()).event().removeEvents(getEntityID());
     }
 
@@ -90,4 +97,6 @@ public abstract class WidgetEntity<T extends WidgetEntity> extends BaseEntity
     protected long getChildEntityHashCode() {
         return 0;
     }
+
+
 }

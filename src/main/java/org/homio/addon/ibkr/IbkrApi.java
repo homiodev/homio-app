@@ -4,13 +4,17 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pivovarit.function.ThrowingSupplier;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
 import org.homio.api.JSDisableMethod;
 import org.homio.api.cache.CachedValue;
+import org.homio.api.util.CommonUtils;
 import org.homio.hquery.Curl;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
@@ -33,23 +37,32 @@ public class IbkrApi {
     private final IbkrEntity entity;
     private final IbkrService service;
     private final List<String> requestFields;
-    private final CachedValue<JsonNode, Object> summary = new CachedValue<>(Duration.ofSeconds(60), new ThrowingSupplier<>() {
+    private final CachedValue<Map<String, Object>, Object> summary = new CachedValue<>(Duration.ofSeconds(60), new ThrowingSupplier<>() {
+        @Override
+        public Map<String, Object> get() {
+            try {
+                JsonNode summary = Curl.get(entity.getUrl("portfolio/%s/summary".formatted(entity.getAccountId())), JsonNode.class);
+                Map<String, Object> values = new HashMap<>();
+                summary.fields().forEachRemaining(entry -> {
+                    String key = entry.getKey();
+                    JsonNode valueNode = entry.getValue();
+                    Double value = valueNode.path("value").isNull() ?
+                            valueNode.path("amount").asDouble() : valueNode.get("value").asDouble();
+                    values.put(key, value);
+                });
+                return values;
+            } catch (Exception ignored) {
+            }
+            return Map.of();
+        }
+    });
+    private final CachedValue<JsonNode, Object> performance = new CachedValue<>(Duration.ofMinutes(10), new ThrowingSupplier<>() {
         @Override
         public JsonNode get() {
             try {
-                return Curl.get(entity.getUrl("portfolio/%s/summary".formatted(entity.getAccountId())), JsonNode.class);
-            } catch (Exception ignored) {
-            }
-            return OBJECT_MAPPER.createObjectNode();
-        }
-    });
-    private final CachedValue<ObjectNode, Object> performance = new CachedValue<>(Duration.ofMinutes(10), new ThrowingSupplier<>() {
-        @Override
-        public ObjectNode get() {
-            try {
                 String url = entity.getUrl("pa/performance");
                 var body = OBJECT_MAPPER.writeValueAsString(new PerformanceRequest(Set.of(entity.getAccountId())));
-                return Curl.post(url, body, ObjectNode.class);
+                return Curl.post(url, body, JsonNode.class);
             } catch (Exception ignored) {
             }
             return OBJECT_MAPPER.createObjectNode();
@@ -57,6 +70,8 @@ public class IbkrApi {
     });
     private String sessionID;
     private WebSocketClient ws;
+    private JSONObject profitAndLoss;
+    private JSONObject trades;
 
     @Getter
     private Collection<Position> allPosition = List.of();
@@ -84,14 +99,17 @@ public class IbkrApi {
             this.sessionID = tickleResult.get("session").asText();
         }
         ws = new WebSocketClient(new URI("ws://localhost:" + entity.getPort() + "/v1/api/ws")) {
+
             @Override
             public void onOpen(ServerHandshake serverHandshake) {
                 log.info("IBKR web-socket connected");
+                ws.send("spl+{}");
+                ws.send("str+{}");
             }
 
             @Override
-            public void onMessage(String s) {
-                log.info(s);
+            public void onMessage(String message) {
+                log.debug(message);
             }
 
             @SneakyThrows
@@ -102,6 +120,17 @@ public class IbkrApi {
                 long conid = json.optLong("conid");
                 if (topic.isEmpty() || conid == 0L) {
                     return;
+                }
+                if (topic.equals("spl")) {
+                    profitAndLoss = json;
+                }
+                if (topic.equals("blt")) {
+                    String message = json.optJSONObject("args").optString("message");
+                    log.warn("Bulletins message: {}", message);
+                    context.ui().toastr().warn("IBKR", message);
+                }
+                if (topic.equals("str")) {
+                    trades = json;
                 }
                 if (json.optBoolean("success")) {
                     log.info("Success subscribed on: {}", json);
@@ -128,6 +157,12 @@ public class IbkrApi {
             @Override
             public void onClose(int i, String s, boolean b) {
                 log.warn("IBKR close websocket connection");
+                try {
+                    Thread.sleep(5000);
+                    this.reconnectBlocking();
+                } catch (Exception ex) {
+                    log.error("Unable to reconnect websocket connection", ex);
+                }
             }
 
             @Override
@@ -136,14 +171,17 @@ public class IbkrApi {
             }
         };
         ws.connect();
-                    /*context.bgp().builder("ibkr-keep-alive").intervalWithDelay(Duration.ofSeconds(60)).execute(() -> {
-                        Curl.post(entity.getUrl("/tickle"), null, JsonNode.class);
-                        this.ws.send("tic");
-                    });*/
 
         context.bgp().builder("ibkr-fetch-positions")
                 .interval(Duration.ofSeconds(60))
                 .execute(() -> {
+                    Curl.post(entity.getUrl("/tickle"), null, JsonNode.class);
+                    try {
+                        this.ws.send("tic");
+                    } catch (Exception ex) {
+                        log.error("Error send tic to websocket: {}", CommonUtils.getErrorMessage(ex));
+                    }
+
                     List<Position> positions = new ArrayList<>();
                     String baseUrl = "portfolio/%s/positions/".formatted(entity.getAccountId());
                     for (int i = 0; i < 100; i++) {
@@ -235,7 +273,7 @@ public class IbkrApi {
     @SneakyThrows
     @JSDisableMethod
     public double getSummary(String field) {
-        return summary.getValue().path(field).path("amount").asDouble();
+        return (double) summary.getValue().getOrDefault(field, 0D);
     }
 
     public double getTotalCash() {
@@ -244,10 +282,6 @@ public class IbkrApi {
 
     public double getEquityWithLoanValue() {
         return getSummary("equitywithloanvalue");
-    }
-
-    public double getGrossPositionValue() {
-        return getSummary("grosspositionvalue");
     }
 
     public double getNetLiquidation() {
@@ -264,6 +298,8 @@ public class IbkrApi {
             for (long conId : subscriptions) {
                 ws.send("umd+" + conId + "+{}");
             }
+            this.ws.send("upl");
+            this.ws.send("utr");
             allPosition = List.of();
             subscriptions.clear();
             ws.close();
@@ -272,13 +308,12 @@ public class IbkrApi {
     }
 
     public WidgetInfo getWidgetInfo() {
-        return new WidgetInfo(allPosition.stream().map(TickerInfo::new).toList(),
+        return new WidgetInfo(
+                allPosition.stream().map(TickerInfo::new).toList(),
                 performance.getValue(),
-                getTotalCash(),
-                getNetLiquidation(),
-                getGrossPositionValue(),
-                getEquityWithLoanValue(),
-                getPreviousDayEquityWithLoanValue());
+                entity.getJsonData("showSummary", false) ? summary.getValue() : null,
+                profitAndLoss,
+                entity.getJsonData("showTrades", false) ? trades : null);
     }
 
     @Getter
@@ -376,21 +411,14 @@ public class IbkrApi {
         private final Set<String> acctIds;
     }
 
-    @Getter
-    @RequiredArgsConstructor
-    private static class PositionRequest {
-        private final List<String> fields;
-        private final int tempo = 2000;
-        private final boolean snapshot = true;
+    private record PositionRequest(List<String> fields) {
     }
 
     public record WidgetInfo(List<TickerInfo> tickers,
-                             ObjectNode performance,
-                             double totalCache,
-                             double netLiquidation,
-                             double grossPositionValue,
-                             double equityWithLoanValue,
-                             double previousDayEquityWithLoanValue) {
+                             JsonNode performance,
+                             Map<String, Object> summary,
+                             JSONObject profitAndLoss,
+                             JSONObject trades) {
     }
 
     @Getter

@@ -24,6 +24,7 @@ import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFie
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.model.entity.widget.HasOptionsForEntityByClassFilter;
 import org.homio.app.utils.UIFieldSelectionUtil.SelectHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -47,9 +48,8 @@ public final class OptionUtil {
 
     @SneakyThrows
     public static Collection<OptionModel> getAllOptions(ContextImpl context) {
-        LoadOptionsParameters param = new LoadOptionsParameters(null, context, Object.class, new Object(), null, null);
         List<OptionModel> options = new ArrayList<>();
-        assembleOptionsForEntityByClassSelection(param, options, HasGetStatusValue.class);
+        assembleOptionsForEntityByClassSelection(context, null, options, HasGetStatusValue.class);
         return filterAndGroupingOptions(options);
     }
 
@@ -59,17 +59,22 @@ public final class OptionUtil {
         return groupingOptions(filterOptions(options));
     }
 
-    public static void assembleOptionsForEntityByClassSelection(LoadOptionsParameters params, List<OptionModel> list,
+    public static void assembleOptionsForEntityByClassSelection(Context context, Object classEntityForDynamicOptionLoader,
+                                                                List<OptionModel> list,
                                                                 Class<? extends HasEntityIdentifier> sourceClassType) {
-
-        for (Class<? extends HasEntityIdentifier> foundTargetType : params.context.getClassesWithParent(sourceClassType)) {
+        for (Class<? extends HasEntityIdentifier> foundTargetType : context.getClassesWithParent(sourceClassType)) {
             if (BaseEntity.class.isAssignableFrom(foundTargetType)) {
-                List<BaseEntity> items = params.context.db().findAll((Class<BaseEntity>) foundTargetType)
+                List<BaseEntity> items = context.db().findAll((Class<BaseEntity>) foundTargetType)
                         .stream().filter(baseEntity -> {
+                            if(classEntityForDynamicOptionLoader instanceof HasOptionsForEntityByClassFilter filter) {
+                                if(filter.isExclude(sourceClassType, baseEntity)) {
+                                    return false;
+                                }
+                            }
                             // hack: check if sourceClassType is HasSetStatusValue and we if we are unable to write to value
                             return !HasSetStatusValue.class.isAssignableFrom(sourceClassType) || ((HasSetStatusValue) baseEntity).isAbleToSetValue();
                         }).collect(Collectors.toList());
-                OptionUtil.assembleItemsToOptions(list, sourceClassType, items, params.context, params.classEntityForDynamicOptionLoader);
+                OptionUtil.assembleItemsToOptions(list, sourceClassType, items, context, classEntityForDynamicOptionLoader);
             }
         }
     }
@@ -169,7 +174,7 @@ public final class OptionUtil {
         return handled;
     }
 
-    private static List<OptionModel> filterAndGroupingOptions(List<OptionModel> options) {
+    public static List<OptionModel> filterAndGroupingOptions(List<OptionModel> options) {
         // filter options
         options = filterOptions(options);
 

@@ -213,7 +213,7 @@ public final class UIFieldSelectionUtil {
         entityByClass(UIFieldEntityByClassSelection.class, params -> {
             List<OptionModel> list = new ArrayList<>();
             for (UIFieldEntityByClassSelection item : params.field.getDeclaredAnnotationsByType(UIFieldEntityByClassSelection.class)) {
-                OptionUtil.assembleOptionsForEntityByClassSelection(params, list, item.value());
+                OptionUtil.assembleOptionsForEntityByClassSelection(params.context, params.classEntityForDynamicOptionLoader, list, item.value());
             }
             return list;
         }),
@@ -224,7 +224,7 @@ public final class UIFieldSelectionUtil {
             if (typeClass == null) {
                 throw new IllegalArgumentException("Unable to find entity class with type: " + item.type());
             }
-            OptionUtil.assembleOptionsForEntityByClassSelection(params, list, typeClass);
+            OptionUtil.assembleOptionsForEntityByClassSelection(params.context, params.classEntityForDynamicOptionLoader, list, typeClass);
             return list;
         });
 

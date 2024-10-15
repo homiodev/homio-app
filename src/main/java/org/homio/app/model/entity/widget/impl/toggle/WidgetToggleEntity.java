@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
 @Entity
 public class WidgetToggleEntity
         extends WidgetEntityAndSeries<WidgetToggleEntity, WidgetToggleSeriesEntity>
-        implements HasBackground, HasLayout, HasPadding, HasSourceServerUpdates, HasName {
+        implements HasBackground, HasLayout, HasPadding, HasName {
 
     @UIField(order = 1)
     @UIFieldGroup(order = 3, value = "NAME")

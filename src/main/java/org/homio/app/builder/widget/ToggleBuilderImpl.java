@@ -58,18 +58,6 @@ public class ToggleBuilderImpl extends WidgetBaseBuilderImpl<ToggleWidgetBuilder
         widget.setLayout(value);
         return this;
     }
-
-    @Override
-    public @NotNull ToggleWidgetBuilder setListenSourceUpdates(@Nullable Boolean value) {
-        widget.setListenSourceUpdates(value);
-        return this;
-    }
-
-    @Override
-    public @NotNull ToggleWidgetBuilder setShowLastUpdateTimer(@Nullable Boolean value) {
-        widget.setShowLastUpdateTimer(value);
-        return this;
-    }
 }
 
 @RequiredArgsConstructor

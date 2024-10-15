@@ -136,8 +136,10 @@ public class WorkspaceVariable extends BaseEntity
     @UIFieldProgress
     public UIFieldProgress.Progress getUsedQuota() {
         int count = 0;
-        if (getEntityID() != null && context() != null && context().var().exists(getEntityID())) {
-            count = (int) context().var().count(getEntityID());
+        if (getEntityID() != null) {
+            if (context().var().exists(getEntityID())) {
+                count = (int) context().var().count(getEntityID());
+            }
         }
         return UIFieldProgress.Progress.of(count, this.quota);
     }
@@ -174,7 +176,7 @@ public class WorkspaceVariable extends BaseEntity
 
     @Override
     public void addUpdateValueListener(Context context, String discriminator, JSONObject dynamicParameters, Consumer<State> listener) {
-        context.event().addEventListener(getEntityID(), discriminator, listener);
+        context.event().addEventListener(getFullEntityID(), discriminator, listener);
     }
 
     public String getParentId() {
@@ -234,6 +236,16 @@ public class WorkspaceVariable extends BaseEntity
     @Override
     public Object getStatusValue(GetStatusValueRequest request) {
         return request.context().var().getRawValue(getEntityID());
+    }
+
+    @Override
+    public ValueType getValueType() {
+        return switch (restriction) {
+            case Bool -> ValueType.Boolean;
+            case Float -> ValueType.Float;
+            case Json, Color, Enum -> ValueType.String;
+            default -> ValueType.Unknown;
+        };
     }
 
     @Override
@@ -414,6 +426,16 @@ public class WorkspaceVariable extends BaseEntity
             return workspaceGroup.getParent();
         }
         return workspaceGroup;
+    }
+
+    @JsonIgnore
+    public String getFullEntityID() {
+        String key = workspaceGroup.getEntityID() + "-->" + getEntityID();
+        WorkspaceGroup parent = workspaceGroup.getParent();
+        if (parent != null) {
+            key = parent.getEntityID() + "-->" + key;
+        }
+        return key;
     }
 
     public enum VarType {

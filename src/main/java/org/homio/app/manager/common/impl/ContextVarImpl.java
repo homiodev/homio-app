@@ -106,25 +106,6 @@ public class ContextVarImpl implements ContextVar {
 
         context.bgp().builder("var-backup").intervalWithDelay(Duration.ofSeconds(60))
                 .cancelOnError(false).execute(this::backupVariables);
-
-        context.ui().addItemContextMenu(broadcastsId, "addSubGroup",
-                uiInputBuilder -> uiInputBuilder.addOpenDialogSelectableButton("ADD_BROADCAST_GROUP", new Icon("fas fa-layer-group"), null,
-                        (context1, params) -> createBroadcastGroup(params, broadcastsId)).editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
-                    flex.addTextInput("name", Lang.getServerMessage("field.GROUP_NAME"), true);
-                    flex.addTextInput("description", "", false);
-                    flex.addIconPicker("icon", "fas fa-object-group");
-                    flex.addColorPicker("color", "#999999");
-                })));
-
-        context.ui().addItemContextMenu(broadcastsId, "add",
-                uiInputBuilder -> uiInputBuilder.addOpenDialogSelectableButton("ADD_BROADCAST_VARIABLE", new Icon("fas fa-rss"), null,
-                        (context1, params) -> createBroadcastVar(params)).editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
-                    flex.addTextInput("name", Lang.getServerMessage("field.BROADCAST_NAME"), true);
-                    flex.addTextInput("description", "", false);
-                    flex.addSelectBox("parentGroup").setLazyOptionLoader(FetchBroadcastSubGroups.class);
-                    flex.addIconPicker("icon", "fas fa-cloud");
-                    flex.addColorPicker("color", "#999999");
-                })));
     }
 
     @Override
@@ -137,9 +118,9 @@ public class ContextVarImpl implements ContextVar {
         return saveOrUpdateGroup(parentGroupId + "-" + groupId, groupName, groupBuilder, wg -> wg.setHidden(true).setParent(parentGroup));
     }
 
-    private @NotNull ActionResponseModel createBroadcastGroup(JSONObject params, String broadcastsId) {
+    public @NotNull ActionResponseModel createSubGroup(JSONObject params, String parentGroupID) {
         String name = params.getString("name");
-        context.var().createSubGroup(broadcastsId, String.valueOf(name.hashCode()), name, builder ->
+        context.var().createSubGroup(parentGroupID, String.valueOf(name.hashCode()), name, builder ->
                 builder.setIcon(new Icon(params.getString("icon"),
                                 StringUtils.defaultIfEmpty(params.optString("color"), "#999999")))
                         .setDescription(params.optString("description")));
@@ -292,17 +273,6 @@ public class ContextVarImpl implements ContextVar {
             return true;
         }
         return false;
-    }
-
-    private @NotNull ActionResponseModel createBroadcastVar(JSONObject params) {
-        String name = params.getString("name");
-        String group = params.getString("parentGroup");
-        context.var().createVariable(group, name, name,
-                VariableType.Any, builder ->
-                        builder.setDescription(params.optString("description"))
-                                .setIcon(new Icon(params.getString("icon"),
-                                        StringUtils.defaultIfEmpty(params.optString("color"), "#999999"))));
-        return ActionResponseModel.success();
     }
 
     @Override
@@ -490,7 +460,7 @@ public class ContextVarImpl implements ContextVar {
         }
         varContext.storageService.save(new WorkspaceVariableMessage(value));
         // context.event().fireEvent(context.groupVariable.getVariableId(), value);
-        context.event().fireEvent(varContext.variable.getEntityID(), State.of(value));
+        context.event().fireEvent(varContext.variable.getFullEntityID(), State.of(value));
 
         // Fire update 'value' on UI
         WorkspaceVariableEntity updatedEntity = WorkspaceVariableEntity.updatableEntity(varContext.variable, context);

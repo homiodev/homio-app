@@ -137,12 +137,9 @@ public class ContextUIImpl implements ContextUI {
 
     public void onContextCreated() {
         // run hourly script to drop not used dynamicUpdateRegisters
-        context
-                .bgp()
-                .builder("drop-outdated-dynamicContext")
-                .intervalWithDelay(Duration.ofHours(1))
-                .execute(() ->
-                        this.dynamicUpdateRegisters.values().removeIf(v -> TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - v.timeout) > 1));
+        context.bgp().addLowPriorityRequest("drop-outdated-dynamicContext", () -> {
+            this.dynamicUpdateRegisters.values().removeIf(v -> TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - v.timeout) > 5);
+        });
 
         context.bgp().builder("send-ui-updates").interval(Duration.ofSeconds(1)).execute(() -> {
             for (Iterator<SendUpdateContext> iterator = sendToUIMap.values().iterator(); iterator.hasNext(); ) {
@@ -201,12 +198,8 @@ public class ContextUIImpl implements ContextUI {
             if (request.getEntityID() != null) {
                 BaseEntity entity = context.db().get(request.getEntityID());
                 if (entity instanceof CustomWidgetConfigurableEntity cwce) {
-                    cwce.setWidgetDataStore(new CustomWidgetDataStore() {
-                        @Override
-                        public void update(Object data) {
-                            context.event().fireEvent(request.getDynamicUpdateId(), new ObjectType(data));
-                        }
-                    });
+                    cwce.setWidgetDataStore(data ->
+                            context.event().fireEvent(request.getDynamicUpdateId(), new ObjectType(data)));
                 }
             }
             dynamicUpdateRegisters.put(request, new DynamicUpdateContext());
@@ -214,8 +207,8 @@ public class ContextUIImpl implements ContextUI {
             duc.timeout = System.currentTimeMillis(); // refresh timer
             duc.registerCounter.incrementAndGet();
         }
-        context.event().addEventBehaviourListener(request.getDynamicUpdateId(), value ->
-                sendDynamicUpdateSupplied(request, () -> value));
+        context.event().addEventBehaviourListener(request.getDynamicUpdateId(), request.getEntityID(),
+                Duration.ofSeconds(60), value -> sendDynamicUpdateSupplied(request, () -> value));
     }
 
     public void unRegisterForUpdates(DynamicUpdateRequest request) {

@@ -1,14 +1,9 @@
 package org.homio.app.model.entity.widget.impl;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import org.apache.commons.lang3.NotImplementedException;
-import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.attributes.*;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.Set;
 
 @Entity
 public class WidgetSimpleValueEntity extends WidgetEntity<WidgetSimpleValueEntity>
@@ -20,8 +15,7 @@ public class WidgetSimpleValueEntity extends WidgetEntity<WidgetSimpleValueEntit
         HasValueTemplate,
         HasPadding,
         HasAlign,
-        HasValueConverter,
-        HasSourceServerUpdates {
+        HasValueConverter {
 
     @Override
     public @NotNull String getImage() {
@@ -41,12 +35,5 @@ public class WidgetSimpleValueEntity extends WidgetEntity<WidgetSimpleValueEntit
     @Override
     public String getDefaultName() {
         return null;
-    }
-
-    @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public Boolean getShowLastUpdateTimer() {
-        throw new NotImplementedException();
     }
 }

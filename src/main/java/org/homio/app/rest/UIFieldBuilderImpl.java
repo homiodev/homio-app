@@ -29,6 +29,18 @@ public class UIFieldBuilderImpl implements UIFieldBuilder {
 
     private final Map<String, FieldBuilderImpl> fields = new HashMap<>();
 
+    @NotNull
+    @Override
+    public FieldBuilder addColorPicker(int order, @NotNull UpdatableValue<String> value) {
+        return addField(value.getName(), new FieldBuilderImpl(order, value, UIFieldType.ColorPicker));
+    }
+
+    @NotNull
+    @Override
+    public FieldBuilder addIconPicker(int order, @NotNull UpdatableValue<String> value) {
+        return addField(value.getName(), new FieldBuilderImpl(order, value, UIFieldType.IconPicker));
+    }
+
     @Override
     public @NotNull HasDynamicUIFields.FieldBuilder addSwitch(int order, @NotNull UpdatableValue<Boolean> value) {
         return addField(value.getName(), new FieldBuilderImpl(order, value, UIFieldType.Boolean));

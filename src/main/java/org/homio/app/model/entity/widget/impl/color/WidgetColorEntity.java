@@ -15,7 +15,6 @@ import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.attributes.HasIconWithoutThreshold;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.model.entity.widget.attributes.HasName;
-import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Set;
@@ -30,7 +29,6 @@ public class WidgetColorEntity extends WidgetEntity<WidgetColorEntity>
         HasLayout,
         HasIconWithoutThreshold,
         HasName,
-        HasSourceServerUpdates,
         HasDynamicParameterFields {
 
     @UIField(order = 1)

@@ -273,7 +273,7 @@ public class WidgetController {
             }
             val valueRequest = new HasGetStatusValue.GetStatusValueRequest(context, null);
             result.put(source, ((HasGetStatusValue) entity).getStatusValue(valueRequest));
-            timeSeriesUtil.addListenValueIfRequire(true, "dashboard",
+            timeSeriesUtil.addListenValueIfRequire("dashboard",
                     entity, null, null, source,
                     object -> ((HasGetStatusValue) entity).getStatusValue(valueRequest));
         }

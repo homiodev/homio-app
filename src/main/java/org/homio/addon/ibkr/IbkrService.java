@@ -119,7 +119,7 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
                 WebElement submitButton = driver.findElement(By.xpath("//button[@type='submit']"));
                 submitButton.click();
 
-                if (!waitAction(driver, currentUrl, 300)) {
+                if (!waitAction(driver, currentUrl, 120)) {
                     throw new ServerException("Error authenticating user", Status.REQUIRE_AUTH);
                 } else {
                     entity.setStatus(Status.ONLINE);
@@ -199,6 +199,10 @@ public class IbkrService extends EntityService.ServiceInstance<IbkrEntity>
 
     public double getEquityWithLoanValue() {
         return api.getEquityWithLoanValue();
+    }
+
+    public double getDayPNL() {
+        return api.getNetLiquidation() - api.getPreviousDayEquityWithLoanValue();
     }
 
     public List<IbkrApi.Position> getPositions() {

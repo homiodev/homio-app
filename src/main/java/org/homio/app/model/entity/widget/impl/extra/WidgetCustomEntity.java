@@ -1,5 +1,7 @@
 package org.homio.app.model.entity.widget.impl.extra;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.Setter;
@@ -9,17 +11,21 @@ import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.field.MonacoLanguage;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldCodeEditor;
-import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.HasDynamicUIFields;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.api.widget.CustomWidgetConfigurableEntity;
+import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 import org.homio.app.model.entity.widget.WidgetEntity;
+import org.homio.app.rest.UIFieldBuilderImpl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Set;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Entity
 @Getter
@@ -30,9 +36,25 @@ public class WidgetCustomEntity extends WidgetEntity<WidgetCustomEntity> impleme
         HasDynamicContextMenuActions,
         HasJsonData {
 
+    @JsonAnyGetter
+    public Map<String, Object> getDynamicUiProperties() {
+        Map<String, Object> dynamicProperties = new HashMap<>();
+        UIFieldBuilderImpl builder = new UIFieldBuilderImpl();
+        assembleUIFields(builder);
+        builder.getFields().forEach((field, fieldBuilder) ->
+                dynamicProperties.put(field, fieldBuilder.getValue().getValue()));
+        return dynamicProperties;
+    }
+
     @Override
     protected @NotNull String getWidgetPrefix() {
         return "custom";
+    }
+
+    @UIField(order = 1)
+    @UIFieldOptionFontSize
+    public String getName() {
+        return super.getName();
     }
 
     @UIField(order = 13)
@@ -87,13 +109,17 @@ public class WidgetCustomEntity extends WidgetEntity<WidgetCustomEntity> impleme
         }
     }
 
-    @UIField(order = 450)
-    @UIFieldGroup("UI")
     public String getCss() {
         return getJsonData("css");
     }
 
     public void setCss(String value) {
         setJsonData("css", value);
+    }
+
+    @JsonIgnore
+    @UIFieldIgnore
+    public List<String> getStyle() {
+        return super.getStyle();
     }
 }

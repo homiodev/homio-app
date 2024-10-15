@@ -37,7 +37,6 @@ public class WidgetDisplayEntity
         HasName,
         HasActionOnClick,
         HasPadding,
-        HasSourceServerUpdates,
         ConfigureFieldsService {
 
     @UIField(order = 1)

@@ -16,7 +16,6 @@ import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod.TimeRange;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
-import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.homio.app.service.mem.InMemoryDB;
 import org.jetbrains.annotations.NotNull;
@@ -28,7 +27,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 @RequiredArgsConstructor
@@ -136,22 +134,20 @@ public class TimeSeriesUtil {
         return resultConverter.apply(value);
     }
 
-    public <R> void addListenValueIfRequire(boolean listenSourceUpdates, @NotNull String entityID, @NotNull Object source,
+    public <R> void addListenValueIfRequire(@NotNull String entityID, @NotNull Object source,
                                             @Nullable JSONObject dynamicParameters, @Nullable String seriesEntityId, @NotNull String dataSourceEntityID,
                                             @NotNull Function<Object, R> valueSupplier) {
-        if (listenSourceUpdates) {
-            AtomicReference<R> valueRef = new AtomicReference<>(null);
-            String key = entityID + Objects.toString(seriesEntityId, "");
-            ((HasUpdateValueListener) source).addUpdateValueListener(context, key, dynamicParameters,
-                    o -> {
-                        R updatedValue = valueSupplier.apply(o);
-                        if (valueRef.get() != updatedValue) {
-                            valueRef.set(updatedValue);
-                            context.ui().sendDynamicUpdateImpl(dataSourceEntityID, entityID,
-                                    new WidgetChartsController.SingleValueData(updatedValue, seriesEntityId));
-                        }
-                    });
-        }
+        AtomicReference<R> valueRef = new AtomicReference<>(null);
+        String key = Objects.toString(seriesEntityId, entityID);
+        ((HasUpdateValueListener) source).addUpdateValueListener(context, key, dynamicParameters,
+                o -> {
+                    R updatedValue = valueSupplier.apply(o);
+                    if (valueRef.get() != updatedValue) {
+                        valueRef.set(updatedValue);
+                        context.ui().sendDynamicUpdateImpl(dataSourceEntityID, key,
+                                new WidgetChartsController.SingleValueData(updatedValue, seriesEntityId));
+                    }
+                });
     }
 
     public <T extends HasDynamicParameterFields & HasChartDataSource> Set<TimeSeriesContext<T>>
@@ -194,11 +190,9 @@ public class TimeSeriesUtil {
         HasGetStatusValue.GetStatusValueRequest valueRequest = new HasGetStatusValue.GetStatusValueRequest(context, dynamicParameters);
         value = ((HasGetStatusValue) source).getStatusValue(valueRequest);
 
-        if (entity instanceof HasSourceServerUpdates) {
-            addListenValueIfRequire(((HasSourceServerUpdates) entity).getListenSourceUpdates(), entity.getEntityID(),
-                    source, dynamicParameters, seriesEntityId, dataSourceEntityID,
-                    object -> resultConverter.apply(((HasGetStatusValue) source).getStatusValue(valueRequest)));
-        }
+        addListenValueIfRequire(entity.getEntityID(),
+                source, dynamicParameters, seriesEntityId, dataSourceEntityID,
+                object -> resultConverter.apply(((HasGetStatusValue) source).getStatusValue(valueRequest)));
         return value;
     }
 }
