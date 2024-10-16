@@ -22,6 +22,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -76,12 +77,16 @@ public class TimeSeriesUtil {
     }
 
     public <T extends HasDynamicParameterFields & HasChartDataSource> void addChangeListenerForTimeSeriesEntity(
-            TimeSeriesContext<T> timeSeriesContext,
-            HasChartTimePeriod.TimePeriod timePeriod, String entityID, Set<T> series, Object source) {
+            @NotNull TimeSeriesContext<T> timeSeriesContext,
+            @NotNull HasChartTimePeriod.TimePeriod timePeriod,
+            @NotNull String entityID,
+            @NotNull Set<T> series,
+            @NotNull Object source) {
 
         T item = timeSeriesContext.getSeriesEntity();
-        ((HasTimeValueSeries) source).addUpdateValueListener(context, entityID + "_timeSeries",
-                item.getChartDynamicParameterFields(),
+        String discriminator = entityID + "_timeSeries";
+        var listener = ((HasTimeValueSeries) source).addUpdateValueListener(context, discriminator,
+                Duration.ofSeconds(60), item.getChartDynamicParameterFields(),
                 o -> {
                     Set<TimeSeriesContext<T>> cts = buildTimeSeriesFromDataSource(timePeriod.snapshot(), item, timeSeriesContext.getSeries());
                     TimeSeriesValues<T> values = timeSeriesContext.getOwner();
@@ -94,6 +99,7 @@ public class TimeSeriesUtil {
                         context.ui().sendDynamicUpdateImpl(item.getChartDataSource(), entityID, fullUpdatedData);
                     }
                 });
+        context.ui().setUpdateListenerRefreshHandler(entityID, discriminator, listener);
     }
 
     /**
@@ -139,7 +145,7 @@ public class TimeSeriesUtil {
                                             @NotNull Function<Object, R> valueSupplier) {
         AtomicReference<R> valueRef = new AtomicReference<>(null);
         String key = Objects.toString(seriesEntityId, entityID);
-        ((HasUpdateValueListener) source).addUpdateValueListener(context, key, dynamicParameters,
+        var listener = ((HasUpdateValueListener) source).addUpdateValueListener(context, key, Duration.ofSeconds(60), dynamicParameters,
                 o -> {
                     R updatedValue = valueSupplier.apply(o);
                     if (valueRef.get() != updatedValue) {
@@ -148,6 +154,7 @@ public class TimeSeriesUtil {
                                 new WidgetChartsController.SingleValueData(updatedValue, seriesEntityId));
                     }
                 });
+        context.ui().setUpdateListenerRefreshHandler(dataSourceEntityID, key, listener);
     }
 
     public <T extends HasDynamicParameterFields & HasChartDataSource> Set<TimeSeriesContext<T>>

@@ -40,6 +40,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -175,8 +176,13 @@ public class WorkspaceVariable extends BaseEntity
     }
 
     @Override
-    public void addUpdateValueListener(Context context, String discriminator, JSONObject dynamicParameters, Consumer<State> listener) {
-        context.event().addEventListener(getFullEntityID(), discriminator, listener);
+    public UpdateValueListener addUpdateValueListener(@NotNull Context context,
+                                                      @NotNull String discriminator,
+                                                      @NotNull Duration ttl,
+                                                      @NotNull JSONObject dynamicParameters,
+                                                      @NotNull Consumer<State> listener) {
+        context.event().addEventListener(getFullEntityID(), discriminator, ttl, listener);
+        return () -> context.event().addEventListener(getFullEntityID(), discriminator, ttl, listener);
     }
 
     public String getParentId() {

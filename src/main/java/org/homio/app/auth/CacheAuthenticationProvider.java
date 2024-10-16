@@ -22,7 +22,7 @@ public class CacheAuthenticationProvider extends DaoAuthenticationProvider {
 
     public CacheAuthenticationProvider() {
         this.attemptsCache = CacheBuilder.newBuilder().
-                expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
+                expireAfterWrite(10, TimeUnit.MINUTES).build(new CacheLoader<>() {
                     public @NotNull Integer load(String ignore) {
                         return 0;
                     }

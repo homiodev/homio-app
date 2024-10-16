@@ -18,6 +18,7 @@ import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.version.HasFirmwareVersion;
+import org.homio.api.entity.widget.ability.HasUpdateValueListener;
 import org.homio.api.exception.ServerException;
 import org.homio.api.fs.TreeNode;
 import org.homio.api.model.ActionResponseModel;
@@ -40,7 +41,6 @@ import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
 import org.homio.api.util.NotificationLevel;
 import org.homio.api.widget.CustomWidgetConfigurableEntity;
-import org.homio.api.widget.CustomWidgetDataStore;
 import org.homio.app.builder.ui.UIInputBuilderImpl;
 import org.homio.app.builder.ui.UIInputEntityActionHandler;
 import org.homio.app.config.WebSocketConfig;
@@ -207,8 +207,13 @@ public class ContextUIImpl implements ContextUI {
             duc.timeout = System.currentTimeMillis(); // refresh timer
             duc.registerCounter.incrementAndGet();
         }
-        context.event().addEventBehaviourListener(request.getDynamicUpdateId(), request.getEntityID(),
-                Duration.ofSeconds(60), value -> sendDynamicUpdateSupplied(request, () -> value));
+        UiUpdateListener uiUpdateListener = updateListenerRefreshHandler.get(request.getEntityID() + "~~~" + request.getDynamicUpdateId());
+        if(uiUpdateListener != null) {
+            uiUpdateListener.listener.refresh();
+        } else {
+            context.event().addEventBehaviourListener(request.getDynamicUpdateId(), request.getEntityID(),
+                    Duration.ofSeconds(60), value -> sendDynamicUpdateSupplied(request, () -> value));
+        }
     }
 
     public void unRegisterForUpdates(DynamicUpdateRequest request) {
@@ -639,6 +644,14 @@ public class ContextUIImpl implements ContextUI {
         }
         return action;
     }
+
+    private final Map<String, UiUpdateListener> updateListenerRefreshHandler = new ConcurrentHashMap<>();
+
+    public void setUpdateListenerRefreshHandler(String dataSourceEntityID, String discriminator, HasUpdateValueListener.UpdateValueListener listener) {
+        updateListenerRefreshHandler.put(discriminator + "~~~" + dataSourceEntityID, new UiUpdateListener(dataSourceEntityID, discriminator, listener));
+    }
+
+    private record UiUpdateListener(String dataSourceEntityID, String discriminator, HasUpdateValueListener.UpdateValueListener listener){}
 
     public enum GlobalSendType {
         headerMenuButton,

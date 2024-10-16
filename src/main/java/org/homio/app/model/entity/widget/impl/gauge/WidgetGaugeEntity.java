@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.*;
 import org.homio.app.model.entity.widget.UIFieldMarkers;
+import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.attributes.*;
 import org.jetbrains.annotations.NotNull;
@@ -94,6 +95,7 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
 
     @UIField(order = 1)
     @UIFieldGroup(value = "TEXT", order = 20, borderColor = "#D4B72B")
+    @UIFieldOptionFontSize
     public String getUnit() {
         return getJsonData("unit", "℃");
     }

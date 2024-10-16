@@ -41,7 +41,6 @@ public class WidgetDisplayEntity
 
     @UIField(order = 1)
     @UIFieldGroup(value = "NAME", order = 3)
-    @UIFieldOptionFontSize
     public String getName() {
         return super.getName();
     }
