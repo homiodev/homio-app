@@ -35,7 +35,7 @@ public class TimeSeriesUtil {
 
     private final ContextImpl context;
 
-    public <T extends HasDynamicParameterFields & HasChartDataSource> WidgetChartsController.TimeSeriesChartData<ChartDataset>
+    public <T extends HasDynamicParameterFields & HasChartDataSource & HasEntityIdentifier> WidgetChartsController.TimeSeriesChartData<ChartDataset>
     buildTimeSeriesFullData(String entityID, HasChartTimePeriod.TimePeriod timePeriod,
                             boolean addUpdateListener, Set<T> series) {
 
@@ -65,10 +65,11 @@ public class TimeSeriesUtil {
             for (TimeSeriesContext<T> item : timeSeriesValues.getItemSeries()) {
                 T seriesEntity = item.getSeriesEntity();
                 timeSeriesChartData.getDatasets().add(seriesEntity.buildTargetDataset(item));
+                String seriesEntityID = seriesEntity.getEntityID();
 
                 // add update listeners
                 if (addUpdateListener) {
-                    addChangeListenerForTimeSeriesEntity(item, timePeriod, entityID, series, timeSeriesValues.getSource());
+                    addChangeListenerForTimeSeriesEntity(item, timePeriod, seriesEntityID, series, timeSeriesValues.getSource());
                 }
             }
         }
@@ -76,16 +77,16 @@ public class TimeSeriesUtil {
         return timeSeriesChartData;
     }
 
-    public <T extends HasDynamicParameterFields & HasChartDataSource> void addChangeListenerForTimeSeriesEntity(
+    public <T extends HasDynamicParameterFields & HasChartDataSource & HasEntityIdentifier> void addChangeListenerForTimeSeriesEntity(
             @NotNull TimeSeriesContext<T> timeSeriesContext,
             @NotNull HasChartTimePeriod.TimePeriod timePeriod,
             @NotNull String entityID,
             @NotNull Set<T> series,
             @NotNull Object source) {
 
+        HasTimeValueSeries sourceValue = (HasTimeValueSeries) source;
         T item = timeSeriesContext.getSeriesEntity();
-        String discriminator = entityID + "_timeSeries";
-        var listener = ((HasTimeValueSeries) source).addUpdateValueListener(context, discriminator,
+        var listener = (sourceValue).addUpdateValueListener(context, entityID,
                 Duration.ofSeconds(60), item.getChartDynamicParameterFields(),
                 o -> {
                     Set<TimeSeriesContext<T>> cts = buildTimeSeriesFromDataSource(timePeriod.snapshot(), item, timeSeriesContext.getSeries());
@@ -99,7 +100,7 @@ public class TimeSeriesUtil {
                         context.ui().sendDynamicUpdateImpl(item.getChartDataSource(), entityID, fullUpdatedData);
                     }
                 });
-        context.ui().setUpdateListenerRefreshHandler(entityID, discriminator, listener);
+        context.ui().setUpdateListenerRefreshHandler(sourceValue.getEntityID(), entityID, listener);
     }
 
     /**
@@ -120,8 +121,8 @@ public class TimeSeriesUtil {
             return null;
         }
 
-        Object value = getValueFromGetStatusValue(entity, resultConverter, seriesEntityId, dynamicParameters, source, valueDataSource);
-        return resultConverter.apply(value);
+        var param = new TimeSeriesUtil.RequestParameters(entity.getEntityID(), source, dynamicParameters,seriesEntityId, valueDataSource);
+        return getValueFromGetStatusValue(resultConverter, dynamicParameters, source, param);
     }
 
     public <T extends WidgetEntity<T>, DS extends HasSingleValueDataSource, R> R
@@ -135,26 +136,24 @@ public class TimeSeriesUtil {
         }
         String dataSourceEntityID = dataSource.getValueDataSource();
 
-        Object value = getValueFromGetStatusValue(entity, resultConverter, seriesEntityId, dynamicParameters, source, dataSourceEntityID);
-
-        return resultConverter.apply(value);
+        var param = new TimeSeriesUtil.RequestParameters(entity.getEntityID(), source, dynamicParameters,seriesEntityId, dataSourceEntityID);
+        return getValueFromGetStatusValue(resultConverter, dynamicParameters, source, param);
     }
 
-    public <R> void addListenValueIfRequire(@NotNull String entityID, @NotNull Object source,
-                                            @Nullable JSONObject dynamicParameters, @Nullable String seriesEntityId, @NotNull String dataSourceEntityID,
+    public <R> void addListenValueIfRequire(@NotNull RequestParameters request,
                                             @NotNull Function<Object, R> valueSupplier) {
         AtomicReference<R> valueRef = new AtomicReference<>(null);
-        String key = Objects.toString(seriesEntityId, entityID);
-        var listener = ((HasUpdateValueListener) source).addUpdateValueListener(context, key, Duration.ofSeconds(60), dynamicParameters,
+        String key = request.getKey();
+        var refreshHandler = ((HasUpdateValueListener) request.source).addUpdateValueListener(context, key, Duration.ofSeconds(60), request.dynamicParameters,
                 o -> {
                     R updatedValue = valueSupplier.apply(o);
                     if (valueRef.get() != updatedValue) {
                         valueRef.set(updatedValue);
-                        context.ui().sendDynamicUpdateImpl(dataSourceEntityID, key,
-                                new WidgetChartsController.SingleValueData(updatedValue, seriesEntityId));
+                        context.ui().sendDynamicUpdateImpl(request.dataSourceEntityID, key,
+                                new WidgetChartsController.SingleValueData(updatedValue, request.seriesEntityId));
                     }
                 });
-        context.ui().setUpdateListenerRefreshHandler(dataSourceEntityID, key, listener);
+        context.ui().setUpdateListenerRefreshHandler(request.dataSourceEntityID, key, refreshHandler);
     }
 
     public <T extends HasDynamicParameterFields & HasChartDataSource> Set<TimeSeriesContext<T>>
@@ -185,21 +184,27 @@ public class TimeSeriesUtil {
         return result;
     }
 
-    private <T extends WidgetEntity<T>, R> Object getValueFromGetStatusValue(
-            @NotNull T entity,
+    private <T extends WidgetEntity<T>, R> R getValueFromGetStatusValue(
             @NotNull Function<Object, R> resultConverter,
-            String seriesEntityId,
             JSONObject dynamicParameters,
             Object source,
-            String dataSourceEntityID) {
+            TimeSeriesUtil.RequestParameters param) {
 
         Object value;
         HasGetStatusValue.GetStatusValueRequest valueRequest = new HasGetStatusValue.GetStatusValueRequest(context, dynamicParameters);
         value = ((HasGetStatusValue) source).getStatusValue(valueRequest);
 
-        addListenValueIfRequire(entity.getEntityID(),
-                source, dynamicParameters, seriesEntityId, dataSourceEntityID,
-                object -> resultConverter.apply(((HasGetStatusValue) source).getStatusValue(valueRequest)));
-        return value;
+        addListenValueIfRequire(param, o -> resultConverter.apply(((HasGetStatusValue) source).getStatusValue(valueRequest)));
+        return resultConverter.apply(value);
+    }
+
+    public record RequestParameters(String entityID,
+                             Object source,
+                             JSONObject dynamicParameters,
+                             String seriesEntityId,
+                             String dataSourceEntityID) {
+        public String getKey() {
+            return Objects.toString(seriesEntityId, entityID);
+        }
     }
 }

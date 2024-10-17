@@ -47,11 +47,11 @@ public class LineChartBuilderImpl extends WidgetBaseBuilderImpl<LineChartBuilder
         return this;
     }
 
-    @Override
+    /*@Override
     public @NotNull LineChartBuilder setFetchDataFromServerInterval(int value) {
         widget.setFetchDataFromServerInterval(value);
         return this;
-    }
+    }*/
 }
 
 @RequiredArgsConstructor

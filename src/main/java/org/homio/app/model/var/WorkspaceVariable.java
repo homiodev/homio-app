@@ -435,6 +435,7 @@ public class WorkspaceVariable extends BaseEntity
     }
 
     @JsonIgnore
+    @Override
     public String getFullEntityID() {
         String key = workspaceGroup.getEntityID() + "-->" + getEntityID();
         WorkspaceGroup parent = workspaceGroup.getParent();

@@ -14,6 +14,7 @@ import org.homio.app.service.device.LocalBoardUsbListener.DiskInfo;
 import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -23,6 +24,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static java.lang.Long.parseLong;
 import static org.homio.hquery.hardware.other.MachineHardwareRepository.osBean;
@@ -32,6 +35,11 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
         implements HasEntityIdentifier {
 
     public static final long TOTAL_MEMORY = osBean.getTotalMemorySize();
+    private final Pattern memTotalPattern = Pattern.compile("MemTotal:\\s+(\\d+) kB");
+    private final Pattern memFreePattern = Pattern.compile("MemFree:\\s+(\\d+) kB");
+    private final Pattern buffersPattern = Pattern.compile("Buffers:\\s+(\\d+) kB");
+    private final Pattern cachedPattern = Pattern.compile("Cached:\\s+(\\d+) kB");
+
     private final LocalBoardUsbListener usbListener;
     private final MachineHardwareRepository hardwareRepo;
 
@@ -137,7 +145,12 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
                     .execute(() -> {
                         cpuUsageVar.set(round100((float) (osBean.getCpuLoad() * 100F)));
                         javaCpuUsageVar.set(round100((float) (osBean.getProcessCpuLoad() * 100F)));
-                        memoryVar.set(round100((TOTAL_MEMORY - osBean.getFreeMemorySize()) / (float) TOTAL_MEMORY * 100F));
+                        // float round100 = round100((TOTAL_MEMORY - osBean.getFreeMemorySize()) / (float) TOTAL_MEMORY * 100F);
+                        Double usedMemory = getUsedMemory();
+                        if (usedMemory != null) {
+                            memoryVar.set(Math.round(usedMemory * 100.0) / 100.0);
+                        }
+
                         if (ableToFetchCpuTemperature) {
                             try {
                                 cpuTemp.set(hardwareRepo.getCpuTemperature());
@@ -159,6 +172,22 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
             }
         }
         usbListener.listenUsbDevices();
+    }
+
+    private Double getUsedMemory() throws IOException {
+        String memInfo = new String(Files.readAllBytes(Paths.get("/proc/meminfo")));
+        long memTotal = extractValue(memInfo, memTotalPattern);
+        long memFree = extractValue(memInfo, memFreePattern);
+        long buffers = extractValue(memInfo, buffersPattern);
+        long cached = extractValue(memInfo, cachedPattern);
+
+
+        if (memTotal > 0) {
+            long availableMemory = memFree + buffers + cached;
+            long usedMemory = memTotal - availableMemory;
+            return (usedMemory / (double) memTotal) * 100;
+        }
+        return null;
     }
 
     public long getNetworkDiff(String iface, Function<NetworkStat, Long> handler) {
@@ -187,6 +216,14 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
 
     @Override
     public void destroy(boolean forRestart, Exception ex) {
+    }
+
+    private static long extractValue(String memInfo, Pattern pattern) {
+        Matcher matcher = pattern.matcher(memInfo);
+        if (matcher.find()) {
+            return Long.parseLong(matcher.group(1));
+        }
+        return -1;
     }
 
     public record NetworkStat(long rx, long tx) {

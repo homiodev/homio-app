@@ -67,7 +67,7 @@ public interface HasLineChartBehaviour extends
         setJsonData("tns", value);
     }
 
-    @UIField(order = 5)
+    /*@UIField(order = 5)
     @UIFieldReadDefaultValue
     @UIFieldSlider(min = 10, max = 600)
     @UIFieldGroup("CHART_UI")
@@ -77,7 +77,7 @@ public interface HasLineChartBehaviour extends
 
     default void setFetchDataFromServerInterval(int value) {
         setJsonData("fsfsi", value);
-    }
+    }*/
 
     @UIField(order = 1)
     @UIFieldReadDefaultValue

@@ -65,11 +65,11 @@ public class BarTimeChartBuilderImpl extends WidgetBaseBuilderImpl<BarTimeChartB
         return this;
     }
 
-    @Override
+    /*@Override
     public @NotNull BarTimeChartBuilder setFetchDataFromServerInterval(int value) {
         widget.setFetchDataFromServerInterval(value);
         return this;
-    }
+    }*/
 }
 
 @RequiredArgsConstructor
