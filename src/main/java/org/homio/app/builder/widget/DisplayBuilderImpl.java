@@ -96,12 +96,6 @@ public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuild
     }
 
     @Override
-    public @NotNull DisplayWidgetBuilder setShowDynamicLine(@Nullable Boolean value) {
-        widget.setShowDynamicLine(value);
-        return this;
-    }
-
-    @Override
     public @NotNull DisplayWidgetBuilder setDynamicLineColor(@Nullable String value) {
         widget.setDynamicLineColor(value);
         return this;

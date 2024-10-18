@@ -115,13 +115,6 @@ public class WorkspaceVariable extends BaseEntity
         this.workspaceGroup = workspaceGroup;
     }
 
-    public WorkspaceVariable(String variableId, String variableName, WorkspaceGroup workspaceGroup, VariableType variableType) {
-        this(workspaceGroup);
-        this.restriction = variableType;
-        this.setName(variableName);
-        this.setEntityID(variableId);
-    }
-
     public int getBackupStorageCount() {
         return backup ? context().getBean(VariableBackupRepository.class).count(this) : 0;
     }
@@ -435,7 +428,6 @@ public class WorkspaceVariable extends BaseEntity
     }
 
     @JsonIgnore
-    @Override
     public String getFullEntityID() {
         String key = workspaceGroup.getEntityID() + "-->" + getEntityID();
         WorkspaceGroup parent = workspaceGroup.getParent();

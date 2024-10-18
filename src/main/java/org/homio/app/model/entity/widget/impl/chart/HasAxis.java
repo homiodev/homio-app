@@ -1,5 +1,6 @@
 package org.homio.app.model.entity.widget.impl.chart;
 
+import org.homio.api.ContextWidget;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
@@ -48,11 +49,11 @@ public interface HasAxis extends HasJsonData {
 
     @UIField(order = 90)
     @UIFieldGroup("CHART_AXIS")
-    default String getAxisDateFormat() {
-        return getJsonData("timeF");
+    default ContextWidget.AxisDateFormat getAxisDateFormat() {
+        return getJsonDataEnum("timeF", ContextWidget.AxisDateFormat.auto);
     }
 
-    default void setAxisDateFormat(String value) {
+    default void setAxisDateFormat(ContextWidget.AxisDateFormat value) {
         setJsonData("timeF", value);
     }
 }

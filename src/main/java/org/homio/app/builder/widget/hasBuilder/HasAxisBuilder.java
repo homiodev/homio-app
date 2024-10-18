@@ -1,5 +1,6 @@
 package org.homio.app.builder.widget.hasBuilder;
 
+import org.homio.api.ContextWidget;
 import org.homio.api.ContextWidget.HasAxis;
 
 public interface HasAxisBuilder<T extends org.homio.app.model.entity.widget.impl.chart.HasAxis, R>
@@ -32,7 +33,7 @@ public interface HasAxisBuilder<T extends org.homio.app.model.entity.widget.impl
     }
 
     @Override
-    default R setAxisDateFormat(String value) {
+    default R setAxisDateFormat(ContextWidget.AxisDateFormat value) {
         getWidget().setAxisDateFormat(value);
         return (R) this;
     }

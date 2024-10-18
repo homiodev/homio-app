@@ -86,6 +86,7 @@ public class TimeSeriesUtil {
 
         HasTimeValueSeries sourceValue = (HasTimeValueSeries) source;
         T item = timeSeriesContext.getSeriesEntity();
+        String dataSourceEntityID = item.getChartDataSource();
         var listener = (sourceValue).addUpdateValueListener(context, entityID,
                 Duration.ofSeconds(60), item.getChartDynamicParameterFields(),
                 o -> {
@@ -97,10 +98,10 @@ public class TimeSeriesUtil {
                         WidgetChartsController.TimeSeriesChartData<ChartDataset> fullUpdatedData =
                                 this.buildTimeSeriesFullData(entityID, timePeriod, false, series);
 
-                        context.ui().sendDynamicUpdateImpl(item.getChartDataSource(), entityID, fullUpdatedData);
+                        context.ui().sendDynamicUpdateImpl(dataSourceEntityID, entityID, fullUpdatedData);
                     }
                 });
-        context.ui().setUpdateListenerRefreshHandler(sourceValue.getEntityID(), entityID, listener);
+        context.ui().setUpdateListenerRefreshHandler(dataSourceEntityID, entityID, listener);
     }
 
     /**

@@ -8,9 +8,9 @@ public interface HasHorizontalLine extends HasJsonData {
 
     @UIField(order = 1)
     @UIFieldGroup(order = 59, value = "CHART_HL", borderColor = "#953CEE")
-    @UIFieldSlider(min = -1, max = 100)
+    @UIFieldSlider(min = 0, max = 100)
     default Integer getSingleLinePos() {
-        return getJsonData("slpos", -1);
+        return getJsonData("slpos", 50);
     }
 
     default void setSingleLinePos(Integer value) {
@@ -31,23 +31,13 @@ public interface HasHorizontalLine extends HasJsonData {
 
     @UIField(order = 3)
     @UIFieldGroup("CHART_HL")
-    @UIFieldSlider(min = 1, max = 10)
+    @UIFieldSlider(min = 0, max = 10)
     default Integer getSingleLineWidth() {
-        return getJsonData("slwidth", 1);
+        return getJsonData("slwidth", 0);
     }
 
     default void setSingleLineWidth(Integer value) {
         setJsonData("slwidth", value);
-    }
-
-    @UIField(order = 4)
-    @UIFieldGroup("CHART_HL")
-    default Boolean isShowDynamicLine() {
-        return getJsonData("sdyn", Boolean.FALSE);
-    }
-
-    default void setShowDynamicLine(Boolean value) {
-        setJsonData("sdyn", value);
     }
 
     @UIField(order = 5)
@@ -64,7 +54,7 @@ public interface HasHorizontalLine extends HasJsonData {
 
     @UIField(order = 6)
     @UIFieldGroup("CHART_HL")
-    @UIFieldSlider(min = 1, max = 10)
+    @UIFieldSlider(min = 0, max = 10)
     default Integer getDynamicLineWidth() {
         return getJsonData("dynlw", 1);
     }

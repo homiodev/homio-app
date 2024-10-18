@@ -18,9 +18,9 @@ public final class EvaluateDatesAndValues {
         return values.stream().map(items -> {
                     if (items.isEmpty()) {
                         return null;
-                    } else if (items.size() == 1) {
+                    }/* else if (items.size() == 1) {
                         return items.get(0);
-                    }
+                    }*/
                     Stream<Float> stream = items.stream();
                     if (aggregationType.isRequireSorting()) {
                         stream = stream.sorted();
