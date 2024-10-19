@@ -2,35 +2,40 @@ package org.homio.app.model.entity.widget.impl.gauge;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
+import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
+import org.homio.app.model.entity.widget.UIEditReloadWidget;
 import org.homio.app.model.entity.widget.UIFieldMarkers;
 import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.attributes.*;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
+
 @Entity
 public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
-        implements HasSingleValueDataSource,
+        implements
+        HasSingleValueDataSource,
+        HasSetSingleValueDataSource,
         HasIcon,
         HasValueConverter,
         HasTextConverter,
         HasName,
-        HasValueTemplate {
+        HasValueTemplate,
+        WidgetGaugeUITab {
 
-    @UIField(order = 1)
-    @UIFieldGroup("UI")
-    public GaugeType getDisplayType() {
-        return getJsonDataEnum("displayType", GaugeType.arch);
+    @Override
+    @JsonIgnore
+    @UIFieldIgnore
+    public List<String> getStyle() {
+        return super.getStyle();
     }
 
-    public void setDisplayType(GaugeType value) {
-        setJsonDataEnum("displayType", value);
-    }
-
-    @UIField(order = 2, label = "gauge.min")
-    @UIFieldGroup("UI")
+    @UIField(order = 100, label = "gauge.min")
+    @UIFieldGroup("VALUE")
     public Integer getMin() {
         return getJsonData("min", 0);
     }
@@ -39,8 +44,8 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
         setJsonData("min", value);
     }
 
-    @UIField(order = 3, label = "gauge.max")
-    @UIFieldGroup("UI")
+    @UIField(order = 110, label = "gauge.max")
+    @UIFieldGroup("VALUE")
     public Integer getMax() {
         return getJsonData("max", 255);
     }
@@ -49,52 +54,29 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
         setJsonData("max", value);
     }
 
-    @UIField(order = 4, type = UIFieldType.Slider, label = "gauge.thick")
-    @UIFieldNumber(min = 1, max = 20)
-    @UIFieldGroup("UI")
-    public Integer getThick() {
-        return getJsonData("thick", 6);
+    @Override
+    @UIField(order = 12)
+    @UIFieldGroup(value = "SET_VALUE", order = 2, borderColor = "#4CC9FE")
+    @UIFieldEntityByClassSelection(HasSetStatusValue.class)
+    @UIEditReloadWidget
+    public String getSetValueDataSource() {
+        return HasSetSingleValueDataSource.super.getSetValueDataSource();
     }
 
-    public void setThick(Integer value) {
-        setJsonData("thick", value);
-    }
-
-    @UIField(order = 5)
-    @UIFieldGroup("UI")
-    public LineType getGaugeCapType() {
-        return getJsonDataEnum("gaugeCapType", LineType.round);
-    }
-
-    public void setGaugeCapType(LineType lineType) {
-        setJsonDataEnum("gaugeCapType", lineType);
-    }
-
-    @UIField(order = 6)
-    @UIFieldGroup("UI")
-    @UIFieldColorPicker(allowThreshold = true)
+    @UIField(order = 250)
+    @UIFieldSlider(min = 0, max = 2)
+    @UIFieldGroup("SET_VALUE")
     @UIFieldReadDefaultValue
-    public String getGaugeForeground() {
-        return getJsonData("gfc", UI.Color.WHITE);
+    public int getValuePrecision() {
+        return getJsonData("prec", 0);
     }
 
-    public void setGaugeForeground(String value) {
-        setJsonData("gfc", value);
-    }
-
-    @UIField(order = 1)
-    @UIFieldGroup("UI")
-    @UIFieldMarkers(UIFieldMarkers.MarkerOP.opacity)
-    public String getSliceThreshold() {
-        return getJsonData("slices", "");
-    }
-
-    public void setSliceThreshold(String value) {
-        setJsonData("slices", value);
+    public void setValuePrecision(int value) {
+        setJsonData("prec", value);
     }
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "TEXT", order = 20, borderColor = "#D4B72B")
+    @UIFieldGroup("NAME")
     @UIFieldOptionFontSize
     public String getUnit() {
         return getJsonData("unit", "℃");
@@ -114,7 +96,7 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
     }
 
     @UIField(order = 2)
-    @UIFieldGroup("TEXT")
+    @UIFieldGroup("NAME")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
     public String getUnitColor() {
@@ -123,76 +105,6 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
 
     public void setUnitColor(String value) {
         setJsonData("uc", value);
-    }
-
-    @UIField(order = 3, label = "label")
-    @UIFieldGroup("TEXT")
-    public String getName() {
-        return super.getName();
-    }
-
-    @UIField(order = 4)
-    @UIFieldGroup("TEXT")
-    @UIFieldColorPicker(allowThreshold = true)
-    @UIFieldReadDefaultValue
-    public String getTextColor() {
-        return getJsonData("tc", UI.Color.WHITE);
-    }
-
-    public void setTextColor(String value) {
-        setJsonData("tc", value);
-    }
-
-    @UIField(order = 24)
-    public Boolean getAnimations() {
-        return getJsonData("animations", Boolean.FALSE);
-    }
-
-    public void setAnimations(Boolean value) {
-        setJsonData("animations", value);
-    }
-
-    @UIField(order = 1)
-    @UIFieldGroup(value = "MARKERS", order = 500, borderColor = "#1F85B8")
-    @UIFieldMarkers(UIFieldMarkers.MarkerOP.label)
-    public String getMarkers() {
-        return getJsonData("markers", "");
-    }
-
-    public void setMarkers(String value) {
-        setJsonData("markers", value);
-    }
-
-    @UIField(order = 2)
-    @UIFieldGroup("MARKERS")
-    public MarkerType getMarkerType() {
-        return getJsonDataEnum("mt", MarkerType.line);
-    }
-
-    public void setMarkerType(MarkerType value) {
-        setJsonDataEnum("mt", value);
-    }
-
-    @UIField(order = 3)
-    @UIFieldGroup("MARKERS")
-    @UIFieldSlider(min = 8, max = 14)
-    public int getMarkerFontSize() {
-        return getJsonData("mfs", 12);
-    }
-
-    public void setMarkerFontSize(int value) {
-        setJsonData("mfs", value);
-    }
-
-    @UIField(order = 4)
-    @UIFieldGroup("MARKERS")
-    @UIFieldSlider(min = 2, max = 16)
-    public int getMarkerSize() {
-        return getJsonData("ms", 8);
-    }
-
-    public void setMarkerSize(int value) {
-        setJsonData("ms", value);
     }
 
     @Override
@@ -220,7 +132,7 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
     @Override
     public void beforePersist() {
         if (!getJsonData().has("gfg")) {
-            setGaugeForeground(UI.Color.random());
+            setForeground(UI.Color.random());
         }
         HasIcon.randomColor(this);
     }

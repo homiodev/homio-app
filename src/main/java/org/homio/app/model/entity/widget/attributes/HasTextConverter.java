@@ -6,7 +6,8 @@ import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 public interface HasTextConverter extends HasDynamicParameterFields {
 
     @UIField(order = 100)
-    @UIFieldGroup("TEXT")
+    @UIFieldGroup(value = "TEXT", order = 19, borderColor = "#FFBF61")
+    @UIFieldTab(value = "ADVANCED", order = 10, color = "#FD8B51")
     @UIFieldCodeEditor(autoFormat = true, editorType = MonacoLanguage.JavaScript)
     @UIFieldReadDefaultValue
     default String getTextConverter() {

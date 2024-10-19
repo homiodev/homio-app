@@ -471,6 +471,10 @@ public class UIFieldUtils {
         var fieldTab = fieldContext.getDeclaredAnnotation(UIFieldTab.class);
         if (fieldTab != null) {
             jsonTypeMetadata.put("tab", fieldTab.value());
+            if (fieldTab.order() > 1) {
+                jsonTypeMetadata.put("tabOrder", fieldTab.order());
+            }
+            putIfNonEmpty(jsonTypeMetadata, "tabColor", fieldTab.color());
         }
 
         var fieldLink = fieldContext.getDeclaredAnnotation(UIFieldLinkToEntity.class);
