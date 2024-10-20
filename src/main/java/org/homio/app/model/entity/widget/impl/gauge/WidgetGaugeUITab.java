@@ -1,8 +1,11 @@
 package org.homio.app.model.entity.widget.impl.gauge;
 
 import org.homio.api.entity.HasJsonData;
+import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
+import org.homio.app.model.entity.widget.UIEditReloadWidget;
 import org.homio.app.model.entity.widget.UIFieldMarkers;
 
 public interface WidgetGaugeUITab extends HasJsonData {
@@ -42,11 +45,11 @@ public interface WidgetGaugeUITab extends HasJsonData {
     @UIFieldTab("UI")
     @UIFieldColorPicker(allowThreshold = true, pulseColorCondition = true)
     @UIFieldReadDefaultValue
-    default String getForeground() {
+    default String getGaugeForeground() {
         return getJsonData("gfc", UI.Color.PRIMARY_COLOR);
     }
 
-    default void setForeground(String value) {
+    default void setGaugeForeground(String value) {
         setJsonData("gfc", value);
     }
 
@@ -54,11 +57,11 @@ public interface WidgetGaugeUITab extends HasJsonData {
     @UIFieldTab("UI")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
-    default String getBackground() {
+    default String getGaugeBackground() {
         return getJsonData("gbg", "#444444");
     }
 
-    default void setBackground(String value) {
+    default void setGaugeBackground(String value) {
         setJsonData("gbg", value);
     }
 
@@ -110,6 +113,48 @@ public interface WidgetGaugeUITab extends HasJsonData {
         setJsonData("dotc", value);
     }
 
+    @UIField(order = 12)
+    @UIFieldTab("UI")
+    default Boolean getDrawForegroundAsSegments() {
+        return getJsonData("dfass", Boolean.FALSE);
+    }
+
+    default void setDrawForegroundAsSegments(Boolean value) {
+        setJsonData("dfass", value);
+    }
+
+    @UIField(order = 13)
+    @UIFieldTab("UI")
+    default Boolean getDrawBackgroundAsSegments() {
+        return getJsonData("dbass", Boolean.FALSE);
+    }
+
+    default void setDrawBackgroundAsSegments(Boolean value) {
+        setJsonData("dbass", value);
+    }
+
+    @UIField(order = 14, type = UIFieldType.Slider)
+    @UIFieldSlider(min = 1, max = 200, step = 2)
+    @UIFieldTab("UI")
+    default Integer getSegmentLength() {
+        return getJsonData("seg_len", 1);
+    }
+
+    default void setSegmentLength(Integer value) {
+        setJsonData("seg_len", value);
+    }
+
+    @UIField(order = 14, type = UIFieldType.Slider)
+    @UIFieldSlider(min = 1, max = 200, step = 2)
+    @UIFieldTab("UI")
+    default Integer getSegmentGap() {
+        return getJsonData("seg_gap", 1);
+    }
+
+    default void setSegmentGap(Integer value) {
+        setJsonData("seg_gap", value);
+    }
+
     @UIField(order = 20)
     @UIFieldTab("UI")
     @UIFieldMarkers(UIFieldMarkers.MarkerOP.opacity)
@@ -121,14 +166,46 @@ public interface WidgetGaugeUITab extends HasJsonData {
         setJsonData("slices", value);
     }
 
-    @UIField(order = 24)
+    @UIField(order = 25)
     @UIFieldTab("UI")
-    default Boolean getAnimations() {
-        return getJsonData("animations", Boolean.FALSE);
+    @UIFieldSlider(min = 0, max = 1500, step = 100)
+    default int getAnimateDuration() {
+        return getJsonData("animdur", 500);
     }
 
-    default void setAnimations(Boolean value) {
-        setJsonData("animations", value);
+    default void getAnimateDuration(int value) {
+        setJsonData("animdur", value);
+    }
+
+    @UIField(order = 30)
+    @UIFieldTab("UI")
+    default String getBackground() {
+        return getJsonData("back");
+    }
+
+    default void setBackground(String value) {
+        setJsonData("back", value);
+    }
+
+    @UIField(order = 35)
+    @UIFieldTab("UI")
+    default Boolean getDrawNeedle() {
+        return getJsonData("ndl", Boolean.FALSE);
+    }
+
+    default void setDrawNeedle(Boolean value) {
+        setJsonData("ndl", value);
+    }
+
+    @UIField(order = 40)
+    @UIFieldTab("UI")
+    @UIFieldColorPicker
+    default String getNeedleColor() {
+        return getJsonData("ndlClr", UI.Color.PRIMARY_COLOR);
+    }
+
+    default void setNeedleColor(String value) {
+        setJsonData("ndlClr", value);
     }
 
     @UIField(order = 1)

@@ -2,6 +2,7 @@ package org.homio.app.model.entity.widget.impl.gauge;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
+import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.*;
@@ -76,6 +77,11 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
     }
 
     @UIField(order = 1)
+    public String getName() {
+        return super.getName();
+    }
+
+    @UIField(order = 2)
     @UIFieldGroup("NAME")
     @UIFieldOptionFontSize
     public String getUnit() {
@@ -95,7 +101,7 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
         setJsonData("unitFS", value);
     }
 
-    @UIField(order = 2)
+    @UIField(order = 3)
     @UIFieldGroup("NAME")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
@@ -129,10 +135,49 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
         return HasValueTemplate.super.getValueTemplate();
     }
 
+    @UIField(order = 10, required = true)
+    @UIFieldGroup(value = "SECOND_VALUE", order = 20, borderColor = "#BF00FF")
+    @UIFieldTab("ADVANCED")
+    @UIFieldEntityByClassSelection(HasGetStatusValue.class)
+    @UIEditReloadWidget
+    public String getSecondValueDataSource() {
+        return getJsonData("vds");
+    }
+
+    public void setSecondValueDataSource(String value) {
+        setJsonData("vds", value);
+    }
+
+    @UIField(order = 9)
+    @UIFieldSlider(min = 0, max = 20)
+    @UIFieldGroup("SECOND_VALUE")
+    @UIFieldTab("ADVANCED")
+    @UIFieldReadDefaultValue
+    public int getSecondDotRadiusWidth() {
+        return getJsonData("dotbrw", 0);
+    }
+
+    public void setSecondDotRadiusWidth(int value) {
+        setJsonData("dotbrw", value);
+    }
+
+    @UIField(order = 11)
+    @UIFieldGroup("SECOND_VALUE")
+    @UIFieldTab("ADVANCED")
+    @UIFieldColorPicker
+    @UIFieldReadDefaultValue
+    public String getSecondDotColor() {
+        return getJsonData("dotsc", UI.Color.WHITE);
+    }
+
+    public void setSecondDotColor(String value) {
+        setJsonData("dotsc", value);
+    }
+
     @Override
     public void beforePersist() {
         if (!getJsonData().has("gfg")) {
-            setForeground(UI.Color.random());
+            setGaugeForeground(UI.Color.random());
         }
         HasIcon.randomColor(this);
     }

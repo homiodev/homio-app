@@ -44,6 +44,7 @@ import org.homio.app.model.entity.widget.impl.color.WidgetColorEntity;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.homio.app.model.entity.widget.impl.extra.WidgetCustomEntity;
 import org.homio.app.model.entity.widget.impl.extra.WidgetJsEntity;
+import org.homio.app.model.entity.widget.impl.gauge.WidgetGaugeEntity;
 import org.homio.app.model.entity.widget.impl.media.WidgetCalendarEntity;
 import org.homio.app.model.entity.widget.impl.media.WidgetFMEntity;
 import org.homio.app.model.entity.widget.impl.media.WidgetFMNodeValue;
@@ -388,6 +389,18 @@ public class WidgetController {
         }
     }
 
+    @PostMapping("/gauge/value")
+    public GaugeValueData getGaugeValue(@Valid @RequestBody WidgetDataRequest request) {
+        WidgetGaugeEntity entity = (WidgetGaugeEntity) request.getEntity(context, objectMapper);
+        context.user().getLoggedInUserRequire().assertViewAccess(entity);
+        Object value = timeSeriesUtil.getSingleValue(entity, (HasSingleValueDataSource) entity, o -> o);
+        Object second = null;
+        if(StringUtils.isNotEmpty(entity.getSecondValueDataSource())) {
+            second = timeSeriesUtil.getSingleValue(entity, (HasSingleValueDataSource) entity, o -> o);
+        }
+        return new GaugeValueData(value, second);
+    }
+
     @PostMapping("/value")
     public SingleValueData getValue(@Valid @RequestBody WidgetDataRequest request) {
         WidgetEntity entity = request.getEntity(context, objectMapper);
@@ -495,11 +508,17 @@ public class WidgetController {
         setValue(request.value, series.getSetValueDataSource(), series.getSetValueDynamicParameterFields());
     }
 
+    @PostMapping("/gauge/update")
+    public void handleGauge(@RequestBody SingleValueRequest<Number> request) {
+        WidgetGaugeEntity entity = context.db().getRequire(request.entityID);
+        context.user().getLoggedInUserRequire().assertEditAccess(entity);
+        setValue(request.value, entity.getSetValueDataSource(), entity.getSetValueDynamicParameterFields());
+    }
+
     @PostMapping("/toggle/values")
     public List<String> getToggleValues(@RequestBody WidgetDataRequest request) {
         WidgetToggleEntity entity = request.getEntity(context, objectMapper, WidgetToggleEntity.class);
         context.user().getLoggedInUserRequire().assertViewAccess(entity);
-
         List<String> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetToggleSeriesEntity item : entity.getSeries()) {
             values.add(timeSeriesUtil.getSingleValue(entity, item, String::valueOf));
@@ -1030,5 +1049,8 @@ public class WidgetController {
     public static class FMRequest {
         private String cursor;
         private List<WidgetFMPrevSnapshot> prevValues;
+    }
+
+    public record GaugeValueData(Object value, Object secondValue) {
     }
 }
