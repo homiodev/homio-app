@@ -2,13 +2,14 @@ package org.homio.app.model.entity.widget.impl.toggle;
 
 import jakarta.persistence.Entity;
 import org.homio.api.ContextWidget.ToggleType;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldLayout;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
+import org.homio.api.ui.UI;
+import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
-import org.homio.app.model.entity.widget.attributes.*;
+import org.homio.app.model.entity.widget.attributes.HasBackground;
+import org.homio.app.model.entity.widget.attributes.HasLayout;
+import org.homio.app.model.entity.widget.attributes.HasName;
+import org.homio.app.model.entity.widget.attributes.HasPadding;
 import org.jetbrains.annotations.NotNull;
 
 @Entity
@@ -16,23 +17,29 @@ public class WidgetToggleEntity
         extends WidgetEntityAndSeries<WidgetToggleEntity, WidgetToggleSeriesEntity>
         implements HasBackground, HasLayout, HasPadding, HasName {
 
-    @UIField(order = 1)
-    @UIFieldGroup(order = 3, value = "NAME")
-    @UIFieldOptionFontSize
+    @UIFieldShowOnCondition("return context.get('displayType') == 'OnOff' || context.get('displayType') == 'Slide'")
     public String getName() {
         return super.getName();
+    }
+
+    @UIFieldColorPicker
+    @UIFieldShowOnCondition("return context.get('displayType') == 'OnOff' || context.get('displayType') == 'Slide'")
+    public String getNameColor() {
+        return getJsonData("nc", UI.Color.WHITE);
     }
 
     @Override
     @UIField(order = 50)
     @UIFieldLayout(options = {"name", "value", "icon", "button"})
     @UIFieldReadDefaultValue
+    @UIFieldShowOnCondition("return context.get('displayType') == 'OnOff' || context.get('displayType') == 'Slide'")
     public String getLayout() {
         return getJsonData("layout", getDefaultLayout());
     }
 
     @UIField(order = 1)
     @UIFieldGroup(value = "HEADER", order = 5)
+    @UIFieldShowOnCondition("return context.get('displayType') == 'OnOff' || context.get('displayType') == 'Slide'")
     public Boolean getShowAllButton() {
         return getJsonData("all", Boolean.FALSE);
     }
@@ -49,6 +56,42 @@ public class WidgetToggleEntity
     public WidgetToggleEntity setDisplayType(ToggleType value) {
         setJsonData("displayType", value);
         return this;
+    }
+
+    @UIField(order = 100)
+    @UIFieldGroup("UI")
+    @UIFieldSlider(min = 0, max = 20)
+    @UIFieldShowOnCondition("return context.get('displayType') == 'SwitchGroup'")
+    public int getBetweenGap() {
+        return getJsonData("gap", 0);
+    }
+
+    public void setBetweenGap(int value) {
+        setJsonData("gap", value);
+    }
+
+    @UIField(order = 130)
+    @UIFieldGroup("UI")
+    @UIFieldSlider(min = 0, max = 30)
+    @UIFieldShowOnCondition("return context.get('displayType') == 'SwitchGroup'")
+    public int getBorderRadius() {
+        return getJsonData("br", 0);
+    }
+
+    public void setBorderRadius(int value) {
+        setJsonData("br", value);
+    }
+
+    @UIField(order = 17)
+    @UIFieldGroup("UI")
+    @UIFieldColorPicker
+    @UIFieldShowOnCondition("return context.get('displayType') == 'SwitchGroup'")
+    public String getGroupForeground() {
+        return getJsonData("ac", UI.Color.PRIMARY_COLOR);
+    }
+
+    public void setGroupForeground(String value) {
+        setJsonData("ac", value);
     }
 
     @Override

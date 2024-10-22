@@ -1,17 +1,29 @@
-package org.homio.app.model.entity.widget.impl.display;
+package org.homio.app.model.entity.widget.impl.simple;
 
 import jakarta.persistence.Entity;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldCodeEditor;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.app.model.entity.widget.WidgetEntity;
+import org.homio.app.model.entity.widget.WidgetGroup;
+import org.homio.app.model.entity.widget.attributes.HasAlign;
 import org.homio.app.model.entity.widget.attributes.HasBackground;
+import org.homio.app.model.entity.widget.attributes.HasIcon;
+import org.homio.app.model.entity.widget.attributes.HasPadding;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Set;
-
 @Entity
-public class WidgetTextEntity extends WidgetEntity<WidgetTextEntity> implements HasBackground {
+public class WidgetSimpleTextEntity extends WidgetEntity<WidgetSimpleTextEntity>
+        implements
+        HasBackground,
+        HasAlign,
+        HasIcon,
+        HasPadding {
+
+    @Override
+    public WidgetGroup getGroup() {
+        return WidgetGroup.Simple;
+    }
 
     @Override
     public @NotNull String getImage() {
@@ -20,7 +32,7 @@ public class WidgetTextEntity extends WidgetEntity<WidgetTextEntity> implements 
 
     @Override
     protected @NotNull String getWidgetPrefix() {
-        return "text";
+        return "sim-txt";
     }
 
     @Override
@@ -49,7 +61,7 @@ public class WidgetTextEntity extends WidgetEntity<WidgetTextEntity> implements 
         setJsonDataEnum("ct", value);
     }
 
-    private enum ContentType {
+    public enum ContentType {
         HTML, Text, Markdown
     }
 }

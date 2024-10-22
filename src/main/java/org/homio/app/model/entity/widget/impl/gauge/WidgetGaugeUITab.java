@@ -1,17 +1,27 @@
 package org.homio.app.model.entity.widget.impl.gauge;
 
 import org.homio.api.entity.HasJsonData;
-import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.*;
-import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
-import org.homio.app.model.entity.widget.UIEditReloadWidget;
 import org.homio.app.model.entity.widget.UIFieldMarkers;
 
 public interface WidgetGaugeUITab extends HasJsonData {
 
     @UIField(order = 1)
-    @UIFieldTab(value = "UI", order = 2, color = "#257180")
+    @UIFieldTab("UI")
+    @UIFieldGroup("GENERAL")
+    @UIFieldSlider(min = 0, max = 1500, step = 100)
+    default int getAnimateDuration() {
+        return getJsonData("animdur", 500);
+    }
+
+    default void getAnimateDuration(int value) {
+        setJsonData("animdur", value);
+    }
+
+    @UIField(order = 2)
+    @UIFieldTab("UI")
+    @UIFieldGroup("GENERAL")
     default WidgetGaugeEntity.GaugeType getDisplayType() {
         return getJsonDataEnum("displayType", WidgetGaugeEntity.GaugeType.arch);
     }
@@ -20,9 +30,14 @@ public interface WidgetGaugeUITab extends HasJsonData {
         setJsonDataEnum("displayType", value);
     }
 
+    default void setMargin(int value) {
+        setJsonData("mrg", value);
+    }
+
     @UIField(order = 4, type = UIFieldType.Slider, label = "gauge.thick")
     @UIFieldNumber(min = 1, max = 20)
     @UIFieldTab("UI")
+    @UIFieldGroup("GENERAL")
     default Integer getThick() {
         return getJsonData("thick", 6);
     }
@@ -33,6 +48,7 @@ public interface WidgetGaugeUITab extends HasJsonData {
 
     @UIField(order = 5)
     @UIFieldTab("UI")
+    @UIFieldGroup("GENERAL")
     default WidgetGaugeEntity.LineType getGaugeCapType() {
         return getJsonDataEnum("gaugeCapType", WidgetGaugeEntity.LineType.round);
     }
@@ -43,6 +59,7 @@ public interface WidgetGaugeUITab extends HasJsonData {
 
     @UIField(order = 6)
     @UIFieldTab("UI")
+    @UIFieldGroup("GENERAL")
     @UIFieldColorPicker(allowThreshold = true, pulseColorCondition = true)
     @UIFieldReadDefaultValue
     default String getGaugeForeground() {
@@ -55,6 +72,7 @@ public interface WidgetGaugeUITab extends HasJsonData {
 
     @UIField(order = 7)
     @UIFieldTab("UI")
+    @UIFieldGroup("GENERAL")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
     default String getGaugeBackground() {
@@ -65,9 +83,10 @@ public interface WidgetGaugeUITab extends HasJsonData {
         setJsonData("gbg", value);
     }
 
-    @UIField(order = 8)
+    @UIField(order = 1)
     @UIFieldSlider(min = 0, max = 20)
     @UIFieldTab("UI")
+    @UIFieldGroup(value = "DOT", order = 300, borderColor = "#C2365B")
     @UIFieldReadDefaultValue
     default int getDotBorderWidth() {
         return getJsonData("dotbw", 0);
@@ -77,9 +96,10 @@ public interface WidgetGaugeUITab extends HasJsonData {
         setJsonData("dotbw", value);
     }
 
-    @UIField(order = 9)
+    @UIField(order = 2)
     @UIFieldSlider(min = 0, max = 20)
     @UIFieldTab("UI")
+    @UIFieldGroup("DOT")
     @UIFieldReadDefaultValue
     default int getDotRadiusWidth() {
         return getJsonData("dotbrw", 0);
@@ -89,8 +109,9 @@ public interface WidgetGaugeUITab extends HasJsonData {
         setJsonData("dotbrw", value);
     }
 
-    @UIField(order = 10)
+    @UIField(order = 3)
     @UIFieldTab("UI")
+    @UIFieldGroup("DOT")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
     default String getDotBorderColor() {
@@ -101,8 +122,9 @@ public interface WidgetGaugeUITab extends HasJsonData {
         setJsonData("dotbc", value);
     }
 
-    @UIField(order = 11)
+    @UIField(order = 4)
     @UIFieldTab("UI")
+    @UIFieldGroup("DOT")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
     default String getDotColor() {
@@ -114,28 +136,31 @@ public interface WidgetGaugeUITab extends HasJsonData {
     }
 
     @UIField(order = 12)
+    @UIFieldGroup(value = "SEGMENTS", order = 400, borderColor = "#8926C7")
     @UIFieldTab("UI")
-    default Boolean getDrawForegroundAsSegments() {
+    default boolean getDrawForegroundAsSegments() {
         return getJsonData("dfass", Boolean.FALSE);
     }
 
-    default void setDrawForegroundAsSegments(Boolean value) {
+    default void setDrawForegroundAsSegments(boolean value) {
         setJsonData("dfass", value);
     }
 
     @UIField(order = 13)
     @UIFieldTab("UI")
-    default Boolean getDrawBackgroundAsSegments() {
+    @UIFieldGroup("SEGMENTS")
+    default boolean getDrawBackgroundAsSegments() {
         return getJsonData("dbass", Boolean.FALSE);
     }
 
-    default void setDrawBackgroundAsSegments(Boolean value) {
+    default void setDrawBackgroundAsSegments(boolean value) {
         setJsonData("dbass", value);
     }
 
     @UIField(order = 14, type = UIFieldType.Slider)
     @UIFieldSlider(min = 1, max = 200, step = 2)
     @UIFieldTab("UI")
+    @UIFieldGroup("SEGMENTS")
     default Integer getSegmentLength() {
         return getJsonData("seg_len", 1);
     }
@@ -147,6 +172,7 @@ public interface WidgetGaugeUITab extends HasJsonData {
     @UIField(order = 14, type = UIFieldType.Slider)
     @UIFieldSlider(min = 1, max = 200, step = 2)
     @UIFieldTab("UI")
+    @UIFieldGroup("SEGMENTS")
     default Integer getSegmentGap() {
         return getJsonData("seg_gap", 1);
     }
@@ -166,17 +192,6 @@ public interface WidgetGaugeUITab extends HasJsonData {
         setJsonData("slices", value);
     }
 
-    @UIField(order = 25)
-    @UIFieldTab("UI")
-    @UIFieldSlider(min = 0, max = 1500, step = 100)
-    default int getAnimateDuration() {
-        return getJsonData("animdur", 500);
-    }
-
-    default void getAnimateDuration(int value) {
-        setJsonData("animdur", value);
-    }
-
     @UIField(order = 30)
     @UIFieldTab("UI")
     default String getBackground() {
@@ -189,16 +204,18 @@ public interface WidgetGaugeUITab extends HasJsonData {
 
     @UIField(order = 35)
     @UIFieldTab("UI")
-    default Boolean getDrawNeedle() {
+    @UIFieldGroup(value = "NEEDLE", order = 450, borderColor = "#ACB82A")
+    default boolean getDrawNeedle() {
         return getJsonData("ndl", Boolean.FALSE);
     }
 
-    default void setDrawNeedle(Boolean value) {
+    default void setDrawNeedle(boolean value) {
         setJsonData("ndl", value);
     }
 
     @UIField(order = 40)
     @UIFieldTab("UI")
+    @UIFieldGroup("NEEDLE")
     @UIFieldColorPicker
     default String getNeedleColor() {
         return getJsonData("ndlClr", UI.Color.PRIMARY_COLOR);
@@ -258,11 +275,11 @@ public interface WidgetGaugeUITab extends HasJsonData {
     @UIField(order = 5)
     @UIFieldTab("UI")
     @UIFieldGroup("MARKERS")
-    default Boolean getMarkerInvert() {
+    default boolean getMarkerInvert() {
         return getJsonData("minv", Boolean.FALSE);
     }
 
-    default void setMarkerInvert(Boolean value) {
+    default void setMarkerInvert(boolean value) {
         setJsonData("minv", value);
     }
 }

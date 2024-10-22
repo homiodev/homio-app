@@ -1,7 +1,8 @@
-package org.homio.app.model.entity.widget.impl;
+package org.homio.app.model.entity.widget.impl.simple;
 
 import jakarta.persistence.Entity;
 import org.homio.app.model.entity.widget.WidgetEntity;
+import org.homio.app.model.entity.widget.WidgetGroup;
 import org.homio.app.model.entity.widget.attributes.*;
 import org.jetbrains.annotations.NotNull;
 
@@ -18,18 +19,18 @@ public class WidgetSimpleValueEntity extends WidgetEntity<WidgetSimpleValueEntit
         HasValueConverter {
 
     @Override
-    public @NotNull String getImage() {
-        return "";
+    public WidgetGroup getGroup() {
+        return WidgetGroup.Simple;
     }
 
     @Override
-    public boolean isVisible() {
-        return false;
+    public @NotNull String getImage() {
+        return "fab fa-pix";
     }
 
     @Override
     protected @NotNull String getWidgetPrefix() {
-        return "sim-value";
+        return "sim-val";
     }
 
     @Override

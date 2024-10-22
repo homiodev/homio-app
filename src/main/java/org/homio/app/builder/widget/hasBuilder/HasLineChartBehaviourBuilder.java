@@ -4,6 +4,7 @@ import org.homio.api.ContextWidget.Fill;
 import org.homio.api.ContextWidget.HasLineChartBehaviour;
 import org.homio.api.ContextWidget.PointStyle;
 import org.homio.api.ContextWidget.Stepped;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public interface HasLineChartBehaviourBuilder<T extends org.homio.app.model.entity.widget.impl.chart.HasLineChartBehaviour, R>
@@ -12,49 +13,49 @@ public interface HasLineChartBehaviourBuilder<T extends org.homio.app.model.enti
     T getWidget();
 
     @Override
-    default R setLineBorderWidth(int value) {
+    default @NotNull R setLineBorderWidth(int value) {
         getWidget().setLineBorderWidth(value);
         return (R) this;
     }
 
     @Override
-    default R setLineFill(Fill value) {
+    default @NotNull R setLineFill(@NotNull Fill value) {
         getWidget().setLineFill(value);
         return (R) this;
     }
 
     @Override
-    default R setStepped(Stepped value) {
+    default @NotNull R setStepped(@NotNull Stepped value) {
         getWidget().setStepped(value);
         return (R) this;
     }
 
     @Override
-    default R setTension(int value) {
+    default @NotNull R setTension(int value) {
         getWidget().setTension(value);
         return (R) this;
     }
 
     @Override
-    default R setPointRadius(double value) {
+    default @NotNull R setPointRadius(double value) {
         getWidget().setPointRadius(value);
         return (R) this;
     }
 
     @Override
-    default R setPointStyle(PointStyle value) {
+    default @NotNull R setPointStyle(@NotNull PointStyle value) {
         getWidget().setPointStyle(value);
         return (R) this;
     }
 
     @Override
-    default R setPointBackgroundColor(@Nullable String value) {
+    default @NotNull R setPointBackgroundColor(@Nullable String value) {
         getWidget().setPointBackgroundColor(value);
         return (R) this;
     }
 
     @Override
-    default R setPointBorderColor(@Nullable String value) {
+    default @NotNull R setPointBorderColor(@Nullable String value) {
         getWidget().setPointBorderColor(value);
         return (R) this;
     }

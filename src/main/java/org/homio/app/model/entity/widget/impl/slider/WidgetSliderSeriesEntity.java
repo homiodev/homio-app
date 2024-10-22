@@ -22,7 +22,7 @@ public class WidgetSliderSeriesEntity
         HasValueTemplate,
         HasName,
         HasPadding,
-        HasTextConverter,
+        HasValueConverter,
         HasOptionsForEntityByClassFilter {
 
     @UIField(order = 1)

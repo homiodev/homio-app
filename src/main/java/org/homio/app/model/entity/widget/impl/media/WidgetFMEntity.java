@@ -50,18 +50,6 @@ public class WidgetFMEntity extends WidgetEntity<WidgetFMEntity>
         }
     }
 
-    @UIField(order = 24)
-    @UIFieldColorPicker
-    @UIFieldReadDefaultValue
-    public String getBorderColor() {
-        return getJsonData("bordC", "#434B5A");
-    }
-
-    public WidgetFMEntity setBorderColor(String value) {
-        setJsonData("bordC", value);
-        return this;
-    }
-
     @UIField(order = 26)
     @UIFieldSlider(min = 0, max = 10)
     public int getMargin() {

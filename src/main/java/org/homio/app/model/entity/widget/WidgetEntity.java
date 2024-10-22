@@ -11,11 +11,13 @@ import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasPermissions;
 import org.homio.api.model.JSON;
 import org.homio.api.ui.UISidebarMenu;
-import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
-import org.homio.app.model.entity.widget.attributes.HasStyle;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.List;
 
 @Getter
 @Setter
@@ -28,7 +30,7 @@ import org.jetbrains.annotations.NotNull;
 @Accessors(chain = true)
 @NoArgsConstructor
 public abstract class WidgetEntity<T extends WidgetEntity> extends BaseEntity
-        implements HasPosition<WidgetEntity>, HasStyle, HasPermissions {
+        implements HasPosition<WidgetEntity>, HasPermissions {
 
     private static final String PREFIX = "widget_";
 
@@ -98,5 +100,50 @@ public abstract class WidgetEntity<T extends WidgetEntity> extends BaseEntity
         return 0;
     }
 
+    @UIField(order = 500, type = UIFieldType.Chips)
+    @UIFieldGroup("GENERAL")
+    @UIFieldTab(value = "UI", order = 2, color = "#257180")
+    public List<String> getStyle() {
+        return getJsonDataList("style");
+    }
 
+    public void setStyle(String value) {
+        setJsonData("style", value);
+    }
+
+    @UIField(order = 491)
+    @UIFieldTab("UI")
+    @UIFieldGroup("GENERAL")
+    @UIFieldColorPicker
+    public String getWidgetBorderColor() {
+        return getJsonData("border_c");
+    }
+
+    public void setWidgetBorderColor(String value) {
+        setJsonData("border_c", value);
+    }
+
+    @UIField(order = 492)
+    @UIFieldTab("UI")
+    @UIFieldGroup("GENERAL")
+    @UIFieldSlider(min = 0, max = 10)
+    public int getWidgetBorderWidth() {
+        return getJsonData("border_w", 1);
+    }
+
+    public void setWidgetBorderWidth(int value) {
+        setJsonData("border_w", value);
+    }
+
+    @UIField(order = 493)
+    @UIFieldTab("UI")
+    @UIFieldGroup("GENERAL")
+    @UIFieldSlider(min = 0, max = 30)
+    public int getWidgetBorderRadius() {
+        return getJsonData("border_r", 4);
+    }
+
+    public void setWidgetBorderRadius(int value) {
+        setJsonData("border_r", value);
+    }
 }

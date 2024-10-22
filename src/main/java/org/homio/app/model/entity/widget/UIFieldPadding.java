@@ -11,5 +11,5 @@ public @interface UIFieldPadding {
 
     int min() default 0;
 
-    int max() default 9;
+    int max() default 50;
 }

@@ -22,13 +22,12 @@ public interface HasToggle extends HasSingleValueDataSource, HasSetSingleValueDa
 
     @UIField(order = 3)
     @UIFieldColorPicker
-    @UIFieldGroup("UI")
     @UIFieldReadDefaultValue
-    default String getColor() {
+    default String getToggleColor() {
         return getJsonData("color", UI.Color.WHITE);
     }
 
-    default void setColor(String value) {
+    default void setToggleColor(String value) {
         setJsonData("color", value);
     }
 

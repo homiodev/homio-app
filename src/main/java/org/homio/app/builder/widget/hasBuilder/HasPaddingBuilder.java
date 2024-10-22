@@ -1,6 +1,7 @@
 package org.homio.app.builder.widget.hasBuilder;
 
 import org.homio.api.ContextWidget.HasPadding;
+import org.jetbrains.annotations.NotNull;
 
 import static java.lang.String.format;
 
@@ -9,7 +10,7 @@ public interface HasPaddingBuilder<T extends org.homio.app.model.entity.widget.a
     T getWidget();
 
     @Override
-    default R setPadding(int top, int right, int bottom, int left) {
+    default @NotNull R setPadding(int top, int right, int bottom, int left) {
         getWidget().setPadding(format("{\"top\":%s,\"right\":%s,\"bottom\":%s,\"left\":%s}", top, right, bottom, left));
         return (R) this;
     }

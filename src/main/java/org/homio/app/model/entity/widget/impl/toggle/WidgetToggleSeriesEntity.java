@@ -25,7 +25,7 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
     public void beforePersist() {
         HasIcon.randomColor(this);
         if (!getJsonData().has("color")) {
-            setColor(UI.Color.random());
+            setToggleColor(UI.Color.random());
         }
         if (getOnValues().isEmpty()) {
             setOnValues("true%s1".formatted(LIST_DELIMITER));

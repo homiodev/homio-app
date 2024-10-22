@@ -1,9 +1,10 @@
-package org.homio.app.model.entity.widget.impl.color;
+package org.homio.app.model.entity.widget.impl.simple;
 
 import jakarta.persistence.Entity;
 import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.UIFieldKeyValue.KeyValueType;
 import org.homio.app.model.entity.widget.WidgetEntity;
+import org.homio.app.model.entity.widget.WidgetGroup;
 import org.homio.app.model.entity.widget.attributes.HasAlign;
 import org.homio.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
@@ -17,18 +18,18 @@ public class WidgetSimpleColorEntity extends WidgetEntity<WidgetSimpleColorEntit
         implements HasAlign, HasSingleValueDataSource, HasSetSingleValueDataSource {
 
     @Override
-    public boolean isVisible() {
-        return false;
+    public WidgetGroup getGroup() {
+        return WidgetGroup.Simple;
     }
 
     @Override
     public @NotNull String getImage() {
-        return "";
+        return "fas fa-fill";
     }
 
     @Override
     protected @NotNull String getWidgetPrefix() {
-        return "scolor";
+        return "sim-clr";
     }
 
     @Override

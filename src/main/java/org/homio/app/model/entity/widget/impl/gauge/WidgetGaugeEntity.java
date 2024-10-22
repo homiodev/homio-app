@@ -8,11 +8,10 @@ import org.homio.api.ui.UI;
 import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;
-import org.homio.app.model.entity.widget.UIFieldMarkers;
-import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.attributes.*;
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONObject;
 
 import java.util.List;
 
@@ -23,10 +22,10 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
         HasSetSingleValueDataSource,
         HasIcon,
         HasValueConverter,
-        HasTextConverter,
         HasName,
         HasValueTemplate,
-        WidgetGaugeUITab {
+        WidgetGaugeUITab,
+        HasPadding {
 
     @Override
     @JsonIgnore
@@ -81,38 +80,6 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
         return super.getName();
     }
 
-    @UIField(order = 2)
-    @UIFieldGroup("NAME")
-    @UIFieldOptionFontSize
-    public String getUnit() {
-        return getJsonData("unit", "℃");
-    }
-
-    public void setUnit(String value) {
-        setJsonData("unit", value);
-    }
-
-    @UIField(order = 0, hideInView = true, hideInEdit = true)
-    public double getUnitFontSize() {
-        return getJsonData("unitFS", 1D);
-    }
-
-    public void setUnitFontSize(double value) {
-        setJsonData("unitFS", value);
-    }
-
-    @UIField(order = 3)
-    @UIFieldGroup("NAME")
-    @UIFieldColorPicker
-    @UIFieldReadDefaultValue
-    public String getUnitColor() {
-        return getJsonData("uc", UI.Color.WHITE);
-    }
-
-    public void setUnitColor(String value) {
-        setJsonData("uc", value);
-    }
-
     @Override
     public @NotNull String getImage() {
         return "fas fa-tachometer-alt";
@@ -128,24 +95,31 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
         return null;
     }
 
-    @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public String getValueTemplate() {
-        return HasValueTemplate.super.getValueTemplate();
+    @UIField(order = 10)
+    @UIFieldGroup("VALUE")
+    public boolean getShowValue() {
+        return getJsonData("minv", Boolean.TRUE);
     }
 
-    @UIField(order = 10, required = true)
+    public void setShowValue(boolean value) {
+        setJsonData("minv", value);
+    }
+
+    @UIField(order = 10)
     @UIFieldGroup(value = "SECOND_VALUE", order = 20, borderColor = "#BF00FF")
     @UIFieldTab("ADVANCED")
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIEditReloadWidget
     public String getSecondValueDataSource() {
-        return getJsonData("vds");
+        return getJsonData("vdss");
     }
 
     public void setSecondValueDataSource(String value) {
-        setJsonData("vds", value);
+        setJsonData("vdss", value);
+    }
+
+    public @NotNull JSONObject getSecondValueDynamicParameterFields() {
+        return getDynamicParameterFields("secondValueDataSource");
     }
 
     @UIField(order = 9)
@@ -154,11 +128,11 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
     @UIFieldTab("ADVANCED")
     @UIFieldReadDefaultValue
     public int getSecondDotRadiusWidth() {
-        return getJsonData("dotbrw", 0);
+        return getJsonData("dotsrw", 0);
     }
 
     public void setSecondDotRadiusWidth(int value) {
-        setJsonData("dotbrw", value);
+        setJsonData("dotsrw", value);
     }
 
     @UIField(order = 11)

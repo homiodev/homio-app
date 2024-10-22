@@ -1,6 +1,5 @@
 package org.homio.app.manager;
 
-import com.pivovarit.function.ThrowingRunnable;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -18,10 +17,7 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -55,7 +51,7 @@ public class WidgetService implements ContextCreated {
 
                 // cancel expired active events
                 for (WidgetCalendarEntity.CalendarEvent activeEvent : activeEvents) {
-                    if(activeEvent.getEnd() > curTime) {
+                    if (activeEvent.getEnd() > curTime) {
                         activeEvents.remove(activeEvent);
                         context.bgp().cancelThread("calendar-repeat-event-" + activeEvent.getId());
                     }
@@ -116,26 +112,31 @@ public class WidgetService implements ContextCreated {
 
     public List<AvailableWidget> getAvailableWidgets() {
         List<AvailableWidget> options = new ArrayList<>();
-        AvailableWidget chartWidgets = new AvailableWidget("chart-widgets", "fas fa-chart-simple", new ArrayList<>());
-        AvailableWidget mediaWidgets = new AvailableWidget("media-widgets", "fas fa-compact-disc", new ArrayList<>());
-        options.add(chartWidgets);
-        options.add(mediaWidgets);
+        Map<WidgetGroup, AvailableWidget> widgetMap = new HashMap<>();
+
         for (WidgetEntity<?> entity : this.widgetBaseEntities) {
             if (entity.isVisible()) {
                 AvailableWidget widget = new AvailableWidget(entity.getType(), entity.getImage(), null);
-                if (entity.getGroup() == WidgetGroup.Chart) {
-                    chartWidgets.children.add(widget);
-                } else if (entity.getGroup() == WidgetGroup.Media) {
-                    mediaWidgets.children.add(widget);
+
+                if (entity.getGroup() == null) {
+                    options.add(widget); // Add directly if group is null
                 } else {
-                    options.add(widget);
+                    widgetMap.computeIfAbsent(entity.getGroup(), group -> {
+                        AvailableWidget parentWidget = new AvailableWidget(group.name().toLowerCase() + "-widgets", group.getIcon(), new ArrayList<>());
+                        options.add(parentWidget);
+                        return parentWidget;
+                    }).children.add(widget);
                 }
             }
         }
 
+        options.sort(Comparator.comparing((AvailableWidget w) -> w.children == null || w.children.isEmpty())
+                .thenComparing(AvailableWidget::getKey));
+
         AvailableWidget extraWidgets = new AvailableWidget("extra-widgets", "fas fa-cheese", new ArrayList<>());
         extraWidgets.children.add(new AvailableWidget("IBKR", "fas fa-user", null));
         options.add(extraWidgets);
+
         /*AvailableWidget extraWidgets = new AvailableWidget("extra-widgets", "fas fa-cheese", new ArrayList<>());
         Map<ParentWidget, AvailableWidget> widgetMap = new HashMap<>();
 

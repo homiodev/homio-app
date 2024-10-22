@@ -109,7 +109,7 @@ public class WidgetChartsController {
 
         SelectionSource selection = DataSourceUtil.getSelection(entity.getValueDataSource());
         if (StringUtils.isNotEmpty(selection.getValue())) {
-            result.value = timeSeriesUtil.getSingleValue(entity, entity, o -> o);
+            result.value = timeSeriesUtil.getSingleValue(entity, entity);
         }
 
         return result;
@@ -121,7 +121,7 @@ public class WidgetChartsController {
         TimeSeriesChartData<ChartDataset> timeSeriesChartData = new TimeSeriesChartData<>();
 
         for (S item : entity.getSeries()) {
-            Object value = timeSeriesUtil.getSingleValue(entity, item, o -> o);
+            Object value = timeSeriesUtil.getSingleValue(entity, item);
 
             ChartDataset dataset = new ChartDataset(item.getEntityID(), item.getEntityID());
             timeSeriesChartData.datasets.add(dataset);

@@ -37,18 +37,6 @@ public class WidgetLayoutEntity extends WidgetEntity<WidgetLayoutEntity>
         return null;
     }
 
-    @UIField(order = 24)
-    @UIFieldGroup("UI")
-    @UIFieldColorPicker
-    @UIFieldReadDefaultValue
-    public String getBorderColor() {
-        return getJsonData("bc", context().setting().getValue(WidgetBorderColorMenuSetting.class));
-    }
-
-    public void setBorderColor(String value) {
-        setJsonData("bc", value);
-    }
-
     @Override
     public void afterDelete() {
         for (WidgetEntity entity : context().db().findAll(WidgetEntity.class)) {

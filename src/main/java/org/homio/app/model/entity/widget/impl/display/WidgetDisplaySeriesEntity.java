@@ -1,17 +1,16 @@
 package org.homio.app.model.entity.widget.impl.display;
 
 import jakarta.persistence.Entity;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.ui.field.*;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.*;
+
+import java.util.List;
 
 @Entity
 public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayEntity>
         implements HasSingleValueDataSource, HasIcon, HasValueTemplate,
-        HasName, HasStyle, HasValueConverter {
+        HasName, HasValueConverter {
 
     @UIField(order = 1)
     @UIFieldGroup("UI")
@@ -38,5 +37,15 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
     @Override
     public void beforePersist() {
         HasIcon.randomColor(this);
+    }
+
+    @UIField(order = 500, type = UIFieldType.Chips)
+    @UIFieldGroup("UI")
+    public List<String> getStyle() {
+        return getJsonDataList("style");
+    }
+
+    public void setStyle(String value) {
+        setJsonData("style", value);
     }
 }

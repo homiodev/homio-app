@@ -16,17 +16,6 @@ public interface HasName extends HasJsonData {
     @UIFieldReadDefaultValue
     String getName();
 
-    @UIField(order = 2)
-    @UIFieldGroup("NAME")
-    @UIFieldReadDefaultValue
-    default Boolean isShowName() {
-        return getJsonData("shn", Boolean.TRUE);
-    }
-
-    default void setShowName(Boolean value) {
-        setJsonData("shn", value);
-    }
-
     @UIField(order = 3)
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldGroup("NAME")

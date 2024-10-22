@@ -3,7 +3,7 @@ package org.homio.app.builder.widget;
 import org.homio.api.ContextWidget.SimpleColorWidgetBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasAlignBuilder;
 import org.homio.app.manager.common.ContextImpl;
-import org.homio.app.model.entity.widget.impl.color.WidgetSimpleColorEntity;
+import org.homio.app.model.entity.widget.impl.simple.WidgetSimpleColorEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

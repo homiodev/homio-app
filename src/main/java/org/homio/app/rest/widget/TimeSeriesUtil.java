@@ -104,40 +104,47 @@ public class TimeSeriesUtil {
         context.ui().setUpdateListenerRefreshHandler(dataSourceEntityID, entityID, listener);
     }
 
+    public <T extends WidgetEntity<T>, DS extends HasSingleValueDataSource, R> R getSingleValue(
+            @NotNull T entity,
+            @NotNull DS dataSource) {
+        return (R) getSingleValue(entity, dataSource, o -> o);
+    }
+
+    public <T extends WidgetEntity<T>, DS extends HasSingleValueDataSource, R> R getSingleValue(
+            @NotNull T entity,
+            @NotNull DS dataSource,
+            @NotNull Function<Object, R> resultConverter) {
+        return getSingleValue(entity, dataSource.getEntityID(), dataSource.getValueDataSource(),
+                dataSource.getValueDynamicParameterFields(), resultConverter);
+    }
+
+    public <T extends WidgetEntity<T>, R> R getSingleValue(
+            @NotNull T entity,
+            @NotNull String seriesEntityId,
+            @Nullable String dataSourceEntityID,
+            @Nullable JSONObject dynamicParameters) {
+        return (R) getSingleValue(entity, seriesEntityId, dataSourceEntityID, dynamicParameters, o -> o);
+    }
+
     /**
      * Evaluate single value from specific data source and attach listener on it for dynamic updates
      */
     public <T extends WidgetEntity<T>, R> R getSingleValue(
             @NotNull T entity,
-            @Nullable String valueDataSource,
+            @NotNull String seriesEntityId,
+            @Nullable String dataSourceEntityID,
             @Nullable JSONObject dynamicParameters,
             @NotNull Function<Object, R> resultConverter) {
-        if (isEmpty(valueDataSource)) {
+        if (isEmpty(dataSourceEntityID)) {
             return null;
         }
-        String seriesEntityId = entity.getEntityID();
-        SelectionSource selection = DataSourceUtil.getSelection(valueDataSource);
+        SelectionSource selection = DataSourceUtil.getSelection(dataSourceEntityID);
         Object source = selection.getValue(context);
-        if (source == null) {
-            return null;
-        }
-
-        var param = new TimeSeriesUtil.RequestParameters(entity.getEntityID(), source, dynamicParameters,seriesEntityId, valueDataSource);
-        return getValueFromGetStatusValue(resultConverter, dynamicParameters, source, param);
-    }
-
-    public <T extends WidgetEntity<T>, DS extends HasSingleValueDataSource, R> R
-    getSingleValue(@NotNull T entity, @NotNull DS dataSource, @NotNull Function<Object, R> resultConverter) {
-        String seriesEntityId = ((HasEntityIdentifier) dataSource).getEntityID();
-        JSONObject dynamicParameters = dataSource.getValueDynamicParameterFields();
-        SelectionSource selection = DataSourceUtil.getSelection(dataSource.getValueDataSource());
-        BaseEntity source = selection.getValue(context);
         if (source == null) {
             return (R) "W.ERROR.BAD_SOURCE";
         }
-        String dataSourceEntityID = dataSource.getValueDataSource();
 
-        var param = new TimeSeriesUtil.RequestParameters(entity.getEntityID(), source, dynamicParameters,seriesEntityId, dataSourceEntityID);
+        var param = new TimeSeriesUtil.RequestParameters(entity.getEntityID(), source, dynamicParameters, seriesEntityId, dataSourceEntityID);
         return getValueFromGetStatusValue(resultConverter, dynamicParameters, source, param);
     }
 
@@ -200,10 +207,10 @@ public class TimeSeriesUtil {
     }
 
     public record RequestParameters(String entityID,
-                             Object source,
-                             JSONObject dynamicParameters,
-                             String seriesEntityId,
-                             String dataSourceEntityID) {
+                                    Object source,
+                                    JSONObject dynamicParameters,
+                                    String seriesEntityId,
+                                    String dataSourceEntityID) {
         public String getKey() {
             return Objects.toString(seriesEntityId, entityID);
         }

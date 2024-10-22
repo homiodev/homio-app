@@ -21,13 +21,6 @@ public class WidgetLineChartEntity
         extends ChartBaseEntity<WidgetLineChartEntity, WidgetLineChartSeriesEntity>
         implements HasLineChartBehaviour, HasHorizontalLine, HasAxis, HasPadding {
 
-    @UIField(order = 101)
-    @UIFieldPadding
-    @UIFieldGroup("UI")
-    public String getPadding() {
-        return HasPadding.super.getPadding();
-    }
-
     @Override
     public @NotNull String getImage() {
         return "fas fa-chart-line";

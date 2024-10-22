@@ -96,10 +96,4 @@ class SliderSeriesBuilderImpl implements SliderWidgetSeriesBuilder,
         series.setStep(value);
         return this;
     }
-
-    @Override
-    public @NotNull SliderWidgetSeriesBuilder setTextConverter(String value) {
-        series.setTextConverter(value);
-        return this;
-    }
 }

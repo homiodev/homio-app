@@ -72,28 +72,28 @@ public interface HasPosition<T> extends HasJsonData {
         if (xb < -1 || xb > 10) {
             throw new IllegalArgumentException("Block x position must be in range 0..10");
         }
-        addJsonDataMap("xbp", Integer.class, m -> m.put(key, xb));
+        setCoordinate(xb, key, "xb");
     }
 
     default void setYb(int yb, String key) {
         if (yb < -1 || yb > 10) {
             throw new IllegalArgumentException("Block y position must be in range 0..10");
         }
-        addJsonDataMap("ybp", Integer.class, m -> m.put(key, yb));
+        setCoordinate(yb, key, "yb");
     }
 
     default void setBw(int bw, String key) {
         if (bw < 1 || bw > 10) {
             throw new IllegalArgumentException("Block width must be in range 1..10");
         }
-        addJsonDataMap("bwp", Integer.class, m -> m.put(key, bw));
+        setCoordinate(bw, key, "bw");
     }
 
     default void setBh(int bh, String key) {
         if (bh < 1 || bh > 10) {
             throw new IllegalArgumentException("Block height must be in range 1..10");
         }
-        addJsonDataMap("bhp", Integer.class, m -> m.put(key, bh));
+        setCoordinate(bh, key, "bh");
     }
 
     default int getXb(String key) {
@@ -118,5 +118,13 @@ public interface HasPosition<T> extends HasJsonData {
             return defValue;
         }
         return map.getOrDefault(key, defValue);
+    }
+
+    private void setCoordinate(int xb, String key, String jsonKey) {
+        if (getParent() == null) {
+            addJsonDataMap(jsonKey + "p", Integer.class, m -> m.put(key, xb));
+        } else {
+            setJsonData(jsonKey, xb);
+        }
     }
 }

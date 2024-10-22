@@ -3,7 +3,7 @@ package org.homio.app.builder.widget;
 import org.homio.api.ContextWidget.SimpleValueWidgetBuilder;
 import org.homio.app.builder.widget.hasBuilder.*;
 import org.homio.app.manager.common.ContextImpl;
-import org.homio.app.model.entity.widget.impl.WidgetSimpleValueEntity;
+import org.homio.app.model.entity.widget.impl.simple.WidgetSimpleValueEntity;
 import org.jetbrains.annotations.NotNull;
 
 public class SimpleValueBuilderImpl extends WidgetBaseBuilderImpl<SimpleValueWidgetBuilder, WidgetSimpleValueEntity>

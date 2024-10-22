@@ -26,7 +26,7 @@ public class LayoutBuilderImpl extends WidgetBaseBuilderImpl<LayoutWidgetBuilder
 
     @Override
     public @NotNull LayoutWidgetBuilder setBorderColor(@Nullable String value) {
-        widget.setBorderColor(value);
+        widget.setWidgetBorderColor(value);
         return this;
     }
 }

@@ -5,7 +5,7 @@ import org.homio.app.builder.widget.hasBuilder.HasAlignBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasPaddingBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasToggleBuilder;
 import org.homio.app.manager.common.ContextImpl;
-import org.homio.app.model.entity.widget.impl.toggle.WidgetSimpleToggleEntity;
+import org.homio.app.model.entity.widget.impl.simple.WidgetSimpleToggleEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

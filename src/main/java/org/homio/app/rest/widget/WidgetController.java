@@ -275,7 +275,7 @@ public class WidgetController {
             val valueRequest = new HasGetStatusValue.GetStatusValueRequest(context, null);
             result.put(source, ((HasGetStatusValue) entity).getStatusValue(valueRequest));
 
-            var param = new TimeSeriesUtil.RequestParameters("dashboard", entity, null,null, source);
+            var param = new TimeSeriesUtil.RequestParameters("dashboard", entity, null, null, source);
             timeSeriesUtil.addListenValueIfRequire(param,
                     object -> ((HasGetStatusValue) entity).getStatusValue(valueRequest));
         }
@@ -393,10 +393,11 @@ public class WidgetController {
     public GaugeValueData getGaugeValue(@Valid @RequestBody WidgetDataRequest request) {
         WidgetGaugeEntity entity = (WidgetGaugeEntity) request.getEntity(context, objectMapper);
         context.user().getLoggedInUserRequire().assertViewAccess(entity);
-        Object value = timeSeriesUtil.getSingleValue(entity, (HasSingleValueDataSource) entity, o -> o);
+        Object value = timeSeriesUtil.getSingleValue(entity, entity);
         Object second = null;
-        if(StringUtils.isNotEmpty(entity.getSecondValueDataSource())) {
-            second = timeSeriesUtil.getSingleValue(entity, (HasSingleValueDataSource) entity, o -> o);
+        if (StringUtils.isNotEmpty(entity.getSecondValueDataSource())) {
+            second = timeSeriesUtil.getSingleValue(entity, entity.getEntityID(), entity.getSecondValueDataSource(),
+                    entity.getSecondValueDynamicParameterFields());
         }
         return new GaugeValueData(value, second);
     }
@@ -406,8 +407,8 @@ public class WidgetController {
         WidgetEntity entity = request.getEntity(context, objectMapper);
         context.user().getLoggedInUserRequire().assertViewAccess(entity);
 
-        if (entity instanceof HasSingleValueDataSource) {
-            return new SingleValueData(timeSeriesUtil.getSingleValue(entity, (HasSingleValueDataSource) entity, o -> o), null);
+        if (entity instanceof HasSingleValueDataSource ds) {
+            return new SingleValueData(timeSeriesUtil.getSingleValue(entity, ds), null);
         }
         throw new IllegalStateException("Entity: " + request.getEntityID() + " not implement 'HasSingleValueDataSource'");
     }
@@ -541,21 +542,21 @@ public class WidgetController {
 
         return new WidgetColorValueResponse(
                 timeSeriesUtil.getSingleValue(entity,
+                        entity.getEntityID(),
                         entity.getBrightnessValueDataSource(),
-                        entity.getDynamicParameterFields("brightness"),
-                        o -> (Integer) o),
+                        entity.getDynamicParameterFields("brightness")),
                 timeSeriesUtil.getSingleValue(entity,
+                        entity.getEntityID(),
                         entity.getColorValueDataSource(),
-                        entity.getDynamicParameterFields("color"),
-                        o -> (String) o),
+                        entity.getDynamicParameterFields("color")),
                 timeSeriesUtil.getSingleValue(entity,
+                        entity.getEntityID(),
                         entity.getOnOffValueDataSource(),
-                        entity.getDynamicParameterFields("onOff"),
-                        o -> (Boolean) o),
+                        entity.getDynamicParameterFields("onOff")),
                 timeSeriesUtil.getSingleValue(entity,
+                        entity.getEntityID(),
                         entity.getColorTemperatureValueDataSource(),
-                        entity.getDynamicParameterFields("colorTemp"),
-                        o -> (Integer) o));
+                        entity.getDynamicParameterFields("colorTemp")));
     }
 
     @PostMapping("/colors/update")
@@ -661,11 +662,11 @@ public class WidgetController {
 
         ScreenLayout layout = entity.getWidgetTabEntity()
                 .getLayoutOrDefault(position.getSw(), position.getSh());
+        entity.setParent(position.parent);
         entity.setXb(position.xb, layout.getKey());
         entity.setYb(position.yb, layout.getKey());
         entity.setBw(position.bw, layout.getKey());
         entity.setBh(position.bh, layout.getKey());
-        entity.setParent(position.parent);
         context.db().save(entity);
     }
 

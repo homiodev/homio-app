@@ -128,10 +128,7 @@ public class WidgetDisplayEntity
     }
 
     @Override
-    @UIField(order = 3)
-    @UIFieldColorPicker // disable thresholding
-    @UIFieldGroup("NAME")
-    @UIFieldReadDefaultValue
+    @UIFieldColorPicker
     public String getNameColor() {
         return HasName.super.getNameColor();
     }

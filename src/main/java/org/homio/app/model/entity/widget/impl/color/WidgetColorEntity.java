@@ -17,7 +17,6 @@ import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.model.entity.widget.attributes.HasName;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -39,10 +38,7 @@ public class WidgetColorEntity extends WidgetEntity<WidgetColorEntity>
     }
 
     @Override
-    @UIField(order = 3)
-    @UIFieldColorPicker // disable thresholding
-    @UIFieldGroup("NAME")
-    @UIFieldReadDefaultValue
+    @UIFieldColorPicker
     public String getNameColor() {
         return HasName.super.getNameColor();
     }
