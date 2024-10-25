@@ -7,7 +7,6 @@ import org.homio.api.ContextWidget.WidgetBaseBuilder;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.WidgetTabEntity;
-import org.homio.app.model.entity.widget.attributes.HasBackground;
 import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -30,9 +29,7 @@ public class WidgetBaseBuilderImpl<T, W extends WidgetEntity> implements WidgetB
 
     @Override
     public @NotNull T setZIndex(int index) {
-        if (widget instanceof HasBackground bg) {
-            bg.setIndex(index);
-        }
+        widget.setIndex(index);
         return (T) this;
     }
 
@@ -53,9 +50,7 @@ public class WidgetBaseBuilderImpl<T, W extends WidgetEntity> implements WidgetB
                                     @Nullable Consumer<ThresholdBuilder> colorBuilder,
                                     @Nullable Consumer<PulseBuilder> pulseBuilder) {
         if (colorBuilder == null && pulseBuilder == null) {
-            if (widget instanceof HasBackground bg) {
-                bg.setBackground(backgroundColor);
-            }
+            widget.setBackground(backgroundColor);
         } else {
             ThresholdBuilderImpl builder = new ThresholdBuilderImpl(backgroundColor);
             if (colorBuilder != null) {
@@ -64,18 +59,14 @@ public class WidgetBaseBuilderImpl<T, W extends WidgetEntity> implements WidgetB
             if (pulseBuilder != null) {
                 pulseBuilder.accept(builder);
             }
-            if (widget instanceof HasBackground bg) {
-                bg.setBackground(builder.build());
-            }
+            widget.setBackground(builder.build());
         }
         return (T) this;
     }
 
     @Override
     public @NotNull T setBackground(String value) {
-        if (widget instanceof HasBackground bg) {
-            bg.setBackground(value);
-        }
+        widget.setBackground(value);
         return (T) this;
     }
 

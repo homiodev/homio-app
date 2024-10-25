@@ -52,11 +52,11 @@ public class WidgetFMEntity extends WidgetEntity<WidgetFMEntity>
 
     @UIField(order = 26)
     @UIFieldSlider(min = 0, max = 10)
-    public int getMargin() {
+    public int getInnerMargin() {
         return getJsonData("mg", 1);
     }
 
-    public WidgetFMEntity setMargin(int value) {
+    public WidgetFMEntity setInnerMargin(int value) {
         setJsonData("mg", value);
         return this;
     }

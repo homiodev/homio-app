@@ -6,8 +6,8 @@ import org.homio.api.ContextWidget.ToggleType;
 import org.homio.api.ContextWidget.ToggleWidgetBuilder;
 import org.homio.api.ContextWidget.ToggleWidgetSeriesBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasIconColorThresholdBuilder;
+import org.homio.app.builder.widget.hasBuilder.HasMarginBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasNameBuilder;
-import org.homio.app.builder.widget.hasBuilder.HasPaddingBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasToggleBuilder;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
@@ -21,7 +21,7 @@ import java.util.function.Consumer;
 
 public class ToggleBuilderImpl extends WidgetBaseBuilderImpl<ToggleWidgetBuilder, WidgetToggleEntity>
         implements ToggleWidgetBuilder,
-        HasPaddingBuilder<WidgetToggleEntity, ToggleWidgetBuilder>,
+        HasMarginBuilder<WidgetToggleEntity, ToggleWidgetBuilder>,
         HasNameBuilder<WidgetToggleEntity, ToggleWidgetBuilder> {
 
     @Getter

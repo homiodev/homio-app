@@ -12,7 +12,6 @@ import org.homio.api.entity.HasPermissions;
 import org.homio.api.model.JSON;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.*;
-import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.jetbrains.annotations.NotNull;
@@ -145,5 +144,44 @@ public abstract class WidgetEntity<T extends WidgetEntity> extends BaseEntity
 
     public void setWidgetBorderRadius(int value) {
         setJsonData("border_r", value);
+    }
+
+    @UIField(order = 21)
+    @UIFieldTab("UI")
+    @UIFieldGroup("GENERAL")
+    @UIFieldColorPicker(allowThreshold = true, pulseColorCondition = true, thresholdSource = true)
+    @UIFieldReadDefaultValue
+    public String getBackground() {
+        return getJsonData("bg", "transparent");
+    }
+
+    public void setBackground(String value) {
+        setJsonData("bg", value);
+    }
+
+    @UIField(order = 25)
+    @UIFieldTab("UI")
+    @UIFieldGroup("GENERAL")
+    @UIFieldSlider(min = 15, max = 25)
+    public int getIndex() {
+        return getJsonData("zi", 20);
+    }
+
+    public void setIndex(Integer value) {
+        if (value == null || value == 20) {
+            value = null;
+        }
+        setJsonData("zi", value);
+    }
+
+    @UIField(order = 1000)
+    @UIFieldTab("UI")
+    @UIFieldGroup("GENERAL")
+    public boolean isAdjustFontSize() {
+        return getJsonData("adjfs", Boolean.FALSE);
+    }
+
+    public void setAdjustFontSize(boolean value) {
+        setJsonData("adjfs", value);
     }
 }

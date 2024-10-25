@@ -50,6 +50,7 @@ import org.homio.app.model.entity.widget.impl.media.WidgetFMEntity;
 import org.homio.app.model.entity.widget.impl.media.WidgetFMNodeValue;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
+import org.homio.app.model.entity.widget.impl.toggle.HasToggle;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntity;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoEntity;
@@ -582,13 +583,19 @@ public class WidgetController {
 
     @PostMapping("/toggle/update")
     public void updateToggleValue(@RequestBody SingleValueRequest<Boolean> request) {
-        WidgetToggleSeriesEntity entity = getSeriesEntity(request);
-        context.user().getLoggedInUserRequire().assertEditAccess(entity);
+        BaseEntity widget = getEntity(request.entityID);
+        HasToggle toggle;
+        if(request.seriesEntityID == null) {
+            toggle = (HasToggle) widget;
+        } else {
+            toggle = getSeriesEntity(request);
+        }
+        context.user().getLoggedInUserRequire().assertEditAccess(widget);
 
         setValue(
-                request.value ? entity.getPushToggleOnValue() : entity.getPushToggleOffValue(),
-                entity.getSetValueDataSource(),
-                entity.getSetValueDynamicParameterFields());
+                request.value ? toggle.getPushToggleOnValue() : toggle.getPushToggleOffValue(),
+                toggle.getSetValueDataSource(),
+                toggle.getSetValueDynamicParameterFields());
     }
 
     @GetMapping("/{entityID}")

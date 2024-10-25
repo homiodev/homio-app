@@ -1,19 +1,16 @@
 package org.homio.app.model.entity.widget.impl;
 
 import jakarta.persistence.Entity;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldTableLayout;
 import org.homio.api.ui.field.condition.UIFieldDisableEditOnCondition;
 import org.homio.app.model.entity.widget.WidgetEntity;
-import org.homio.app.model.entity.widget.attributes.HasBackground;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
-import org.homio.app.setting.dashboard.WidgetBorderColorMenuSetting;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.Set;
 
 @Entity
 public class WidgetLayoutEntity extends WidgetEntity<WidgetLayoutEntity>
-        implements HasLayout, HasBackground {
+        implements HasLayout {
 
     @Override
     public @NotNull String getImage() {

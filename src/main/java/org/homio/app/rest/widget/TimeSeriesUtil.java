@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
+// Ugly
 @RequiredArgsConstructor
 public class TimeSeriesUtil {
 
@@ -90,11 +91,11 @@ public class TimeSeriesUtil {
         var listener = (sourceValue).addUpdateValueListener(context, entityID,
                 Duration.ofSeconds(60), item.getChartDynamicParameterFields(),
                 o -> {
-                    Set<TimeSeriesContext<T>> cts = buildTimeSeriesFromDataSource(timePeriod.snapshot(), item, timeSeriesContext.getSeries());
-                    TimeSeriesValues<T> values = timeSeriesContext.getOwner();
+                    var cts = buildTimeSeriesFromDataSource(timePeriod.snapshot(), item, timeSeriesContext.getSeries());
+                    boolean isEqualContext = timeSeriesContext.getOwner().isEqualSeries(cts);
 
                     // if context was updated - we need update rest of values also !!!
-                    if (!values.isEqualSeries(cts)) {
+                    if (!isEqualContext) {
                         WidgetChartsController.TimeSeriesChartData<ChartDataset> fullUpdatedData =
                                 this.buildTimeSeriesFullData(entityID, timePeriod, false, series);
 

@@ -1,8 +1,6 @@
 package org.homio.app.model.entity.widget.impl.slider;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import org.apache.commons.lang3.NotImplementedException;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
@@ -21,7 +19,7 @@ public class WidgetSliderSeriesEntity
         HasIcon,
         HasValueTemplate,
         HasName,
-        HasPadding,
+        HasMargin,
         HasValueConverter,
         HasOptionsForEntityByClassFilter {
 
@@ -79,13 +77,6 @@ public class WidgetSliderSeriesEntity
     @Override
     public String getDefaultName() {
         return null;
-    }
-
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public String getNoValueText() {
-        throw new NotImplementedException();
     }
 
     @Override

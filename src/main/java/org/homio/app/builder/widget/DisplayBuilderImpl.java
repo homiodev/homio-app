@@ -27,7 +27,7 @@ public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuild
         HasChartTimePeriodBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
         HasMinMaxChartValueBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
         HasChartDataSourceBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
-        HasPaddingBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
+        HasMarginBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
         HasNameBuilder<WidgetDisplayEntity, DisplayWidgetBuilder> {
 
     @Getter

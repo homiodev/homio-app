@@ -9,12 +9,11 @@ import org.jetbrains.annotations.NotNull;
 @Entity
 public class WidgetSimpleValueEntity extends WidgetEntity<WidgetSimpleValueEntity>
         implements
-        HasBackground,
         HasIcon,
         HasActionOnClick,
         HasSingleValueDataSource,
         HasValueTemplate,
-        HasPadding,
+        HasMargin,
         HasAlign,
         HasValueConverter {
 

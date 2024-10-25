@@ -10,9 +10,11 @@ import org.homio.api.ui.field.UIFieldLayout.HorizontalAlign;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.homio.app.model.entity.widget.UIFieldJSONLine;
-import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
-import org.homio.app.model.entity.widget.attributes.*;
+import org.homio.app.model.entity.widget.attributes.HasActionOnClick;
+import org.homio.app.model.entity.widget.attributes.HasLayout;
+import org.homio.app.model.entity.widget.attributes.HasMargin;
+import org.homio.app.model.entity.widget.attributes.HasName;
 import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.homio.app.model.entity.widget.impl.chart.HasHorizontalLine;
 import org.homio.app.model.entity.widget.impl.chart.HasLineChartBehaviour;
@@ -29,14 +31,13 @@ import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 public class WidgetDisplayEntity
         extends WidgetEntityAndSeries<WidgetDisplayEntity, WidgetDisplaySeriesEntity>
         implements HasLineChartBehaviour,
-        HasBackground,
         HasDynamicParameterFields,
         HasChartDataSource,
         HasHorizontalLine,
         HasLayout,
         HasName,
         HasActionOnClick,
-        HasPadding,
+        HasMargin,
         ConfigureFieldsService {
 
     @UIField(order = 1)

@@ -10,7 +10,7 @@ public class SimpleValueBuilderImpl extends WidgetBaseBuilderImpl<SimpleValueWid
         implements SimpleValueWidgetBuilder,
         HasActionOnClickBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder>,
         HasValueConverterBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder>,
-        HasPaddingBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder>,
+        HasMarginBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder>,
         HasAlignBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder>,
         HasIconColorThresholdBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder>,
         HasValueTemplateBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder> {

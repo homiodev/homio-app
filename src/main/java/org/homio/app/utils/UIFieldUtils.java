@@ -533,6 +533,12 @@ public class UIFieldUtils {
             jsonTypeMetadata.put("max", fieldNumber.max());
         }
 
+        var fieldTemplate = fieldContext.getDeclaredAnnotation(UIFieldStringTemplate.class);
+        if (fieldTemplate != null) {
+            jsonTypeMetadata.putPOJO("template", fieldTemplate);
+            entityUIMetaData.setType("StringTemplate");
+        }
+
         var fieldSlider = fieldContext.getDeclaredAnnotation(UIFieldSlider.class);
         if (fieldSlider != null) {
             jsonTypeMetadata.put("min", fieldSlider.min());

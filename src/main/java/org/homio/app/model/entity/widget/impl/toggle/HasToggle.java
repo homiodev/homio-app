@@ -21,7 +21,7 @@ public interface HasToggle extends HasSingleValueDataSource, HasSetSingleValueDa
     }
 
     @UIField(order = 3)
-    @UIFieldColorPicker
+    @UIFieldColorPicker(allowThreshold = true, pulseColorCondition = true, thresholdSource = true)
     @UIFieldReadDefaultValue
     default String getToggleColor() {
         return getJsonData("color", UI.Color.WHITE);

@@ -5,9 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.homio.api.ContextWidget.ChartType;
 import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.app.model.entity.widget.UIFieldPadding;
-import org.homio.app.model.entity.widget.attributes.HasPadding;
+import org.homio.app.model.entity.widget.attributes.HasMargin;
 import org.homio.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.homio.app.model.entity.widget.impl.chart.HasAxis;
 import org.homio.app.model.entity.widget.impl.chart.HasHorizontalLine;
@@ -19,7 +17,7 @@ import org.jetbrains.annotations.NotNull;
 @Entity
 public class WidgetLineChartEntity
         extends ChartBaseEntity<WidgetLineChartEntity, WidgetLineChartSeriesEntity>
-        implements HasLineChartBehaviour, HasHorizontalLine, HasAxis, HasPadding {
+        implements HasLineChartBehaviour, HasHorizontalLine, HasAxis, HasMargin {
 
     @Override
     public @NotNull String getImage() {

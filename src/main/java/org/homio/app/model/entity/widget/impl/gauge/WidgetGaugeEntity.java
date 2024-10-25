@@ -23,9 +23,9 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
         HasIcon,
         HasValueConverter,
         HasName,
-        HasValueTemplate,
         WidgetGaugeUITab,
-        HasPadding {
+        WidgetGaugeContentTab,
+        HasMargin {
 
     @Override
     @JsonIgnore

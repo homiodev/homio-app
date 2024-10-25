@@ -7,18 +7,16 @@ import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.homio.app.model.entity.widget.attributes.HasAlign;
-import org.homio.app.model.entity.widget.attributes.HasBackground;
 import org.homio.app.model.entity.widget.attributes.HasIcon;
-import org.homio.app.model.entity.widget.attributes.HasPadding;
+import org.homio.app.model.entity.widget.attributes.HasMargin;
 import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetSimpleTextEntity extends WidgetEntity<WidgetSimpleTextEntity>
         implements
-        HasBackground,
         HasAlign,
         HasIcon,
-        HasPadding {
+        HasMargin {
 
     @Override
     public WidgetGroup getGroup() {
