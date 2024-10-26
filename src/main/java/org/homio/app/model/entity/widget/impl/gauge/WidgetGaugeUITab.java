@@ -30,10 +30,6 @@ public interface WidgetGaugeUITab extends HasJsonData {
         setJsonDataEnum("displayType", value);
     }
 
-    default void setMargin(int value) {
-        setJsonData("mrg", value);
-    }
-
     @UIField(order = 4, type = UIFieldType.Slider, label = "gauge.thick")
     @UIFieldNumber(min = 1, max = 20)
     @UIFieldTab("UI")

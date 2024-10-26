@@ -10,7 +10,6 @@ import org.homio.app.auth.AccessFilter;
 import org.homio.app.auth.CacheAuthenticationProvider;
 import org.homio.app.auth.JwtTokenProvider;
 import org.homio.app.auth.UserEntityDetailsService;
-import org.homio.app.manager.common.impl.ContextSettingImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -27,6 +26,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.validation.beanvalidation.MethodValidationPostProcessor;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
 import static org.homio.app.config.WebSocketConfig.WEB_SOCKET_ENDPOINT;
@@ -67,9 +69,7 @@ public class SecurityConfiguration {
                     authorize.requestMatchers(WEB_SOCKET_ENDPOINT, CUSTOM_WEB_SOCKET_ENDPOINT + "/**", "/rest/**").permitAll());
         } else {
             http.authorizeHttpRequests(authorize -> {
-                // to avoid issue with ResponseEntity<StreamingResponseBody>
-                authorize.dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD, DispatcherType.ASYNC).permitAll();
-                authorize.requestMatchers(
+                List<String> paths = new ArrayList<>(List.of(
                         WEB_SOCKET_ENDPOINT,
                         CUSTOM_WEB_SOCKET_ENDPOINT + "/**",
                         "/swagger-ui/**",
@@ -87,7 +87,11 @@ public class SecurityConfiguration {
                         "/rest/media/video/playback/**",
                         "/rest/addon/image/**",
                         "/rest/route/proxy/**",
-                        "/rest/device/**").permitAll();
+                        "/rest/device/**"
+                ));
+                // to avoid issue with ResponseEntity<StreamingResponseBody>
+                authorize.dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD, DispatcherType.ASYNC).permitAll();
+                authorize.requestMatchers(paths.toArray(new String[0])).permitAll();
                 // allow preflight requests
                 authorize.requestMatchers(HttpMethod.OPTIONS).permitAll();
                 authorize.requestMatchers("/rest/**").authenticated();

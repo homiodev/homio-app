@@ -2,30 +2,36 @@ package org.homio.app.model.entity.widget.impl.gauge;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
+import org.homio.api.entity.validation.MaxItems;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;
-import org.homio.app.model.entity.widget.WidgetEntity;
+import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
 import org.homio.app.model.entity.widget.attributes.*;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 import java.util.List;
+import java.util.Set;
 
 @Entity
-public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
+public class WidgetGaugeEntity extends WidgetEntityAndSeries<WidgetGaugeEntity, WidgetGaugeSeriesEntity>
         implements
         HasSingleValueDataSource,
         HasSetSingleValueDataSource,
-        HasIcon,
         HasValueConverter,
         HasName,
         WidgetGaugeUITab,
-        WidgetGaugeContentTab,
         HasMargin {
+
+    @Override
+    @MaxItems(3)
+    public Set<WidgetGaugeSeriesEntity> getSeries() {
+        return super.getSeries();
+    }
 
     @Override
     @JsonIgnore
@@ -96,16 +102,6 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
     }
 
     @UIField(order = 10)
-    @UIFieldGroup("VALUE")
-    public boolean getShowValue() {
-        return getJsonData("minv", Boolean.TRUE);
-    }
-
-    public void setShowValue(boolean value) {
-        setJsonData("minv", value);
-    }
-
-    @UIField(order = 10)
     @UIFieldGroup(value = "SECOND_VALUE", order = 20, borderColor = "#BF00FF")
     @UIFieldTab("ADVANCED")
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
@@ -153,7 +149,6 @@ public class WidgetGaugeEntity extends WidgetEntity<WidgetGaugeEntity>
         if (!getJsonData().has("gfg")) {
             setGaugeForeground(UI.Color.random());
         }
-        HasIcon.randomColor(this);
     }
 
     public enum GaugeType {

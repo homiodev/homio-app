@@ -11,7 +11,7 @@ public interface HasValueTemplate extends HasJsonData {
     @UIFieldGroup(value = "VALUE", order = 10)
     @UIFieldStringTemplate
     default UIFieldStringTemplate.StringTemplate getValueTemplate() {
-        return getJsonData("vt", UIFieldStringTemplate.StringTemplate.class);
+        return getJsonData("vt", UIFieldStringTemplate.StringTemplate.class, true);
     }
 
     default void setValueTemplate(UIFieldStringTemplate.StringTemplate value) {

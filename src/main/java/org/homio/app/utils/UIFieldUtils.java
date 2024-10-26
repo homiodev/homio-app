@@ -535,7 +535,7 @@ public class UIFieldUtils {
 
         var fieldTemplate = fieldContext.getDeclaredAnnotation(UIFieldStringTemplate.class);
         if (fieldTemplate != null) {
-            jsonTypeMetadata.putPOJO("template", fieldTemplate);
+            jsonTypeMetadata.putPOJO("template", toRecord(fieldTemplate));
             entityUIMetaData.setType("StringTemplate");
         }
 
@@ -873,6 +873,24 @@ public class UIFieldUtils {
         return allSuperClassesAndInterfaces;
     }
 
+    private static int getSelectAnnotationCount(UIFieldContext fieldContext) {
+        return fieldContext.getDeclaredAnnotationsByType(UIFieldTreeNodeSelection.class).size()
+               + fieldContext.getDeclaredAnnotationsByType(UIFieldDynamicSelection.class).size()
+               + fieldContext.getDeclaredAnnotationsByType(UIFieldDevicePortSelection.class).size()
+               + fieldContext.getDeclaredAnnotationsByType(UIFieldStaticSelection.class).size()
+               + fieldContext.getDeclaredAnnotationsByType(UIFieldEntityByClassSelection.class).size()
+               + fieldContext.getDeclaredAnnotationsByType(UIFieldEntityTypeSelection.class).size()
+               + fieldContext.getDeclaredAnnotationsByType(UIFieldBeanSelection.class).size();
+    }
+
+    private static Object toRecord(UIFieldStringTemplate annotation) {
+        return new UIFieldStringTemplateRecord(
+                annotation.allowSuffix(),
+                annotation.allowPrefix(),
+                annotation.allowValueClickShowHistoryOption()
+        );
+    }
+
     public interface UIFieldContext {
 
         String getName();
@@ -904,6 +922,11 @@ public class UIFieldUtils {
                 Class<A> annotationClass, boolean isOnlyFirstOccurrence);
 
         <A extends Annotation> List<A> getDeclaredAnnotationsByType(Class<A> annotationClass);
+    }
+
+    public interface ConfigureFieldsService {
+
+        void configure(@NotNull List<EntityUIMetaData> result);
     }
 
     @RequiredArgsConstructor
@@ -1058,18 +1081,6 @@ public class UIFieldUtils {
         }
     }
 
-    public interface ConfigureFieldsService {
-
-        void configure(@NotNull List<EntityUIMetaData> result);
-    }
-
-    private static int getSelectAnnotationCount(UIFieldContext fieldContext) {
-        return fieldContext.getDeclaredAnnotationsByType(UIFieldTreeNodeSelection.class).size()
-               + fieldContext.getDeclaredAnnotationsByType(UIFieldDynamicSelection.class).size()
-               + fieldContext.getDeclaredAnnotationsByType(UIFieldDevicePortSelection.class).size()
-               + fieldContext.getDeclaredAnnotationsByType(UIFieldStaticSelection.class).size()
-               + fieldContext.getDeclaredAnnotationsByType(UIFieldEntityByClassSelection.class).size()
-               + fieldContext.getDeclaredAnnotationsByType(UIFieldEntityTypeSelection.class).size()
-               + fieldContext.getDeclaredAnnotationsByType(UIFieldBeanSelection.class).size();
+    public record UIFieldStringTemplateRecord(boolean as, boolean ap, boolean hst) {
     }
 }
