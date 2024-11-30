@@ -3,11 +3,10 @@ package org.homio.app.model.entity.widget.impl.gauge;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
+import org.homio.app.model.entity.widget.UIEditReloadWidget;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasIcon;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
@@ -34,7 +33,7 @@ public class WidgetGaugeSeriesEntity extends WidgetSeriesEntity<WidgetGaugeEntit
 
     @UIField(order = 1)
     public boolean getUseGaugeValue() {
-        return getJsonData("ugv", Boolean.TRUE);
+        return getJsonData("ugv", Boolean.FALSE);
     }
 
     public void setUseGaugeValue(boolean value) {
@@ -42,12 +41,38 @@ public class WidgetGaugeSeriesEntity extends WidgetSeriesEntity<WidgetGaugeEntit
     }
 
     @Override
-    @UIFieldGroup("")
-    @UIField(order = 10, required = true)
+    @UIField(order = 10)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
-    @UIFieldShowOnCondition("return context.get('useGaugeValue') == 'false'")
+    @UIFieldGroup(value = "VALUE", order = 1)
+    @UIEditReloadWidget
+    @UIFieldShowOnCondition("return context.get('useGaugeValue') != true")
+    @UIFieldIgnoreParent
     public String getValueDataSource() {
         return getJsonData("vds");
+    }
+
+    @UIField(order = 20)
+    @UIFieldReadDefaultValue
+    @UIFieldSlider(min = -50, max = 50)
+    @UIFieldGroup("VALUE")
+    public int getPosition() {
+        return getJsonData("pos", 0);
+    }
+
+    public void setPosition(int value) {
+        setJsonData("pos", value);
+    }
+
+    @UIField(order = 25)
+    @UIFieldReadDefaultValue
+    @UIFieldSlider(min = -50, max = 50)
+    @UIFieldGroup("VALUE")
+    public int getShift() {
+        return getJsonData("shift", 0);
+    }
+
+    public void setShift(int value) {
+        setJsonData("shift", value);
     }
 
     @Override

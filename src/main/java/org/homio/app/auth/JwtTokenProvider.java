@@ -25,6 +25,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
@@ -166,7 +167,8 @@ public class JwtTokenProvider implements ContextCreated {
         return null;
     }*/
 
-    String createToken(String username, Authentication authentication, long validMillis) {
+    public  String createToken(String username, Authentication authentication) {
+        long validMillis = TimeUnit.MINUTES.toMillis(jwtValidityTimeout);
         String token = createToken(username, authentication.getAuthorities(), validMillis);
         userCache.put(token, authentication);
         removeOutdatedTokens();

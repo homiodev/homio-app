@@ -146,14 +146,14 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                                                    BaseEntity actionEntity, JSONObject params) {
         List<Object> objects = new ArrayList<>();
         for (AnnotatedType parameterType : method.getAnnotatedParameterTypes()) {
-            if (actionHolder.getClass().isAssignableFrom((Class) parameterType.getType())) {
+            if (actionHolder.getClass().isAssignableFrom((Class<?>) parameterType.getType())) {
                 objects.add(actionHolder);
-            } else if (BaseEntity.class.isAssignableFrom((Class) parameterType.getType())) {
+            } else if (BaseEntity.class.isAssignableFrom((Class<?>) parameterType.getType())) {
                 objects.add(actionEntity);
             } else if (JSONObject.class.isAssignableFrom((Class<?>) parameterType.getType())) {
                 objects.add(params);
             } else {
-                objects.add(context.getBean((Class) parameterType.getType()));
+                objects.add(context.getBean((Class<?>) parameterType.getType()));
             }
         }
         method.setAccessible(true);
@@ -214,6 +214,9 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
         if (classEntity == null) {
             // i.e in case we load Widget
+            if (entityID.contains(":GENERATED:")) {
+                entityID = entityID.substring(0, entityID.indexOf(":"));
+            }
             Class<?> aClass = entityManager.getUIFieldClassByType(entityID);
             if (aClass == null) {
                 List<Class<?>> classImplementationsByType = findAllClassImplementationsByType(entityID);
@@ -857,12 +860,11 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             if (!uiSidebarChildren.allowCreateItem()) {
                 return null;
             }
-            optionModel.json(json -> {
-                json.put("icon", uiSidebarChildren.icon())
-                        .put("color", uiSidebarChildren.color())
-                        .put("maxExceeded", uiSidebarChildren.maxAllowCreateItem() > 0 &&
-                                            uiSidebarChildren.maxAllowCreateItem() >= getItems(aClass.getSimpleName()).size());
-            });
+            optionModel.json(json ->
+                    json.put("icon", uiSidebarChildren.icon())
+                            .put("color", uiSidebarChildren.color())
+                            .put("maxExceeded", uiSidebarChildren.maxAllowCreateItem() > 0 &&
+                                                uiSidebarChildren.maxAllowCreateItem() >= getItems(aClass.getSimpleName()).size()));
         }
         return optionModel;
     }
@@ -978,12 +980,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             }
         }
         return classTypes;
-    }
-
-    private void addFilePath(List<Path> files, Path file) {
-        if (file != null && Files.exists(file)) {
-            files.add(file);
-        }
     }
 
     @Getter

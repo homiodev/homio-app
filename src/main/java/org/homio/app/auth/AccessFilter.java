@@ -32,6 +32,7 @@ public class AccessFilter extends OncePerRequestFilter {
             || request.getRequestURI().endsWith(".js")
             || request.getRequestURI().endsWith(".json")
             || request.getRequestURI().endsWith(".jpg")
+            || request.getRequestURI().endsWith(".ico")
             || request.getRequestURI().endsWith(".jpeg")
             || request.getRequestURI().endsWith(".png")
             || request.getRequestURI().endsWith(".html")) {

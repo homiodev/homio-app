@@ -85,7 +85,7 @@ public interface WidgetGaugeUITab extends HasJsonData {
     @UIFieldGroup(value = "DOT", order = 300, borderColor = "#C2365B")
     @UIFieldReadDefaultValue
     default int getDotBorderWidth() {
-        return getJsonData("dotbw", 0);
+        return getJsonData("dotbw", 2);
     }
 
     default void setDotBorderWidth(int value) {
@@ -98,7 +98,7 @@ public interface WidgetGaugeUITab extends HasJsonData {
     @UIFieldGroup("DOT")
     @UIFieldReadDefaultValue
     default int getDotRadiusWidth() {
-        return getJsonData("dotbrw", 0);
+        return getJsonData("dotbrw", 5);
     }
 
     default void setDotRadiusWidth(int value) {
@@ -179,7 +179,7 @@ public interface WidgetGaugeUITab extends HasJsonData {
 
     @UIField(order = 20)
     @UIFieldTab("UI")
-    @UIFieldMarkers(UIFieldMarkers.MarkerOP.opacity)
+    @UIFieldMarkers(UIFieldMarkers.MarkerOP.none)
     default String getSliceThreshold() {
         return getJsonData("slices", "");
     }

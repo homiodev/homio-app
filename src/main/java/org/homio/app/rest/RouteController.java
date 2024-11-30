@@ -10,6 +10,7 @@ import org.homio.api.Context;
 import org.homio.api.ContextService.RouteProxyBuilder.ProxyUrl;
 import org.homio.api.exception.ServerException;
 import org.homio.api.ui.UISidebarMenu;
+import org.homio.app.auth.JwtTokenProvider;
 import org.homio.app.manager.AddonService;
 import org.homio.app.manager.AddonService.AddonJson;
 import org.homio.app.manager.common.ClassFinder;
@@ -23,6 +24,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.DataNode;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.mvc.ProxyExchange;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -114,6 +116,11 @@ public class RouteController {
         modifyRequestBody(proxy, request);
 
         ProxyExchange<byte[]> proxyExchange = proxy.uri(uri);
+        /*String homioToken = request.getParameter("homio_token");
+        if(homioToken != null) {
+            proxyExchange.header("Authorization", "Bearer " + homioToken);
+        }*/
+
         proxyExchange.sensitive(""); // allow pass Cookie and Authentication headers
         modifyHeaders(request, proxyExchange, uri, routeProxy);
 

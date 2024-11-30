@@ -10,7 +10,10 @@ import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;
 import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
-import org.homio.app.model.entity.widget.attributes.*;
+import org.homio.app.model.entity.widget.attributes.HasMargin;
+import org.homio.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
+import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
+import org.homio.app.model.entity.widget.attributes.HasValueConverter;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
@@ -23,7 +26,6 @@ public class WidgetGaugeEntity extends WidgetEntityAndSeries<WidgetGaugeEntity, 
         HasSingleValueDataSource,
         HasSetSingleValueDataSource,
         HasValueConverter,
-        HasName,
         WidgetGaugeUITab,
         HasMargin {
 
@@ -64,7 +66,6 @@ public class WidgetGaugeEntity extends WidgetEntityAndSeries<WidgetGaugeEntity, 
     @UIField(order = 12)
     @UIFieldGroup(value = "SET_VALUE", order = 2, borderColor = "#4CC9FE")
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
-    @UIEditReloadWidget
     public String getSetValueDataSource() {
         return HasSetSingleValueDataSource.super.getSetValueDataSource();
     }
@@ -148,6 +149,7 @@ public class WidgetGaugeEntity extends WidgetEntityAndSeries<WidgetGaugeEntity, 
     public void beforePersist() {
         if (!getJsonData().has("gfg")) {
             setGaugeForeground(UI.Color.random());
+            setDotBorderColor(getGaugeForeground());
         }
     }
 

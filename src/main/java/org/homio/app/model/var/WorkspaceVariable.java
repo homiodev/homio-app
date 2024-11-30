@@ -23,6 +23,7 @@ import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.entity.widget.ability.HasTimeValueSeries;
 import org.homio.api.model.Icon;
 import org.homio.api.model.JSON;
+import org.homio.api.model.OptionModel;
 import org.homio.api.state.State;
 import org.homio.api.storage.SourceHistory;
 import org.homio.api.storage.SourceHistoryItem;
@@ -210,6 +211,8 @@ public class WorkspaceVariable extends BaseEntity
         return null;
     }
 
+    @UIField(order = 100)
+    @UIFieldShowOnCondition("return context.get('restriction') == 'Float'")
     public @Nullable Float getMin() {
         return getJsonData().has("min") ? getJsonData().getFloat("min") : null;
     }
@@ -218,6 +221,8 @@ public class WorkspaceVariable extends BaseEntity
         setJsonData("min", min);
     }
 
+    @UIField(order = 110)
+    @UIFieldShowOnCondition("return context.get('restriction') == 'Float'")
     public @Nullable Float getMax() {
         return getJsonData().has("max") ? getJsonData().getFloat("max") : null;
     }
@@ -442,7 +447,13 @@ public class WorkspaceVariable extends BaseEntity
     }
 
     @Override
-    public void afterUpdate() {
-        super.afterUpdate();
+    public void configureOptionModel(@NotNull OptionModel optionModel, @NotNull Context context) {
+        optionModel.json(node -> {
+            node.put("type", getRestriction().name());
+            if (getMin() != null) {
+                node.put("min", getMin());
+                node.put("max", getMax());
+            }
+        });
     }
 }

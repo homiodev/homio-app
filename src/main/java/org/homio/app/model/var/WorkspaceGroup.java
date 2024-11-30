@@ -43,6 +43,7 @@ import org.homio.app.model.UIHideEntityIfFieldNotNull;
 import org.homio.app.model.var.WorkspaceVariable.VarType;
 import org.homio.app.repository.VariableBackupRepository;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -64,7 +65,9 @@ import static org.homio.app.utils.UIFieldUtils.nullIfFalse;
         icon = "fas fa-boxes-stacked",
         bg = "#54AD24",
         allowCreateNewItems = true,
-        overridePath = "variable")
+        overridePath = "variable",
+        filter = {"*:fas fa-filter:#8DBA73"}
+)
 @AttributeOverride(name = "name", column = @Column(nullable = false))
 @UIHideEntityIfFieldNotNull("parent")
 @NoArgsConstructor
@@ -320,6 +323,9 @@ public class WorkspaceGroup extends BaseEntity
     @NoArgsConstructor
     public static class WorkspaceVariableEntity {
 
+        private @Nullable Float min;
+        private @Nullable Float max;
+
         private String entityID;
 
         @UIField(order = 10, type = UIFieldType.HTML)
@@ -394,6 +400,8 @@ public class WorkspaceGroup extends BaseEntity
             this.backup = nullIfFalse(variable.isBackup());
             this.quota = variable.getQuota();
             this.usedQuota = variable.getUsedQuota();
+            this.min = variable.getMin();
+            this.max = variable.getMax();
             this.disableDelete = Boolean.TRUE.equals(variable.isDisableDelete()) ? true : null;
             if (variable.getVarType() != VarType.standard) {
                 this.rowClass = "var-type-%s".formatted(variable.getVarType());

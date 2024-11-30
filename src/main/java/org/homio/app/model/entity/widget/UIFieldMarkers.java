@@ -13,6 +13,6 @@ public @interface UIFieldMarkers {
 
     enum MarkerOP {
         label,
-        opacity
+        none
     }
 }
