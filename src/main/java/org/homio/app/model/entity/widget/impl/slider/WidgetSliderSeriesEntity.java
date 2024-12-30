@@ -7,6 +7,7 @@ import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.app.model.entity.widget.HasOptionsForEntityByClassFilter;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.*;
@@ -69,6 +70,54 @@ public class WidgetSliderSeriesEntity
         setJsonData("step", value);
     }
 
+    @UIField(order = 5)
+    @UIFieldGroup("SLIDER")
+    public SliderView getSliderView() {
+        return getJsonDataEnum("view", SliderView.WideSlider);
+    }
+
+    public void setSliderView(SliderView value) {
+        setJsonDataEnum("view", value);
+    }
+
+    @UIField(order = 1)
+    @UIFieldShowOnCondition("return context.get('sliderView') == 'WideSlider'")
+    @UIFieldGroup(value = "BORDER", order = 12, borderColor = "#299942")
+    @UIFieldSlider(min = 0, max = 25)
+    public int getWidgetBorderRadius() {
+        return getJsonData("br", 10);
+    }
+
+    public WidgetSliderSeriesEntity setWidgetBorderRadius(int value) {
+        setJsonData("br", value);
+        return this;
+    }
+
+    @UIField(order = 2)
+    @UIFieldShowOnCondition("return context.get('sliderView') == 'WideSlider'")
+    @UIFieldGroup("BORDER")
+    @UIFieldSlider(min = 0, max = 10)
+    public Integer getWidgetBorderWidth() {
+        return getJsonData("bw", 0);
+    }
+
+    public WidgetSliderSeriesEntity setWidgetBorderWidth(Integer value) {
+        setJsonData("bw", value);
+        return this;
+    }
+
+    @UIField(order = 3)
+    @UIFieldShowOnCondition("return context.get('sliderView') == 'WideSlider'")
+    @UIFieldGroup("BORDER")
+    @UIFieldColorPicker
+    public String getWidgetBorderColor() {
+        return getJsonData("bc");
+    }
+
+    public void setWidgetBorderColor(String value) {
+        setJsonData("bc", value);
+    }
+
     @Override
     protected String getSeriesPrefix() {
         return "slider";
@@ -100,5 +149,9 @@ public class WidgetSliderSeriesEntity
         }
 
         return false;
+    }
+
+    enum SliderView {
+        Regular, WideSlider
     }
 }

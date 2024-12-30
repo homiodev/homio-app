@@ -8,8 +8,12 @@ import jakarta.annotation.PostConstruct;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
-import lombok.*;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import lombok.val;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -37,9 +41,14 @@ import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.UIFilterOptions;
-import org.homio.api.ui.field.action.*;
+import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
+import org.homio.api.ui.field.action.HasDynamicUIFields;
+import org.homio.api.ui.field.action.UIActionButton;
+import org.homio.api.ui.field.action.UIContextMenuAction;
+import org.homio.api.ui.field.action.UIContextMenuUploadAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
+import org.homio.api.ui.field.inline.UIFieldInlineEntities;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader.DynamicOptionLoaderParameters;
 import org.homio.api.ui.field.selection.dynamic.DynamicParameterFields;
@@ -75,14 +84,28 @@ import org.springframework.core.annotation.MergedAnnotations.SearchStrategy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.*;
+import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.AnnotatedType;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
@@ -91,8 +114,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
@@ -616,8 +648,11 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             BaseEntity owner = context.db().getRequire(entityID);
 
             for (String type : jsonObject.keySet()) {
-                Class<? extends BaseEntity> className = (Class<? extends BaseEntity>) entityManager.getUIFieldClassByType(type);
                 JSONObject entityFields = jsonObject.getJSONObject(type);
+                if (type.contains(":GENERATED:")) {
+                    type = type.substring(0, type.indexOf(":"));
+                }
+                Class<? extends BaseEntity> className = (Class<? extends BaseEntity>) entityManager.getUIFieldClassByType(type);
                 BaseEntity newEntity = objectMapper.readValue(entityFields.toString(), className);
                 FieldUtils.writeField(newEntity, mappedBy, owner, true);
                 context.db().save(newEntity);
@@ -749,6 +784,17 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 return actionEntity.handleTextFieldAction(fieldName, request.params);
             }
         }
+
+        // Case for WorkspaceVariable, if user click on single variable
+        ActionResponseModel result = null;
+        String variableEntityID = request.params.getString("inlineEntity");
+        if (variableEntityID != null) {
+            result = tryHandleInlineEntity(variableEntityID, actionHolder, actionID, actionEntity, request);
+            if (result != null) {
+                return result;
+            }
+        }
+
         if (actionHolder instanceof HasDynamicContextMenuActions da) {
             return da.handleAction(context, actionID, request.params);
         }
@@ -766,6 +812,54 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
 
         throw new IllegalArgumentException("Unable to find action: <" + actionID + "> for model: " + actionHolder);
+    }
+
+    private ActionResponseModel tryHandleInlineEntity(String variableEntityID, Object actionHolder, String actionID, BaseEntity actionEntity, ActionModelRequest request) {
+        Method[] methods = MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIFieldInlineEntities.class);
+        if (methods.length == 0) {
+            return null;
+        }
+        ParameterizedType grt = (ParameterizedType) methods[0].getGenericReturnType();
+        Class realType = (Class) grt.getActualTypeArguments()[0];
+        if (!UIFieldInlineEntities.InlineEntity.class.isAssignableFrom(realType)) {
+            return null;
+        }
+        for (Method method : MethodUtils.getMethodsWithAnnotation(realType, UIContextMenuAction.class)) {
+            UIContextMenuAction menuAction = method.getDeclaredAnnotation(UIContextMenuAction.class);
+            if (menuAction.value().equals(actionID)) {
+                var targetObject = findTargetObjectFromFieldInlineEntities(variableEntityID, actionHolder, methods);
+                if (targetObject != null) {
+                    ActionResponseModel model = executeMethodAction(method, targetObject, context, actionEntity, request.params);
+                    return model == null ? ActionResponseModel.none() : model;
+                }
+            }
+        }
+        return null;
+    }
+
+    @SneakyThrows
+    private static Object findTargetObjectFromFieldInlineEntities(String variableEntityID, Object actionHolder, Method[] methods) {
+        List items = (List) methods[0].invoke(actionHolder);
+        for (Object item : items) {
+            if (((UIFieldInlineEntities.InlineEntity) item).getEntityID().equals(variableEntityID)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    @SneakyThrows
+    private static boolean filterMatchFieldInlineEntity(String variableEntityID, Object i) {
+        Field entityID;
+        try {
+            entityID = i.getClass().getField("entityID");
+        } catch (Exception e) {
+            entityID = i.getClass().getDeclaredField("ieeeAddress");
+        }
+        if (variableEntityID.equals(FieldUtils.readField(entityID, i, true))) {
+            return true;
+        }
+        return false;
     }
 
     private List<ItemContextResponse> buildItemBootstrap(String type, String subType) {

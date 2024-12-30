@@ -198,6 +198,9 @@ public abstract class UserBaseEntity extends IdentityEntity
 
     @Override
     public boolean isDisableEdit() {
+        if (context().user().getLoggedInUser() == null) {
+            return false;
+        }
         return !context().user().isAdminLoggedUser();
     }
 

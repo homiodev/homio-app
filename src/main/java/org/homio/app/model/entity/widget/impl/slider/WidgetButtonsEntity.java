@@ -57,4 +57,9 @@ public class WidgetButtonsEntity
     public void setBackColor(String value) {
         setJsonData("bcClr", value);
     }
+
+    @Override
+    public void beforePersist() {
+        setOverflow(Overflow.hidden);
+    }
 }

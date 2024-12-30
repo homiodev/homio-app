@@ -73,7 +73,8 @@ public class WidgetBaseBuilderImpl<T, W extends WidgetEntity> implements WidgetB
     @Override
     public @NotNull T attachToTab(@NotNull String name) {
         for (WidgetTabEntity widgetTabEntity : context.db().findAll(WidgetTabEntity.class)) {
-            if (Objects.equals(widgetTabEntity.getName(), name)) {
+            if (Objects.equals(widgetTabEntity.getName(), name) ||
+                Objects.equals(widgetTabEntity.getEntityID(), name)) {
                 widget.setWidgetTabEntity(widgetTabEntity);
                 break;
             }

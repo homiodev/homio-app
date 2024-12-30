@@ -66,7 +66,7 @@ public class AuthController {
         UserBaseEntity.log.info("Registering <{}>", credentials.getEmail());
         try {
             UserAdminEntity userAdminEntity = context.db().getRequire(UserAdminEntity.class, PRIMARY_DEVICE);
-            if (userAdminEntity.getEmail().isEmpty()) {
+            if (!userAdminEntity.getEmail().isEmpty()) {
                 throw new IllegalStateException("Unable to register second primary user");
             }
             userAdminEntity.setEmail(credentials.email);

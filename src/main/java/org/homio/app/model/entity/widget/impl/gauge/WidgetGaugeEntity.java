@@ -11,6 +11,7 @@ import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;
 import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
 import org.homio.app.model.entity.widget.attributes.HasMargin;
+import org.homio.app.model.entity.widget.attributes.HasName;
 import org.homio.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasValueConverter;
@@ -23,6 +24,7 @@ import java.util.Set;
 @Entity
 public class WidgetGaugeEntity extends WidgetEntityAndSeries<WidgetGaugeEntity, WidgetGaugeSeriesEntity>
         implements
+        HasName,
         HasSingleValueDataSource,
         HasSetSingleValueDataSource,
         HasValueConverter,
@@ -80,11 +82,6 @@ public class WidgetGaugeEntity extends WidgetEntityAndSeries<WidgetGaugeEntity, 
 
     public void setValuePrecision(int value) {
         setJsonData("prec", value);
-    }
-
-    @UIField(order = 1)
-    public String getName() {
-        return super.getName();
     }
 
     @Override
@@ -145,8 +142,19 @@ public class WidgetGaugeEntity extends WidgetEntityAndSeries<WidgetGaugeEntity, 
         setJsonData("dotsc", value);
     }
 
+    @UIField(order = 1)
+    @UIFieldGroup(value = "GAUGE", borderColor = "#FF00FF", order = 100)
+    public Boolean isUpdateOnMove() {
+        return getJsonData("uom", Boolean.FALSE);
+    }
+
+    public void setUpdateOnMove(boolean value) {
+        setJsonData("uom", value);
+    }
+
     @Override
     public void beforePersist() {
+        setOverflow(Overflow.hidden);
         if (!getJsonData().has("gfg")) {
             setGaugeForeground(UI.Color.random());
             setDotBorderColor(getGaugeForeground());
@@ -162,10 +170,5 @@ public class WidgetGaugeEntity extends WidgetEntityAndSeries<WidgetGaugeEntity, 
     public enum MarkerType {
         line,
         triangle
-    }
-
-    public enum LineType {
-        round,
-        butt
     }
 }

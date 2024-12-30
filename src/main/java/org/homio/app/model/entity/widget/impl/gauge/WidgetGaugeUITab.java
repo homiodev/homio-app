@@ -1,5 +1,6 @@
 package org.homio.app.model.entity.widget.impl.gauge;
 
+import org.homio.api.ContextWidget;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.*;
@@ -15,18 +16,18 @@ public interface WidgetGaugeUITab extends HasJsonData {
         return getJsonData("animdur", 500);
     }
 
-    default void getAnimateDuration(int value) {
+    default void setAnimateDuration(int value) {
         setJsonData("animdur", value);
     }
 
     @UIField(order = 2)
     @UIFieldTab("UI")
     @UIFieldGroup("GENERAL")
-    default WidgetGaugeEntity.GaugeType getDisplayType() {
-        return getJsonDataEnum("displayType", WidgetGaugeEntity.GaugeType.arch);
+    default ContextWidget.GaugeDisplayType getDisplayType() {
+        return getJsonDataEnum("displayType", ContextWidget.GaugeDisplayType.arch);
     }
 
-    default void setDisplayType(WidgetGaugeEntity.GaugeType value) {
+    default void setDisplayType(ContextWidget.GaugeDisplayType value) {
         setJsonDataEnum("displayType", value);
     }
 
@@ -45,11 +46,11 @@ public interface WidgetGaugeUITab extends HasJsonData {
     @UIField(order = 5)
     @UIFieldTab("UI")
     @UIFieldGroup("GENERAL")
-    default WidgetGaugeEntity.LineType getGaugeCapType() {
-        return getJsonDataEnum("gaugeCapType", WidgetGaugeEntity.LineType.round);
+    default ContextWidget.GaugeCapType getGaugeCapType() {
+        return getJsonDataEnum("gaugeCapType", ContextWidget.GaugeCapType.round);
     }
 
-    default void setGaugeCapType(WidgetGaugeEntity.LineType lineType) {
+    default void setGaugeCapType(ContextWidget.GaugeCapType lineType) {
         setJsonDataEnum("gaugeCapType", lineType);
     }
 
@@ -77,6 +78,17 @@ public interface WidgetGaugeUITab extends HasJsonData {
 
     default void setGaugeBackground(String value) {
         setJsonData("gbg", value);
+    }
+
+    @UIField(order = 8)
+    @UIFieldTab("UI")
+    @UIFieldGroup("GENERAL")
+    default Boolean isShowGradient() {
+        return getJsonData("sg", Boolean.FALSE);
+    }
+
+    default void setShowGradient(boolean value) {
+        setJsonData("sg", value);
     }
 
     @UIField(order = 1)
@@ -201,6 +213,7 @@ public interface WidgetGaugeUITab extends HasJsonData {
     @UIField(order = 35)
     @UIFieldTab("UI")
     @UIFieldGroup(value = "NEEDLE", order = 450, borderColor = "#ACB82A")
+    @UIFieldReadDefaultValue
     default boolean getDrawNeedle() {
         return getJsonData("ndl", Boolean.FALSE);
     }

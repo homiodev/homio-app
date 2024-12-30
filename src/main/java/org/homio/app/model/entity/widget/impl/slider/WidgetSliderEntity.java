@@ -31,6 +31,12 @@ public class WidgetSliderEntity
 
     @UIField(order = 3)
     @UIFieldGroup("SLIDER")
+    public Boolean isVerticalInvert() {
+        return getJsonData("vti", Boolean.FALSE);
+    }
+
+    @UIField(order = 4)
+    @UIFieldGroup("SLIDER")
     public Boolean getThumbLabel() {
         return getJsonData("tl", Boolean.TRUE);
     }
@@ -59,6 +65,10 @@ public class WidgetSliderEntity
         setJsonData("vt", value);
     }
 
+    public void setVerticalInvert(Boolean value) {
+        setJsonData("vti", value);
+    }
+
     public void setUpdateOnMove(Boolean value) {
         setJsonData("uom", value);
     }
@@ -84,5 +94,10 @@ public class WidgetSliderEntity
                                 .addCol("slider", UIFieldLayout.HorizontalAlign.center)
                                 .addCol("value", UIFieldLayout.HorizontalAlign.center))
                 .build();
+    }
+
+    @Override
+    public void beforePersist() {
+        setOverflow(Overflow.hidden);
     }
 }

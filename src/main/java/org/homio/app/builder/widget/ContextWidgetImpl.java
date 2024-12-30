@@ -20,21 +20,24 @@ import org.homio.api.widget.template.TemplateWidgetBuilder;
 import org.homio.api.widget.template.WidgetDefinition;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.WidgetEntity;
+import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.WidgetTabEntity;
 import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
-import org.homio.app.model.entity.widget.impl.simple.WidgetSimpleValueEntity;
 import org.homio.app.model.entity.widget.impl.chart.bar.WidgetBarTimeChartEntity;
 import org.homio.app.model.entity.widget.impl.chart.bar.WidgetBarTimeChartSeriesEntity;
 import org.homio.app.model.entity.widget.impl.chart.line.WidgetLineChartEntity;
 import org.homio.app.model.entity.widget.impl.chart.line.WidgetLineChartSeriesEntity;
 import org.homio.app.model.entity.widget.impl.color.WidgetColorEntity;
-import org.homio.app.model.entity.widget.impl.simple.WidgetSimpleColorEntity;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplaySeriesEntity;
 import org.homio.app.model.entity.widget.impl.extra.WidgetCustomEntity;
+import org.homio.app.model.entity.widget.impl.gauge.WidgetGaugeEntity;
+import org.homio.app.model.entity.widget.impl.gauge.WidgetGaugeSeriesEntity;
+import org.homio.app.model.entity.widget.impl.simple.WidgetSimpleColorEntity;
+import org.homio.app.model.entity.widget.impl.simple.WidgetSimpleToggleEntity;
+import org.homio.app.model.entity.widget.impl.simple.WidgetSimpleValueEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
-import org.homio.app.model.entity.widget.impl.simple.WidgetSimpleToggleEntity;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntity;
 import org.jetbrains.annotations.NotNull;
@@ -57,7 +60,7 @@ public class ContextWidgetImpl implements ContextWidget {
         WidgetLayoutEntity widget = createStubWidget(entityID, new WidgetLayoutEntity());
         LayoutBuilderImpl builder = new LayoutBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        context.db().save(builder.getWidget());
+        save(builder.getWidget());
     }
 
     private static void addPropertyDefinitions(
@@ -113,14 +116,26 @@ public class ContextWidgetImpl implements ContextWidget {
     }
 
     @Override
+    public void createGaugeWidget(@NotNull String entityID, @NotNull Consumer<GaugeWidgetBuilder> widgetBuilder) {
+        WidgetGaugeEntity widget = createStubWidget(entityID, new WidgetGaugeEntity());
+        GaugeBuilderImpl builder = new GaugeBuilderImpl(widget, context);
+        widgetBuilder.accept(builder);
+        WidgetGaugeEntity savedWidget = save(builder.getWidget());
+        for (WidgetGaugeSeriesEntity entity : builder.getSeries()) {
+            entity.setWidgetEntity(savedWidget);
+            save(entity);
+        }
+    }
+
+    @Override
     public void createDisplayWidget(@NotNull String entityID, @NotNull Consumer<DisplayWidgetBuilder> widgetBuilder) {
         WidgetDisplayEntity widget = createStubWidget(entityID, new WidgetDisplayEntity());
         DisplayBuilderImpl builder = new DisplayBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        WidgetDisplayEntity savedWidget = context.db().save(builder.getWidget());
+        WidgetDisplayEntity savedWidget = save(builder.getWidget());
         for (WidgetDisplaySeriesEntity entity : builder.getSeries()) {
             entity.setWidgetEntity(savedWidget);
-            context.db().save(entity);
+            save(entity);
         }
     }
 
@@ -129,7 +144,7 @@ public class ContextWidgetImpl implements ContextWidget {
         WidgetSimpleValueEntity widget = createStubWidget(entityID, new WidgetSimpleValueEntity());
         SimpleValueBuilderImpl builder = new SimpleValueBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        context.db().save(builder.getWidget());
+        save(builder.getWidget());
     }
 
     @Override
@@ -137,10 +152,10 @@ public class ContextWidgetImpl implements ContextWidget {
         WidgetToggleEntity widget = createStubWidget(entityID, new WidgetToggleEntity());
         ToggleBuilderImpl builder = new ToggleBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        WidgetToggleEntity savedWidget = context.db().save(builder.getWidget());
+        WidgetToggleEntity savedWidget = save(builder.getWidget());
         for (WidgetToggleSeriesEntity entity : builder.getSeries()) {
             entity.setWidgetEntity(savedWidget);
-            context.db().save(entity);
+            save(entity);
         }
     }
 
@@ -149,7 +164,7 @@ public class ContextWidgetImpl implements ContextWidget {
         WidgetSimpleToggleEntity widget = createStubWidget(entityID, new WidgetSimpleToggleEntity());
         SimpleToggleBuilderImpl builder = new SimpleToggleBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        context.db().save(builder.getWidget());
+        save(builder.getWidget());
     }
 
     @Override
@@ -157,10 +172,10 @@ public class ContextWidgetImpl implements ContextWidget {
         WidgetSliderEntity widget = createStubWidget(entityID, new WidgetSliderEntity());
         SliderBuilderImpl builder = new SliderBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        WidgetSliderEntity savedWidget = context.db().save(builder.getWidget());
+        WidgetSliderEntity savedWidget = save(builder.getWidget());
         for (WidgetSliderSeriesEntity entity : builder.getSeries()) {
             entity.setWidgetEntity(savedWidget);
-            context.db().save(entity);
+            save(entity);
         }
     }
 
@@ -169,7 +184,7 @@ public class ContextWidgetImpl implements ContextWidget {
         WidgetSimpleColorEntity widget = createStubWidget(entityID, new WidgetSimpleColorEntity());
         SimpleColorBuilderImpl builder = new SimpleColorBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        context.db().save(builder.getWidget());
+        save(builder.getWidget());
     }
 
     @Override
@@ -180,7 +195,7 @@ public class ContextWidgetImpl implements ContextWidget {
         WidgetColorEntity widget = createStubWidget(entityID, new WidgetColorEntity());
         ColorWidgetBuilderImpl builder = new ColorWidgetBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        context.db().save(builder.getWidget());
+        save(builder.getWidget());
     }
 
     @Override
@@ -188,10 +203,10 @@ public class ContextWidgetImpl implements ContextWidget {
         WidgetBarTimeChartEntity widget = createStubWidget(entityID, new WidgetBarTimeChartEntity());
         BarTimeChartBuilderImpl builder = new BarTimeChartBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        WidgetBarTimeChartEntity savedWidget = context.db().save(builder.getWidget());
+        WidgetBarTimeChartEntity savedWidget = save(builder.getWidget());
         for (WidgetBarTimeChartSeriesEntity entity : builder.getSeries()) {
             entity.setWidgetEntity(savedWidget);
-            context.db().save(entity);
+            save(entity);
         }
     }
 
@@ -202,10 +217,10 @@ public class ContextWidgetImpl implements ContextWidget {
         WidgetLineChartEntity widget = createStubWidget(entityID, new WidgetLineChartEntity());
         LineChartBuilderImpl builder = new LineChartBuilderImpl(widget, context);
         widgetBuilder.accept(builder);
-        WidgetLineChartEntity savedWidget = context.db().save(builder.getWidget());
+        WidgetLineChartEntity savedWidget = save(builder.getWidget());
         for (WidgetLineChartSeriesEntity entity : builder.getSeries()) {
             entity.setWidgetEntity(savedWidget);
-            context.db().save(entity);
+            save(entity);
         }
     }
 
@@ -317,5 +332,16 @@ public class ContextWidgetImpl implements ContextWidget {
         widget.setEntityID(entityID);
         widget.setWidgetTabEntity(generalTabEntity);
         return widget;
+    }
+
+    private <T extends WidgetEntity> T save(T widget) {
+        widget.beforePersist();
+        context.db().save(widget);
+        return widget;
+    }
+
+    private <T extends WidgetSeriesEntity> void save(T widget) {
+        widget.beforePersist();
+        context.db().save(widget);
     }
 }

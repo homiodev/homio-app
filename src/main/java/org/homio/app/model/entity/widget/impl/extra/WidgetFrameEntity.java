@@ -90,12 +90,16 @@ public class WidgetFrameEntity extends WidgetEntity<WidgetFrameEntity> implement
     @Override
     public void beforePersist() {
         super.beforePersist();
-        setHtml("<html>\n"
-                + "  <head></head>\n"
-                + "  <body>\n"
-                + "     <div style=\"display:flex;align-items:center;margin: 0 auto;\">\n\tHTML template\n</div>\n"
-                + "  </body>\n"
-                + "</html>");
+        setOverflow(Overflow.hidden);
+        setHtml("""
+                <html>
+                  <head></head>
+                  <body>
+                     <div style="display:flex;align-items:center;margin: 0 auto;">
+                \tHTML template
+                </div>
+                  </body>
+                </html>""");
         setCss(":root\n{\n\tcolor: #999;\n}\n\nbody\n{\n\tpadding:0;\n\tmargin:0;\n\tdisplay:flex;\n}");
     }
 }

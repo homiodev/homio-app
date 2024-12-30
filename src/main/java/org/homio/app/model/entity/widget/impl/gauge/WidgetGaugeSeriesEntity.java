@@ -1,9 +1,12 @@
 package org.homio.app.model.entity.widget.impl.gauge;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldIgnoreParent;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;
@@ -73,12 +76,5 @@ public class WidgetGaugeSeriesEntity extends WidgetSeriesEntity<WidgetGaugeEntit
 
     public void setShift(int value) {
         setJsonData("shift", value);
-    }
-
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public String getName() {
-        return super.getName();
     }
 }

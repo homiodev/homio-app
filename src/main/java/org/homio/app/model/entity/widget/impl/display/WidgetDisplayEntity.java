@@ -158,4 +158,9 @@ public class WidgetDisplayEntity
             }
         }
     }
+
+    @Override
+    public void beforePersist() {
+        setOverflow(Overflow.hidden);
+    }
 }

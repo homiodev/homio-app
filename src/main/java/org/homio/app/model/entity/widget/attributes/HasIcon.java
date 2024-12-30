@@ -17,7 +17,7 @@ public interface HasIcon extends HasJsonData {
     @UIFieldIconPicker(allowEmptyIcon = true, allowThreshold = true, allowBackground = true)
     @UIFieldGroup(value = "ICON", order = 20, borderColor = "#009688")
     default String getIcon() {
-        return getJsonData("icon", "fas fa-adjust");
+        return getJsonData("icon");
     }
 
     default void setIcon(String value) {

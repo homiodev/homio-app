@@ -5,8 +5,13 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import jakarta.validation.Valid;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.homio.addon.camera.entity.BaseCameraEntity;
@@ -42,6 +47,7 @@ import org.homio.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.impl.color.WidgetColorEntity;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplayEntity;
+import org.homio.app.model.entity.widget.impl.display.WidgetDisplaySeriesEntity;
 import org.homio.app.model.entity.widget.impl.extra.WidgetCustomEntity;
 import org.homio.app.model.entity.widget.impl.extra.WidgetJsEntity;
 import org.homio.app.model.entity.widget.impl.gauge.WidgetGaugeEntity;
@@ -58,12 +64,28 @@ import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 import org.homio.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver;
 import org.homio.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver.VideoEntityResponse;
 import org.homio.app.model.rest.WidgetDataRequest;
+import org.homio.app.model.var.WorkspaceVariable;
 import org.homio.app.rest.widget.WidgetChartsController.SingleValueData;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -71,7 +93,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.apache.commons.lang3.StringUtils.*;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 @Log4j2
 @RestController
@@ -585,7 +609,7 @@ public class WidgetController {
     public void updateToggleValue(@RequestBody SingleValueRequest<Boolean> request) {
         BaseEntity widget = getEntity(request.entityID);
         HasToggle toggle;
-        if(request.seriesEntityID == null) {
+        if (request.seriesEntityID == null) {
             toggle = (HasToggle) widget;
         } else {
             toggle = getSeriesEntity(request);
@@ -677,6 +701,12 @@ public class WidgetController {
         context.db().save(entity);
     }
 
+    @Getter
+    @Setter
+    public static class VariableWidget {
+        private String id;
+    }
+
     @PostMapping("/create/{tabId}/{type}")
     public BaseEntity createWidget(
             @PathVariable("tabId") String tabId,
@@ -704,7 +734,9 @@ public class WidgetController {
         baseEntity.setWidgetTabEntity(widgetTabEntity);
         baseEntity.getWidgetTabEntity().addLayoutOptional(width, height);
         findSuitablePosition(baseEntity, new AtomicBoolean());
-        return context.db().save(baseEntity);
+        WidgetEntity<?> saved = context.db().save(baseEntity);
+
+        return saved;
     }
 
     @PostMapping("/create/{tabId}/{type}/{addon}")
@@ -795,7 +827,7 @@ public class WidgetController {
 
     @SneakyThrows
     @PostMapping("/tab/{name}")
-    public WidgetTabEntity createWidgetTab(@PathVariable("name") String name, @RequestBody CreateWidgetRequest request) {
+    public WidgetTabEntity createWidgetTab(@PathVariable("name") String name, @RequestBody CreateWidgetTabRequest request) {
         BaseEntity widgetTab = context.db().get(WidgetTabEntity.PREFIX + name);
         if (widgetTab == null) {
             WidgetTabEntity widgetTabEntity = new WidgetTabEntity();
@@ -906,6 +938,9 @@ public class WidgetController {
     }
 
     private void setValue(Object value, String dataSource, JSONObject dynamicParameters) {
+        if(StringUtils.isEmpty(dataSource)) {
+            throw new IllegalArgumentException("Unable to set value for non defined dataSource: " + dataSource);
+        }
         SelectionSource selection = DataSourceUtil.getSelection(dataSource);
         BaseEntity entity = selection.getValue(context);
         ((HasSetStatusValue) entity).setStatusValue(new HasSetStatusValue.SetStatusValueRequest(
@@ -1025,7 +1060,7 @@ public class WidgetController {
 
     @Getter
     @Setter
-    public static class CreateWidgetRequest {
+    public static class CreateWidgetTabRequest {
 
         private String icon;
         private String color;

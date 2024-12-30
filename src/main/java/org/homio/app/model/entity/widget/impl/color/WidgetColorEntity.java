@@ -259,6 +259,7 @@ public class WidgetColorEntity extends WidgetEntity<WidgetColorEntity>
     @Override
     public void beforePersist() {
         super.beforePersist();
+        setOverflow(Overflow.hidden);
         if (!getJsonData().has("colors")) {
             setColors(Stream.of("#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FFFFFF")
                     .map(color -> String.format("{\"key\":\"0\",\"value\":\"%s\"}", color))

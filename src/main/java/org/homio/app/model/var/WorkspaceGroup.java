@@ -1,7 +1,14 @@
 package org.homio.app.model.var;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
+import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -19,8 +26,14 @@ import org.homio.api.model.JSON;
 import org.homio.api.model.OptionModel;
 import org.homio.api.state.DecimalType;
 import org.homio.api.ui.UISidebarMenu;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldIconPicker;
+import org.homio.api.ui.field.UIFieldProgress;
 import org.homio.api.ui.field.UIFieldProgress.Progress;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.UIFieldType;
+import org.homio.api.ui.field.action.ActionInputParameter;
 import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.UIActionInput;
 import org.homio.api.ui.field.action.UIActionInput.Type;
@@ -35,6 +48,8 @@ import org.homio.api.ui.field.inline.UIFieldInlineEntities;
 import org.homio.api.ui.field.inline.UIFieldInlineEntityWidth;
 import org.homio.api.ui.field.inline.UIFieldInlineGroup;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent.SelectionParent;
+import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
+import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.impl.ContextVarImpl;
@@ -42,6 +57,7 @@ import org.homio.app.model.UIFieldClickToEdit;
 import org.homio.app.model.UIHideEntityIfFieldNotNull;
 import org.homio.app.model.var.WorkspaceVariable.VarType;
 import org.homio.app.repository.VariableBackupRepository;
+import org.homio.app.setting.WorkspaceGroupEntityCompactModeSetting;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -55,6 +71,9 @@ import java.util.function.Consumer;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.api.ContextVar.GROUP_BROADCAST;
+import static org.homio.api.ui.field.UIFieldType.HTML;
+import static org.homio.api.ui.field.action.ActionInputParameter.select;
+import static org.homio.api.ui.field.action.ActionInputParameter.textRequired;
 import static org.homio.app.utils.UIFieldUtils.nullIfFalse;
 
 @Entity
@@ -76,22 +95,40 @@ public class WorkspaceGroup extends BaseEntity
 
     public static final String PREFIX = "group_";
 
+    public boolean isCompactMode() {
+        return context().setting().getValue(WorkspaceGroupEntityCompactModeSetting.class);
+    }
+
+    @UIField(order = 1, fullWidth = true, color = "#89AA50", type = HTML, style = "height: 32px;")
+    @UIFieldShowOnCondition("return context.get('compactMode')")
+    public String getCompactDescription() {
+        if (!isCompactMode()) {
+            return null;
+        }
+        return format("<i style=\"color:%s\" class=\"%s\"></i> %s (%s)",
+                getIconColor(), getIcon(), getName(), getVarCount());
+    }
+
     @UIField(order = 12, inlineEditWhenEmpty = true)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
     private String description;
     // unable to CRUD variables inside group or rename/drop group
     private boolean locked;
 
     @UIField(order = 13)
     @UIFieldIconPicker(allowSize = false, allowSpin = false)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
     private String icon;
 
     @UIField(order = 14)
     @UIFieldColorPicker
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
     private String iconColor;
 
     private boolean hidden;
 
     @UIField(order = 15, hideInEdit = true)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
     public int getVarCount() {
         if (workspaceVariables == null) {
             return 0;
@@ -133,6 +170,7 @@ public class WorkspaceGroup extends BaseEntity
 
     @Override
     @UIField(order = 10, label = "groupName")
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
     public String getName() {
         return super.getName();
     }
@@ -193,8 +231,16 @@ public class WorkspaceGroup extends BaseEntity
     }
 
     @Override
+    public boolean isDisableEdit() {
+        return true;
+    }
+
+    @Override
     public boolean isDisableDelete() {
-        return locked || getEntityID().equals(PREFIX + GROUP_BROADCAST) || getJsonData("dis_del", false);
+        return locked
+               || getEntityID().equals(PREFIX + GROUP_BROADCAST)
+               || getJsonData("dis_del", false)
+               || super.isDisableDelete();
     }
 
     public static String generateValue(Object val, WorkspaceVariable variable) {
@@ -285,7 +331,10 @@ public class WorkspaceGroup extends BaseEntity
                                             .setOptions(OptionModel.entityList(this.getChildrenGroups(), null, context()))));
         } else {
             uiInputBuilder.addOpenDialogSelectableButton("ADD_VARIABLE", new Icon("fas fa-rss"), null,
-                            (context, params) -> createVar(context, params, params.getEnum(ContextVar.VariableType.class, "type"), false))
+                            (context, params) -> {
+                                var variableType = params.getEnum(ContextVar.VariableType.class, "type");
+                                return createVar(context, params, variableType, false);
+                            })
                     .editDialog(dialogBuilder ->
                             addCommonFields(dialogBuilder, "field.BROADCAST_NAME", builder -> {
                                 builder.addSelectBox("type")
@@ -294,6 +343,36 @@ public class WorkspaceGroup extends BaseEntity
                                 builder.addSelectBox("parentGroup")
                                         .setOptions(OptionModel.entityList(this.getChildrenGroups(), null, context()));
                             }));
+            uiInputBuilder.addOpenDialogSelectableButton("ADD_VARIABLE_2", new Icon("fas fa-rss"), CreateVariableDialogModel.class, null,
+                            (context, params) -> {
+                                var variableType = params.getEnum(ContextVar.VariableType.class, "type");
+                                return createVar(context, params, variableType, false);
+                            })
+                    .editDialog(dialogBuilder ->
+                            addCommonFields(dialogBuilder, "field.BROADCAST_NAME", builder -> {
+                                builder.addSelectBox("type")
+                                        .setValue(ContextVar.VariableType.Float.name())
+                                        .setOptions(OptionModel.enumList(ContextVar.VariableType.class));
+                                builder.addSelectBox("parentGroup")
+                                        .setOptions(OptionModel.entityList(this.getChildrenGroups(), null, context()));
+                            }));
+        }
+    }
+
+    public static class CreateVariableDialogModel {
+        @UIField(order = 1)
+        public ContextVar.VariableType type = ContextVar.VariableType.Float;
+        @UIField(order = 2)
+        @UIFieldDynamicSelection(ParentGroupSelection.class)
+        public String parentGroup;
+
+        public static class ParentGroupSelection implements DynamicOptionLoader {
+
+            @Override
+            public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
+                WorkspaceGroup group = (WorkspaceGroup) parameters.getBaseEntity();
+                return OptionModel.entityList(group.getChildrenGroups(), null, parameters.context());
+            }
         }
     }
 
@@ -321,7 +400,10 @@ public class WorkspaceGroup extends BaseEntity
 
     @Getter
     @NoArgsConstructor
-    public static class WorkspaceVariableEntity {
+    public static class WorkspaceVariableEntity implements UIFieldInlineEntities.InlineEntity {
+
+        @JsonIgnore
+        private WorkspaceVariable variable;
 
         private @Nullable Float min;
         private @Nullable Float max;
@@ -379,6 +461,7 @@ public class WorkspaceGroup extends BaseEntity
 
         public WorkspaceVariableEntity(WorkspaceVariable variable, ContextImpl context) {
             this.entityID = variable.getEntityID();
+            this.variable = variable;
 
             name = new JSONObject()
                     .put("color", variable.getIconColor())
@@ -417,5 +500,90 @@ public class WorkspaceGroup extends BaseEntity
             return entity;
         }
 
+        @UIContextMenuAction(value = "TITLE.CREATE_DISPLAY_WIDGET", icon = "fas fa-chart-simple")
+        public ActionResponseModel createDisplayWidget(Context context) {
+            context.ui().dialog().sendDialogRequest("create-display-widget", "TITLE.CREATE_DISPLAY_WIDGET",
+                    (responseType, pressedButton, parameters) -> {
+                        context.widget().createDisplayWidget(variable.getEntityID(), builder -> {
+                            builder
+                                    .setChartHeight(40)
+                                    .setLineBorderWidth(1)
+                                    .setChartPointsPerHour(120)
+                                    .setShowChartFullScreenButton(true)
+                                    .setChartDataSource(variable.getFullEntityID())
+                                    .setChartColor(variable.getIconColor())
+                                    .attachToTab(parameters.get("tab").asText());
+                            builder.addSeries(parameters.get("name").asText(), series -> {
+                                series
+                                        .setValueSuffix(variable.getUnit())
+                                        .setValueDataSource(variable.getFullEntityID())
+                                        .setIcon(parameters.get("icon").asText())
+                                        .setIconColor(parameters.get("iconColor").asText());
+                            });
+                            if (variable.getMin() != null) {
+                                builder.setMin(variable.getMin().intValue());
+                            }
+                            if (variable.getMax() != null) {
+                                builder.setMax(variable.getMax().intValue());
+                            }
+                        });
+                    }, dialogEditor -> {
+                        dialogEditor.disableKeepOnUi();
+                        dialogEditor.appearance(new Icon(variable.getIcon(), variable.getIconColor()), null);
+                        List<ActionInputParameter> inputs = List.of(
+                                select("tab", context.widget().getDashboardTabs()),
+                                ActionInputParameter.icon("icon", variable.getIcon()),
+                                ActionInputParameter.color("iconColor", variable.getIconColor()),
+                                textRequired("name", variable.getTitle(), 3, 20)
+                        );
+                        dialogEditor.submitButton("Create Widget", button -> {
+                        }).group("General", inputs);
+                    });
+            return null;
+        }
+
+        @UIContextMenuAction(value = "TITLE.CREATE_GAUGE_WIDGET", icon = "fas fa-gauge")
+        public ActionResponseModel createGaugeWidget(Context context) {
+            context.ui().dialog().sendDialogRequest("create-gauge-widget", "TITLE.CREATE_GAUGE_WIDGET",
+                    (responseType, pressedButton, parameters) -> {
+                        context.widget().createGaugeWidget(variable.getEntityID(), builder -> {
+                            builder
+                                    .setValueDataSource(variable.getFullEntityID())
+                                    .setGaugeForegroundColor(variable.getIconColor())
+                                    .attachToTab(parameters.get("tab").asText());
+                            builder.addSeries("Gauge value", series -> {
+                                series
+                                        .setVerticalValuePosition(-5)
+                                        .setHorizontalValuePosition(3)
+                                        .setUseGaugeValue(true)
+                                        .setValueFontSize(0.9)
+                                        .setValueSuffix(variable.getUnit());
+                            });
+                            builder.addSeries("Gauge icon", series -> {
+                                series
+                                        .setVerticalValuePosition(40)
+                                        .setIcon(parameters.get("icon").asText())
+                                        .setIconColor(parameters.get("iconColor").asText());
+                            });
+                            if (variable.getMin() != null) {
+                                builder.setMin(variable.getMin().intValue());
+                            }
+                            if (variable.getMax() != null) {
+                                builder.setMax(variable.getMax().intValue());
+                            }
+                        });
+                    }, dialogEditor -> {
+                        dialogEditor.disableKeepOnUi();
+                        dialogEditor.appearance(new Icon(variable.getIcon(), variable.getIconColor()), null);
+                        List<ActionInputParameter> inputs = List.of(
+                                select("tab", context.widget().getDashboardTabs()),
+                                ActionInputParameter.icon("icon", variable.getIcon()),
+                                ActionInputParameter.color("iconColor", variable.getIconColor())
+                        );
+                        dialogEditor.submitButton("Create Widget", button -> {
+                        }).group("General", inputs);
+                    });
+            return null;
+        }
     }
 }

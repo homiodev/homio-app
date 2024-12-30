@@ -39,11 +39,11 @@ public class WidgetToggleEntity
     @UIField(order = 1)
     @UIFieldGroup(value = "HEADER", order = 5)
     @UIFieldShowOnCondition("return context.get('displayType') == 'OnOff' || context.get('displayType') == 'Slide'")
-    public Boolean getShowAllButton() {
+    public boolean getShowAllButton() {
         return getJsonData("all", Boolean.FALSE);
     }
 
-    public void setShowAllButton(Boolean value) {
+    public void setShowAllButton(boolean value) {
         setJsonData("all", value);
     }
 
@@ -173,5 +173,10 @@ public class WidgetToggleEntity
                                 .addCol("name", UIFieldLayout.HorizontalAlign.left)
                                 .addCol("button", UIFieldLayout.HorizontalAlign.center))
                 .build();
+    }
+
+    @Override
+    public void beforePersist() {
+        setOverflow(Overflow.hidden);
     }
 }

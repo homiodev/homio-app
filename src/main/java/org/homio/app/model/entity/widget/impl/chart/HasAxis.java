@@ -10,7 +10,7 @@ public interface HasAxis extends HasJsonData {
     @UIField(order = 80)
     @UIFieldGroup("CHART_AXIS")
     default Boolean getShowAxisX() {
-        return getJsonData("showAxisX", Boolean.TRUE);
+        return getJsonData("showAxisX", Boolean.FALSE);
     }
 
     default void setShowAxisX(Boolean value) {
@@ -20,7 +20,7 @@ public interface HasAxis extends HasJsonData {
     @UIField(order = 81)
     @UIFieldGroup("CHART_AXIS")
     default Boolean getShowAxisY() {
-        return getJsonData("showAxisY", Boolean.TRUE);
+        return getJsonData("showAxisY", Boolean.FALSE);
     }
 
     default void setShowAxisY(Boolean value) {

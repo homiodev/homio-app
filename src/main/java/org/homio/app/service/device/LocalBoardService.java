@@ -175,17 +175,19 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
     }
 
     private Double getUsedMemory() throws IOException {
-        String memInfo = new String(Files.readAllBytes(Paths.get("/proc/meminfo")));
-        long memTotal = extractValue(memInfo, memTotalPattern);
-        long memFree = extractValue(memInfo, memFreePattern);
-        long buffers = extractValue(memInfo, buffersPattern);
-        long cached = extractValue(memInfo, cachedPattern);
+        if (SystemUtils.IS_OS_LINUX) {
+            String memInfo = new String(Files.readAllBytes(Paths.get("/proc/meminfo")));
+            long memTotal = extractValue(memInfo, memTotalPattern);
+            long memFree = extractValue(memInfo, memFreePattern);
+            long buffers = extractValue(memInfo, buffersPattern);
+            long cached = extractValue(memInfo, cachedPattern);
 
 
-        if (memTotal > 0) {
-            long availableMemory = memFree + buffers + cached;
-            long usedMemory = memTotal - availableMemory;
-            return (usedMemory / (double) memTotal) * 100;
+            if (memTotal > 0) {
+                long availableMemory = memFree + buffers + cached;
+                long usedMemory = memTotal - availableMemory;
+                return (usedMemory / (double) memTotal) * 100;
+            }
         }
         return null;
     }

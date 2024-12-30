@@ -157,4 +157,9 @@ public class WidgetFMEntity extends WidgetEntity<WidgetFMEntity>
         setBw(3);
         setBh(3);
     }
+
+    @Override
+    public void beforePersist() {
+        setOverflow(Overflow.hidden);
+    }
 }

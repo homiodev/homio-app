@@ -90,4 +90,9 @@ public abstract class ChartBaseEntity<T extends WidgetEntityAndSeries, S extends
     public void setChartBackground(String value) {
         setJsonData("chartBG", value);
     }
+
+    @Override
+    public void beforePersist() {
+        setOverflow(Overflow.hidden);
+    }
 }

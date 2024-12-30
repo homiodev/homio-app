@@ -56,7 +56,7 @@ public interface HasHorizontalLine extends HasJsonData {
     @UIFieldGroup("CHART_HL")
     @UIFieldSlider(min = 0, max = 10)
     default Integer getDynamicLineWidth() {
-        return getJsonData("dynlw", 1);
+        return getJsonData("dynlw", 0);
     }
 
     default void setDynamicLineWidth(Integer value) {

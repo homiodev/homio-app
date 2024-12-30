@@ -184,4 +184,18 @@ public abstract class WidgetEntity<T extends WidgetEntity> extends BaseEntity
     public void setAdjustFontSize(boolean value) {
         setJsonData("adjfs", value);
     }
+
+
+    public Overflow getOverflow() {
+        return getJsonDataEnum("overflow", Overflow.auto);
+    }
+
+    public void setOverflow(Overflow value) {
+        setJsonDataEnum("overflow", value);
+    }
+
+    public enum Overflow {
+        auto,
+        hidden
+    }
 }

@@ -32,7 +32,7 @@ public class ToggleBuilderImpl extends WidgetBaseBuilderImpl<ToggleWidgetBuilder
     }
 
     @Override
-    public @NotNull ToggleWidgetBuilder setShowAllButton(Boolean value) {
+    public @NotNull ToggleWidgetBuilder setShowAllButton(boolean value) {
         widget.setShowAllButton(value);
         return this;
     }

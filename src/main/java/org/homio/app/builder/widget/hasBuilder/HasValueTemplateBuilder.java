@@ -2,7 +2,6 @@ package org.homio.app.builder.widget.hasBuilder;
 
 import org.homio.api.ContextWidget.HasValueTemplate;
 import org.homio.api.ContextWidget.VerticalAlign;
-import org.homio.api.ui.field.UIFieldStringTemplate;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,74 +12,82 @@ public interface HasValueTemplateBuilder<T extends org.homio.app.model.entity.wi
 
     @Override
     default @NotNull R setValueTemplate(@Nullable String prefix, @Nullable String suffix) {
-        UIFieldStringTemplate.StringTemplate template = getWidget().getValueTemplate();
-        template.setP(prefix).setS(suffix);
+        getWidget().applyValueTemplate(t -> t.setP(prefix).setS(suffix));
         return (R) this;
     }
 
     @Override
     default @NotNull R setValueColor(@Nullable String value) {
-        getWidget().getValueTemplate().setVc(value);
+        getWidget().applyValueTemplate(t -> t.setVc(value));
         return (R) this;
     }
 
     @Override
     default @NotNull R setNoValueText(@Nullable String value) {
-        getWidget().getValueTemplate().setNvt(value);
+        getWidget().applyValueTemplate(t -> t.setNvt(value));
         return (R) this;
     }
 
     @Override
     default @NotNull R setValueFontSize(double value) {
-        getWidget().getValueTemplate().setVfs(value);
+        assertFontSize(value);
+        getWidget().applyValueTemplate(t -> t.setVfs(value));
         return (R) this;
+    }
+
+    private static void assertFontSize(double value) {
+        if(value < 0 || value > 2) {
+            throw new IllegalArgumentException("Font size must be between 0 and 2");
+        }
     }
 
     @Override
     default @NotNull R setValuePrefixFontSize(double value) {
-        getWidget().getValueTemplate().setPfs(value);
+        assertFontSize(value);
+        getWidget().applyValueTemplate(t -> t.setPfs(value));
         return (R) this;
     }
 
     @Override
     default @NotNull R setValueSuffixFontSize(double value) {
-        getWidget().getValueTemplate().setSfs(value);
+        assertFontSize(value);
+        getWidget().applyValueTemplate(t -> t.setSfs(value));
         return (R) this;
     }
 
     @Override
     default @NotNull R setValuePrefixVerticalAlign(@NotNull VerticalAlign value) {
-        getWidget().getValueTemplate().setPa(value);
+        getWidget().applyValueTemplate(t -> t.setPa(value));
         return (R) this;
     }
 
     @Override
     default @NotNull R setValueSuffixVerticalAlign(@NotNull VerticalAlign value) {
-        getWidget().getValueTemplate().setSa(value);
+        getWidget().applyValueTemplate(t -> t.setSa(value));
         return (R) this;
     }
 
     @Override
     default @NotNull R setValueVerticalAlign(@NotNull VerticalAlign value) {
-        getWidget().getValueTemplate().setVa(value);
+        getWidget().applyValueTemplate(t -> t.setVa(value));
         return (R) this;
     }
 
     @Override
     default @NotNull R setValuePrefixColor(String value) {
-        getWidget().getValueTemplate().setPc(value);
+        getWidget().applyValueTemplate(t -> t.setPc(value));
         return (R) this;
     }
 
     @Override
     default @NotNull R setValueSuffixColor(String value) {
-        getWidget().getValueTemplate().setSc(value);
+        getWidget().applyValueTemplate(t -> t.setSc(value));
         return (R) this;
     }
 
     @Override
     default @NotNull R setValueSourceClickHistory(boolean value) {
-        getWidget().getValueTemplate().setHoc(value);
+        getWidget().applyValueTemplate(t -> t.setHoc(value));
         return (R) this;
     }
 }

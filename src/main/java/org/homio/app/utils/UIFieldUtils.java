@@ -778,6 +778,10 @@ public class UIFieldUtils {
                     UIFieldUtils.fillEntityUIMetadataList(childClassInstance, new HashSet<>(), context, fullDisableEdit, entityUIMetaData));
             if (!inlineTypeFields.isEmpty()) {
                 jsonTypeMetadata.set("inlineTypeFields", inlineTypeFields);
+                Collection<UIInputEntity> actions = fetchUIActionsFromClass((Class<?>) inlineType, context);
+                if(actions != null && !actions.isEmpty()) {
+                    jsonTypeMetadata.set("inlineTypeActions", OBJECT_MAPPER.valueToTree(actions));
+                }
             }
         }
     }

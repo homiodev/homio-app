@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.homio.addon.z2m.model.Z2MDeviceEntity;
+import org.homio.addon.z2m.setting.ZigBeeEntityCompactModeSetting;
 import org.homio.api.Context;
 import org.homio.api.ContextHardware;
 import org.homio.api.ContextNetwork;
@@ -26,6 +28,7 @@ import org.homio.app.config.TransactionManagerContext;
 import org.homio.app.manager.*;
 import org.homio.app.manager.common.impl.*;
 import org.homio.app.model.entity.FFMPEGEntity;
+import org.homio.app.model.var.WorkspaceGroup;
 import org.homio.app.repository.AbstractRepository;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.repository.VariableBackupRepository;
@@ -40,6 +43,7 @@ import org.homio.app.service.FileSystemService;
 import org.homio.app.service.cloud.CloudService;
 import org.homio.app.service.scan.BeansItemsDiscovery;
 import org.homio.app.setting.ScanDevicesSetting;
+import org.homio.app.setting.WorkspaceGroupEntityCompactModeSetting;
 import org.homio.app.setting.system.SystemClearCacheButtonSetting;
 import org.homio.app.setting.system.SystemShowEntityStateSetting;
 import org.homio.app.setting.system.SystemSoftRestartButtonSetting;
@@ -250,6 +254,8 @@ public class ContextImpl implements Context {
             cacheService.clearCache();
             ui().toastr().success("Cache has been cleared successfully");
         });
+        setting().listenValue(WorkspaceGroupEntityCompactModeSetting.class, "workspace-group-compact-mode",
+                (value) -> ui().updateItems(WorkspaceGroup.class));
         setting().listenValue(SystemSoftRestartButtonSetting.class, "soft-restart", () -> SystemSoftRestartButtonSetting.restart(this));
         setting().listenValue(ScanDevicesSetting.class, "scan-devices", () ->
                 ui().handleResponse(new BeansItemsDiscovery(ItemDiscoverySupport.class).handleAction(this, null)));

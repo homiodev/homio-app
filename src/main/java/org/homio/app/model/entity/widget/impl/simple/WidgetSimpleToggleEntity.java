@@ -121,6 +121,7 @@ public class WidgetSimpleToggleEntity extends WidgetEntity<WidgetSimpleToggleEnt
 
     @Override
     public void beforePersist() {
+        setOverflow(Overflow.hidden);
         if (!getJsonData().has("color")) {
             setToggleColor(UI.Color.random());
         }
