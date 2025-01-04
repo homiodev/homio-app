@@ -5,7 +5,6 @@ import lombok.Getter;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;
 import org.homio.app.model.entity.widget.UIFieldFunction;
@@ -36,7 +35,6 @@ public interface HasChartTimePeriod extends HasJsonData {
     @UIFieldSlider(min = 1, max = 600, step = 5) // max 10 point per minute
     @UIFieldGroup(value = "CHART_TIME_PERIOD")
     @UIEditReloadWidget
-    @UIFieldReadDefaultValue
     default int getChartPointsPerHour() {
         return getJsonData("pph", 60);
     }

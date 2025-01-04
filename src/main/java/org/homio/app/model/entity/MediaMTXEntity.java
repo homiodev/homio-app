@@ -25,7 +25,6 @@ import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
@@ -155,7 +154,6 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     }
 
     @UIField(order = 200)
-    @UIFieldReadDefaultValue
     @UIFieldGroup("CONFIGURATION")
     public int getApiPort() {
         return getJsonData("ap", 9997);
@@ -166,7 +164,6 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     }
 
     @UIField(order = 210)
-    @UIFieldReadDefaultValue
     @UIFieldGroup("CONFIGURATION")
     public int getRtspPort() {
         return getJsonData("rtsp", 8564);
@@ -177,7 +174,6 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     }
 
     @UIField(order = 220)
-    @UIFieldReadDefaultValue
     @UIFieldGroup("CONFIGURATION")
     public int getWebRtcPort() {
         return getJsonData("webrtc", 8889);
@@ -188,7 +184,6 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
     }
 
     @UIField(order = 230)
-    @UIFieldReadDefaultValue
     @UIFieldGroup("CONFIGURATION")
     public int getHlsPort() {
         return getJsonData("hls", 8888);

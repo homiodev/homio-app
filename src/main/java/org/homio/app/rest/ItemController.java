@@ -142,7 +142,7 @@ import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
 @RequiredArgsConstructor
 public class ItemController implements ContextCreated, ContextRefreshed {
 
-    private static final Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames =
+    private static final Map<String, List<Class<?>>> typeToEntityClassNames =
             new ConcurrentHashMap<>();
     public static Map<String, Class<?>> className2Class = new ConcurrentHashMap<>();
     private final Map<String, List<ItemContextResponse>> itemsBootstrapContextMap =
@@ -158,7 +158,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     private final ReentrantLock updateItemLock = new ReentrantLock();
     private final Cache<String, Consumer<String>> fileSaveMapping = CacheBuilder
             .newBuilder().expireAfterAccess(Duration.ofMinutes(5)).build();
-    private Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses = new HashMap<>();
+    public static Map<String, Class<?>> baseEntitySimpleClasses = new HashMap<>();
 
     private static void updateDynamicUIFieldValues(BaseEntity entity, JSONObject entityFields) {
         if (entity instanceof HasDynamicUIFields df) {
@@ -229,7 +229,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         for (Class<? extends BaseEntity> baseEntityClass : baseEntityClasses) {
             Class<?> cursor = baseEntityClass.getSuperclass();
             while (!cursor.getSimpleName().equals(BaseEntity.class.getSimpleName())) {
-                this.baseEntitySimpleClasses.put(cursor.getSimpleName(), (Class<? extends BaseEntity>) cursor);
+                this.baseEntitySimpleClasses.put(cursor.getSimpleName(), cursor);
                 cursor = cursor.getSuperclass();
             }
         }
@@ -259,6 +259,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             }
             classEntity = CommonUtils.newInstance(aClass);
         }
+        Object originalClassEntity = classEntity;
         if (isNotEmpty(optionsRequest.getFieldFetchType())) {
             classEntity = ContextImpl.getFetchType(optionsRequest.getFieldFetchType());
         }
@@ -268,7 +269,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             return options;
         }
 
-        return OptionUtil.loadOptions(classEntity, context, fieldName, null, optionsRequest.getSelectType(), optionsRequest.getDeps());
+        return OptionUtil.loadOptions(classEntity, context, fieldName, originalClassEntity, optionsRequest.getSelectType(), optionsRequest.getDeps());
     }
 
     @GetMapping("/{type}/context")
@@ -375,7 +376,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             }
         }
         Set<OptionModel> list = entityClassByType == null ? new HashSet<>() : fetchCreateItemTypes(entityClassByType);
-        for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
+        for (Class<?> aClass : typeToEntityClassNames.get(type)) {
             OptionModel option = getUISideBarMenuOption(aClass);
             if (option != null) {
                 list.add(option);
@@ -401,8 +402,10 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     public List<OptionModel> getItemOptionsByType(@PathVariable("type") String type) {
         putTypeToEntityIfNotExists(type);
         List<BaseEntity> entities = new ArrayList<>();
-        for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
-            entities.addAll(context.db().findAll(aClass));
+        for (Class<?> aClass : typeToEntityClassNames.get(type)) {
+            if(BaseEntity.class.isAssignableFrom(aClass)) {
+                entities.addAll(context.db().findAll((Class<BaseEntity>)aClass));
+            }
         }
         if (!entities.isEmpty()) {
             return context.toOptionModels(entities);
@@ -560,8 +563,10 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         putTypeToEntityIfNotExists(type);
         List<BaseEntity> items = new ArrayList<>();
 
-        for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
-            items.addAll(context.db().findAll(aClass));
+        for (Class<?> aClass : typeToEntityClassNames.get(type)) {
+            if(BaseEntity.class.isAssignableFrom(aClass)) {
+                items.addAll(context.db().findAll((Class<BaseEntity>)aClass));
+            }
         }
         items.removeIf(this::isRemoveItemFromResult);
         Collections.sort(items);
@@ -629,8 +634,10 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     public List<BaseEntity> getItemsByType(@PathVariable("type") String type) {
         putTypeToEntityIfNotExists(type);
         List<BaseEntity> list = new ArrayList<>();
-        for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
-            list.addAll(context.db().findAll(aClass));
+        for (Class<?> aClass : typeToEntityClassNames.get(type)) {
+            if(BaseEntity.class.isAssignableFrom(aClass)) {
+                list.addAll(context.db().findAll((Class<BaseEntity>) aClass));
+            }
         }
         list.removeIf(this::isRemoveItemFromResult);
 
@@ -786,8 +793,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
 
         // Case for WorkspaceVariable, if user click on single variable
-        ActionResponseModel result = null;
-        String variableEntityID = request.params.getString("inlineEntity");
+        ActionResponseModel result;
+        String variableEntityID = request.params.optString("inlineEntity");
         if (variableEntityID != null) {
             result = tryHandleInlineEntity(variableEntityID, actionHolder, actionID, actionEntity, request);
             if (result != null) {
@@ -967,14 +974,14 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     private synchronized void putTypeToEntityIfNotExists(String type) {
         if (!typeToEntityClassNames.containsKey(type)) {
             typeToEntityClassNames.put(type, new ArrayList<>());
-            Class<? extends BaseEntity> baseEntityByName = baseEntitySimpleClasses.get(type);
+            Class<?> baseEntityByName = baseEntitySimpleClasses.get(type);
             if (baseEntityByName != null) {
                 putTypeToEntityByClass(type, baseEntityByName);
             }
         }
     }
 
-    private void putTypeToEntityByClass(String type, Class<? extends BaseEntity> baseEntityByName) {
+    private void putTypeToEntityByClass(String type, Class<?> baseEntityByName) {
         if (Modifier.isAbstract(baseEntityByName.getModifiers())) {
             var list = classFinder.getClassesWithParent(baseEntityByName);
             typeToEntityClassNames.get(type).addAll(list);
@@ -984,7 +991,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
         // populate if entity require extra packages to install
         Set<Class> baseClasses = new HashSet<>();
-        for (Class<? extends BaseEntity> entityClass : typeToEntityClassNames.get(type)) {
+        for (Class<?> entityClass : typeToEntityClassNames.get(type)) {
             baseClasses.addAll(ClassFinder.findAllParentClasses(entityClass, baseEntityByName));
         }
     }

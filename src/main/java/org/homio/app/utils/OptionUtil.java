@@ -185,7 +185,7 @@ public final class OptionUtil {
     private static List<OptionModel> loadOptions(AccessibleObject field, Context context, Class<?> targetClass, Object classEntity,
                                                  Object classEntityForDynamicOptionLoader, String selectType, Map<String, String> deps) {
 
-        LoadOptionsParameters param = new LoadOptionsParameters(field, context, targetClass, classEntity, classEntityForDynamicOptionLoader, deps);
+        LoadOptionsParameters param = new LoadOptionsParameters(field, context, targetClass, classEntityForDynamicOptionLoader, classEntity, deps);
         // fetch all options according to all selectType
         List<OptionModel> options = new ArrayList<>();
         boolean handled = selectType != null && assembleOptionsBySelectType(field, selectType, param, options);

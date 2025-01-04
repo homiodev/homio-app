@@ -38,7 +38,6 @@ public abstract class ChartBaseEntity<T extends WidgetEntityAndSeries, S extends
     @UIField(order = 2)
     @UIFieldGroup("DATA_LABELS")
     @UIFieldColorPicker
-    @UIFieldReadDefaultValue
     public String getDataLabelsColor() {
         return getJsonData("dlc", "#ADB5BD");
     }
@@ -68,7 +67,6 @@ public abstract class ChartBaseEntity<T extends WidgetEntityAndSeries, S extends
     }
 
     /*@UIField(order = 9)
-    @UIFieldReadDefaultValue
     @UIFieldSlider(min = 10, max = 600)
     @UIFieldGroup("CHART_UI")
     public int getFetchDataFromServerInterval() {
@@ -82,7 +80,6 @@ public abstract class ChartBaseEntity<T extends WidgetEntityAndSeries, S extends
     @UIField(order = 10)
     @UIFieldGroup("CHART_UI")
     @UIFieldColorPicker(allowThreshold = true)
-    @UIFieldReadDefaultValue
     public String getChartBackground() {
         return getJsonData("chartBG", "transparent");
     }

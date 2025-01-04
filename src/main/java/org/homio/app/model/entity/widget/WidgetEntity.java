@@ -150,7 +150,6 @@ public abstract class WidgetEntity<T extends WidgetEntity> extends BaseEntity
     @UIFieldTab("UI")
     @UIFieldGroup("GENERAL")
     @UIFieldColorPicker(allowThreshold = true, pulseColorCondition = true, thresholdSource = true)
-    @UIFieldReadDefaultValue
     public String getBackground() {
         return getJsonData("bg", "transparent");
     }

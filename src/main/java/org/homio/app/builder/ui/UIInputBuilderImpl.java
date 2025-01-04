@@ -13,7 +13,10 @@ import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.ui.field.action.v1.item.UIButtonItemBuilder;
 import org.homio.api.ui.field.action.v1.layout.UILayoutBuilder;
 import org.homio.api.ui.field.action.v1.layout.dialog.UIDialogLayoutBuilder;
+import org.homio.api.util.CommonUtils;
 import org.homio.app.builder.ui.layout.UIDialogLayoutBuilderImpl;
+import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.rest.ItemController;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -94,18 +97,30 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
 
     @Override
     public UIInputBuilder.DialogEntity<UIButtonItemBuilder> addOpenDialogSelectableButton(@NotNull String name, Icon icon,
-                                                                                          @Nullable Integer dialogWidth, @NotNull UIActionHandler action, int order) {
+                                                                                          @Nullable Integer dialogWidth,
+                                                                                          @NotNull UIActionHandler action,
+                                                                                          int order) {
         return addOpenDialogSelectableButtonInternal(name, icon, dialogWidth, action);
+    }
+
+    @Override
+    public void addOpenDialogSelectableButtonFromClass(
+            @NotNull String name,
+            @Nullable Icon icon,
+            @NotNull Class<?> entityClass,
+            @NotNull UIActionHandler action) {
+        ItemController.baseEntitySimpleClasses.put(entityClass.getSimpleName(), entityClass);
+        ContextImpl.FIELD_FETCH_TYPE.put(entityClass.getSimpleName(), CommonUtils.newInstance(entityClass));
+        ((UIButtonItemBuilderImpl) addSelectableButton(name, icon, action))
+                .setActionReferenceV2(entityClass.getSimpleName());
     }
 
     public UIInputBuilder.DialogEntity<UIButtonItemBuilder> addOpenDialogSelectableButtonInternal(
             String name, Icon icon, Integer dialogWidth, UIActionHandler action) {
-        UIDialogLayoutBuilderImpl uiDialogLayoutBuilder =
-                new UIDialogLayoutBuilderImpl(name, dialogWidth);
-        UIDialogLayoutBuilderImpl dialogEntityBuilder = addEntity(uiDialogLayoutBuilder);
-        UIButtonItemBuilder entityBuilder =
-                ((UIButtonItemBuilderImpl) addSelectableButton(name, icon, action))
-                        .setActionReference(dialogEntityBuilder.getEntityID());
+        var uiDialogLayoutBuilder = new UIDialogLayoutBuilderImpl(name, dialogWidth);
+        var dialogEntityBuilder = addEntity(uiDialogLayoutBuilder);
+        var entityBuilder = ((UIButtonItemBuilderImpl) addSelectableButton(name, icon, action))
+                .setActionReference(dialogEntityBuilder.getEntityID());
         return new UIInputBuilder.DialogEntity<>() {
             @Override
             public @NotNull UIInputBuilder up() {

@@ -74,7 +74,7 @@ public class WorkspaceVariable extends BaseEntity
     //@UIFieldDisableEditOnCondition("return context.getParent('locked')")
     private String description;
 
-    @UIField(order = 20, label = "format")
+    @UIField(order = 20, label = "format", disableEdit = true)
     @Enumerated(EnumType.STRING)
     @UIFieldShowOnCondition("return context.getParent('groupId') !== 'broadcasts'")
     private ContextVar.VariableType restriction = ContextVar.VariableType.Any;

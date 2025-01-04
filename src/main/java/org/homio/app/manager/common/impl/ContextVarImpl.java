@@ -27,7 +27,6 @@ import org.homio.api.storage.SourceHistoryItem;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.DataSourceUtil;
-import org.homio.api.util.Lang;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.impl.ContextVarImpl.TransformVariableContext.ExtendedDoubleEvaluator;
 import org.homio.app.manager.common.impl.javaluator.DynamicVariableSet;
@@ -46,7 +45,15 @@ import org.json.JSONObject;
 
 import java.math.BigDecimal;
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
@@ -541,6 +548,7 @@ public class ContextVarImpl implements ContextVar {
                     context.variable,
                     context.variable.getQuota());
             var messages = backupData.stream()
+                    .sorted(Comparator.comparingInt(VariableBackup::getId))
                     .map(bd -> WorkspaceVariableMessage.of(bd, context.valueConverter.apply(bd.getValue())))
                     .sorted().collect(Collectors.toList());
             if (!messages.isEmpty()) {
@@ -723,6 +731,13 @@ public class ContextVarImpl implements ContextVar {
         @Override
         public @NotNull VariableMetaBuilderImpl setValues(Set<String> values) {
             entity.setJsonData("options", String.join(LIST_DELIMITER, values));
+            return this;
+        }
+
+        @Override
+        public @NotNull VariableMetaBuilder setRange(float min, float max) {
+            entity.setMin(min);
+            entity.setMax(max);
             return this;
         }
     }

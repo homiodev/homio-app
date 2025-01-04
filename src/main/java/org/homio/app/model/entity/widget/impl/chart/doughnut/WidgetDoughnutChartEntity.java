@@ -31,7 +31,6 @@ public class WidgetDoughnutChartEntity
     @UIField(order = 4)
     @UIFieldGroup("VALUE")
     @UIFieldColorPicker(allowThreshold = true)
-    @UIFieldReadDefaultValue
     public String getValueColor() {
         return getJsonData("vc", UI.Color.WHITE);
     }

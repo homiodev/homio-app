@@ -27,7 +27,6 @@ public class WidgetSliderSeriesEntity
     @UIField(order = 1)
     @UIFieldGroup(order = 2, value = "SLIDER", borderColor = "#6AA427")
     @UIFieldColorPicker(allowThreshold = true)
-    @UIFieldReadDefaultValue
     public String getSliderColor() {
         return getJsonData("sc", UI.Color.WHITE);
     }

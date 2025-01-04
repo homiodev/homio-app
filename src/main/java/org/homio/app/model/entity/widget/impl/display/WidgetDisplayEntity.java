@@ -58,7 +58,6 @@ public class WidgetDisplayEntity
 
     @UIField(order = 50, hideInView = true)
     @UIFieldLayout(options = {"name", "value", "icon"}, rows = "1:10")
-    @UIFieldReadDefaultValue
     public String getLayout() {
         return getJsonData("layout", getDefaultLayout());
     }

@@ -58,7 +58,6 @@ public interface WidgetGaugeUITab extends HasJsonData {
     @UIFieldTab("UI")
     @UIFieldGroup("GENERAL")
     @UIFieldColorPicker(allowThreshold = true, pulseColorCondition = true)
-    @UIFieldReadDefaultValue
     default String getGaugeForeground() {
         return getJsonData("gfc", UI.Color.PRIMARY_COLOR);
     }
@@ -71,7 +70,6 @@ public interface WidgetGaugeUITab extends HasJsonData {
     @UIFieldTab("UI")
     @UIFieldGroup("GENERAL")
     @UIFieldColorPicker
-    @UIFieldReadDefaultValue
     default String getGaugeBackground() {
         return getJsonData("gbg", "#444444");
     }
@@ -95,7 +93,6 @@ public interface WidgetGaugeUITab extends HasJsonData {
     @UIFieldSlider(min = 0, max = 20)
     @UIFieldTab("UI")
     @UIFieldGroup(value = "DOT", order = 300, borderColor = "#C2365B")
-    @UIFieldReadDefaultValue
     default int getDotBorderWidth() {
         return getJsonData("dotbw", 2);
     }
@@ -108,7 +105,6 @@ public interface WidgetGaugeUITab extends HasJsonData {
     @UIFieldSlider(min = 0, max = 20)
     @UIFieldTab("UI")
     @UIFieldGroup("DOT")
-    @UIFieldReadDefaultValue
     default int getDotRadiusWidth() {
         return getJsonData("dotbrw", 5);
     }
@@ -121,7 +117,6 @@ public interface WidgetGaugeUITab extends HasJsonData {
     @UIFieldTab("UI")
     @UIFieldGroup("DOT")
     @UIFieldColorPicker
-    @UIFieldReadDefaultValue
     default String getDotBorderColor() {
         return getJsonData("dotbc", UI.Color.WHITE);
     }
@@ -134,7 +129,6 @@ public interface WidgetGaugeUITab extends HasJsonData {
     @UIFieldTab("UI")
     @UIFieldGroup("DOT")
     @UIFieldColorPicker
-    @UIFieldReadDefaultValue
     default String getDotColor() {
         return getJsonData("dotc", UI.Color.WHITE);
     }
@@ -213,7 +207,6 @@ public interface WidgetGaugeUITab extends HasJsonData {
     @UIField(order = 35)
     @UIFieldTab("UI")
     @UIFieldGroup(value = "NEEDLE", order = 450, borderColor = "#ACB82A")
-    @UIFieldReadDefaultValue
     default boolean getDrawNeedle() {
         return getJsonData("ndl", Boolean.FALSE);
     }

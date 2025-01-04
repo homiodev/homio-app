@@ -5,7 +5,6 @@ import org.homio.api.ui.UI;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldColorPicker;
 import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 
 public interface HasName extends HasJsonData {
@@ -13,13 +12,11 @@ public interface HasName extends HasJsonData {
     @UIField(order = 1)
     @UIFieldGroup(value = "NAME", order = 3)
     @UIFieldOptionFontSize
-    @UIFieldReadDefaultValue
     String getName();
 
     @UIField(order = 3)
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldGroup("NAME")
-    @UIFieldReadDefaultValue
     default String getNameColor() {
         return getJsonData("nc", UI.Color.WHITE);
     }
@@ -29,7 +26,6 @@ public interface HasName extends HasJsonData {
     }
 
     @UIField(order = 0, hideInView = true, hideInEdit = true)
-    @UIFieldReadDefaultValue
     default double getNameFontSize() {
         return getJsonData("nfs", 1D);
     }

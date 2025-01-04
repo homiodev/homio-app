@@ -20,7 +20,6 @@ public interface HasHorizontalLine extends HasJsonData {
     @UIField(order = 2)
     @UIFieldGroup("CHART_HL")
     @UIFieldColorPicker
-    @UIFieldReadDefaultValue
     default String getSingleLineColor() {
         return getJsonData("slcol", UI.Color.RED);
     }
@@ -43,7 +42,6 @@ public interface HasHorizontalLine extends HasJsonData {
     @UIField(order = 5)
     @UIFieldGroup("CHART_HL")
     @UIFieldColorPicker
-    @UIFieldReadDefaultValue
     default String getDynamicLineColor() {
         return getJsonData("dynlc", UI.Color.GREEN);
     }

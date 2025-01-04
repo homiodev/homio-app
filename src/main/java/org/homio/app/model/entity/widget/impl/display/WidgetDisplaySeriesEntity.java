@@ -15,7 +15,6 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
     @UIField(order = 1)
     @UIFieldGroup("UI")
     @UIFieldColorPicker(allowThreshold = true)
-    @UIFieldReadDefaultValue
     public String getBackground() {
         return getJsonData("bg", "transparent");
     }

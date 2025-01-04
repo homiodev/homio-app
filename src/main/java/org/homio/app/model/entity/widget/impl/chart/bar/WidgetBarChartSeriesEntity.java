@@ -13,7 +13,6 @@ public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChar
     @UIField(order = 50)
     @UIFieldGroup(value = "CHART_UI", order = 54, borderColor = "#673AB7")
     @UIFieldColorPicker
-    @UIFieldReadDefaultValue
     public String getChartColor() {
         return getJsonData("chartC", UI.Color.WHITE);
     }

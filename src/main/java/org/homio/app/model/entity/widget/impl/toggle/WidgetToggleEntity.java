@@ -30,7 +30,6 @@ public class WidgetToggleEntity
     @Override
     @UIField(order = 50)
     @UIFieldLayout(options = {"name", "value", "icon", "button"})
-    @UIFieldReadDefaultValue
     @UIFieldShowOnCondition("return context.get('displayType') == 'OnOff' || context.get('displayType') == 'Slide'")
     public String getLayout() {
         return getJsonData("layout", getDefaultLayout());

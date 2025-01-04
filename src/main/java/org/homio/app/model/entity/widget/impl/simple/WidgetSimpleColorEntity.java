@@ -52,7 +52,6 @@ public class WidgetSimpleColorEntity extends WidgetEntity<WidgetSimpleColorEntit
     @UIField(order = 4)
     @UIFieldSlider(min = 0, max = 40)
     @UIFieldGroup("COLORS")
-    @UIFieldReadDefaultValue
     public int getCircleSpacing() {
         return getJsonData("space", 14);
     }
@@ -64,7 +63,6 @@ public class WidgetSimpleColorEntity extends WidgetEntity<WidgetSimpleColorEntit
     @UIField(order = 5)
     @UIFieldSlider(min = 10, max = 40)
     @UIFieldGroup("COLORS")
-    @UIFieldReadDefaultValue
     public int getCircleSize() {
         return getJsonData("size", 28);
     }

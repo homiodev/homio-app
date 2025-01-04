@@ -70,6 +70,7 @@ import java.util.function.Consumer;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.api.ContextVar.GROUP_BROADCAST;
 import static org.homio.api.ui.field.UIFieldType.HTML;
 import static org.homio.api.ui.field.action.ActionInputParameter.select;
@@ -330,49 +331,46 @@ public class WorkspaceGroup extends BaseEntity
                                     builder.addSelectBox("parentGroup")
                                             .setOptions(OptionModel.entityList(this.getChildrenGroups(), null, context()))));
         } else {
-            uiInputBuilder.addOpenDialogSelectableButton("ADD_VARIABLE", new Icon("fas fa-rss"), null,
-                            (context, params) -> {
-                                var variableType = params.getEnum(ContextVar.VariableType.class, "type");
-                                return createVar(context, params, variableType, false);
-                            })
-                    .editDialog(dialogBuilder ->
-                            addCommonFields(dialogBuilder, "field.BROADCAST_NAME", builder -> {
-                                builder.addSelectBox("type")
-                                        .setValue(ContextVar.VariableType.Float.name())
-                                        .setOptions(OptionModel.enumList(ContextVar.VariableType.class));
-                                builder.addSelectBox("parentGroup")
-                                        .setOptions(OptionModel.entityList(this.getChildrenGroups(), null, context()));
-                            }));
-            uiInputBuilder.addOpenDialogSelectableButton("ADD_VARIABLE_2", new Icon("fas fa-rss"), CreateVariableDialogModel.class, null,
-                            (context, params) -> {
-                                var variableType = params.getEnum(ContextVar.VariableType.class, "type");
-                                return createVar(context, params, variableType, false);
-                            })
-                    .editDialog(dialogBuilder ->
-                            addCommonFields(dialogBuilder, "field.BROADCAST_NAME", builder -> {
-                                builder.addSelectBox("type")
-                                        .setValue(ContextVar.VariableType.Float.name())
-                                        .setOptions(OptionModel.enumList(ContextVar.VariableType.class));
-                                builder.addSelectBox("parentGroup")
-                                        .setOptions(OptionModel.entityList(this.getChildrenGroups(), null, context()));
-                            }));
+            uiInputBuilder.addOpenDialogSelectableButtonFromClass("ADD_VARIABLE", new Icon("fas fa-rss"),
+                    CreateVariableDialogModel.class, (context, params) -> {
+                        var variableType = params.getEnum(ContextVar.VariableType.class, "variableType");
+                        return createVar(context, params, variableType, false);
+                    });
         }
     }
 
+    @Getter
+    @Setter
     public static class CreateVariableDialogModel {
         @UIField(order = 1)
-        public ContextVar.VariableType type = ContextVar.VariableType.Float;
+        public ContextVar.VariableType variableType = ContextVar.VariableType.Float;
         @UIField(order = 2)
+        public String name = "Variable name";
+        @UIField(order = 3)
+        @UIFieldIconPicker(allowSize = false, allowSpin = false)
+        public String icon = "fas fa-cloud";
+        @UIField(order = 4)
+        @UIFieldColorPicker
+        public String iconColor = "#999999";
+        @UIField(order = 5)
         @UIFieldDynamicSelection(ParentGroupSelection.class)
         public String parentGroup;
+        @UIField(order = 6)
+        @UIFieldShowOnCondition("return context.get('variableType') == 'Float'")
+        private int min;
+        @UIField(order = 7)
+        @UIFieldShowOnCondition("return context.get('variableType') == 'Float'")
+        private int max = 100;
+        @UIField(order = 8)
+        public String description = "Variable description";
+    }
 
-        public static class ParentGroupSelection implements DynamicOptionLoader {
+    public static class ParentGroupSelection implements DynamicOptionLoader {
 
-            @Override
-            public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
-                WorkspaceGroup group = (WorkspaceGroup) parameters.getBaseEntity();
-                return OptionModel.entityList(group.getChildrenGroups(), null, parameters.context());
-            }
+        @Override
+        public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
+            WorkspaceGroup group = (WorkspaceGroup) parameters.getBaseEntity();
+            return OptionModel.entityList(group.getChildrenGroups(), null, parameters.context());
         }
     }
 
@@ -388,13 +386,19 @@ public class WorkspaceGroup extends BaseEntity
 
     public @NotNull ActionResponseModel createVar(Context context, JSONObject params, ContextVar.VariableType variableType, boolean readOnly) {
         String name = params.getString("name");
-        String group = params.getString("parentGroup");
+        String group = params.optString("parentGroup", this.getEntityID());
         context.var().createVariable(group, name, name,
-                variableType, builder ->
-                        builder.setWritable(!readOnly)
-                                .setDescription(params.optString("description"))
-                                .setIcon(new Icon(params.getString("icon"),
-                                        StringUtils.defaultIfEmpty(params.optString("color"), "#999999"))));
+                variableType, builder -> {
+                    builder.setWritable(!readOnly)
+                            .setDescription(params.optString("description"));
+                    String icon = params.optString("icon");
+                    if (isNotEmpty(icon)) {
+                        builder.setIcon(new Icon(icon, params.optString("color", "#999999")));
+                    }
+                    if (params.has("min") && params.has("max")) {
+                        builder.setRange(params.getFloat("min"), params.getFloat("max"));
+                    }
+                });
         return ActionResponseModel.success();
     }
 
@@ -503,31 +507,29 @@ public class WorkspaceGroup extends BaseEntity
         @UIContextMenuAction(value = "TITLE.CREATE_DISPLAY_WIDGET", icon = "fas fa-chart-simple")
         public ActionResponseModel createDisplayWidget(Context context) {
             context.ui().dialog().sendDialogRequest("create-display-widget", "TITLE.CREATE_DISPLAY_WIDGET",
-                    (responseType, pressedButton, parameters) -> {
-                        context.widget().createDisplayWidget(variable.getEntityID(), builder -> {
-                            builder
-                                    .setChartHeight(40)
-                                    .setLineBorderWidth(1)
-                                    .setChartPointsPerHour(120)
-                                    .setShowChartFullScreenButton(true)
-                                    .setChartDataSource(variable.getFullEntityID())
-                                    .setChartColor(variable.getIconColor())
-                                    .attachToTab(parameters.get("tab").asText());
-                            builder.addSeries(parameters.get("name").asText(), series -> {
-                                series
-                                        .setValueSuffix(variable.getUnit())
-                                        .setValueDataSource(variable.getFullEntityID())
-                                        .setIcon(parameters.get("icon").asText())
-                                        .setIconColor(parameters.get("iconColor").asText());
-                            });
-                            if (variable.getMin() != null) {
-                                builder.setMin(variable.getMin().intValue());
-                            }
-                            if (variable.getMax() != null) {
-                                builder.setMax(variable.getMax().intValue());
-                            }
-                        });
-                    }, dialogEditor -> {
+                    (responseType, pressedButton, parameters) ->
+                            context.widget().createDisplayWidget(variable.getEntityID(), builder -> {
+                                builder
+                                        .setChartHeight(40)
+                                        .setLineBorderWidth(1)
+                                        .setChartPointsPerHour(120)
+                                        .setShowChartFullScreenButton(true)
+                                        .setChartDataSource(variable.getFullEntityID())
+                                        .setChartColor(variable.getIconColor())
+                                        .attachToTab(parameters.get("tab").asText());
+                                builder.addSeries(parameters.get("name").asText(), series ->
+                                        series
+                                                .setValueSuffix(variable.getUnit())
+                                                .setValueDataSource(variable.getFullEntityID())
+                                                .setIcon(parameters.get("icon").asText())
+                                                .setIconColor(parameters.get("iconColor").asText()));
+                                if (variable.getMin() != null) {
+                                    builder.setMin(variable.getMin().intValue());
+                                }
+                                if (variable.getMax() != null) {
+                                    builder.setMax(variable.getMax().intValue());
+                                }
+                            }), dialogEditor -> {
                         dialogEditor.disableKeepOnUi();
                         dialogEditor.appearance(new Icon(variable.getIcon(), variable.getIconColor()), null);
                         List<ActionInputParameter> inputs = List.of(
@@ -545,34 +547,30 @@ public class WorkspaceGroup extends BaseEntity
         @UIContextMenuAction(value = "TITLE.CREATE_GAUGE_WIDGET", icon = "fas fa-gauge")
         public ActionResponseModel createGaugeWidget(Context context) {
             context.ui().dialog().sendDialogRequest("create-gauge-widget", "TITLE.CREATE_GAUGE_WIDGET",
-                    (responseType, pressedButton, parameters) -> {
-                        context.widget().createGaugeWidget(variable.getEntityID(), builder -> {
-                            builder
-                                    .setValueDataSource(variable.getFullEntityID())
-                                    .setGaugeForegroundColor(variable.getIconColor())
-                                    .attachToTab(parameters.get("tab").asText());
-                            builder.addSeries("Gauge value", series -> {
-                                series
-                                        .setVerticalValuePosition(-5)
-                                        .setHorizontalValuePosition(3)
-                                        .setUseGaugeValue(true)
-                                        .setValueFontSize(0.9)
-                                        .setValueSuffix(variable.getUnit());
-                            });
-                            builder.addSeries("Gauge icon", series -> {
-                                series
-                                        .setVerticalValuePosition(40)
-                                        .setIcon(parameters.get("icon").asText())
-                                        .setIconColor(parameters.get("iconColor").asText());
-                            });
-                            if (variable.getMin() != null) {
-                                builder.setMin(variable.getMin().intValue());
-                            }
-                            if (variable.getMax() != null) {
-                                builder.setMax(variable.getMax().intValue());
-                            }
-                        });
-                    }, dialogEditor -> {
+                    (responseType, pressedButton, parameters) ->
+                            context.widget().createGaugeWidget(variable.getEntityID(), builder -> {
+                                builder
+                                        .setValueDataSource(variable.getFullEntityID())
+                                        .setGaugeForegroundColor(variable.getIconColor())
+                                        .attachToTab(parameters.get("tab").asText());
+                                builder.addSeriesGaugeValue("Gauge value", series ->
+                                        series
+                                                .setVerticalValuePosition(-5)
+                                                .setHorizontalValuePosition(3)
+                                                .setValueFontSize(0.9)
+                                                .setValueSuffix(variable.getUnit()));
+                                builder.addSeriesCustomValue("Gauge icon", series ->
+                                        series
+                                                .setVerticalValuePosition(40)
+                                                .setIcon(parameters.get("icon").asText())
+                                                .setIconColor(parameters.get("iconColor").asText()));
+                                if (variable.getMin() != null) {
+                                    builder.setMin(variable.getMin().intValue());
+                                }
+                                if (variable.getMax() != null) {
+                                    builder.setMax(variable.getMax().intValue());
+                                }
+                            }), dialogEditor -> {
                         dialogEditor.disableKeepOnUi();
                         dialogEditor.appearance(new Icon(variable.getIcon(), variable.getIconColor()), null);
                         List<ActionInputParameter> inputs = List.of(

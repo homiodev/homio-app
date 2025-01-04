@@ -27,7 +27,6 @@ public interface HasIcon extends HasJsonData {
     @UIField(order = 2)
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldGroup("ICON")
-    @UIFieldReadDefaultValue
     default String getIconColor() {
         return getJsonData("iconColor", UI.Color.WHITE);
     }

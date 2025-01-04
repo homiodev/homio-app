@@ -75,7 +75,6 @@ public class WidgetGaugeEntity extends WidgetEntityAndSeries<WidgetGaugeEntity, 
     @UIField(order = 250)
     @UIFieldSlider(min = 0, max = 2)
     @UIFieldGroup("SET_VALUE")
-    @UIFieldReadDefaultValue
     public int getValuePrecision() {
         return getJsonData("prec", 0);
     }
@@ -120,7 +119,6 @@ public class WidgetGaugeEntity extends WidgetEntityAndSeries<WidgetGaugeEntity, 
     @UIFieldSlider(min = 0, max = 20)
     @UIFieldGroup("SECOND_VALUE")
     @UIFieldTab("ADVANCED")
-    @UIFieldReadDefaultValue
     public int getSecondDotRadiusWidth() {
         return getJsonData("dotsrw", 0);
     }
@@ -133,7 +131,6 @@ public class WidgetGaugeEntity extends WidgetEntityAndSeries<WidgetGaugeEntity, 
     @UIFieldGroup("SECOND_VALUE")
     @UIFieldTab("ADVANCED")
     @UIFieldColorPicker
-    @UIFieldReadDefaultValue
     public String getSecondDotColor() {
         return getJsonData("dotsc", UI.Color.WHITE);
     }

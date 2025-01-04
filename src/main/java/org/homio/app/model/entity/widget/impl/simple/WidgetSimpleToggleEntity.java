@@ -73,7 +73,6 @@ public class WidgetSimpleToggleEntity extends WidgetEntity<WidgetSimpleToggleEnt
     @UIField(order = 2)
     @UIFieldColorPicker(allowThreshold = true, pulseColorCondition = true)
     @UIFieldGroup("ICON")
-    @UIFieldReadDefaultValue
     @UIFieldShowOnCondition("return context.get('displayType') == 'OnOff'")
     public String getIconColor() {
         return getJsonData("iconColor", UI.Color.WHITE);

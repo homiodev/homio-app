@@ -25,19 +25,57 @@ import org.homio.api.model.Status;
 import org.homio.api.model.WebAddress;
 import org.homio.api.model.endpoint.DeviceEndpointUI;
 import org.homio.api.ui.UISidebarMenu;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldCodeEditor;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldIconPicker;
+import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.ui.field.UIFieldIgnoreParent;
+import org.homio.api.ui.field.UIFieldInlineEditConfirm;
+import org.homio.api.ui.field.UIFieldKeyValue;
+import org.homio.api.ui.field.UIFieldLayout;
+import org.homio.api.ui.field.UIFieldLinkToEntity;
+import org.homio.api.ui.field.UIFieldNoReadDefaultValue;
+import org.homio.api.ui.field.UIFieldNumber;
+import org.homio.api.ui.field.UIFieldPort;
+import org.homio.api.ui.field.UIFieldPosition;
+import org.homio.api.ui.field.UIFieldProgress;
 import org.homio.api.ui.field.UIFieldProgress.UIFieldProgressColorChange;
-import org.homio.api.ui.field.action.*;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.UIFieldStringTemplate;
+import org.homio.api.ui.field.UIFieldTab;
+import org.homio.api.ui.field.UIFieldTableLayout;
+import org.homio.api.ui.field.UIFieldType;
+import org.homio.api.ui.field.action.ActionInputParameter;
+import org.homio.api.ui.field.action.UIActionButton;
+import org.homio.api.ui.field.action.UIActionInput;
+import org.homio.api.ui.field.action.UIContextMenuAction;
+import org.homio.api.ui.field.action.UIContextMenuUploadAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
-import org.homio.api.ui.field.color.*;
+import org.homio.api.ui.field.color.UIFieldColorBgRef;
+import org.homio.api.ui.field.color.UIFieldColorBooleanMatch;
+import org.homio.api.ui.field.color.UIFieldColorMatch;
+import org.homio.api.ui.field.color.UIFieldColorRef;
+import org.homio.api.ui.field.color.UIFieldColorStatusMatch;
 import org.homio.api.ui.field.condition.UIFieldDisableCreateTab;
 import org.homio.api.ui.field.condition.UIFieldDisableEditOnCondition;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.api.ui.field.image.UIFieldImage;
 import org.homio.api.ui.field.image.UIFieldImageSrc;
-import org.homio.api.ui.field.inline.*;
-import org.homio.api.ui.field.selection.*;
+import org.homio.api.ui.field.inline.UIFieldInlineEditEntities;
+import org.homio.api.ui.field.inline.UIFieldInlineEntities;
+import org.homio.api.ui.field.inline.UIFieldInlineEntityEditWidth;
+import org.homio.api.ui.field.inline.UIFieldInlineEntityWidth;
+import org.homio.api.ui.field.inline.UIFieldInlineGroup;
+import org.homio.api.ui.field.selection.UIFieldBeanSelection;
+import org.homio.api.ui.field.selection.UIFieldDevicePortSelection;
+import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
+import org.homio.api.ui.field.selection.UIFieldEntityTypeSelection;
+import org.homio.api.ui.field.selection.UIFieldSelectConfig;
+import org.homio.api.ui.field.selection.UIFieldStaticSelection;
+import org.homio.api.ui.field.selection.UIFieldTreeNodeSelection;
 import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
 import org.homio.api.util.CommonUtils;
@@ -45,7 +83,14 @@ import org.homio.api.util.SecureString;
 import org.homio.app.builder.ui.UIInputBuilderImpl;
 import org.homio.app.builder.ui.layout.UIDialogLayoutBuilderImpl;
 import org.homio.app.model.UIFieldClickToEdit;
-import org.homio.app.model.entity.widget.*;
+import org.homio.app.model.entity.widget.UIEditReloadWidget;
+import org.homio.app.model.entity.widget.UIFieldFunction;
+import org.homio.app.model.entity.widget.UIFieldMarkers;
+import org.homio.app.model.entity.widget.UIFieldOptionColor;
+import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
+import org.homio.app.model.entity.widget.UIFieldOptionVerticalAlign;
+import org.homio.app.model.entity.widget.UIFieldPadding;
+import org.homio.app.model.entity.widget.UIFieldTimeSlider;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.model.var.UIFieldVariable;
 import org.jetbrains.annotations.NotNull;
@@ -54,13 +99,28 @@ import org.json.JSONObject;
 import org.springframework.core.annotation.AnnotationUtils;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.*;
-import java.util.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toSet;
-import static org.apache.commons.lang3.StringUtils.*;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 @Log4j2
@@ -230,12 +290,16 @@ public class UIFieldUtils {
         entityUIMetaData.setStyle(field.style());
 
         // make sense keep defaultValue(for revert) only if able to edit value
-        if (fieldContext.isAnnotationPresent(UIFieldReadDefaultValue.class) &&
-            !fullDisableEdit && !field.disableEdit()) {
+        boolean noReadDefaultValue = fieldContext.isAnnotationPresent(UIFieldNoReadDefaultValue.class);
+        if (!noReadDefaultValue && !fullDisableEdit && !field.disableEdit()) {
             entityUIMetaData.setDefaultValue(fieldContext.getDefaultValue(instance));
         }
 
         ObjectNode jsonTypeMetadata = OBJECT_MAPPER.createObjectNode();
+
+        if (type.isEnum()) {
+            entityUIMetaData.setDefaultValue(fieldContext.getDefaultValue(instance));
+        }
 
         detectFieldType(instance, fieldContext, entityUIMetaData, genericType, type, field, jsonTypeMetadata);
 
@@ -545,6 +609,7 @@ public class UIFieldUtils {
             jsonTypeMetadata.put("max", fieldSlider.max());
             jsonTypeMetadata.put("step", fieldSlider.step());
             entityUIMetaData.setType(UIFieldType.Slider.name());
+            entityUIMetaData.setDefaultValue(fieldContext.getDefaultValue(instance));
         }
 
         var fieldCodeEditor = fieldContext.getDeclaredAnnotation(UIFieldCodeEditor.class);
@@ -779,7 +844,7 @@ public class UIFieldUtils {
             if (!inlineTypeFields.isEmpty()) {
                 jsonTypeMetadata.set("inlineTypeFields", inlineTypeFields);
                 Collection<UIInputEntity> actions = fetchUIActionsFromClass((Class<?>) inlineType, context);
-                if(actions != null && !actions.isEmpty()) {
+                if (actions != null && !actions.isEmpty()) {
                     jsonTypeMetadata.set("inlineTypeActions", OBJECT_MAPPER.valueToTree(actions));
                 }
             }

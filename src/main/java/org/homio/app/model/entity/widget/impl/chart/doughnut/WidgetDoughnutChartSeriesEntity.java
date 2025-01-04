@@ -14,7 +14,6 @@ public class WidgetDoughnutChartSeriesEntity extends WidgetSeriesEntity<WidgetDo
     @UIField(order = 20)
     @UIFieldGroup("CHART_UI")
     @UIFieldColorPicker
-    @UIFieldReadDefaultValue
     public String getChartColor() {
         return getJsonData("chartC", UI.Color.WHITE);
     }

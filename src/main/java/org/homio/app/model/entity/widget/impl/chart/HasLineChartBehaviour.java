@@ -18,7 +18,6 @@ public interface HasLineChartBehaviour extends
     ChartType getChartType();
 
     @UIField(order = 20)
-    @UIFieldReadDefaultValue
     @UIFieldGroup(order = 54, value = "CHART_UI", borderColor = "#673AB7")
     @UIFieldSlider(min = 0, max = 10)
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
@@ -31,7 +30,6 @@ public interface HasLineChartBehaviour extends
     }
 
     @UIField(order = 40)
-    @UIFieldReadDefaultValue
     @UIFieldGroup("CHART_UI")
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default Fill getLineFill() {
@@ -43,7 +41,6 @@ public interface HasLineChartBehaviour extends
     }
 
     @UIField(order = 6)
-    @UIFieldReadDefaultValue
     @UIFieldGroup("CHART_UI")
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default Stepped getStepped() {
@@ -55,7 +52,6 @@ public interface HasLineChartBehaviour extends
     }
 
     @UIField(order = 3)
-    @UIFieldReadDefaultValue
     @UIFieldSlider(min = 0, max = 10)
     @UIFieldGroup("CHART_UI")
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
@@ -68,7 +64,6 @@ public interface HasLineChartBehaviour extends
     }
 
     /*@UIField(order = 5)
-    @UIFieldReadDefaultValue
     @UIFieldSlider(min = 10, max = 600)
     @UIFieldGroup("CHART_UI")
     default int getFetchDataFromServerInterval() {
@@ -80,7 +75,6 @@ public interface HasLineChartBehaviour extends
     }*/
 
     @UIField(order = 1)
-    @UIFieldReadDefaultValue
     @UIFieldGroup(order = 58, value = "CHART_POINT")
     @UIFieldSlider(min = 0, max = 4, step = 0.2)
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
@@ -93,7 +87,6 @@ public interface HasLineChartBehaviour extends
     }
 
     @UIField(order = 2)
-    @UIFieldReadDefaultValue
     @UIFieldGroup("CHART_POINT")
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default PointStyle getPointStyle() {
@@ -108,7 +101,6 @@ public interface HasLineChartBehaviour extends
     @UIFieldGroup("CHART_POINT")
     @UIFieldColorPicker
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
-    @UIFieldReadDefaultValue
     default String getPointBackgroundColor() {
         return getJsonData("pbg", UI.Color.WHITE);
     }
@@ -121,7 +113,6 @@ public interface HasLineChartBehaviour extends
     @UIFieldGroup("CHART_POINT")
     @UIFieldColorPicker
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
-    @UIFieldReadDefaultValue
     default String getPointBorderColor() {
         return getJsonData("pbc", UI.Color.PRIMARY_COLOR);
     }

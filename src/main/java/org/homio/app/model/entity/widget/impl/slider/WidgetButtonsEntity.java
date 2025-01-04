@@ -3,7 +3,6 @@ package org.homio.app.model.entity.widget.impl.slider;
 import jakarta.persistence.Entity;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldColorPicker;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -38,7 +37,6 @@ public class WidgetButtonsEntity
 
     @UIField(order = 12)
     @UIFieldColorPicker
-    @UIFieldReadDefaultValue
     public String getActiveColor() {
         return getJsonData("actClr", "#777777");
     }
@@ -49,7 +47,6 @@ public class WidgetButtonsEntity
 
     @UIField(order = 12)
     @UIFieldColorPicker
-    @UIFieldReadDefaultValue
     public String getBackColor() {
         return getJsonData("bcClr", "#3D3D3D");
     }

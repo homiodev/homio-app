@@ -5,7 +5,6 @@ import org.homio.api.ui.UI;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldColorPicker;
 import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
@@ -22,7 +21,6 @@ public interface HasToggle extends HasSingleValueDataSource, HasSetSingleValueDa
 
     @UIField(order = 3)
     @UIFieldColorPicker(allowThreshold = true, pulseColorCondition = true, thresholdSource = true)
-    @UIFieldReadDefaultValue
     default String getToggleColor() {
         return getJsonData("color", UI.Color.WHITE);
     }

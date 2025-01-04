@@ -36,7 +36,6 @@ public interface HasChartDataSource extends HasJsonData {
     @UIField(order = 5)
     @UIFieldGroup("CHART")
     @UIEditReloadWidget
-    @UIFieldReadDefaultValue
     default AggregationType getChartAggregationType() {
         return getJsonDataEnum("chartAggrType", AggregationType.AverageNoZero);
     }
@@ -48,7 +47,6 @@ public interface HasChartDataSource extends HasJsonData {
     @UIField(order = 6)
     @UIFieldGroup("CHART")
     @UIFieldCodeEditor(autoFormat = true, editorType = MonacoLanguage.JavaScript)
-    @UIFieldReadDefaultValue
     default String getFinalChartValueConverter() {
         return getJsonData("finValConv", "return value;");
     }
@@ -60,7 +58,6 @@ public interface HasChartDataSource extends HasJsonData {
     @UIField(order = 1)
     @UIFieldGroup(order = 54, value = "CHART_UI", borderColor = "#673AB7")
     @UIFieldColorPicker(allowThreshold = true)
-    @UIFieldReadDefaultValue
     default String getChartColor() {
         return getJsonData("chartC", UI.Color.WHITE);
     }
@@ -72,7 +69,6 @@ public interface HasChartDataSource extends HasJsonData {
     @UIField(order = 2)
     @UIFieldSlider(min = 0, max = 100, step = 5)
     @UIFieldGroup("CHART_UI")
-    @UIFieldReadDefaultValue
     default int getChartColorOpacity() {
         return getJsonData("chartCO", 50);
     }

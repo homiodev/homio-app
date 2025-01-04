@@ -14,7 +14,6 @@ public class WidgetPieChartSeriesEntity extends WidgetSeriesEntity<WidgetPieChar
     @UIField(order = 20)
     @UIFieldGroup(order = 54, value = "CHART_UI", borderColor = "#673AB7")
     @UIFieldColorPicker
-    @UIFieldReadDefaultValue
     public String getChartColor() {
         return getJsonData("chartC", UI.Color.WHITE);
     }
