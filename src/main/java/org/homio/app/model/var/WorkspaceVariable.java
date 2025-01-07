@@ -28,6 +28,7 @@ import org.homio.api.state.State;
 import org.homio.api.storage.SourceHistory;
 import org.homio.api.storage.SourceHistoryItem;
 import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldProgress;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.color.UIFieldColorRef;
@@ -88,8 +89,15 @@ public class WorkspaceVariable extends BaseEntity
     @UIField(order = 25, hideInEdit = true)
     private boolean readOnly = true;
 
-    @UIField(order = 30)
-    private boolean backup = false;
+    @UIField(order = 1)
+    @UIFieldGroup(value = "BACKUP", order = 10, borderColor = "#832DA6")
+    @UIFieldSlider(min = 0, max = 365)
+    private int backupDays = 31;
+
+    // Backup runs once per minute. Does aggregate values into single value for backup. Highly recommend true
+    @UIField(order = 2)
+    @UIFieldGroup("BACKUP")
+    private boolean backupAggregateValues = true;
 
     private String icon;
 
@@ -116,8 +124,9 @@ public class WorkspaceVariable extends BaseEntity
         this.workspaceGroup = workspaceGroup;
     }
 
+    // NEED FOR UI
     public int getBackupStorageCount() {
-        return backup ? context().getBean(VariableBackupRepository.class).count(this) : 0;
+        return backupDays > 0 ? context().getBean(VariableBackupRepository.class).count(this) : 0;
     }
 
     @Override
@@ -261,7 +270,7 @@ public class WorkspaceVariable extends BaseEntity
                 .setDescription(getDescription());
         sourceHistory.setAttributes(new ArrayList<>(Arrays.asList(
                 "Owner:" + workspaceGroup.getName(),
-                "Backup:" + backup,
+                "Backup:" + backupDays + " days",
                 "Quota:" + quota,
                 "Type:" + restriction.name().toLowerCase(),
                 "Locked:" + locked,
@@ -290,8 +299,7 @@ public class WorkspaceVariable extends BaseEntity
 
     @Override
     public void setStatusValue(SetStatusValueRequest request) {
-        ((ContextVarImpl) request.context().var())
-                .set(getEntityID(), request.getValue(), true);
+        request.context().var().set(getEntityID(), request.getValue(), true);
     }
 
     @Override
@@ -376,7 +384,7 @@ public class WorkspaceVariable extends BaseEntity
         result = 31 * result + (restriction != null ? restriction.hashCode() : 0);
         result = 31 * result + quota;
         result = 31 * result + (readOnly ? 1 : 0);
-        result = 31 * result + (backup ? 1 : 0);
+        result = 31 * result + backupDays;
         result = 31 * result + (locked ? 1 : 0);
         result = 31 * result + (icon != null ? icon.hashCode() : 0);
         result = 31 * result + (iconColor != null ? iconColor.hashCode() : 0);
@@ -440,6 +448,11 @@ public class WorkspaceVariable extends BaseEntity
             key = parent.getEntityID() + "-->" + key;
         }
         return key;
+    }
+
+    @JsonIgnore
+    public boolean isBackup() {
+        return backupDays > 0;
     }
 
     public enum VarType {

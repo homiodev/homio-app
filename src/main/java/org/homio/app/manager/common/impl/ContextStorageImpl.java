@@ -17,6 +17,7 @@ import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.entity.HasPlace;
 import org.homio.api.entity.HasStatusAndMsg;
+import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.device.DeviceContract;
 import org.homio.api.model.HasEntityIdentifier;
@@ -174,8 +175,12 @@ public class ContextStorageImpl implements ContextStorage {
 
         String entityID = entity.getEntityID();
         entity.setContext(context);
-        UserGuestEntity.assertEditAction(context, entity);
-        if (entity.isDisableEdit()) {
+        UserEntity user = context.user().getLoggedInUser();
+        if(user != null && !user.isAdmin()) {
+            UserGuestEntity guest = (UserGuestEntity) user;
+            guest.assertEditAccess(entity);
+        }
+        if (entity.getCreationTime() != null && entity.isDisableEdit()) {
             throw new IllegalAccessException("User is unable to persist/update entity");
         }
         if (entityID == null) {

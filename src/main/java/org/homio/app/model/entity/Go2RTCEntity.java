@@ -50,7 +50,7 @@ public class Go2RTCEntity extends MediaEntity implements HasEntityLog,
             GitHubProject.of("AlexxIT", "go2rtc")
                     .setInstalledVersionResolver((context, gitHubProject) -> {
                         Path executable = CommonUtils.getInstallPath().resolve("go2rtc").resolve("go2rtc");
-                        String version = context.hardware().execute(executable + " --version");
+                        String version = context.hardware().execute(executable + " --version", "V?");
                         if (version.startsWith("Current version: ")) {
                             return "v" + version.substring("Current version: ".length()).trim();
                         }

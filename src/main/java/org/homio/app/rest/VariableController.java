@@ -95,7 +95,7 @@ public class VariableController {
                         .setSourceVariables(request.getSources() == null ? List.of() : request.getSources())
                         .setIcon(new Icon(request.getIcon(), request.getIconColor()))
                         .setDescription(request.getDescription())
-                        .setPersistent(request.isBackup())
+                        .setPersistent(request.getBackupDays())
                         .setQuota(request.getQuota())
         );
     }
@@ -273,7 +273,7 @@ public class VariableController {
         private String name;
         private String description;
         private int quota;
-        private boolean backup;
+        private int backupDays;
         private String icon;
         private String iconColor;
     }

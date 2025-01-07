@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
 import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContractStub;
@@ -54,7 +55,7 @@ public class MediaMTXEntity extends MediaEntity implements HasEntityLog,
             GitHubProject.of("bluenviron", "mediamtx")
                     .setInstalledVersionResolver((context, gitHubProject) -> {
                         Path executable = CommonUtils.getInstallPath().resolve("mediamtx").resolve("mediamtx");
-                        return context.hardware().execute(executable + " --version");
+                        return context.hardware().execute(executable + " --version", "V?");
                     });
 
     public static MediaMTXEntity getEntity(Context context) {

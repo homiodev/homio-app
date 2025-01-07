@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.Context;
 import org.homio.api.ContextVar;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 @Component
@@ -111,8 +113,8 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
         Set<TableCell> cells = new HashSet<>();
 
         LocalBoardService service = getService();
-        cells.add(new TableCell("Cpu load", "value", service.getCpuUsageVar().getValue().toString()));
-        cells.add(new TableCell("Ram memory", "value", service.getMemoryVar().getValue().toString()));
+        cells.add(new TableCell("Cpu load", "value", Objects.toString(service.getCpuUsageVar().getValue(), "-")));
+        cells.add(new TableCell("Ram memory", "value", Objects.toString(service.getMemoryVar().getValue(), "-")));
         cells.add(new TableCell("Uptime", "value", machineHardwareRepository.getUptime()));
         if (SystemUtils.IS_OS_LINUX) {
             cells.add(new TableCell("Cpu temperature", "value", decimalToString(service.getCpuTemp())));

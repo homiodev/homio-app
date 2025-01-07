@@ -67,7 +67,7 @@ public class ContextHardwareImpl implements ContextHardware {
     }
 
     @Override
-    public @NotNull String execute(@NotNull String command) {
+    public @Nullable String execute(@NotNull String command) {
         return hardwareRepository.execute(command);
     }
 
