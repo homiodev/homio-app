@@ -3,6 +3,7 @@ package org.homio.app.repository;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.hibernate.Hibernate;
 import org.homio.api.entity.BaseEntity;
@@ -52,7 +53,9 @@ public class AbstractRepository<T extends BaseEntity> {
      * @return saved entity
      */
     public @NotNull T save(@NotNull T entity) {
-        return tmc.executeWithoutTransaction(em -> em.merge(entity));
+        return tmc.executeWithoutTransaction(em -> {
+          return em.merge(entity);
+        });
     }
 
     public void flushCashedEntity(@NotNull T entity) {

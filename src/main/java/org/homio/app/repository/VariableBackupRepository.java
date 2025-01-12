@@ -1,5 +1,6 @@
 package org.homio.app.repository;
 
+import lombok.extern.log4j.Log4j2;
 import org.homio.app.config.TransactionManagerContext;
 import org.homio.app.model.var.VariableBackup;
 import org.homio.app.model.var.WorkspaceVariable;
@@ -10,6 +11,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@Log4j2
 @Repository
 public class VariableBackupRepository {
 
@@ -18,7 +20,9 @@ public class VariableBackupRepository {
 
   public VariableBackupRepository(TransactionManagerContext tmc) {
     this.tmc = tmc;
+    log.info("Evaluate VariableBackupRepository max id");
     this.nextId = new AtomicInteger(getMaxId());
+    log.info("Done evaluating VariableBackupRepository max id: {}", nextId);
   }
 
   public Integer getMaxId() {

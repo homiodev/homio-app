@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import lombok.Getter;
 import lombok.Setter;
@@ -40,6 +41,7 @@ import java.util.Set;
         allowCreateNewItems = true,
         overridePath = "scripts")
 @Accessors(chain = true)
+@Table(name = "scripts")
 public class ScriptEntity extends BaseEntity implements HasJsonData {
 
     public static final String PREFIX = "script_";

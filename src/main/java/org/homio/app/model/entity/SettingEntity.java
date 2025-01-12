@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import lombok.Getter;
 import lombok.Setter;
@@ -33,6 +34,7 @@ import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 @Setter
 @Entity
 @Accessors(chain = true)
+@Table(name = "settings")
 public class SettingEntity extends BaseEntity implements HasJsonData {
 
     public static final String PREFIX = "st_";

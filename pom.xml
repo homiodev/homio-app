@@ -203,6 +203,18 @@
         </dependency>
 
         <dependency>
+            <artifactId>addon-mediamtx</artifactId>
+            <groupId>org.homio.addon</groupId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <artifactId>addon-go2rtc</artifactId>
+            <groupId>org.homio.addon</groupId>
+            <version>${homio-primary-addons.version}</version>
+        </dependency>
+
+        <dependency>
             <artifactId>addon-camera</artifactId>
             <groupId>org.homio.addon</groupId>
             <version>${homio-primary-addons.version}</version>
@@ -293,15 +305,6 @@
         <dependency>
             <artifactId>converter-gson</artifactId>
             <groupId>com.squareup.retrofit2</groupId>
-        </dependency>
-
-        <dependency>
-            <artifactId>okhttp</artifactId>
-            <groupId>com.squareup.okhttp3</groupId>
-        </dependency>
-        <dependency>
-            <artifactId>logging-interceptor</artifactId>
-            <groupId>com.squareup.okhttp3</groupId>
         </dependency>
 
         <dependency>

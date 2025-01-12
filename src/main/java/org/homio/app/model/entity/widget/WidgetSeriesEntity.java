@@ -20,6 +20,7 @@ import java.util.Set;
 @Accessors(chain = true)
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@Table(name = "widget_series")
 public abstract class WidgetSeriesEntity<T extends WidgetEntityAndSeries>
         extends BaseEntity implements HasDynamicParameterFields, HasJsonData {
 

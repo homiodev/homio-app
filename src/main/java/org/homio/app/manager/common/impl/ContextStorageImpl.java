@@ -7,6 +7,7 @@ import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.homio.addon.z2m.model.Z2MLocalCoordinatorEntity;
@@ -39,6 +40,7 @@ import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
 import org.homio.app.repository.AbstractRepository;
 import org.homio.app.repository.device.AllDeviceRepository;
+import org.homio.app.repository.generator.HomioIdGenerator;
 import org.homio.app.repository.widget.WidgetRepository;
 import org.homio.app.repository.widget.WidgetSeriesRepository;
 import org.homio.app.service.mem.InMemoryDB;
@@ -183,16 +185,25 @@ public class ContextStorageImpl implements ContextStorage {
         if (entity.getCreationTime() != null && entity.isDisableEdit()) {
             throw new IllegalAccessException("User is unable to persist/update entity");
         }
-        if (entityID == null) {
+        if (entity.getCreationTime() == null) {
             if (StringUtils.isEmpty(entity.getName())) {
                 entity.setName(entity.refreshName());
             }
             entity.beforePersist();
+            entity.validate();
+
+            // hack to save entity with defined id
+            HomioIdGenerator.PERSIST_IDS.put(entityID, Pair.of(entityID, entity.getName()));
+            entity.setName(entityID);
+            entity.setEntityID(null);
         } else {
+            if(entityID == null) {
+                throw new IllegalStateException("Entity ID is null");
+            }
             entity.beforeUpdate();
+            entity.validate();
         }
 
-        entity.validate();
         T oldEntity = entityID == null ? null : get(entityID, false);
 
         T updatedEntity = transactionManagerContext.executeInTransaction(entityManager -> (T) repository.save(entity));

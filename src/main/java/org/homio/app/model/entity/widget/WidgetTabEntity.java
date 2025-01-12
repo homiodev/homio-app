@@ -23,7 +23,8 @@ import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 @Getter
 @Setter
 @Entity
-public final class WidgetTabEntity extends BaseEntity implements
+@Table(name = "widget_tabs")
+public class WidgetTabEntity extends BaseEntity implements
         HasOrder,
         SelectionConfiguration {
 

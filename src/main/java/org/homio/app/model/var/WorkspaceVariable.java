@@ -60,6 +60,7 @@ import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
         iconColor = "#28A60C",
         description = "Group variables")
 @NoArgsConstructor
+@Table(name = "workspace_variable")
 public class WorkspaceVariable extends BaseEntity
         implements HasJsonData,
         UIFieldSelectionParent.SelectionParent,

@@ -28,6 +28,7 @@ import java.util.List;
         overridePath = "widgets")
 @Accessors(chain = true)
 @NoArgsConstructor
+@Table(name = "widgets")
 public abstract class WidgetEntity<T extends WidgetEntity> extends BaseEntity
         implements HasPosition<WidgetEntity>, HasPermissions {
 

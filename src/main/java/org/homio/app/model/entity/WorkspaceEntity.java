@@ -3,6 +3,7 @@ package org.homio.app.model.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -24,7 +25,8 @@ import java.util.Set;
 @Entity
 @Accessors(chain = true)
 @NoArgsConstructor
-public final class WorkspaceEntity extends BaseEntity implements
+@Table(name = "workspaces")
+public class WorkspaceEntity extends BaseEntity implements
         HasJsonData,
         SelectionConfiguration {
 

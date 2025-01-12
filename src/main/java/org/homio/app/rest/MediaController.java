@@ -34,8 +34,7 @@ import org.homio.app.manager.AddonService;
 import org.homio.app.manager.ImageService;
 import org.homio.app.manager.ImageService.ImageResponse;
 import org.homio.app.manager.common.ContextImpl;
-import org.homio.app.model.entity.Go2RTCEntity;
-import org.homio.app.model.entity.MediaMTXEntity;
+import org.homio.app.manager.common.impl.ContextMediaVideoImpl;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity.VideoSeriesDataSourceDynamicOptionLoader;
 import org.homio.app.rest.FileSystemController.NodeRequest;
 import org.homio.app.spring.ContextCreated;
@@ -47,9 +46,24 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpRange;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.MimeType;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.WebRequest;
 
 import java.io.File;
@@ -61,7 +75,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -73,7 +95,12 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION;
-import static org.springframework.http.HttpHeaders.*;
+import static org.springframework.http.HttpHeaders.ACCEPT_RANGES;
+import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
+import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
+import static org.springframework.http.HttpHeaders.CONTENT_RANGE;
+import static org.springframework.http.HttpHeaders.ETAG;
+import static org.springframework.http.HttpHeaders.LAST_MODIFIED;
 import static org.springframework.http.HttpStatus.OK;
 import static org.springframework.http.HttpStatus.PARTIAL_CONTENT;
 
@@ -103,23 +130,9 @@ public class MediaController implements ContextCreated {
                     .build();
 
     private final Map<String, StreamContext> streams = new ConcurrentHashMap<>();
-    private int go2rtcWebRtcPort;
-    private int mtxWebRtcPort;
-    private int mtxHlsPort;
 
     @Override
     public void onContextCreated(ContextImpl context) throws Exception {
-        go2rtcWebRtcPort = Go2RTCEntity.getEntity(context).getWebRtcPort();
-        MediaMTXEntity mtx = MediaMTXEntity.getEntity(context);
-        mtxWebRtcPort = mtx.getWebRtcPort();
-        mtxHlsPort = mtx.getHlsPort();
-        context.event().addEntityUpdateListener(Go2RTCEntity.class, "media", upd ->
-                go2rtcWebRtcPort = upd.getWebRtcPort());
-        context.event().addEntityUpdateListener(MediaMTXEntity.class, "media", upd -> {
-            mtxWebRtcPort = upd.getWebRtcPort();
-            mtxHlsPort = upd.getHlsPort();
-        });
-
         context.bgp().builder("audio-stream-cleanup")
                 .intervalWithDelay(Duration.ofMinutes(60))
                 .execute(this::removeTimedOutStreams);
@@ -198,14 +211,15 @@ public class MediaController implements ContextCreated {
         entity.getStreamPlayer().stop();
     }
 
-    @PostMapping("/{entityID}/go2rtc/video.webrtc")
-    public ResponseEntity<?> postGo2RTCWebRTC(@PathVariable("entityID") String entityID, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
-        return proxyUrl(proxy, go2rtcWebRtcPort, entityID, "whep", request.getQueryString(), ProxyExchange::post);
-    }
-
-    @PostMapping("/{entityID}/mediamtx/video.webrtc")
-    public ResponseEntity<?> postMediaMtxWebRTC(@PathVariable("entityID") String entityID, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
-        return proxyUrl(proxy, mtxWebRtcPort, entityID, "whep", request.getQueryString(), ProxyExchange::post);
+    @PostMapping("/{entityID}/{provider}/video.webrtc")
+    public ResponseEntity<?> postVideoWebRTC(@PathVariable("entityID") String entityID,
+                                             @PathVariable("provider") String provider,
+                                             HttpServletRequest request, ProxyExchange<byte[]> proxy) {
+        Integer port = ContextMediaVideoImpl.webRTCProviders.get(provider);
+        if(port == null) {
+            throw new IllegalArgumentException("Unable to find webrtc provider: " + provider);
+        }
+        return proxyUrl(proxy, port, entityID, "whep", request.getQueryString(), ProxyExchange::post);
     }
 
     @PatchMapping("/{entityID}/mediamtx/video.webrtc")
@@ -213,16 +227,26 @@ public class MediaController implements ContextCreated {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-    @GetMapping("/{entityID}/mediamtx/{filename}.m3u8")
+    @GetMapping("/{entityID}/{provider}/{filename}.m3u8")
     public ResponseEntity<?> getMediaMtxHls(@PathVariable("entityID") String entityID,
+                                            @PathVariable("provider") String provider,
                                             @PathVariable("filename") String filename, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
-        return proxyUrl(proxy, mtxHlsPort, entityID, filename + ".m3u8", request.getQueryString(), ProxyExchange::get);
+        Integer port = ContextMediaVideoImpl.hlsProviders.get(provider);
+        if(port == null) {
+            throw new IllegalArgumentException("Unable to find webrtc provider: " + provider);
+        }
+        return proxyUrl(proxy, port, entityID, filename + ".m3u8", request.getQueryString(), ProxyExchange::get);
     }
 
-    @GetMapping("/{entityID}/mediamtx/{filename}.mp4")
+    @GetMapping("/{entityID}/{provider}/{filename}.mp4")
     public ResponseEntity<?> getMediaMtxHlsMp4(@PathVariable("entityID") String entityID,
+                                               @PathVariable("provider") String provider,
                                                @PathVariable("filename") String filename, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
-        return proxyUrl(proxy, mtxHlsPort, entityID, filename + ".mp4", request.getQueryString(), ProxyExchange::get);
+        Integer port = ContextMediaVideoImpl.webRTCProviders.get(provider);
+        if(port == null) {
+            throw new IllegalArgumentException("Unable to find webrtc provider: " + provider);
+        }
+        return proxyUrl(proxy, port, entityID, filename + ".mp4", request.getQueryString(), ProxyExchange::get);
     }
 
     @GetMapping("/video/playback/days/{entityID}/{from}/{to}")

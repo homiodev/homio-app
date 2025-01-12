@@ -9,6 +9,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -91,6 +92,7 @@ import static org.homio.app.utils.UIFieldUtils.nullIfFalse;
 @AttributeOverride(name = "name", column = @Column(nullable = false))
 @UIHideEntityIfFieldNotNull("parent")
 @NoArgsConstructor
+@Table(name = "workspace_group")
 public class WorkspaceGroup extends BaseEntity
         implements HasJsonData, SelectionParent, HasDynamicContextMenuActions {
 

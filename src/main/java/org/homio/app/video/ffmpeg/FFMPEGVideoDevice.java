@@ -3,7 +3,7 @@ package org.homio.app.video.ffmpeg;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.homio.api.ContextMedia.VideoInputDevice;
+import org.homio.api.ContextMediaVideo;
 import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
@@ -12,7 +12,7 @@ import java.util.List;
 
 @Getter
 @Accessors(chain = true)
-public class FFMPEGVideoDevice implements VideoInputDevice {
+public class FFMPEGVideoDevice implements ContextMediaVideo.VideoInputDevice {
 
     @Setter
     private @NotNull String name;
