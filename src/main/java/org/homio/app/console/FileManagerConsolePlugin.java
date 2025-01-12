@@ -14,37 +14,37 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class FileManagerConsolePlugin implements ConsolePlugin<Object> {
 
-    public static final String NAME = "fm";
+  public static final String NAME = "fm";
 
-    private final @Accessors(fluent = true) Context context;
+  private final @Accessors(fluent = true) Context context;
 
-    @Override
-    public Object getValue() {
-        return null;
+  @Override
+  public Object getValue() {
+    return null;
+  }
+
+  @Override
+  public @NotNull RenderType getRenderType() {
+    return RenderType.tree;
+  }
+
+  @Override
+  public boolean isEnabled() {
+    try {
+      UserGuestEntity.assertFileManagerReadAccess(context);
+    } catch (Exception ignore) {
+      UserGuestEntity.assertFileManagerWriteAccess(context);
     }
+    return true;
+  }
 
-    @Override
-    public @NotNull RenderType getRenderType() {
-        return RenderType.tree;
-    }
+  @Override
+  public @NotNull String getName() {
+    return NAME;
+  }
 
-    @Override
-    public boolean isEnabled() {
-        try {
-            UserGuestEntity.assertFileManagerReadAccess(context);
-        } catch (Exception ignore) {
-            UserGuestEntity.assertFileManagerWriteAccess(context);
-        }
-        return true;
-    }
-
-    @Override
-    public @NotNull String getName() {
-        return NAME;
-    }
-
-    @Override
-    public boolean hasRefreshIntervalSetting() {
-        return false;
-    }
+  @Override
+  public boolean hasRefreshIntervalSetting() {
+    return false;
+  }
 }

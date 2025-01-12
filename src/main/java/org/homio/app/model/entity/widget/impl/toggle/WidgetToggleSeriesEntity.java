@@ -9,26 +9,26 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 
 @Entity
 public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEntity>
-        implements HasSingleValueDataSource, HasIcon, HasName, HasToggle {
+  implements HasSingleValueDataSource, HasIcon, HasName, HasToggle {
 
-    @Override
-    protected String getSeriesPrefix() {
-        return "toggle";
-    }
+  @Override
+  protected String getSeriesPrefix() {
+    return "toggle";
+  }
 
-    @Override
-    public String getDefaultName() {
-        return null;
-    }
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
 
-    @Override
-    public void beforePersist() {
-        HasIcon.randomColor(this);
-        if (!getJsonData().has("color")) {
-            setToggleColor(UI.Color.random());
-        }
-        if (getOnValues().isEmpty()) {
-            setOnValues("true%s1".formatted(LIST_DELIMITER));
-        }
+  @Override
+  public void beforePersist() {
+    HasIcon.randomColor(this);
+    if (!getJsonData().has("color")) {
+      setToggleColor(UI.Color.random());
     }
+    if (getOnValues().isEmpty()) {
+      setOnValues("true%s1".formatted(LIST_DELIMITER));
+    }
+  }
 }

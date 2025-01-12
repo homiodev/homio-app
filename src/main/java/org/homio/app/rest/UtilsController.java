@@ -67,199 +67,199 @@ import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 @Validated
 public class UtilsController {
 
-    private static final LoadingCache<String, GitHubReadme> readmeCache =
-            CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
-                public @NotNull GitHubReadme load(@NotNull String url) {
-                    return new GitHubReadme(url, Curl.get(url + "/raw/master/README.md", String.class));
-                }
-            });
-    private final ContextImpl context;
-    private final ScriptService scriptService;
-    private final CodeParser codeParser;
-    private final Map<String, OneTimeRequest> requests = new ConcurrentHashMap<>();
+  private static final LoadingCache<String, GitHubReadme> readmeCache =
+    CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
+      public @NotNull GitHubReadme load(@NotNull String url) {
+        return new GitHubReadme(url, Curl.get(url + "/raw/master/README.md", String.class));
+      }
+    });
+  private final ContextImpl context;
+  private final ScriptService scriptService;
+  private final CodeParser codeParser;
+  private final Map<String, OneTimeRequest> requests = new ConcurrentHashMap<>();
 
-    @SneakyThrows
-    @GetMapping("/access/get/{requestId}")
-    public void getOneTimeAccessUrl(@PathVariable("requestId") String requestId,
-                                    HttpServletRequest request,
-                                    HttpServletResponse response) {
-        OneTimeRequest oneTimeRequest = requests.remove(requestId);
-        if (oneTimeRequest != null) {
-            SecurityContextHolder.getContext().setAuthentication(oneTimeRequest.authentication);
-            request.getRequestDispatcher("/" + oneTimeRequest.url).forward(request, response);
-        } else {
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+  @SneakyThrows
+  @GetMapping("/access/get/{requestId}")
+  public void getOneTimeAccessUrl(@PathVariable("requestId") String requestId,
+                                  HttpServletRequest request,
+                                  HttpServletResponse response) {
+    OneTimeRequest oneTimeRequest = requests.remove(requestId);
+    if (oneTimeRequest != null) {
+      SecurityContextHolder.getContext().setAuthentication(oneTimeRequest.authentication);
+      request.getRequestDispatcher("/" + oneTimeRequest.url).forward(request, response);
+    } else {
+      response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+    }
+  }
+
+  @PutMapping("/access")
+  public OneTimeUrlResponse createOneTimeAccessLink(@RequestBody OneTimeUrlRequest request) {
+    String requestId = CommonUtils.generateUUID();
+    requests.put(requestId, new OneTimeRequest(request.url,
+      SecurityContextHolder.getContext().getAuthentication()));
+    return new OneTimeUrlResponse(requestId);
+  }
+
+  @GetMapping("/frame/{entityID}")
+  public String getFrame(@PathVariable("entityID") String entityID) {
+    WidgetFrameEntity widgetFrameEntity = context.db().getRequire(entityID);
+    return widgetFrameEntity.getFrame();
+  }
+
+  @PostMapping("/github/readme")
+  public GitHubReadme getUrlContent(@RequestBody String url) {
+    try {
+      return readmeCache.get(url.endsWith("/wiki") ? url.substring(0, url.length() - "/wiki".length()) : url);
+    } catch (Exception ex) {
+      throw new ServerException("No readme found");
+    }
+  }
+
+  @PostMapping("/getCompletions")
+  public Set<Completion> getCompletions(@RequestBody CompletionRequest completionRequest)
+    throws NoSuchMethodException {
+    ParserContext context = ParserContext.noneContext();
+    return codeParser.addCompetitionFromManagerOrClass(
+      CodeParser.removeAllComments(completionRequest.getLine()),
+      new Stack<>(),
+      context,
+      completionRequest.getAllScript());
+  }
+
+  @GetMapping(value = "/download/tmp/{fileName:.+}", produces = APPLICATION_OCTET_STREAM)
+  public ResponseEntity<StreamingResponseBody> downloadFile(
+    @PathVariable("fileName") String fileName) {
+    UserGuestEntity.assertAction(context, new Predicate<UserGuestEntity>() {
+      @Override
+      public boolean test(UserGuestEntity guest) {
+        return guest.getDeleteWidget();
+      }
+    }, "User is not allowed to access to FileManager");
+    Path outputPath = CommonUtils.getTmpPath().resolve(fileName);
+    if (!Files.exists(outputPath)) {
+      throw NotFoundException.fileNotFound(outputPath);
+    }
+    HttpHeaders headers = new HttpHeaders();
+    headers.add(
+      HttpHeaders.CONTENT_DISPOSITION,
+      format("attachment; filename=\"%s\"", outputPath.getFileName()));
+    headers.add(HttpHeaders.CONTENT_TYPE, APPLICATION_OCTET_STREAM);
+
+    return new ResponseEntity<>(
+      outputStream -> {
+        try (FileChannel inChannel = FileChannel.open(outputPath, StandardOpenOption.READ)) {
+          long size = inChannel.size();
+          WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
+          inChannel.transferTo(0, size, writableByteChannel);
         }
+      },
+      headers,
+      HttpStatus.OK);
+  }
+
+  @PostMapping("/code/run")
+  @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
+  public RunScriptResponse runScriptOnce(@RequestBody RunScriptRequest request)
+    throws IOException {
+    RunScriptResponse runScriptResponse = new RunScriptResponse();
+    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+    PrintStream logOutputStream = new PrintStream(outputStream);
+    ScriptEntity scriptEntity = new ScriptEntity();
+    scriptEntity.setEntityID(request.entityID);
+    scriptEntity.setJavaScript(request.javaScript);
+    scriptEntity.setJavaScriptParameters(request.javaScriptParameters);
+
+    try {
+      runScriptResponse.result =
+        scriptService.executeJavaScriptOnce(
+          scriptEntity,
+          logOutputStream,
+          false,
+          State.of(request.contextParameters)).stringValue();
+    } catch (Exception ex) {
+      runScriptResponse.error = ExceptionUtils.getStackTrace(ex);
+    }
+    int size = outputStream.size();
+    if (size > 50000) {
+      String name = scriptEntity.getEntityID() + "_size_" + outputStream.size() + "___.log";
+      Path tempFile = CommonUtils.getTmpPath().resolve(name);
+      Files.copy(tempFile, outputStream);
+      runScriptResponse.logUrl =
+        "rest/download/tmp/" + CommonUtils.getTmpPath().relativize(tempFile);
+    } else {
+      runScriptResponse.log = outputStream.toString(StandardCharsets.UTF_8);
     }
 
-    @PutMapping("/access")
-    public OneTimeUrlResponse createOneTimeAccessLink(@RequestBody OneTimeUrlRequest request) {
-        String requestId = CommonUtils.generateUUID();
-        requests.put(requestId, new OneTimeRequest(request.url,
-                SecurityContextHolder.getContext().getAuthentication()));
-        return new OneTimeUrlResponse(requestId);
-    }
+    return runScriptResponse;
+  }
 
-    @GetMapping("/frame/{entityID}")
-    public String getFrame(@PathVariable("entityID") String entityID) {
-        WidgetFrameEntity widgetFrameEntity = context.db().getRequire(entityID);
-        return widgetFrameEntity.getFrame();
-    }
+  @GetMapping("/i18n/{lang}.json")
+  @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
+  public ObjectNode getI18NLangNodes(@PathVariable("lang") String lang) {
+    return Lang.getLangJson(lang);
+  }
 
-    @PostMapping("/github/readme")
-    public GitHubReadme getUrlContent(@RequestBody String url) {
-        try {
-            return readmeCache.get(url.endsWith("/wiki") ? url.substring(0, url.length() - "/wiki".length()) : url);
-        } catch (Exception ex) {
-            throw new ServerException("No readme found");
-        }
-    }
+  @SneakyThrows
+  @PostMapping("/header/dialog/{entityID}")
+  public void acceptDialog(@PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
+    context.ui().handleDialog(entityID, ContextUI.DialogResponseType.Accepted, dialogRequest.pressedButton,
+      OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
+  }
 
-    @PostMapping("/getCompletions")
-    public Set<Completion> getCompletions(@RequestBody CompletionRequest completionRequest)
-            throws NoSuchMethodException {
-        ParserContext context = ParserContext.noneContext();
-        return codeParser.addCompetitionFromManagerOrClass(
-                CodeParser.removeAllComments(completionRequest.getLine()),
-                new Stack<>(),
-                context,
-                completionRequest.getAllScript());
-    }
+  @DeleteMapping("/header/dialog/{entityID}")
+  @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
+  public void discardDialog(@PathVariable("entityID") String entityID) {
+    context.ui().handleDialog(entityID, ContextUI.DialogResponseType.Cancelled, null, null);
+  }
 
-    @GetMapping(value = "/download/tmp/{fileName:.+}", produces = APPLICATION_OCTET_STREAM)
-    public ResponseEntity<StreamingResponseBody> downloadFile(
-            @PathVariable("fileName") String fileName) {
-        UserGuestEntity.assertAction(context, new Predicate<UserGuestEntity>() {
-            @Override
-            public boolean test(UserGuestEntity guest) {
-                return guest.getDeleteWidget();
-            }
-        }, "User is not allowed to access to FileManager");
-        Path outputPath = CommonUtils.getTmpPath().resolve(fileName);
-        if (!Files.exists(outputPath)) {
-            throw NotFoundException.fileNotFound(outputPath);
-        }
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(
-                HttpHeaders.CONTENT_DISPOSITION,
-                format("attachment; filename=\"%s\"", outputPath.getFileName()));
-        headers.add(HttpHeaders.CONTENT_TYPE, APPLICATION_OCTET_STREAM);
+  @Getter
+  @Setter
+  public static class DialogRequest {
 
-        return new ResponseEntity<>(
-                outputStream -> {
-                    try (FileChannel inChannel = FileChannel.open(outputPath, StandardOpenOption.READ)) {
-                        long size = inChannel.size();
-                        WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
-                        inChannel.transferTo(0, size, writableByteChannel);
-                    }
-                },
-                headers,
-                HttpStatus.OK);
-    }
+    private String pressedButton;
+    private String params;
+  }
 
-    @PostMapping("/code/run")
-    @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
-    public RunScriptResponse runScriptOnce(@RequestBody RunScriptRequest request)
-            throws IOException {
-        RunScriptResponse runScriptResponse = new RunScriptResponse();
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        PrintStream logOutputStream = new PrintStream(outputStream);
-        ScriptEntity scriptEntity = new ScriptEntity();
-        scriptEntity.setEntityID(request.entityID);
-        scriptEntity.setJavaScript(request.javaScript);
-        scriptEntity.setJavaScriptParameters(request.javaScriptParameters);
+  @Getter
+  @AllArgsConstructor
+  public static class GitHubReadme {
 
-        try {
-            runScriptResponse.result =
-                    scriptService.executeJavaScriptOnce(
-                            scriptEntity,
-                            logOutputStream,
-                            false,
-                            State.of(request.contextParameters)).stringValue();
-        } catch (Exception ex) {
-            runScriptResponse.error = ExceptionUtils.getStackTrace(ex);
-        }
-        int size = outputStream.size();
-        if (size > 50000) {
-            String name = scriptEntity.getEntityID() + "_size_" + outputStream.size() + "___.log";
-            Path tempFile = CommonUtils.getTmpPath().resolve(name);
-            Files.copy(tempFile, outputStream);
-            runScriptResponse.logUrl =
-                    "rest/download/tmp/" + CommonUtils.getTmpPath().relativize(tempFile);
-        } else {
-            runScriptResponse.log = outputStream.toString(StandardCharsets.UTF_8);
-        }
+    private String url;
+    private String content;
+  }
 
-        return runScriptResponse;
-    }
+  @Setter
+  public static class RunScriptRequest {
 
-    @GetMapping("/i18n/{lang}.json")
-    @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-    public ObjectNode getI18NLangNodes(@PathVariable("lang") String lang) {
-        return Lang.getLangJson(lang);
-    }
+    private String javaScriptParameters;
+    private String contextParameters;
+    private String entityID;
+    private String javaScript;
+  }
 
-    @SneakyThrows
-    @PostMapping("/header/dialog/{entityID}")
-    public void acceptDialog(@PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
-        context.ui().handleDialog(entityID, ContextUI.DialogResponseType.Accepted, dialogRequest.pressedButton,
-                OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
-    }
+  @Getter
+  public static class RunScriptResponse {
 
-    @DeleteMapping("/header/dialog/{entityID}")
-    @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
-    public void discardDialog(@PathVariable("entityID") String entityID) {
-        context.ui().handleDialog(entityID, ContextUI.DialogResponseType.Cancelled, null, null);
-    }
+    private Object result;
+    private String log;
+    private String error;
+    private String logUrl;
+  }
 
-    @Getter
-    @Setter
-    public static class DialogRequest {
+  @Getter
+  public static class OneTimeUrlRequest {
+    private String url;
+  }
 
-        private String pressedButton;
-        private String params;
-    }
+  @Getter
+  @AllArgsConstructor
+  public static class OneTimeUrlResponse {
+    private final String id;
+  }
 
-    @Getter
-    @AllArgsConstructor
-    public static class GitHubReadme {
-
-        private String url;
-        private String content;
-    }
-
-    @Setter
-    public static class RunScriptRequest {
-
-        private String javaScriptParameters;
-        private String contextParameters;
-        private String entityID;
-        private String javaScript;
-    }
-
-    @Getter
-    public static class RunScriptResponse {
-
-        private Object result;
-        private String log;
-        private String error;
-        private String logUrl;
-    }
-
-    @Getter
-    public static class OneTimeUrlRequest {
-        private String url;
-    }
-
-    @Getter
-    @AllArgsConstructor
-    public static class OneTimeUrlResponse {
-        private final String id;
-    }
-
-    @RequiredArgsConstructor
-    private static class OneTimeRequest {
-        private final String url;
-        private final Authentication authentication;
-    }
+  @RequiredArgsConstructor
+  private static class OneTimeRequest {
+    private final String url;
+    private final Authentication authentication;
+  }
 }

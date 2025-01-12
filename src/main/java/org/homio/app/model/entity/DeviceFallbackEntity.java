@@ -14,13 +14,13 @@ import java.util.Set;
 @UISidebarChildren(icon = "", color = "", allowCreateItem = false)
 public class DeviceFallbackEntity extends DeviceBaseEntity {
 
-    @Override
-    protected @NotNull String getDevicePrefix() {
-        return "fallback";
-    }
+  @Override
+  protected @NotNull String getDevicePrefix() {
+    return "fallback";
+  }
 
-    @Override
-    public String getDefaultName() {
-        return null;
-    }
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
 }

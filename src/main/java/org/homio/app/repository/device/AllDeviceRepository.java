@@ -8,24 +8,24 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class AllDeviceRepository extends AbstractRepository<DeviceBaseEntity> {
 
-    public AllDeviceRepository() {
-        super(DeviceBaseEntity.class, "dvc_");
-    }
+  public AllDeviceRepository() {
+    super(DeviceBaseEntity.class, "dvc_");
+  }
 
-    @Override
-    public DeviceBaseEntity getByEntityID(String entityID) {
-        String sql = "FROM DeviceBaseEntity where ieeeAddress = :value OR entityID = :value";
-        return tmc.executeInTransactionReadOnly(em ->
-                em.createQuery(sql, DeviceBaseEntity.class)
-                        .setParameter("value", entityID)
-                        .getResultList().stream().findAny().orElse(null));
-    }
+  @Override
+  public DeviceBaseEntity getByEntityID(String entityID) {
+    String sql = "FROM DeviceBaseEntity where ieeeAddress = :value OR entityID = :value";
+    return tmc.executeInTransactionReadOnly(em ->
+      em.createQuery(sql, DeviceBaseEntity.class)
+        .setParameter("value", entityID)
+        .getResultList().stream().findAny().orElse(null));
+  }
 
-    public <T extends DeviceBaseEntity> @Nullable T getByIeeeAddressOrName(String name) {
-        String sql = "FROM DeviceBaseEntity where ieeeAddress = :value OR name = :value";
-        return tmc.executeInTransactionReadOnly(em -> (T)
-                em.createQuery(sql, DeviceBaseEntity.class)
-                        .setParameter("value", name)
-                        .getResultList().stream().findAny().orElse(null));
-    }
+  public <T extends DeviceBaseEntity> @Nullable T getByIeeeAddressOrName(String name) {
+    String sql = "FROM DeviceBaseEntity where ieeeAddress = :value OR name = :value";
+    return tmc.executeInTransactionReadOnly(em -> (T)
+      em.createQuery(sql, DeviceBaseEntity.class)
+        .setParameter("value", name)
+        .getResultList().stream().findAny().orElse(null));
+  }
 }

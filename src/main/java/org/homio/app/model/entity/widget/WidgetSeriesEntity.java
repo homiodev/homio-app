@@ -22,57 +22,54 @@ import java.util.Set;
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @Table(name = "widget_series")
 public abstract class WidgetSeriesEntity<T extends WidgetEntityAndSeries>
-        extends BaseEntity implements HasDynamicParameterFields, HasJsonData {
+  extends BaseEntity implements HasDynamicParameterFields, HasJsonData {
 
-    private int priority;
+  private static final String PREFIX = "series_";
+  private int priority;
+  @JsonIgnore
+  @ManyToOne(fetch = FetchType.LAZY, targetEntity = WidgetEntityAndSeries.class)
+  private T widgetEntity;
+  @Column(length = 65535)
+  @Convert(converter = JSONConverter.class)
+  private JSON jsonData = new JSON();
 
-    private static final String PREFIX = "series_";
+  @Override
+  public final @NotNull String getEntityPrefix() {
+    return PREFIX + getSeriesPrefix() + "_";
+  }
 
-    @Override
-    public final @NotNull String getEntityPrefix() {
-        return PREFIX + getSeriesPrefix() + "_";
+  protected abstract String getSeriesPrefix();
+
+  @Override
+  public void getAllRelatedEntities(Set<BaseEntity> set) {
+    set.add(widgetEntity);
+  }
+
+  @Override
+  public int compareTo(@NotNull BaseEntity o) {
+    if (o instanceof WidgetSeriesEntity) {
+      return Integer.compare(this.priority, ((WidgetSeriesEntity<?>) o).priority);
     }
+    return super.compareTo(o);
+  }
 
-    protected abstract String getSeriesPrefix();
+  @Override
+  protected long getChildEntityHashCode() {
+    return 0;
+  }
 
-    @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY, targetEntity = WidgetEntityAndSeries.class)
-    private T widgetEntity;
+  @Override
+  public void afterUpdate() {
+    removeEvents();
+  }
 
-    @Column(length = 65535)
-    @Convert(converter = JSONConverter.class)
-    private JSON jsonData = new JSON();
+  @Override
+  public void afterDelete() {
+    removeEvents();
+  }
 
-    @Override
-    public void getAllRelatedEntities(Set<BaseEntity> set) {
-        set.add(widgetEntity);
-    }
-
-    @Override
-    public int compareTo(@NotNull BaseEntity o) {
-        if (o instanceof WidgetSeriesEntity) {
-            return Integer.compare(this.priority, ((WidgetSeriesEntity<?>) o).priority);
-        }
-        return super.compareTo(o);
-    }
-
-    @Override
-    protected long getChildEntityHashCode() {
-        return 0;
-    }
-
-    @Override
-    public void afterUpdate() {
-        removeEvents();
-    }
-
-    @Override
-    public void afterDelete() {
-        removeEvents();
-    }
-
-    private void removeEvents() {
-        ((ContextImpl) context()).event().removeEvents(widgetEntity.getEntityID() + getEntityID());
-        ((ContextImpl) context()).event().removeEvents(getEntityID());
-    }
+  private void removeEvents() {
+    ((ContextImpl) context()).event().removeEvents(widgetEntity.getEntityID() + getEntityID());
+    ((ContextImpl) context()).event().removeEvents(getEntityID());
+  }
 }

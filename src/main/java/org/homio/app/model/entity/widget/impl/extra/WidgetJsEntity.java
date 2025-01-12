@@ -21,51 +21,50 @@ import java.util.Set;
 @Accessors(chain = true)
 public class WidgetJsEntity extends WidgetEntity<WidgetJsEntity> implements HasJsonData {
 
-    @Override
-    protected @NotNull String getWidgetPrefix() {
-        return "js";
-    }
+  @Transient
+  private String javaScriptResponse;
+  @Transient
+  private String javaScriptErrorResponse;
 
-    @Transient
-    private String javaScriptResponse;
+  @Override
+  protected @NotNull String getWidgetPrefix() {
+    return "js";
+  }
 
-    @Transient
-    private String javaScriptErrorResponse;
+  @UIField(order = 13)
+  @UIFieldCodeEditor(editorType = MonacoLanguage.JavaScript)
+  public String getJavaScript() {
+    return getJsonData("js");
+  }
 
-    @UIField(order = 13)
-    @UIFieldCodeEditor(editorType = MonacoLanguage.JavaScript)
-    public String getJavaScript() {
-        return getJsonData("js");
-    }
+  public WidgetJsEntity setJavaScript(String value) {
+    setJsonData("js", value);
+    return this;
+  }
 
-    public WidgetJsEntity setJavaScript(String value) {
-        setJsonData("js", value);
-        return this;
-    }
+  @UIField(order = 12)
+  @UIFieldCodeEditor(editorType = MonacoLanguage.Json, autoFormat = true)
+  public String getJavaScriptParameters() {
+    return getJsonData("jsp", "{}");
+  }
 
-    @UIField(order = 12)
-    @UIFieldCodeEditor(editorType = MonacoLanguage.Json, autoFormat = true)
-    public String getJavaScriptParameters() {
-        return getJsonData("jsp", "{}");
-    }
+  public WidgetJsEntity setJavaScriptParameters(String value) {
+    setJsonData("jsp", value);
+    return this;
+  }
 
-    public WidgetJsEntity setJavaScriptParameters(String value) {
-        setJsonData("jsp", value);
-        return this;
-    }
+  public Boolean getJavaScriptParametersReadOnly() {
+    return getJsonData("jspro", Boolean.FALSE);
+  }
 
-    public Boolean getJavaScriptParametersReadOnly() {
-        return getJsonData("jspro", Boolean.FALSE);
-    }
+  public WidgetJsEntity setJavaScriptParametersReadOnly(Boolean value) {
+    setJsonData("jspro", value);
+    return this;
+  }
 
-    public WidgetJsEntity setJavaScriptParametersReadOnly(Boolean value) {
-        setJsonData("jspro", value);
-        return this;
-    }
-
-    public @NotNull String getImage() {
-        return "fab fa-js-square";
-    }
+  public @NotNull String getImage() {
+    return "fab fa-js-square";
+  }
    /* @Override
 
     @Override
@@ -85,9 +84,9 @@ public class WidgetJsEntity extends WidgetEntity<WidgetJsEntity> implements HasJ
         setJavaScript("function run() {\n\treturn params.get('text');\n}");
     }*/
 
-    @Override
-    public @Nullable String getDefaultName() {
-        return "JS";
-    }
+  @Override
+  public @Nullable String getDefaultName() {
+    return "JS";
+  }
 
-    }
+}

@@ -10,15 +10,15 @@ import org.homio.app.model.entity.widget.UIEditReloadWidget;
 
 public interface HasSingleValueDataSource extends HasDynamicParameterFields, HasEntityIdentifier {
 
-    @UIField(order = 10, required = true)
-    @UIFieldEntityByClassSelection(HasGetStatusValue.class)
-    @UIFieldGroup(value = "VALUE", order = 1)
-    @UIEditReloadWidget
-    default String getValueDataSource() {
-        return getJsonData("vds");
-    }
+  @UIField(order = 10, required = true)
+  @UIFieldEntityByClassSelection(HasGetStatusValue.class)
+  @UIFieldGroup(value = "VALUE", order = 1)
+  @UIEditReloadWidget
+  default String getValueDataSource() {
+    return getJsonData("vds");
+  }
 
-    default void setValueDataSource(String value) {
-        setJsonData("vds", value);
-    }
+  default void setValueDataSource(String value) {
+    setJsonData("vds", value);
+  }
 }

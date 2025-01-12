@@ -10,13 +10,13 @@ import java.util.List;
 @AllArgsConstructor
 public class UIDialogInputEntity implements UIInputEntity {
 
-    private final String entityID;
-    private final int order;
-    private final String itemType;
-    private final String title;
-    private final String icon;
-    private final String iconColor;
-    private final String style;
-    private final Integer width;
-    private final List<UIInputEntity> children;
+  private final String entityID;
+  private final int order;
+  private final String itemType;
+  private final String title;
+  private final String icon;
+  private final String iconColor;
+  private final String style;
+  private final Integer width;
+  private final List<UIInputEntity> children;
 }

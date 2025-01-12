@@ -11,26 +11,26 @@ import java.util.*;
 
 public class ExtRequestMappingHandlerMapping extends RequestMappingHandlerMapping {
 
-    private final Map<Object, List<RequestMappingInfo>> controllerToMethodRegisterInfo = new HashMap<>();
+  private final Map<Object, List<RequestMappingInfo>> controllerToMethodRegisterInfo = new HashMap<>();
 
-    public void registerAddonRestControllers(@NotNull AddonContext addonContext) {
-        Collection<Object> restControllers = addonContext.getApplicationContext().getBeansWithAnnotation(RestController.class).values();
-        for (Object restController : restControllers) {
-            controllerToMethodRegisterInfo.put(restController, new ArrayList<>());
-            super.detectHandlerMethods(restController);
-            addonContext.onDestroy(() -> {
-                for (RequestMappingInfo requestMappingInfo : controllerToMethodRegisterInfo.get(restController)) {
-                    unregisterMapping(requestMappingInfo);
-                }
-            });
+  public void registerAddonRestControllers(@NotNull AddonContext addonContext) {
+    Collection<Object> restControllers = addonContext.getApplicationContext().getBeansWithAnnotation(RestController.class).values();
+    for (Object restController : restControllers) {
+      controllerToMethodRegisterInfo.put(restController, new ArrayList<>());
+      super.detectHandlerMethods(restController);
+      addonContext.onDestroy(() -> {
+        for (RequestMappingInfo requestMappingInfo : controllerToMethodRegisterInfo.get(restController)) {
+          unregisterMapping(requestMappingInfo);
         }
+      });
     }
+  }
 
-    @Override
-    protected void registerHandlerMethod(Object handler, Method method, RequestMappingInfo mapping) {
-        if (controllerToMethodRegisterInfo.containsKey(handler)) {
-            controllerToMethodRegisterInfo.get(handler).add(mapping);
-        }
-        super.registerHandlerMethod(handler, method, mapping);
+  @Override
+  protected void registerHandlerMethod(Object handler, Method method, RequestMappingInfo mapping) {
+    if (controllerToMethodRegisterInfo.containsKey(handler)) {
+      controllerToMethodRegisterInfo.get(handler).add(mapping);
     }
+    super.registerHandlerMethod(handler, method, mapping);
+  }
 }

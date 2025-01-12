@@ -15,33 +15,33 @@ import org.homio.app.model.entity.widget.attributes.*;
 
 @Entity
 public class WidgetButtonsSeriesEntity
-        extends WidgetSeriesEntity<WidgetButtonsEntity>
-        implements HasSingleValueDataSource,
-        HasSetSingleValueDataSource,
-        HasIcon,
-        HasName {
+  extends WidgetSeriesEntity<WidgetButtonsEntity>
+  implements HasSingleValueDataSource,
+  HasSetSingleValueDataSource,
+  HasIcon,
+  HasName {
 
-    @UIField(order = 3)
-    public String getActiveSendValue() {
-        return getJsonData("onValue", "1");
-    }
+  @UIField(order = 3)
+  public String getActiveSendValue() {
+    return getJsonData("onValue", "1");
+  }
 
-    public void setActiveSendValue(String value) {
-        setJsonData("onValue", value);
-    }
+  public void setActiveSendValue(String value) {
+    setJsonData("onValue", value);
+  }
 
-    @Override
-    protected String getSeriesPrefix() {
-        return "buttons";
-    }
+  @Override
+  protected String getSeriesPrefix() {
+    return "buttons";
+  }
 
-    @Override
-    public String getDefaultName() {
-        return null;
-    }
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
 
-    @Override
-    public void beforePersist() {
-        HasIcon.randomColor(this);
-    }
+  @Override
+  public void beforePersist() {
+    HasIcon.randomColor(this);
+  }
 }

@@ -10,20 +10,20 @@ import java.util.function.Consumer;
 
 public interface HasValueTemplate extends HasJsonData {
 
-    @UIField(order = 200)
-    @UIFieldGroup(value = "VALUE", order = 10)
-    @UIFieldStringTemplate
-    default UIFieldStringTemplate.StringTemplate getValueTemplate() {
-        return getJsonData("vt", UIFieldStringTemplate.StringTemplate.class, true);
-    }
+  @UIField(order = 200)
+  @UIFieldGroup(value = "VALUE", order = 10)
+  @UIFieldStringTemplate
+  default UIFieldStringTemplate.StringTemplate getValueTemplate() {
+    return getJsonData("vt", UIFieldStringTemplate.StringTemplate.class, true);
+  }
 
-    default void setValueTemplate(UIFieldStringTemplate.StringTemplate value) {
-        setJsonDataObject("vt", value);
-    }
+  default void setValueTemplate(UIFieldStringTemplate.StringTemplate value) {
+    setJsonDataObject("vt", value);
+  }
 
-    default void applyValueTemplate(Consumer<UIFieldStringTemplate.StringTemplate> handler) {
-        UIFieldStringTemplate.StringTemplate valueTemplate = getValueTemplate();
-        handler.accept(valueTemplate);
-        setValueTemplate(valueTemplate);
-    }
+  default void applyValueTemplate(Consumer<UIFieldStringTemplate.StringTemplate> handler) {
+    UIFieldStringTemplate.StringTemplate valueTemplate = getValueTemplate();
+    handler.accept(valueTemplate);
+    setValueTemplate(valueTemplate);
+  }
 }

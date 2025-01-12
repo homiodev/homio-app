@@ -5,5 +5,5 @@ import org.homio.api.ui.field.action.v1.UIInputEntity;
 
 public interface UIInputEntityActionHandler extends UIInputEntity {
 
-    UIActionHandler getActionHandler();
+  UIActionHandler getActionHandler();
 }

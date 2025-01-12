@@ -13,41 +13,41 @@ import org.jetbrains.annotations.NotNull;
 @UISidebarChildren(icon = "fas fa-chalkboard-user", color = "#B5094E", allowCreateItem = false)
 public final class UserAdminEntity extends UserBaseEntity {
 
-    @Override
-    public boolean isDisableDelete() {
-        return true;
-    }
+  @Override
+  public boolean isDisableDelete() {
+    return true;
+  }
 
-    @Override
-    protected @NotNull String getDevicePrefix() {
-        return "user-admin";
-    }
+  @Override
+  protected @NotNull String getDevicePrefix() {
+    return "user-admin";
+  }
 
-    @Override
-    public @NotNull UserType getUserType() {
-        return UserType.ADMIN;
-    }
+  @Override
+  public @NotNull UserType getUserType() {
+    return UserType.ADMIN;
+  }
 
-    @Override
-    public void assertDeleteAccess(BaseEntity entity) {
-    }
+  @Override
+  public void assertDeleteAccess(BaseEntity entity) {
+  }
 
-    @Override
-    public void assertEditAccess(BaseEntity entity) {
+  @Override
+  public void assertEditAccess(BaseEntity entity) {
 
-    }
+  }
 
-    @Override
-    public void assertViewAccess(BaseEntity entity) {
+  @Override
+  public void assertViewAccess(BaseEntity entity) {
 
-    }
+  }
 
-    @Override
-    public void assertSettingsAccess(SettingPlugin<?> setting, Context context) {
-    }
+  @Override
+  public void assertSettingsAccess(SettingPlugin<?> setting, Context context) {
+  }
 
-    @Override
-    public String getDefaultName() {
-        return "Admin user";
-    }
+  @Override
+  public String getDefaultName() {
+    return "Admin user";
+  }
 }

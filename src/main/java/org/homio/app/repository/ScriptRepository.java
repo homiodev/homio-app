@@ -6,14 +6,14 @@ import org.springframework.stereotype.Repository;
 @Repository("executeRepository")
 public class ScriptRepository extends AbstractRepository<ScriptEntity> {
 
-    public ScriptRepository() {
-        super(ScriptEntity.class);
-    }
+  public ScriptRepository() {
+    super(ScriptEntity.class);
+  }
 
-    public ScriptEntity getByURL(String url) {
+  public ScriptEntity getByURL(String url) {
         /*return tm.executeInTransaction(entityManager -> {
             return findSingle(entityManager, "url", url);
         });*/
-        return null;
-    }
+    return null;
+  }
 }

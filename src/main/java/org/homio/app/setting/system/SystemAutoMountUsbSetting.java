@@ -16,20 +16,20 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 @Log4j2
 public class SystemAutoMountUsbSetting
-        implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
+  implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
 
-    @Override
-    public @NotNull GroupKey getGroupKey() {
-        return GroupKey.system;
-    }
+  @Override
+  public @NotNull GroupKey getGroupKey() {
+    return GroupKey.system;
+  }
 
-    @Override
-    public @NotNull Icon getIcon() {
-        return new Icon("fab fa-usb");
-    }
+  @Override
+  public @NotNull Icon getIcon() {
+    return new Icon("fab fa-usb");
+  }
 
-    @Override
-    public int order() {
-        return 400;
-    }
+  @Override
+  public int order() {
+    return 400;
+  }
 }

@@ -6,20 +6,20 @@ import org.homio.app.setting.CoreSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 
 public class SystemLanguageSetting
-        implements CoreSettingPlugin<Lang>, SettingPluginOptionsEnum<Lang> {
+  implements CoreSettingPlugin<Lang>, SettingPluginOptionsEnum<Lang> {
 
-    @Override
-    public @NotNull GroupKey getGroupKey() {
-        return GroupKey.system;
-    }
+  @Override
+  public @NotNull GroupKey getGroupKey() {
+    return GroupKey.system;
+  }
 
-    @Override
-    public @NotNull Class<Lang> getType() {
-        return Lang.class;
-    }
+  @Override
+  public @NotNull Class<Lang> getType() {
+    return Lang.class;
+  }
 
-    @Override
-    public int order() {
-        return 600;
-    }
+  @Override
+  public int order() {
+    return 600;
+  }
 }

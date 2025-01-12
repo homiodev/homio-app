@@ -51,234 +51,234 @@ import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION
 @CreateSingleEntity
 @UISidebarChildren(icon = "fas fa-podcast", color = "#2DA844", allowCreateItem = false)
 public class FFMPEGEntity extends MediaEntity implements
-        HasEntityLog,
-        HasEntitySourceLog,
-        HasFirmwareVersion,
-        DeviceEndpointsBehaviourContractStub {
+  HasEntityLog,
+  HasEntitySourceLog,
+  HasFirmwareVersion,
+  DeviceEndpointsBehaviourContractStub {
 
-    private static FfmpegInstaller FFMPEG_INSTALLER;
+  private static FfmpegInstaller FFMPEG_INSTALLER;
 
-    public static void ensureEntityExists(Context context) {
+  public static void ensureEntityExists(Context context) {
         /*context.install().createInstallContext(FfmpegInstaller.class)
                      .requireAsync(null, (installed, exception) -> {
                          if (installed) {
                              log.info("FFPMEG service successfully installed");
                          }
                      });*/
-        FFMPEGEntity.getFfmpegInstaller(context).installLatestAsync();
+    FFMPEGEntity.getFfmpegInstaller(context).installLatestAsync();
 
-        FFMPEGImpl.entity = context.db().get(FFMPEGEntity.class, PRIMARY_DEVICE);
+    FFMPEGImpl.entity = context.db().get(FFMPEGEntity.class, PRIMARY_DEVICE);
 
-        context.bgp().registerThreadsPuller("ffmpeg", threadPuller -> {
-            for (Map.Entry<String, FFMPEGImpl> threadEntry : FFMPEGImpl.ffmpegMap.entrySet()) {
-                FFMPEGImpl ffmpeg = threadEntry.getValue();
-                if (ffmpeg.getIsAlive()) {
-                    threadPuller.addThread(threadEntry.getKey(), ffmpeg.getDescription(), ffmpeg.getCreationDate(),
-                            "running", null,
-                            "Command: " + ffmpeg.getCmd()
-                    );
-                }
-            }
-        });
-    }
-
-    @Override
-    public String getFirmwareVersion() {
-        return FFMPEGEntity.getFfmpegInstaller(context()).getVersion();
-    }
-
-    @Override
-    @JsonIgnore
-    public @Nullable String getIeeeAddress() {
-        return getEntityID();
-    }
-
-    @Override
-    public String getDescriptionImpl() {
-        return "CAMERA.FFMPEG_DESCRIPTION";
-    }
-
-    @Override
-    public String getDefaultName() {
-        return "Ffmpeg";
-    }
-
-    @Override
-    public @Nullable Status.EntityStatus getEntityStatus() {
-        return null;
-    }
-
-    @Override
-    @UIFieldIgnore
-    public @NotNull Status getStatus() {
-        return Status.ONLINE;
-    }
-
-    @Override
-    public void logBuilder(@NotNull EntityLogBuilder builder) {
-    }
-
-    private static FfmpegInstaller getFfmpegInstaller(Context context) {
-        if (FFMPEG_INSTALLER == null) {
-            FFMPEG_INSTALLER = new FfmpegInstaller(context);
+    context.bgp().registerThreadsPuller("ffmpeg", threadPuller -> {
+      for (Map.Entry<String, FFMPEGImpl> threadEntry : FFMPEGImpl.ffmpegMap.entrySet()) {
+        FFMPEGImpl ffmpeg = threadEntry.getValue();
+        if (ffmpeg.getIsAlive()) {
+          threadPuller.addThread(threadEntry.getKey(), ffmpeg.getDescription(), ffmpeg.getCreationDate(),
+            "running", null,
+            "Command: " + ffmpeg.getCmd()
+          );
         }
-        return FFMPEG_INSTALLER;
+      }
+    });
+  }
+
+  private static FfmpegInstaller getFfmpegInstaller(Context context) {
+    if (FFMPEG_INSTALLER == null) {
+      FFMPEG_INSTALLER = new FfmpegInstaller(context);
+    }
+    return FFMPEG_INSTALLER;
+  }
+
+  @Override
+  public String getFirmwareVersion() {
+    return FFMPEGEntity.getFfmpegInstaller(context()).getVersion();
+  }
+
+  @Override
+  @JsonIgnore
+  public @Nullable String getIeeeAddress() {
+    return getEntityID();
+  }
+
+  @Override
+  public String getDescriptionImpl() {
+    return "CAMERA.FFMPEG_DESCRIPTION";
+  }
+
+  @Override
+  public String getDefaultName() {
+    return "Ffmpeg";
+  }
+
+  @Override
+  public @Nullable Status.EntityStatus getEntityStatus() {
+    return null;
+  }
+
+  @Override
+  @UIFieldIgnore
+  public @NotNull Status getStatus() {
+    return Status.ONLINE;
+  }
+
+  @Override
+  public void logBuilder(@NotNull EntityLogBuilder builder) {
+  }
+
+  @Override
+  @JsonIgnore
+  @UIFieldIgnore
+  public String getName() {
+    return super.getName();
+  }
+
+  @Override
+  public @NotNull List<OptionModel> getLogSources() {
+    List<OptionModel> list = new ArrayList<>();
+    for (FFMPEGImpl ffmpeg : FFMPEGImpl.ffmpegMap.values()) {
+      list.add(OptionModel.of(ffmpeg.getFileLogger().getName()));
+    }
+    return list;
+  }
+
+  @Override
+  public @Nullable InputStream getSourceLogInputStream(@NotNull String sourceID) {
+    for (FFMPEGImpl ffmpeg : FFMPEGImpl.ffmpegMap.values()) {
+      if (ffmpeg.getFileLogger().getName().equals(sourceID)) {
+        return ffmpeg.getFileLogger().getFileInputStream();
+      }
+    }
+    return null;
+  }
+
+  @Override
+  protected @NotNull String getDevicePrefix() {
+    return "ffmpeg";
+  }
+
+  @Override
+  public void assembleActions(UIInputBuilder uiInputBuilder) {
+
+  }
+
+  @Override
+  public @NotNull Map<String, ? extends DeviceEndpoint> getDeviceEndpoints() {
+    Map<String, FfmpegInstanceEndpoint> streams = new HashMap<>();
+    for (FFMPEGImpl ffmpeg : FFMPEGImpl.ffmpegMap.values()) {
+      streams.put(ffmpeg.getDescription(), new FfmpegInstanceEndpoint(ffmpeg, this));
+    }
+    return streams;
+  }
+
+  @Override
+  @UIFieldIgnore
+  public @Nullable String getImageIdentifier() {
+    return super.getImageIdentifier();
+  }
+
+  @Getter
+  public static class FfmpegInstanceEndpoint extends BaseDeviceEndpoint<FFMPEGEntity> {
+
+    private final String description;
+
+    @SneakyThrows
+    public FfmpegInstanceEndpoint(FFMPEGImpl ffmpeg, FFMPEGEntity entity) {
+      super(new Icon(ffmpeg.getFormat().getIcon(), ffmpeg.getFormat().getColor()),
+        "FFMPEG",
+        entity.context(),
+        entity,
+        ffmpeg.getDescription(),
+        false,
+        EndpointType.string);
+      this.description = ffmpeg.getCmd();
+      if (ffmpeg.getIsAlive()) {
+        ProcessStat stat = ffmpeg.getProcessStat(this::updateUI);
+        setValue(new StringType("Cpu(%.1f%%) Mem(%.1f%%)".formatted(stat.getCpuUsage(), stat.getMemUsage())), false);
+      } else {
+        setValue(new StringType("Dead"), false);
+      }
+    }
+
+    public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
+      String html = Arrays.stream(getValue().toString().split(" "))
+        .collect(Collectors.joining("</div><div>", "<div>", "</div>"));
+      uiInputBuilder.addInfo("<div class=\"dfc fs14\">%s</div>".formatted(html), InfoType.HTML);
+    }
+  }
+
+  @Log4j2
+  public static class FfmpegInstaller extends DependencyExecutableInstaller {
+
+    public FfmpegInstaller(Context context) {
+      super(context);
+      executable = FFMPEG_LOCATION;
     }
 
     @Override
-    @JsonIgnore
-    @UIFieldIgnore
     public String getName() {
-        return super.getName();
+      return "ffmpeg";
     }
 
     @Override
-    public @NotNull List<OptionModel> getLogSources() {
-        List<OptionModel> list = new ArrayList<>();
-        for (FFMPEGImpl ffmpeg : FFMPEGImpl.ffmpegMap.values()) {
-            list.add(OptionModel.of(ffmpeg.getFileLogger().getName()));
+    public @Nullable String getExecutablePath(@NotNull Path execPath) {
+      return getVersion() == null ? null : FFMPEG_LOCATION;
+    }
+
+    @Override
+    protected @Nullable String getInstalledVersion() {
+      ContextHardware hardware = context.hardware();
+      String version = null;
+      try {
+        if (IS_OS_WINDOWS) {
+          Path targetPath = CommonUtils.getInstallPath().resolve("ffmpeg").resolve("ffmpeg.exe");
+          if (Files.isRegularFile(targetPath)) {
+            version = hardware.execute(targetPath + " -version", 60, null);
+          }
+        } else {
+          version = hardware.execute("ffmpeg -version", 60, null);
         }
-        return list;
+      } catch (Exception ignore) {
+      }
+
+      if (version != null && version.startsWith("ffmpeg version")) {
+        version = version.substring("ffmpeg version".length()).trim().split(" ")[0].trim();
+        if (version.contains("-")) {
+          version = version.substring(0, version.indexOf("-"));
+        }
+      }
+      return version;
     }
 
     @Override
-    public @Nullable InputStream getSourceLogInputStream(@NotNull String sourceID) {
-        for (FFMPEGImpl ffmpeg : FFMPEGImpl.ffmpegMap.values()) {
-            if (ffmpeg.getFileLogger().getName().equals(sourceID)) {
-                return ffmpeg.getFileLogger().getFileInputStream();
+    protected void installDependencyInternal(@NotNull ProgressBar progressBar, String version) {
+      if (IS_OS_LINUX) {
+        ContextHardware hardware = context.hardware();
+        if (!hardware.isSoftwareInstalled("ffmpeg")) {
+          hardware.installSoftware("ffmpeg", 600, progressBar);
+          if (!hardware.isSoftwareInstalled("ffmpeg")) {
+            GitHubProject gitHubProject = GitHubProject.of("BtbN", "FFmpeg-Builds");
+            String lastReleaseVersion = gitHubProject.getLastReleaseVersion();
+            if (lastReleaseVersion != null) {
+              gitHubProject.downloadReleaseAndInstall(context, lastReleaseVersion, progressBar);
+              Path path = gitHubProject.getLocalProjectPath().resolve("bin").resolve("ffmpeg");
+              context.hardware().execute("ln -s " + path + " /usr/local/bin/ffmpeg");
             }
+          }
         }
-        return null;
+      } else {
+        String url = context.setting().getEnv("source-ffmpeg");
+        if (url == null) {
+          url = STATIC_FILES.getContentFile("ffmpeg").map(VersionedFile::getDownloadUrl).orElse(null);
+        }
+        if (url == null) {
+          throw new IllegalStateException("Unable to find ffmpeg download url");
+        }
+        ArchiveUtil.downloadAndExtract(url, "ffmpeg.7z",
+          (progress, message, error) -> {
+            progressBar.progress(progress, message);
+            log.info("FFMPEG: {}", message);
+          });
+      }
     }
-
-    @Override
-    protected @NotNull String getDevicePrefix() {
-        return "ffmpeg";
-    }
-
-    @Override
-    public void assembleActions(UIInputBuilder uiInputBuilder) {
-
-    }
-
-    @Override
-    public @NotNull Map<String, ? extends DeviceEndpoint> getDeviceEndpoints() {
-        Map<String, FfmpegInstanceEndpoint> streams = new HashMap<>();
-        for (FFMPEGImpl ffmpeg : FFMPEGImpl.ffmpegMap.values()) {
-            streams.put(ffmpeg.getDescription(), new FfmpegInstanceEndpoint(ffmpeg, this));
-        }
-        return streams;
-    }
-
-    @Override
-    @UIFieldIgnore
-    public @Nullable String getImageIdentifier() {
-        return super.getImageIdentifier();
-    }
-
-    @Getter
-    public static class FfmpegInstanceEndpoint extends BaseDeviceEndpoint<FFMPEGEntity> {
-
-        private final String description;
-
-        @SneakyThrows
-        public FfmpegInstanceEndpoint(FFMPEGImpl ffmpeg, FFMPEGEntity entity) {
-            super(new Icon(ffmpeg.getFormat().getIcon(), ffmpeg.getFormat().getColor()),
-                    "FFMPEG",
-                    entity.context(),
-                    entity,
-                    ffmpeg.getDescription(),
-                    false,
-                    EndpointType.string);
-            this.description = ffmpeg.getCmd();
-            if (ffmpeg.getIsAlive()) {
-                ProcessStat stat = ffmpeg.getProcessStat(this::updateUI);
-                setValue(new StringType("Cpu(%.1f%%) Mem(%.1f%%)".formatted(stat.getCpuUsage(), stat.getMemUsage())), false);
-            } else {
-                setValue(new StringType("Dead"), false);
-            }
-        }
-
-        public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
-            String html = Arrays.stream(getValue().toString().split(" "))
-                    .collect(Collectors.joining("</div><div>", "<div>", "</div>"));
-            uiInputBuilder.addInfo("<div class=\"dfc fs14\">%s</div>".formatted(html), InfoType.HTML);
-        }
-    }
-
-    @Log4j2
-    public static class FfmpegInstaller extends DependencyExecutableInstaller {
-
-        public FfmpegInstaller(Context context) {
-            super(context);
-            executable = FFMPEG_LOCATION;
-        }
-
-        @Override
-        public String getName() {
-            return "ffmpeg";
-        }
-
-        @Override
-        public @Nullable String getExecutablePath(@NotNull Path execPath) {
-            return getVersion() == null ? null : FFMPEG_LOCATION;
-        }
-
-        @Override
-        protected @Nullable String getInstalledVersion() {
-            ContextHardware hardware = context.hardware();
-            String version = null;
-            try {
-                if (IS_OS_WINDOWS) {
-                    Path targetPath = CommonUtils.getInstallPath().resolve("ffmpeg").resolve("ffmpeg.exe");
-                    if (Files.isRegularFile(targetPath)) {
-                        version = hardware.execute(targetPath + " -version", 60, null);
-                    }
-                } else {
-                    version = hardware.execute("ffmpeg -version", 60, null);
-                }
-            } catch (Exception ignore) {
-            }
-
-            if (version != null && version.startsWith("ffmpeg version")) {
-                version = version.substring("ffmpeg version".length()).trim().split(" ")[0].trim();
-                if (version.contains("-")) {
-                    version = version.substring(0, version.indexOf("-"));
-                }
-            }
-            return version;
-        }
-
-        @Override
-        protected void installDependencyInternal(@NotNull ProgressBar progressBar, String version) {
-            if (IS_OS_LINUX) {
-                ContextHardware hardware = context.hardware();
-                if (!hardware.isSoftwareInstalled("ffmpeg")) {
-                    hardware.installSoftware("ffmpeg", 600, progressBar);
-                    if (!hardware.isSoftwareInstalled("ffmpeg")) {
-                        GitHubProject gitHubProject = GitHubProject.of("BtbN", "FFmpeg-Builds");
-                        String lastReleaseVersion = gitHubProject.getLastReleaseVersion();
-                        if (lastReleaseVersion != null) {
-                            gitHubProject.downloadReleaseAndInstall(context, lastReleaseVersion, progressBar);
-                            Path path = gitHubProject.getLocalProjectPath().resolve("bin").resolve("ffmpeg");
-                            context.hardware().execute("ln -s " + path + " /usr/local/bin/ffmpeg");
-                        }
-                    }
-                }
-            } else {
-                String url = context.setting().getEnv("source-ffmpeg");
-                if (url == null) {
-                    url = STATIC_FILES.getContentFile("ffmpeg").map(VersionedFile::getDownloadUrl).orElse(null);
-                }
-                if (url == null) {
-                    throw new IllegalStateException("Unable to find ffmpeg download url");
-                }
-                ArchiveUtil.downloadAndExtract(url, "ffmpeg.7z",
-                        (progress, message, error) -> {
-                            progressBar.progress(progress, message);
-                            log.info("FFMPEG: {}", message);
-                        });
-            }
-        }
-    }
+  }
 }

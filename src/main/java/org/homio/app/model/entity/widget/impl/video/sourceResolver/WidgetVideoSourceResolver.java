@@ -17,30 +17,30 @@ import java.util.regex.Pattern;
 
 public interface WidgetVideoSourceResolver {
 
-    Pattern VIDEO_FORMATS = Pattern.compile("webrtc|webm|ogv|flv|avi|mp4|ts|m3u8|mjpeg");
-    Pattern IMAGE_FORMATS = Pattern.compile("jpg|png|gif");
+  Pattern VIDEO_FORMATS = Pattern.compile("webrtc|webm|ogv|flv|avi|mp4|ts|m3u8|mjpeg");
+  Pattern IMAGE_FORMATS = Pattern.compile("jpg|png|gif");
 
-    default VideoEntityResponse resolveDataSource(WidgetVideoSeriesEntity item) {
-        return resolveDataSource(item.getValueDataSource(), item.context());
-    }
+  default VideoEntityResponse resolveDataSource(WidgetVideoSeriesEntity item) {
+    return resolveDataSource(item.getValueDataSource(), item.context());
+  }
 
-    VideoEntityResponse resolveDataSource(String valueDataSource, Context context);
+  VideoEntityResponse resolveDataSource(String valueDataSource, Context context);
 
-    @Getter
-    @RequiredArgsConstructor
-    class VideoEntityResponse {
+  @Getter
+  @RequiredArgsConstructor
+  class VideoEntityResponse {
 
-        private final @NotNull String valueDataSource;
-        private final @NotNull String dataSource;
-        private final @NotNull String source;
-        private final @NotNull String type;
-        private @Nullable
-        @Setter
-        @Accessors(chain = true) String error;
-        private final @NotNull List<String> resolutions = new ArrayList<>();
-        private @Nullable
-        @Setter Collection<UIInputEntity> actions;
-        private @Nullable
-        @Setter String poster;
-    }
+    private final @NotNull String valueDataSource;
+    private final @NotNull String dataSource;
+    private final @NotNull String source;
+    private final @NotNull String type;
+    private final @NotNull List<String> resolutions = new ArrayList<>();
+    private @Nullable
+    @Setter
+    @Accessors(chain = true) String error;
+    private @Nullable
+    @Setter Collection<UIInputEntity> actions;
+    private @Nullable
+    @Setter String poster;
+  }
 }

@@ -16,26 +16,26 @@ import org.jetbrains.annotations.NotNull;
 @Setter
 @Entity
 public class WidgetLineChartEntity
-        extends ChartBaseEntity<WidgetLineChartEntity, WidgetLineChartSeriesEntity>
-        implements HasLineChartBehaviour, HasHorizontalLine, HasAxis, HasMargin {
+  extends ChartBaseEntity<WidgetLineChartEntity, WidgetLineChartSeriesEntity>
+  implements HasLineChartBehaviour, HasHorizontalLine, HasAxis, HasMargin {
 
-    @Override
-    public @NotNull String getImage() {
-        return "fas fa-chart-line";
-    }
+  @Override
+  public @NotNull String getImage() {
+    return "fas fa-chart-line";
+  }
 
-    @Override
-    protected @NotNull String getWidgetPrefix() {
-        return "line";
-    }
+  @Override
+  protected @NotNull String getWidgetPrefix() {
+    return "line";
+  }
 
-    @UIField(order = 0, hideInView = true, hideInEdit = true)
-    public ChartType getChartType() {
-        return ChartType.line;
-    }
+  @UIField(order = 0, hideInView = true, hideInEdit = true)
+  public ChartType getChartType() {
+    return ChartType.line;
+  }
 
-    @Override
-    public String getDefaultName() {
-        return null;
-    }
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
 }

@@ -18,45 +18,45 @@ import org.json.JSONObject;
 @Setter
 @Accessors(chain = true)
 public class UIButtonItemBuilderImpl
-        extends UIBaseEntityItemBuilderImpl<UIButtonItemBuilder, String>
-        implements UIButtonItemBuilder {
+  extends UIBaseEntityItemBuilderImpl<UIButtonItemBuilder, String>
+  implements UIButtonItemBuilder {
 
-    private String[] fireActionsBeforeChange;
-    private String actionReference;
-    private String actionReferenceV2;
-    private JSONObject metadata;
-    private String confirmMessage;
-    private String confirmMessageDialogColor;
-    private String confirmMessageDialogTitle;
-    private Icon confirmMessageDialogIcon;
+  private String[] fireActionsBeforeChange;
+  private String actionReference;
+  private String actionReferenceV2;
+  private JSONObject metadata;
+  private String confirmMessage;
+  private String confirmMessageDialogColor;
+  private String confirmMessageDialogTitle;
+  private Icon confirmMessageDialogIcon;
 
-    private UIDialogLayoutBuilder dialogEntityBuilder;
+  private UIDialogLayoutBuilder dialogEntityBuilder;
 
-    private UIStickyDialogItemBuilder stickyDialogBuilder;
-    private boolean primary = true;
-    private int height = 32;
+  private UIStickyDialogItemBuilder stickyDialogBuilder;
+  private boolean primary = true;
+  private int height = 32;
 
-    public UIButtonItemBuilderImpl(@NotNull UIItemType uiItemType, @NotNull String entityID, @Nullable Icon icon, int order, @Nullable UIActionHandler actionHandler) {
-        super(uiItemType, entityID, order, actionHandler);
-        if (icon == null || StringUtils.isEmpty(icon.getIcon())) {
-            setValue(entityID);
-        }
-        setText(entityID.isEmpty() ? "" : entityID);
-        setIcon(icon);
+  public UIButtonItemBuilderImpl(@NotNull UIItemType uiItemType, @NotNull String entityID, @Nullable Icon icon, int order, @Nullable UIActionHandler actionHandler) {
+    super(uiItemType, entityID, order, actionHandler);
+    if (icon == null || StringUtils.isEmpty(icon.getIcon())) {
+      setValue(entityID);
     }
+    setText(entityID.isEmpty() ? "" : entityID);
+    setIcon(icon);
+  }
 
-    public UIButtonItemBuilderImpl setText(@Nullable String text) {
-        this.setValue(text);
-        return this;
-    }
+  public UIButtonItemBuilderImpl setText(@Nullable String text) {
+    this.setValue(text);
+    return this;
+  }
 
-    public UIInputEntity getDialogReference() {
-        return dialogEntityBuilder == null
-                ? (stickyDialogBuilder == null ? null : stickyDialogBuilder.buildEntity())
-                : dialogEntityBuilder.buildEntity();
-    }
+  public UIInputEntity getDialogReference() {
+    return dialogEntityBuilder == null
+      ? (stickyDialogBuilder == null ? null : stickyDialogBuilder.buildEntity())
+      : dialogEntityBuilder.buildEntity();
+  }
 
-    public boolean isSticky() {
-        return this.stickyDialogBuilder != null;
-    }
+  public boolean isSticky() {
+    return this.stickyDialogBuilder != null;
+  }
 }

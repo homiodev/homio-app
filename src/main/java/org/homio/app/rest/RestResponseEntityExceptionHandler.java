@@ -21,84 +21,84 @@ import java.nio.file.DirectoryNotEmptyException;
 @RestControllerAdvice
 public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionHandler {
 
-    private final ContextImpl context;
+  private final ContextImpl context;
 
-    public RestResponseEntityExceptionHandler(ContextImpl context) {
-        this.context = context;
-    }
+  public RestResponseEntityExceptionHandler(ContextImpl context) {
+    this.context = context;
+  }
 
-    @ExceptionHandler({IllegalAccessException.class})
-    public ResponseEntity<Object> handeAccessException(IllegalAccessException ex, WebRequest request) {
-        return handleExceptionInternal(ex, null, null, HttpStatus.FORBIDDEN, request);
-    }
+  @ExceptionHandler({IllegalAccessException.class})
+  public ResponseEntity<Object> handeAccessException(IllegalAccessException ex, WebRequest request) {
+    return handleExceptionInternal(ex, null, null, HttpStatus.FORBIDDEN, request);
+  }
 
-    @ExceptionHandler({ServerException.class})
-    public ResponseEntity<Object> handleServerException(ServerException ex, WebRequest request) {
-        return handleExceptionInternal(ex, null, null, ex.getHttpStatus(), request);
-    }
+  @ExceptionHandler({ServerException.class})
+  public ResponseEntity<Object> handleServerException(ServerException ex, WebRequest request) {
+    return handleExceptionInternal(ex, null, null, ex.getHttpStatus(), request);
+  }
 
-    @ExceptionHandler({LinkageError.class})
-    public ErrorHolderModel handleLinkageError(LinkageError ex) {
-        log.error("Error <{}>", CommonUtils.getErrorMessage(ex));
-        return new ErrorHolderModel("Linkage error", ex.getMessage(), ex);
-    }
+  @ExceptionHandler({LinkageError.class})
+  public ErrorHolderModel handleLinkageError(LinkageError ex) {
+    log.error("Error <{}>", CommonUtils.getErrorMessage(ex));
+    return new ErrorHolderModel("Linkage error", ex.getMessage(), ex);
+  }
 
-    @ExceptionHandler({HardwareException.class})
-    public ErrorHolderModel handleHardwareException(HardwareException ex) {
-        log.error("Error <{}>", CommonUtils.getErrorMessage(ex));
-        return new ErrorHolderModel("Hardware error", String.join("; ", ex.getInputs()), ex);
-    }
+  @ExceptionHandler({HardwareException.class})
+  public ErrorHolderModel handleHardwareException(HardwareException ex) {
+    log.error("Error <{}>", CommonUtils.getErrorMessage(ex));
+    return new ErrorHolderModel("Hardware error", String.join("; ", ex.getInputs()), ex);
+  }
 
-    @ExceptionHandler({AccessDeniedException.class})
-    public ResponseEntity<Object> handleAccessDenied(AccessDeniedException ex) {
-        log.error("Error <{}>", CommonUtils.getErrorMessage(ex));
-        return new ResponseEntity<>(new ErrorHolderModel("ERROR", "W.ERROR.ACCESS_DENIED", ex), HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+  @ExceptionHandler({AccessDeniedException.class})
+  public ResponseEntity<Object> handleAccessDenied(AccessDeniedException ex) {
+    log.error("Error <{}>", CommonUtils.getErrorMessage(ex));
+    return new ResponseEntity<>(new ErrorHolderModel("ERROR", "W.ERROR.ACCESS_DENIED", ex), HttpStatus.INTERNAL_SERVER_ERROR);
+  }
 
-    @ExceptionHandler({DirectoryNotEmptyException.class})
-    public ErrorHolderModel handleDirectoryNotEmptyException(DirectoryNotEmptyException ex) {
-        String msg = CommonUtils.getErrorMessage(ex);
-        return new ErrorHolderModel(
-                "Unable remove directory", "Directory " + msg + " not empty", ex);
-    }
+  @ExceptionHandler({DirectoryNotEmptyException.class})
+  public ErrorHolderModel handleDirectoryNotEmptyException(DirectoryNotEmptyException ex) {
+    String msg = CommonUtils.getErrorMessage(ex);
+    return new ErrorHolderModel(
+      "Unable remove directory", "Directory " + msg + " not empty", ex);
+  }
 
-    @ExceptionHandler({Exception.class})
-    public ResponseEntity<Object> handleUnknownException(Exception ex, WebRequest request) {
-        return handleExceptionInternal(ex, null, null, HttpStatus.INTERNAL_SERVER_ERROR, request);
-    }
+  @ExceptionHandler({Exception.class})
+  public ResponseEntity<Object> handleUnknownException(Exception ex, WebRequest request) {
+    return handleExceptionInternal(ex, null, null, HttpStatus.INTERNAL_SERVER_ERROR, request);
+  }
 
-    @Override
-    protected ResponseEntity<Object> handleExceptionInternal(
-            @NotNull Exception ex,
-            @Nullable Object body,
-            @Nullable HttpHeaders headers,
-            @NotNull HttpStatusCode statusCode,
-            @NotNull WebRequest request) {
-        String msg = CommonUtils.getErrorMessage(ex);
-        // addon linkage error
-        if (ex.getCause() instanceof AbstractMethodError && msg.contains("org.homio.addon")) {
-            int start = msg.indexOf("org.homio.addon") + "org.homio.addon".length() + 1;
-            context.getAddon().disableAddon(msg.substring(start, msg.indexOf(".", start)));
-        }
-        if (ex instanceof NullPointerException) {
-            msg += ". src: " + ex.getStackTrace()[0].toString();
-        }
-        if (ex instanceof ServerException se) {
-            if (se.isLog()) {
-                context.ui().toastr().error(ex);
-                log.error("Error <{}>", msg, ex);
-            }
-        } else {
-            log.error("Error <{}>", msg, ex);
-        }
-        if (headers == null) {
-            headers = new HttpHeaders();
-        }
-        try {
-            // for readonly HttpHeaders
-            headers.setContentType(MediaType.APPLICATION_JSON);
-        } catch (Exception ignored) {
-        }
-        return new ResponseEntity<>(new ErrorHolderModel("ERROR", msg, ex), headers, statusCode);
+  @Override
+  protected ResponseEntity<Object> handleExceptionInternal(
+    @NotNull Exception ex,
+    @Nullable Object body,
+    @Nullable HttpHeaders headers,
+    @NotNull HttpStatusCode statusCode,
+    @NotNull WebRequest request) {
+    String msg = CommonUtils.getErrorMessage(ex);
+    // addon linkage error
+    if (ex.getCause() instanceof AbstractMethodError && msg.contains("org.homio.addon")) {
+      int start = msg.indexOf("org.homio.addon") + "org.homio.addon".length() + 1;
+      context.getAddon().disableAddon(msg.substring(start, msg.indexOf(".", start)));
     }
+    if (ex instanceof NullPointerException) {
+      msg += ". src: " + ex.getStackTrace()[0].toString();
+    }
+    if (ex instanceof ServerException se) {
+      if (se.isLog()) {
+        context.ui().toastr().error(ex);
+        log.error("Error <{}>", msg, ex);
+      }
+    } else {
+      log.error("Error <{}>", msg, ex);
+    }
+    if (headers == null) {
+      headers = new HttpHeaders();
+    }
+    try {
+      // for readonly HttpHeaders
+      headers.setContentType(MediaType.APPLICATION_JSON);
+    } catch (Exception ignored) {
+    }
+    return new ResponseEntity<>(new ErrorHolderModel("ERROR", msg, ex), headers, statusCode);
+  }
 }

@@ -9,24 +9,24 @@ import org.jetbrains.annotations.Nullable;
 import static java.lang.String.format;
 
 public class LayoutBuilderImpl extends WidgetBaseBuilderImpl<LayoutWidgetBuilder, WidgetLayoutEntity>
-        implements LayoutWidgetBuilder {
+  implements LayoutWidgetBuilder {
 
-    LayoutBuilderImpl(WidgetLayoutEntity widget, ContextImpl context) {
-        super(widget, context);
-    }
+  LayoutBuilderImpl(WidgetLayoutEntity widget, ContextImpl context) {
+    super(widget, context);
+  }
 
-    @Override
-    public @NotNull LayoutWidgetBuilder setLayoutDimension(int rows, int columns) {
-        if (rows > 30 || columns > 15) {
-            throw new IllegalArgumentException("rows/columns must be less than 9");
-        }
-        widget.setLayout(format("%sx%s", columns, rows));
-        return this;
+  @Override
+  public @NotNull LayoutWidgetBuilder setLayoutDimension(int rows, int columns) {
+    if (rows > 30 || columns > 15) {
+      throw new IllegalArgumentException("rows/columns must be less than 9");
     }
+    widget.setLayout(format("%sx%s", columns, rows));
+    return this;
+  }
 
-    @Override
-    public @NotNull LayoutWidgetBuilder setBorderColor(@Nullable String value) {
-        widget.setWidgetBorderColor(value);
-        return this;
-    }
+  @Override
+  public @NotNull LayoutWidgetBuilder setBorderColor(@Nullable String value) {
+    widget.setWidgetBorderColor(value);
+    return this;
+  }
 }

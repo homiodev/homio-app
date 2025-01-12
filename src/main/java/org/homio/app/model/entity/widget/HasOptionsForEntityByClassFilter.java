@@ -8,5 +8,5 @@ import org.homio.api.model.HasEntityIdentifier;
  * Float only, etc...
  */
 public interface HasOptionsForEntityByClassFilter {
-    boolean isExclude(Class<? extends HasEntityIdentifier> sourceClassType, BaseEntity baseEntity);
+  boolean isExclude(Class<? extends HasEntityIdentifier> sourceClassType, BaseEntity baseEntity);
 }

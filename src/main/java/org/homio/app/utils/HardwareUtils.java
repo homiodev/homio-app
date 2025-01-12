@@ -15,49 +15,49 @@ import java.util.Collections;
 @Log4j2
 public final class HardwareUtils {
 
-    /**
-     * Fully restart application
-     */
-    @SneakyThrows
-    public static void exitApplication(ApplicationContext applicationContext, int code) {
-        SpringApplication.exit(applicationContext, () -> code);
-        System.exit(code);
-        // sleep to allow program exist
-        Thread.sleep(30000);
-        log.info("Unable to stop app in 30sec. Force stop it");
-        // force exit
-        Runtime.getRuntime().halt(code);
-    }
+  /**
+   * Fully restart application
+   */
+  @SneakyThrows
+  public static void exitApplication(ApplicationContext applicationContext, int code) {
+    SpringApplication.exit(applicationContext, () -> code);
+    System.exit(code);
+    // sleep to allow program exist
+    Thread.sleep(30000);
+    log.info("Unable to stop app in 30sec. Force stop it");
+    // force exit
+    Runtime.getRuntime().halt(code);
+  }
 
-    @SneakyThrows
-    public static void copyResources(URL url) {
-        if (url != null) {
-            Path target = CommonUtils.getFilesPath();
-            InputStream stream = HardwareUtils.class.getClassLoader().getResourceAsStream(url.toString());
-            FileSystem fileSystem = null;
-            if (stream == null) {
-                fileSystem = FileSystems.newFileSystem(url.toURI(), Collections.emptyMap());
-                Path filesPath = fileSystem.getPath("external_files.7z");
-                stream = Files.exists(filesPath) ? Files.newInputStream(filesPath) : null;
-            }
-            if (stream != null) {
-                String addonJar = url.getFile().replaceAll(".jar!/", "_");
-                addonJar = addonJar.substring(addonJar.lastIndexOf("/") + 1);
-                Path targetPath = target.resolve(target.resolve(addonJar));
-                if (!Files.exists(targetPath) || Files.size(targetPath) != stream.available()) {
-                    // copy files
-                    log.info("Copy resource <{}>", url);
-                    Files.copy(stream, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                    log.info("Unzip resource <{}>", targetPath);
-                    ArchiveUtil.unzip(targetPath, targetPath.getParent(), null, false, null, ArchiveUtil.UnzipFileIssueHandler.replace);
-                    // Files.move();
-                    log.info("Done copy resource <{}>", url);
-                }
-                stream.close();
-                if (fileSystem != null) {
-                    fileSystem.close();
-                }
-            }
+  @SneakyThrows
+  public static void copyResources(URL url) {
+    if (url != null) {
+      Path target = CommonUtils.getFilesPath();
+      InputStream stream = HardwareUtils.class.getClassLoader().getResourceAsStream(url.toString());
+      FileSystem fileSystem = null;
+      if (stream == null) {
+        fileSystem = FileSystems.newFileSystem(url.toURI(), Collections.emptyMap());
+        Path filesPath = fileSystem.getPath("external_files.7z");
+        stream = Files.exists(filesPath) ? Files.newInputStream(filesPath) : null;
+      }
+      if (stream != null) {
+        String addonJar = url.getFile().replaceAll(".jar!/", "_");
+        addonJar = addonJar.substring(addonJar.lastIndexOf("/") + 1);
+        Path targetPath = target.resolve(target.resolve(addonJar));
+        if (!Files.exists(targetPath) || Files.size(targetPath) != stream.available()) {
+          // copy files
+          log.info("Copy resource <{}>", url);
+          Files.copy(stream, targetPath, StandardCopyOption.REPLACE_EXISTING);
+          log.info("Unzip resource <{}>", targetPath);
+          ArchiveUtil.unzip(targetPath, targetPath.getParent(), null, false, null, ArchiveUtil.UnzipFileIssueHandler.replace);
+          // Files.move();
+          log.info("Done copy resource <{}>", url);
         }
+        stream.close();
+        if (fileSystem != null) {
+          fileSystem.close();
+        }
+      }
     }
+  }
 }

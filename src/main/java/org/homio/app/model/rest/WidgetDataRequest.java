@@ -13,25 +13,25 @@ import org.homio.app.model.entity.widget.WidgetEntity;
 @Setter
 public class WidgetDataRequest {
 
-    @NotNull
-    private String entityID;
-    private String liveEntity;
+  @NotNull
+  private String entityID;
+  private String liveEntity;
 
-    @SneakyThrows
-    public <T extends BaseEntity> T getEntity(
-            Context context, ObjectMapper objectMapper, Class<T> tClass) {
-        if (liveEntity != null) {
-            return objectMapper.readValue(liveEntity, tClass);
-        }
-        return context.db().get(entityID);
+  @SneakyThrows
+  public <T extends BaseEntity> T getEntity(
+    Context context, ObjectMapper objectMapper, Class<T> tClass) {
+    if (liveEntity != null) {
+      return objectMapper.readValue(liveEntity, tClass);
     }
+    return context.db().get(entityID);
+  }
 
-    @SneakyThrows
-    public WidgetEntity getEntity(Context context, ObjectMapper objectMapper) {
-        WidgetEntity entity = context.db().get(entityID);
-        if (liveEntity != null) {
-            return objectMapper.readValue(liveEntity, entity.getClass());
-        }
-        return context.db().get(entityID);
+  @SneakyThrows
+  public WidgetEntity getEntity(Context context, ObjectMapper objectMapper) {
+    WidgetEntity entity = context.db().get(entityID);
+    if (liveEntity != null) {
+      return objectMapper.readValue(liveEntity, entity.getClass());
     }
+    return context.db().get(entityID);
+  }
 }

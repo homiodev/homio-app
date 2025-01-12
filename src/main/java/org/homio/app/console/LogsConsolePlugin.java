@@ -15,34 +15,34 @@ import java.util.List;
 @RequiredArgsConstructor
 public class LogsConsolePlugin implements ConsolePluginLines {
 
-    @Getter
-    private final @Accessors(fluent = true) Context context;
-    private final LogService logService;
-    private final String name;
+  @Getter
+  private final @Accessors(fluent = true) Context context;
+  private final LogService logService;
+  private final String name;
 
-    @Override
-    public List<String> getValue() {
-        try {
-            UserGuestEntity.assertLogAccess(context);
-            return this.logService.getLogs(name);
-        } catch (Exception e) {
-            return List.of(e.getMessage());
-        }
+  @Override
+  public List<String> getValue() {
+    try {
+      UserGuestEntity.assertLogAccess(context);
+      return this.logService.getLogs(name);
+    } catch (Exception e) {
+      return List.of(e.getMessage());
     }
+  }
 
-    @Override
-    public ConsolePlugin.@NotNull RenderType getRenderType() {
-        return RenderType.lines;
-    }
+  @Override
+  public ConsolePlugin.@NotNull RenderType getRenderType() {
+    return RenderType.lines;
+  }
 
-    @Override
-    public boolean isEnabled() {
-        UserGuestEntity.assertLogAccess(context);
-        return true;
-    }
+  @Override
+  public boolean isEnabled() {
+    UserGuestEntity.assertLogAccess(context);
+    return true;
+  }
 
-    @Override
-    public @NotNull String getName() {
-        return "logs";
-    }
+  @Override
+  public @NotNull String getName() {
+    return "logs";
+  }
 }

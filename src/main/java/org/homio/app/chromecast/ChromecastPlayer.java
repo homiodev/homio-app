@@ -18,63 +18,63 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class ChromecastPlayer implements AudioPlayer, VideoPlayer {
 
-    private final @NotNull ChromecastService service;
+  private final @NotNull ChromecastService service;
 
-    @Override
-    public String getId() {
-        return "chromecast-" + service.getEntityID();
-    }
+  @Override
+  public String getId() {
+    return "chromecast-" + service.getEntityID();
+  }
 
-    @Override
-    public @NotNull String getLabel() {
-        String name = Objects.toString(service.getEntity().getName(), "Chromecast");
-        if (!service.getEntity().getChromecastType().name().startsWith(name)) {
-            name = service.getEntity().getChromecastType() + ": " + name;
-        }
-        return name;
+  @Override
+  public @NotNull String getLabel() {
+    String name = Objects.toString(service.getEntity().getName(), "Chromecast");
+    if (!service.getEntity().getChromecastType().name().startsWith(name)) {
+      name = service.getEntity().getChromecastType() + ": " + name;
     }
+    return name;
+  }
 
-    @Override
-    public boolean isPlaying() {
-        return service.isPlaying();
-    }
+  @Override
+  public boolean isPlaying() {
+    return service.isPlaying();
+  }
 
-    @Override
-    public void stop() {
-        service.closeApp(null);
-    }
+  @Override
+  public void stop() {
+    service.closeApp(null);
+  }
 
-    @Override
-    public void pause() {
-        service.handlePause();
-    }
+  @Override
+  public void pause() {
+    service.handlePause();
+  }
 
-    @Override
-    public void resume() {
-        service.handlePlay();
-    }
+  @Override
+  public void resume() {
+    service.handlePlay();
+  }
 
-    @Override
-    public void play(@NotNull ContentStream stream, Integer startFrame, Integer endFrame) {
-        final String url;
-        if (stream instanceof URLContentStream urlStream) {
-            url = urlStream.getURL().toString();
-            IOUtils.closeQuietly(stream);
-        } else {
-            String relativeUrl = service.context().media().createStreamUrl(stream, Duration.ofHours(1));
-            url = service.context().hardware().getServerUrl() + relativeUrl;
-        }
-        MimeType mimeType = stream.getStreamFormat().getMimeType();
-        service.playMedia(stream.getResource().getFilename(), url, mimeType.toString());
+  @Override
+  public void play(@NotNull ContentStream stream, Integer startFrame, Integer endFrame) {
+    final String url;
+    if (stream instanceof URLContentStream urlStream) {
+      url = urlStream.getURL().toString();
+      IOUtils.closeQuietly(stream);
+    } else {
+      String relativeUrl = service.context().media().createStreamUrl(stream, Duration.ofHours(1));
+      url = service.context().hardware().getServerUrl() + relativeUrl;
     }
+    MimeType mimeType = stream.getStreamFormat().getMimeType();
+    service.playMedia(stream.getResource().getFilename(), url, mimeType.toString());
+  }
 
-    @Override
-    public int getVolume() {
-        return service.getEndpoints().get("volume").getValue().intValue();
-    }
+  @Override
+  public int getVolume() {
+    return service.getEndpoints().get("volume").getValue().intValue();
+  }
 
-    @Override
-    public void setVolume(int volume) {
-        service.getEndpoints().get("volume").setValue(new DecimalType(volume), true);
-    }
+  @Override
+  public void setVolume(int volume) {
+    service.getEndpoints().get("volume").setValue(new DecimalType(volume), true);
+  }
 }

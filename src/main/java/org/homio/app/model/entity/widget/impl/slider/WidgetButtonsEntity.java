@@ -9,54 +9,54 @@ import org.jetbrains.annotations.Nullable;
 
 @Entity
 public class WidgetButtonsEntity
-        extends WidgetEntityAndSeries<WidgetButtonsEntity, WidgetButtonsSeriesEntity> {
+  extends WidgetEntityAndSeries<WidgetButtonsEntity, WidgetButtonsSeriesEntity> {
 
-    @UIField(order = 2)
-    public Boolean isVertical() {
-        return getJsonData("vt", Boolean.FALSE);
-    }
+  @UIField(order = 2)
+  public Boolean isVertical() {
+    return getJsonData("vt", Boolean.FALSE);
+  }
 
-    public void setVertical(Boolean value) {
-        setJsonData("vt", value);
-    }
+  public void setVertical(Boolean value) {
+    setJsonData("vt", value);
+  }
 
-    @Override
-    protected @NotNull String getWidgetPrefix() {
-        return "buttons";
-    }
+  @Override
+  protected @NotNull String getWidgetPrefix() {
+    return "buttons";
+  }
 
-    @Override
-    public @NotNull String getImage() {
-        return "far fa-circle-dot";
-    }
+  @Override
+  public @NotNull String getImage() {
+    return "far fa-circle-dot";
+  }
 
-    @Override
-    public @Nullable String getDefaultName() {
-        return "Buttons";
-    }
+  @Override
+  public @Nullable String getDefaultName() {
+    return "Buttons";
+  }
 
-    @UIField(order = 12)
-    @UIFieldColorPicker
-    public String getActiveColor() {
-        return getJsonData("actClr", "#777777");
-    }
+  @UIField(order = 12)
+  @UIFieldColorPicker
+  public String getActiveColor() {
+    return getJsonData("actClr", "#777777");
+  }
 
-    public void setActiveColor(String value) {
-        setJsonData("actClr", value);
-    }
+  public void setActiveColor(String value) {
+    setJsonData("actClr", value);
+  }
 
-    @UIField(order = 12)
-    @UIFieldColorPicker
-    public String getBackColor() {
-        return getJsonData("bcClr", "#3D3D3D");
-    }
+  @UIField(order = 12)
+  @UIFieldColorPicker
+  public String getBackColor() {
+    return getJsonData("bcClr", "#3D3D3D");
+  }
 
-    public void setBackColor(String value) {
-        setJsonData("bcClr", value);
-    }
+  public void setBackColor(String value) {
+    setJsonData("bcClr", value);
+  }
 
-    @Override
-    public void beforePersist() {
-        setOverflow(Overflow.hidden);
-    }
+  @Override
+  public void beforePersist() {
+    setOverflow(Overflow.hidden);
+  }
 }

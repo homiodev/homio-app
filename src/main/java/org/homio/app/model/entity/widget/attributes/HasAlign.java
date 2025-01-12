@@ -8,16 +8,16 @@ import org.homio.api.ui.field.UIFieldTab;
 
 public interface HasAlign extends HasJsonData {
 
-    @UIField(order = 102)
-    @UIFieldGroup("GENERAL")
-    @UIFieldTab("UI")
-    @UIFieldPosition(disableCenter = false)
-    default String getAlign() {
-        // default center align
-        return getJsonData("al", "2x2");
-    }
+  @UIField(order = 102)
+  @UIFieldGroup("GENERAL")
+  @UIFieldTab("UI")
+  @UIFieldPosition(disableCenter = false)
+  default String getAlign() {
+    // default center align
+    return getJsonData("al", "2x2");
+  }
 
-    default void setAlign(String value) {
-        setJsonData("al", value);
-    }
+  default void setAlign(String value) {
+    setJsonData("al", value);
+  }
 }

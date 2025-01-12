@@ -5,25 +5,25 @@ import org.homio.app.setting.CoreSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 
 public class SystemProxyAddressSetting
-        implements CoreSettingPlugin<String>, SettingPluginTextInput {
+  implements CoreSettingPlugin<String>, SettingPluginTextInput {
 
-    @Override
-    public @NotNull GroupKey getGroupKey() {
-        return GroupKey.system;
-    }
+  @Override
+  public @NotNull GroupKey getGroupKey() {
+    return GroupKey.system;
+  }
 
-    @Override
-    public @NotNull String getSubGroupKey() {
-        return "PROXY";
-    }
+  @Override
+  public @NotNull String getSubGroupKey() {
+    return "PROXY";
+  }
 
-    @Override
-    public int order() {
-        return 100;
-    }
+  @Override
+  public int order() {
+    return 100;
+  }
 
-    @Override
-    public @NotNull String getDefaultValue() {
-        return "";
-    }
+  @Override
+  public @NotNull String getDefaultValue() {
+    return "";
+  }
 }

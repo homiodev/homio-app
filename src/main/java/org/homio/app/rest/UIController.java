@@ -17,36 +17,36 @@ import java.util.List;
 @RequestMapping("/rest/ui")
 @RequiredArgsConstructor
 public class UIController {
-    private final ContextImpl context;
+  private final ContextImpl context;
 
-    @PutMapping("/multiDynamicUpdates")
-    public void multiDynamicUpdates(@Valid @RequestBody List<DynamicRequestItem> request) {
-        for (DynamicRequestItem requestItem : request) {
-            try {
-                context.ui().registerForUpdates(new DynamicUpdateRequest(requestItem.did, requestItem.eid));
-            } catch (Exception ignored) {
-            }
-        }
+  @PutMapping("/multiDynamicUpdates")
+  public void multiDynamicUpdates(@Valid @RequestBody List<DynamicRequestItem> request) {
+    for (DynamicRequestItem requestItem : request) {
+      try {
+        context.ui().registerForUpdates(new DynamicUpdateRequest(requestItem.did, requestItem.eid));
+      } catch (Exception ignored) {
+      }
     }
+  }
 
-    @DeleteMapping("/dynamicUpdates")
-    public void unregisterForUpdates(@Valid @RequestBody DynamicUpdateRequest request) {
-        context.ui().unRegisterForUpdates(request);
-    }
+  @DeleteMapping("/dynamicUpdates")
+  public void unregisterForUpdates(@Valid @RequestBody DynamicUpdateRequest request) {
+    context.ui().unRegisterForUpdates(request);
+  }
 
-    @PostMapping("/web-driver/{entityID}/interact")
-    public void interactWebDriver(
-            @PathVariable("entityID") String entityID,
-            @RequestBody ContextMediaImpl.InteractWebDriverRequest request) {
-        context.media().interactWebDriver(entityID, request);
-    }
+  @PostMapping("/web-driver/{entityID}/interact")
+  public void interactWebDriver(
+    @PathVariable("entityID") String entityID,
+    @RequestBody ContextMediaImpl.InteractWebDriverRequest request) {
+    context.media().interactWebDriver(entityID, request);
+  }
 
 
-    @Getter
-    @Setter
-    public static class DynamicRequestItem {
+  @Getter
+  @Setter
+  public static class DynamicRequestItem {
 
-        private String eid;
-        private String did;
-    }
+    private String eid;
+    private String did;
+  }
 }

@@ -16,53 +16,53 @@ import java.util.Set;
 
 @Entity
 public class WidgetVideoEntity
-        extends WidgetEntityAndSeries<WidgetVideoEntity, WidgetVideoSeriesEntity> {
+  extends WidgetEntityAndSeries<WidgetVideoEntity, WidgetVideoSeriesEntity> {
 
-    public WidgetVideoEntity() {
-        setBw(3);
-        setBh(3);
+  public WidgetVideoEntity() {
+    setBw(3);
+    setBh(3);
+  }
+
+  @Override
+  public WidgetGroup getGroup() {
+    return WidgetGroup.Media;
+  }
+
+  @MaxItems(4) // allow max 4 cameras
+  public Set<WidgetVideoSeriesEntity> getSeries() {
+    return super.getSeries();
+  }
+
+  @Override
+  public @NotNull String getImage() {
+    return "fas fa-video";
+  }
+
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
+
+  @Override
+  protected @NotNull String getWidgetPrefix() {
+    return "video";
+  }
+
+  public List<OptionModel> getCast() {
+    List<OptionModel> models = new ArrayList<>();
+    List<BaseStreamEntity> services = ((ContextImpl) context()).getEntityServices(BaseStreamEntity.class);
+
+    for (BaseStreamEntity streamService : services) {
+      OptionModel model = OptionModel.entity(streamService.getStreamEntity(), null, context());
+      if (!Objects.toString(model.getTitle(), "").toLowerCase().startsWith("chromecast")) {
+        model.setTitle("Chromecast: " + model.getTitle());
+      }
+      if (streamService.getStreamPlayer().isPlaying()) {
+        model.setTitle(model.getTitle() + " (Playing)");
+        model.json(jsonNodes -> jsonNodes.put("playing", true));
+      }
+      models.add(model);
     }
-
-    @Override
-    public WidgetGroup getGroup() {
-        return WidgetGroup.Media;
-    }
-
-    @MaxItems(4) // allow max 4 cameras
-    public Set<WidgetVideoSeriesEntity> getSeries() {
-        return super.getSeries();
-    }
-
-    @Override
-    public @NotNull String getImage() {
-        return "fas fa-video";
-    }
-
-    @Override
-    public String getDefaultName() {
-        return null;
-    }
-
-    @Override
-    protected @NotNull String getWidgetPrefix() {
-        return "video";
-    }
-
-    public List<OptionModel> getCast() {
-        List<OptionModel> models = new ArrayList<>();
-        List<BaseStreamEntity> services = ((ContextImpl) context()).getEntityServices(BaseStreamEntity.class);
-
-        for (BaseStreamEntity streamService : services) {
-            OptionModel model = OptionModel.entity(streamService.getStreamEntity(), null, context());
-            if (!Objects.toString(model.getTitle(), "").toLowerCase().startsWith("chromecast")) {
-                model.setTitle("Chromecast: " + model.getTitle());
-            }
-            if (streamService.getStreamPlayer().isPlaying()) {
-                model.setTitle(model.getTitle() + " (Playing)");
-                model.json(jsonNodes -> jsonNodes.put("playing", true));
-            }
-            models.add(model);
-        }
-        return models;
-    }
+    return models;
+  }
 }

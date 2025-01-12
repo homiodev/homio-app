@@ -14,10 +14,10 @@ import java.util.Collection;
 @RequiredArgsConstructor
 public class HardwareController {
 
-    private final ContextImpl context;
+  private final ContextImpl context;
 
-    @GetMapping("/event")
-    public Collection<OptionModel> getHardwareEvents() {
-        return context.event().getEvents();
-    }
+  @GetMapping("/event")
+  public Collection<OptionModel> getHardwareEvents() {
+    return context.event().getEvents();
+  }
 }

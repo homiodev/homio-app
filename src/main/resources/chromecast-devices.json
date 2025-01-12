@@ -12,7 +12,10 @@
       "name": "device_status",
       "stateless": true,
       "availableValues": [
-        "ONLINE", "OFFLINE", "ERROR", "UNKNOWN"
+        "ONLINE",
+        "OFFLINE",
+        "ERROR",
+        "UNKNOWN"
       ]
     },
     {

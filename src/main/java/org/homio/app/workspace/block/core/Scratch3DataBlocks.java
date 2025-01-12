@@ -19,40 +19,40 @@ import java.util.function.BiFunction;
 @Component
 public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
 
-    public Scratch3DataBlocks(Context context) {
-        super("data", context);
+  public Scratch3DataBlocks(Context context) {
+    super("data", context);
 
-        blockReporter("prev_variable", this::getPreviousValue);
+    blockReporter("prev_variable", this::getPreviousValue);
 
-        blockHat("onchange_variable_to", this::onChangeVariableHatTo);
-        blockHat("onchange_variable", this::onChangeVariableHat);
+    blockHat("onchange_variable_to", this::onChangeVariableHatTo);
+    blockHat("onchange_variable", this::onChangeVariableHat);
 
-        blockReporter("variable", this::variableReporter);
-        blockCommand("setvariableto", this::setVariableHandler);
-        blockCommand("changevariableby", this::changeVariableHandler);
-    }
+    blockReporter("variable", this::variableReporter);
+    blockCommand("setvariableto", this::setVariableHandler);
+    blockCommand("changevariableby", this::changeVariableHandler);
+  }
 
-    private void onChangeVariableHat(WorkspaceBlock workspaceBlock) {
-        workspaceBlock.handleNext(next -> {
-            String variableId = getVariable(workspaceBlock);
-            Lock lock = workspaceBlock.getLockManager().getLock(workspaceBlock, variableId);
-            workspaceBlock.subscribeToLock(lock, next::handle);
-        });
-    }
+  private void onChangeVariableHat(WorkspaceBlock workspaceBlock) {
+    workspaceBlock.handleNext(next -> {
+      String variableId = getVariable(workspaceBlock);
+      Lock lock = workspaceBlock.getLockManager().getLock(workspaceBlock, variableId);
+      workspaceBlock.subscribeToLock(lock, next::handle);
+    });
+  }
 
-    private void onChangeVariableHatTo(WorkspaceBlock workspaceBlock) {
-        workspaceBlock.handleNext(next -> {
-            WhenValueOperator operator = WhenValueOperator.getByOp(workspaceBlock.getField("OPERATOR"));
-            String variableId = getVariable(workspaceBlock);
-            Lock lock = workspaceBlock.getLockManager().getLock(workspaceBlock, variableId);
-            workspaceBlock.subscribeToLock(lock, o -> operator.checkFn.apply(workspaceBlock, o), next::handle);
-        });
-    }
+  private void onChangeVariableHatTo(WorkspaceBlock workspaceBlock) {
+    workspaceBlock.handleNext(next -> {
+      WhenValueOperator operator = WhenValueOperator.getByOp(workspaceBlock.getField("OPERATOR"));
+      String variableId = getVariable(workspaceBlock);
+      Lock lock = workspaceBlock.getLockManager().getLock(workspaceBlock, variableId);
+      workspaceBlock.subscribeToLock(lock, o -> operator.checkFn.apply(workspaceBlock, o), next::handle);
+    });
+  }
 
-    private State getPreviousValue(WorkspaceBlock workspaceBlock) {
-        WorkspaceBlockImpl workspaceBlockImpl = (WorkspaceBlockImpl) workspaceBlock;
-        return workspaceBlockImpl.getParent().getLastValue();
-    }
+  private State getPreviousValue(WorkspaceBlock workspaceBlock) {
+    WorkspaceBlockImpl workspaceBlockImpl = (WorkspaceBlockImpl) workspaceBlock;
+    return workspaceBlockImpl.getParent().getLastValue();
+  }
 
     /*private JSONObject getJsonVariableToReporter(WorkspaceBlock workspaceBlock) {
         WorkspaceJsonVariableEntity entity = context.db().get(WorkspaceJsonVariableEntity.PREFIX
@@ -61,65 +61,65 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         return Scratch3MutatorBlocks.reduceJSON(entity.getValue().toString(), query);
     }*/
 
-    private State variableReporter(WorkspaceBlock workspaceBlock) {
-        String variable = getVariable(workspaceBlock);
-        return variable == null ? null : context.var().getValue(variable);
+  private State variableReporter(WorkspaceBlock workspaceBlock) {
+    String variable = getVariable(workspaceBlock);
+    return variable == null ? null : context.var().getValue(variable);
+  }
+
+  private void changeVariableHandler(WorkspaceBlock workspaceBlock) {
+    String variable = getVariable(workspaceBlock);
+    Float value = workspaceBlock.getInputFloat("ITEM");
+
+    if (value != null) {
+      context.var().inc(variable, value);
     }
+  }
 
-    private void changeVariableHandler(WorkspaceBlock workspaceBlock) {
-        String variable = getVariable(workspaceBlock);
-        Float value = workspaceBlock.getInputFloat("ITEM");
+  private void setVariableHandler(WorkspaceBlock workspaceBlock) {
+    String variable = getVariable(workspaceBlock);
+    Object value = workspaceBlock.getInput("ITEM", true);
+    if (value != null) {
+      context.var().set(variable, value);
+    }
+  }
 
-        if (value != null) {
-            context.var().inc(variable, value);
+  private String getVariable(WorkspaceBlock workspaceBlock) {
+    String source = workspaceBlock.getFieldId("VARIABLE");
+    return DataSourceUtil.getSelection(source).getEntityValue();
+  }
+
+  @RequiredArgsConstructor
+  private enum WhenValueOperator {
+    More(">",
+      (workspaceBlock, value) -> toNumber(value) > workspaceBlock.getInputFloat("ITEM")),
+    Less("<",
+      (workspaceBlock, value) -> toNumber(value) < workspaceBlock.getInputFloat("ITEM")),
+    Eq("=",
+      (workspaceBlock, value) -> value.toString().equals(workspaceBlock.getInputString("ITEM", ""))),
+    Regexp("regex",
+      (workspaceBlock, value) -> value.toString().matches(workspaceBlock.getInputString("ITEM", ""))),
+    Any("any", (workspaceBlock, o) -> true),
+    NotEq("!=",
+      (workspaceBlock, value) -> !value.toString().equals(workspaceBlock.getInputString("ITEM", "")));
+
+    private final String op;
+    private final BiFunction<WorkspaceBlock, Object, Boolean> checkFn;
+
+    public static WhenValueOperator getByOp(String operator) {
+      for (WhenValueOperator item : WhenValueOperator.values()) {
+        if (item.op.equals(operator)) {
+          return item;
         }
+      }
+      throw new IllegalStateException("Unable to find compare operator: " + operator);
     }
 
-    private void setVariableHandler(WorkspaceBlock workspaceBlock) {
-        String variable = getVariable(workspaceBlock);
-        Object value = workspaceBlock.getInput("ITEM", true);
-        if (value != null) {
-            context.var().set(variable, value);
-        }
+    @SneakyThrows
+    private static float toNumber(Object value) {
+      if (value instanceof Number) {
+        return ((Number) value).floatValue();
+      }
+      return NumberFormat.getInstance().parse(value.toString()).floatValue();
     }
-
-    private String getVariable(WorkspaceBlock workspaceBlock) {
-        String source = workspaceBlock.getFieldId("VARIABLE");
-        return DataSourceUtil.getSelection(source).getEntityValue();
-    }
-
-    @RequiredArgsConstructor
-    private enum WhenValueOperator {
-        More(">",
-                (workspaceBlock, value) -> toNumber(value) > workspaceBlock.getInputFloat("ITEM")),
-        Less("<",
-                (workspaceBlock, value) -> toNumber(value) < workspaceBlock.getInputFloat("ITEM")),
-        Eq("=",
-                (workspaceBlock, value) -> value.toString().equals(workspaceBlock.getInputString("ITEM", ""))),
-        Regexp("regex",
-                (workspaceBlock, value) -> value.toString().matches(workspaceBlock.getInputString("ITEM", ""))),
-        Any("any", (workspaceBlock, o) -> true),
-        NotEq("!=",
-                (workspaceBlock, value) -> !value.toString().equals(workspaceBlock.getInputString("ITEM", "")));
-
-        private final String op;
-        private final BiFunction<WorkspaceBlock, Object, Boolean> checkFn;
-
-        public static WhenValueOperator getByOp(String operator) {
-            for (WhenValueOperator item : WhenValueOperator.values()) {
-                if (item.op.equals(operator)) {
-                    return item;
-                }
-            }
-            throw new IllegalStateException("Unable to find compare operator: " + operator);
-        }
-
-        @SneakyThrows
-        private static float toNumber(Object value) {
-            if (value instanceof Number) {
-                return ((Number) value).floatValue();
-            }
-            return NumberFormat.getInstance().parse(value.toString()).floatValue();
-        }
-    }
+  }
 }

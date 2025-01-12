@@ -15,76 +15,76 @@ import java.util.Set;
 
 public class BuildInMicrophoneInput implements AudioInput {
 
-    /**
-     * Java Sound audio format
-     */
-    private final javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(16000.0f, 16, 1, true,
-            false);
+  /**
+   * Java Sound audio format
+   */
+  private final javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(16000.0f, 16, 1, true,
+    false);
 
-    /**
-     * AudioFormat of the JavaSoundAudioSource
-     */
-    private final AudioFormat audioFormat = convertAudioFormat(format);
+  /**
+   * AudioFormat of the JavaSoundAudioSource
+   */
+  private final AudioFormat audioFormat = convertAudioFormat(format);
 
-    /**
-     * TargetDataLine for the mic
-     */
-    private @Nullable TargetDataLine microphone;
+  /**
+   * TargetDataLine for the mic
+   */
+  private @Nullable TargetDataLine microphone;
 
-    @Override
-    public @NotNull String getId() {
-        return "BuildInMicrophone";
-    }
+  private static AudioFormat convertAudioFormat(javax.sound.sampled.AudioFormat audioFormat) {
+    String container = AudioFormat.CONTAINER_WAVE;
 
-    @Override
-    public @NotNull Set<AudioFormat> getSupportedFormats() {
-        return Collections.singleton(audioFormat);
-    }
+    String codec = audioFormat.getEncoding().toString();
 
-    @Override
-    public @Nullable ContentStream getResource() {
+    Boolean bigEndian = audioFormat.isBigEndian();
+
+    int frameSize = audioFormat.getFrameSize(); // In bytes
+    int bitsPerFrame = frameSize * 8;
+    Integer bitDepth = ((AudioSystem.NOT_SPECIFIED == frameSize) ? null : bitsPerFrame);
+
+    float frameRate = audioFormat.getFrameRate();
+    Integer bitRate = ((AudioSystem.NOT_SPECIFIED == frameRate) ? null
+      : (int) (frameRate * bitsPerFrame));
+
+    float sampleRate = audioFormat.getSampleRate();
+    Long frequency = ((AudioSystem.NOT_SPECIFIED == sampleRate) ? null : (long) sampleRate);
+
+    return new AudioFormat(container, codec, bigEndian, bitDepth, bitRate, frequency);
+  }
+
+  @Override
+  public @NotNull String getId() {
+    return "BuildInMicrophone";
+  }
+
+  @Override
+  public @NotNull Set<AudioFormat> getSupportedFormats() {
+    return Collections.singleton(audioFormat);
+  }
+
+  @Override
+  public @Nullable ContentStream getResource() {
         /*if (!expectedFormat.isCompatible(audioFormat)) {
             throw new IllegalStateException("Cannot produce streams in format " + expectedFormat);
         }*/
-        TargetDataLine mic = this.microphone;
-        if (mic == null) {
-            mic = initMicrophone(format);
-        }
-        return new JavaSoundInputStream(mic, audioFormat);
+    TargetDataLine mic = this.microphone;
+    if (mic == null) {
+      mic = initMicrophone(format);
     }
+    return new JavaSoundInputStream(mic, audioFormat);
+  }
 
-    private static AudioFormat convertAudioFormat(javax.sound.sampled.AudioFormat audioFormat) {
-        String container = AudioFormat.CONTAINER_WAVE;
+  private TargetDataLine initMicrophone(javax.sound.sampled.AudioFormat format) {
+    try {
+      DataLine.Info info = new DataLine.Info(TargetDataLine.class, format);
+      TargetDataLine microphone = (TargetDataLine) AudioSystem.getLine(info);
 
-        String codec = audioFormat.getEncoding().toString();
+      microphone.open(format);
 
-        Boolean bigEndian = audioFormat.isBigEndian();
-
-        int frameSize = audioFormat.getFrameSize(); // In bytes
-        int bitsPerFrame = frameSize * 8;
-        Integer bitDepth = ((AudioSystem.NOT_SPECIFIED == frameSize) ? null : bitsPerFrame);
-
-        float frameRate = audioFormat.getFrameRate();
-        Integer bitRate = ((AudioSystem.NOT_SPECIFIED == frameRate) ? null
-                : (int) (frameRate * bitsPerFrame));
-
-        float sampleRate = audioFormat.getSampleRate();
-        Long frequency = ((AudioSystem.NOT_SPECIFIED == sampleRate) ? null : (long) sampleRate);
-
-        return new AudioFormat(container, codec, bigEndian, bitDepth, bitRate, frequency);
+      this.microphone = microphone;
+      return microphone;
+    } catch (Exception e) {
+      throw new RuntimeException("Error creating the audio input stream.", e);
     }
-
-    private TargetDataLine initMicrophone(javax.sound.sampled.AudioFormat format) {
-        try {
-            DataLine.Info info = new DataLine.Info(TargetDataLine.class, format);
-            TargetDataLine microphone = (TargetDataLine) AudioSystem.getLine(info);
-
-            microphone.open(format);
-
-            this.microphone = microphone;
-            return microphone;
-        } catch (Exception e) {
-            throw new RuntimeException("Error creating the audio input stream.", e);
-        }
-    }
+  }
 }

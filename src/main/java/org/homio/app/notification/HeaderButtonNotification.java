@@ -17,31 +17,31 @@ import java.util.function.Supplier;
 @EqualsAndHashCode
 public class HeaderButtonNotification extends BaseNotificationModel<HeaderButtonNotification> {
 
-    private final Set<DialogModel> dialogs = new LinkedHashSet<>();
-    private Integer duration;
+  private final Set<DialogModel> dialogs = new LinkedHashSet<>();
+  private Integer duration;
 
-    private String icon;
-    private String iconColor;
+  private String icon;
+  private String iconColor;
 
-    private Integer borderWidth = 1;
-    private String borderColor;
+  private Integer borderWidth = 1;
+  private String borderColor;
 
-    private String handleActionID;
-    private String page;
-    private Supplier<ActionResponseModel> clickAction;
-    private String attachToHeaderMenu;
+  private String handleActionID;
+  private String page;
+  private Supplier<ActionResponseModel> clickAction;
+  private String attachToHeaderMenu;
 
-    public HeaderButtonNotification(String entityID) {
-        super(entityID);
-    }
+  public HeaderButtonNotification(String entityID) {
+    super(entityID);
+  }
 
-    @Override
-    public HeaderButtonNotification setTitle(String name) {
-        return (HeaderButtonNotification) super.setTitle(name);
-    }
+  @Override
+  public HeaderButtonNotification setTitle(String name) {
+    return (HeaderButtonNotification) super.setTitle(name);
+  }
 
-    @Override
-    public HeaderButtonNotification setValue(Object value) {
-        return (HeaderButtonNotification) super.setValue(value);
-    }
+  @Override
+  public HeaderButtonNotification setValue(Object value) {
+    return (HeaderButtonNotification) super.setValue(value);
+  }
 }

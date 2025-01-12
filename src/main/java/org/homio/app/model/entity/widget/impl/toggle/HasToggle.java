@@ -13,72 +13,72 @@ import java.util.List;
 
 public interface HasToggle extends HasSingleValueDataSource, HasSetSingleValueDataSource {
 
-    @UIField(order = 12, required = true)
-    @UIFieldEntityByClassSelection(HasSetStatusValue.class)
-    default String getSetValueDataSource() {
-        return HasSetSingleValueDataSource.super.getSetValueDataSource();
-    }
+  @UIField(order = 12, required = true)
+  @UIFieldEntityByClassSelection(HasSetStatusValue.class)
+  default String getSetValueDataSource() {
+    return HasSetSingleValueDataSource.super.getSetValueDataSource();
+  }
 
-    @UIField(order = 3)
-    @UIFieldColorPicker(allowThreshold = true, pulseColorCondition = true, thresholdSource = true)
-    default String getToggleColor() {
-        return getJsonData("color", UI.Color.WHITE);
-    }
+  @UIField(order = 3)
+  @UIFieldColorPicker(allowThreshold = true, pulseColorCondition = true, thresholdSource = true)
+  default String getToggleColor() {
+    return getJsonData("color", UI.Color.WHITE);
+  }
 
-    default void setToggleColor(String value) {
-        setJsonData("color", value);
-    }
+  default void setToggleColor(String value) {
+    setJsonData("color", value);
+  }
 
-    @UIField(order = 1)
-    @UIFieldGroup(value = "ON", order = 4)
-    default String getOnName() {
-        return getJsonData("onName", "On");
-    }
+  @UIField(order = 1)
+  @UIFieldGroup(value = "ON", order = 4)
+  default String getOnName() {
+    return getJsonData("onName", "On");
+  }
 
-    default void setOnName(String value) {
-        setJsonData("onName", value);
-    }
+  default void setOnName(String value) {
+    setJsonData("onName", value);
+  }
 
-    /**
-     * Determine to check if toggle is on compare server value with list of OnValues
-     */
-    @UIField(order = 2)
-    @UIFieldGroup("ON")
-    default List<String> getOnValues() {
-        return getJsonDataList("onValues");
-    }
+  /**
+   * Determine to check if toggle is on compare server value with list of OnValues
+   */
+  @UIField(order = 2)
+  @UIFieldGroup("ON")
+  default List<String> getOnValues() {
+    return getJsonDataList("onValues");
+  }
 
-    default void setOnValues(String value) {
-        setJsonData("onValues", value);
-    }
+  default void setOnValues(String value) {
+    setJsonData("onValues", value);
+  }
 
-    @UIField(order = 3)
-    @UIFieldGroup("ON")
-    default String getPushToggleOnValue() {
-        return getJsonData("onValue", "true");
-    }
+  @UIField(order = 3)
+  @UIFieldGroup("ON")
+  default String getPushToggleOnValue() {
+    return getJsonData("onValue", "true");
+  }
 
-    default void setPushToggleOnValue(String value) {
-        setJsonData("onValue", value);
-    }
+  default void setPushToggleOnValue(String value) {
+    setJsonData("onValue", value);
+  }
 
-    @UIField(order = 1)
-    @UIFieldGroup(value = "OFF", order = 4)
-    default String getOffName() {
-        return getJsonData("offName", "Off");
-    }
+  @UIField(order = 1)
+  @UIFieldGroup(value = "OFF", order = 4)
+  default String getOffName() {
+    return getJsonData("offName", "Off");
+  }
 
-    default void setOffName(String value) {
-        setJsonData("offName", value);
-    }
+  default void setOffName(String value) {
+    setJsonData("offName", value);
+  }
 
-    @UIField(order = 2)
-    @UIFieldGroup("OFF")
-    default String getPushToggleOffValue() {
-        return getJsonData("offValue", "false");
-    }
+  @UIField(order = 2)
+  @UIFieldGroup("OFF")
+  default String getPushToggleOffValue() {
+    return getJsonData("offValue", "false");
+  }
 
-    default void setPushToggleOffValue(String value) {
-        setJsonData("offValue", value);
-    }
+  default void setPushToggleOffValue(String value) {
+    setJsonData("offValue", value);
+  }
 }

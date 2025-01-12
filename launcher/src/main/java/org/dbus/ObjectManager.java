@@ -9,5 +9,5 @@ import org.freedesktop.dbus.Variant;
 
 @DBusInterfaceName("org.freedesktop.DBus.ObjectManager")
 public interface ObjectManager extends DBusInterface {
-    Map<Path, Map<String, Map<String, Variant>>> GetManagedObjects();
+  Map<Path, Map<String, Map<String, Variant>>> GetManagedObjects();
 }

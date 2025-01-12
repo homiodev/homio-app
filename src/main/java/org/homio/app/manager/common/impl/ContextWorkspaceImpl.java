@@ -12,20 +12,20 @@ import org.jetbrains.annotations.NotNull;
 @Log4j2
 public class ContextWorkspaceImpl implements ContextWorkspace {
 
-    private final @Getter
-    @Accessors(fluent = true) ContextImpl context;
-    private WorkspaceService workspaceService;
+  private final @Getter
+  @Accessors(fluent = true) ContextImpl context;
+  private WorkspaceService workspaceService;
 
-    public ContextWorkspaceImpl(ContextImpl context) {
-        this.context = context;
-    }
+  public ContextWorkspaceImpl(ContextImpl context) {
+    this.context = context;
+  }
 
-    public void onContextCreated(WorkspaceService workspaceService) {
-        this.workspaceService = workspaceService;
-    }
+  public void onContextCreated(WorkspaceService workspaceService) {
+    this.workspaceService = workspaceService;
+  }
 
-    @Override
-    public void registerScratch3Extension(@NotNull Scratch3ExtensionBlocks scratch3ExtensionBlocks) {
-        workspaceService.registerScratch3Extension(scratch3ExtensionBlocks);
-    }
+  @Override
+  public void registerScratch3Extension(@NotNull Scratch3ExtensionBlocks scratch3ExtensionBlocks) {
+    workspaceService.registerScratch3Extension(scratch3ExtensionBlocks);
+  }
 }

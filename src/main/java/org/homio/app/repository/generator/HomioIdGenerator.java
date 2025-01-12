@@ -18,7 +18,7 @@ public class HomioIdGenerator implements IdentifierGenerator {
   public Object generate(SharedSessionContractImplementor session, Object object) {
     if (object instanceof BaseEntity baseEntity) {
       var data = PERSIST_IDS.remove(baseEntity.getName());
-      if(data != null) {
+      if (data != null) {
         baseEntity.setEntityID(data.getLeft());
         baseEntity.setName(data.getRight());
       }

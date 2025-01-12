@@ -12,39 +12,39 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetPieChartEntity
-        extends ChartBaseEntity<WidgetPieChartEntity, WidgetPieChartSeriesEntity>
-        implements HasChartTimePeriod {
+  extends ChartBaseEntity<WidgetPieChartEntity, WidgetPieChartSeriesEntity>
+  implements HasChartTimePeriod {
 
-    @UIField(order = 52)
-    @UIFieldSlider(min = 1, max = 4)
-    public int getBorderWidth() {
-        return getJsonData("bw", 1);
-    }
+  @UIField(order = 52)
+  @UIFieldSlider(min = 1, max = 4)
+  public int getBorderWidth() {
+    return getJsonData("bw", 1);
+  }
 
-    public WidgetPieChartEntity setBorderWidth(int value) {
-        setJsonData("bw", value);
-        return this;
-    }
+  public WidgetPieChartEntity setBorderWidth(int value) {
+    setJsonData("bw", value);
+    return this;
+  }
 
-    @Override
-    public @NotNull String getImage() {
-        return "fas fa-chart-pie";
-    }
+  @Override
+  public @NotNull String getImage() {
+    return "fas fa-chart-pie";
+  }
 
-    @Override
-    protected @NotNull String getWidgetPrefix() {
-        return "pie";
-    }
+  @Override
+  protected @NotNull String getWidgetPrefix() {
+    return "pie";
+  }
 
-    @Override
-    public String getDefaultName() {
-        return null;
-    }
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
 
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public boolean getShowChartFullScreenButton() {
-        throw new NotImplementedException();
-    }
+  @Override
+  @JsonIgnore
+  @UIFieldIgnore
+  public boolean getShowChartFullScreenButton() {
+    throw new NotImplementedException();
+  }
 }

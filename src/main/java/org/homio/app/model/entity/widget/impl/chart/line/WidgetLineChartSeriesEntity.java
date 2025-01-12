@@ -14,35 +14,35 @@ import java.util.Set;
 
 @Entity
 public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineChartEntity>
-        implements HasChartDataSource {
+  implements HasChartDataSource {
 
-    @Override
-    public String getDefaultName() {
-        return null;
-    }
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
 
-    @UIField(order = 1, required = true)
-    @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
-    @UIFieldGroup(order = 50, value = "CHART", borderColor = "#9C27B0")
-    @UIFieldIgnoreParent
-    public String getChartDataSource() {
-        return getJsonData("chartDS");
-    }
+  @UIField(order = 1, required = true)
+  @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
+  @UIFieldGroup(order = 50, value = "CHART", borderColor = "#9C27B0")
+  @UIFieldIgnoreParent
+  public String getChartDataSource() {
+    return getJsonData("chartDS");
+  }
 
-    @Override
-    public void beforePersist() {
-        HasChartDataSource.randomColor(this);
-    }
+  @Override
+  public void beforePersist() {
+    HasChartDataSource.randomColor(this);
+  }
 
-    @Override
-    protected String getSeriesPrefix() {
-        return "line";
-    }
+  @Override
+  protected String getSeriesPrefix() {
+    return "line";
+  }
 
-    @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-        if (getChartDataSource().isEmpty()) {
-            fields.add("chartDataSource");
-        }
+  @Override
+  protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+    if (getChartDataSource().isEmpty()) {
+      fields.add("chartDataSource");
     }
+  }
 }

@@ -29,137 +29,137 @@ import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 @SuppressWarnings("unused")
 @Entity
 public class WidgetDisplayEntity
-        extends WidgetEntityAndSeries<WidgetDisplayEntity, WidgetDisplaySeriesEntity>
-        implements HasLineChartBehaviour,
-        HasDynamicParameterFields,
-        HasChartDataSource,
-        HasHorizontalLine,
-        HasLayout,
-        HasName,
-        HasActionOnClick,
-        HasMargin,
-        ConfigureFieldsService {
+  extends WidgetEntityAndSeries<WidgetDisplayEntity, WidgetDisplaySeriesEntity>
+  implements HasLineChartBehaviour,
+  HasDynamicParameterFields,
+  HasChartDataSource,
+  HasHorizontalLine,
+  HasLayout,
+  HasName,
+  HasActionOnClick,
+  HasMargin,
+  ConfigureFieldsService {
 
-    @UIField(order = 1)
-    @UIFieldGroup(value = "NAME", order = 3)
-    public String getName() {
-        return super.getName();
-    }
+  @UIField(order = 1)
+  @UIFieldGroup(value = "NAME", order = 3)
+  public String getName() {
+    return super.getName();
+  }
 
-    @Override
-    public @NotNull String getImage() {
-        return "fas fa-tv";
-    }
+  @Override
+  public @NotNull String getImage() {
+    return "fas fa-tv";
+  }
 
-    @Override
-    protected @NotNull String getWidgetPrefix() {
-        return "display";
-    }
+  @Override
+  protected @NotNull String getWidgetPrefix() {
+    return "display";
+  }
 
-    @UIField(order = 50, hideInView = true)
-    @UIFieldLayout(options = {"name", "value", "icon"}, rows = "1:10")
-    public String getLayout() {
-        return getJsonData("layout", getDefaultLayout());
-    }
+  @UIField(order = 50, hideInView = true)
+  @UIFieldLayout(options = {"name", "value", "icon"}, rows = "1:10")
+  public String getLayout() {
+    return getJsonData("layout", getDefaultLayout());
+  }
 
-    @JsonIgnore
-    @UIFieldIgnore
-    public String getChartLabel() {
-        return "";
-    }
+  @JsonIgnore
+  @UIFieldIgnore
+  public String getChartLabel() {
+    return "";
+  }
 
-    @UIField(order = 4)
-    @UIFieldSlider(min = 20, max = 100)
-    @UIFieldGroup("CHART_UI")
-    public int getChartHeight() {
-        return getJsonData("ch", 30);
-    }
+  @UIField(order = 4)
+  @UIFieldSlider(min = 20, max = 100)
+  @UIFieldGroup("CHART_UI")
+  public int getChartHeight() {
+    return getJsonData("ch", 30);
+  }
 
-    public void setChartHeight(int value) {
-        setJsonData("ch", value);
-    }
+  public void setChartHeight(int value) {
+    setJsonData("ch", value);
+  }
 
-    @UIField(order = 20)
-    @UIFieldJSONLine(
-            template = "{\"top\": number}, \"right\": number, \"bottom\": number, \"left\": number")
-    @UIFieldGroup("CHART_UI")
-    @UIFieldShowOnCondition("return context.get('chartType') == 'bar'")
-    public String getBarBorderWidth() {
-        return getJsonData("bbw", "{\"top\": 0, \"right\": 0, \"bottom\": 0, \"left\": 0}");
-    }
+  @UIField(order = 20)
+  @UIFieldJSONLine(
+    template = "{\"top\": number}, \"right\": number, \"bottom\": number, \"left\": number")
+  @UIFieldGroup("CHART_UI")
+  @UIFieldShowOnCondition("return context.get('chartType') == 'bar'")
+  public String getBarBorderWidth() {
+    return getJsonData("bbw", "{\"top\": 0, \"right\": 0, \"bottom\": 0, \"left\": 0}");
+  }
 
-    public void setBarBorderWidth(String value) {
-        setJsonData("bbw", value);
-    }
+  public void setBarBorderWidth(String value) {
+    setJsonData("bbw", value);
+  }
 
-    @UIField(order = 7)
-    @UIFieldGroup("CHART")
-    public ChartType getChartType() {
-        return getJsonDataEnum("ct", ChartType.line);
-    }
+  @UIField(order = 7)
+  @UIFieldGroup("CHART")
+  public ChartType getChartType() {
+    return getJsonDataEnum("ct", ChartType.line);
+  }
 
-    public void setChartType(ChartType value) {
-        setJsonData("ct", value);
-    }
+  public void setChartType(ChartType value) {
+    setJsonData("ct", value);
+  }
 
-    @Override
-    public String getDefaultName() {
-        return null;
-    }
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
 
-    @UIField(order = 8)
-    @UIFieldGroup("CHART_UI")
-    public boolean getShowChartFullScreenButton() {
-        return getJsonData("sfsb", Boolean.FALSE);
-    }
+  @UIField(order = 8)
+  @UIFieldGroup("CHART_UI")
+  public boolean getShowChartFullScreenButton() {
+    return getJsonData("sfsb", Boolean.FALSE);
+  }
 
-    public void setShowChartFullScreenButton(boolean value) {
-        setJsonData("sfsb", value);
-    }
+  public void setShowChartFullScreenButton(boolean value) {
+    setJsonData("sfsb", value);
+  }
 
-    @UIField(order = 2)
-    @UIFieldGroup("CHART")
-    public boolean isShowChart() {
-        return getJsonData("showC", true);
-    }
+  @UIField(order = 2)
+  @UIFieldGroup("CHART")
+  public boolean isShowChart() {
+    return getJsonData("showC", true);
+  }
 
-    public void setShowChart(boolean value) {
-        setJsonData("showC", value);
-    }
+  public void setShowChart(boolean value) {
+    setJsonData("showC", value);
+  }
 
-    @Override
-    @UIFieldColorPicker
-    public String getNameColor() {
-        return HasName.super.getNameColor();
-    }
+  @Override
+  @UIFieldColorPicker
+  public String getNameColor() {
+    return HasName.super.getNameColor();
+  }
 
-    private String getDefaultLayout() {
-        return UIFieldLayout.LayoutBuilder
-                .builder(15, 50, 35)
-                .addRow(rb -> rb
-                        .addCol("icon", HorizontalAlign.left)
-                        .addCol("name", UIFieldLayout.HorizontalAlign.left)
-                        .addCol("value", HorizontalAlign.right))
-                .build();
-    }
+  private String getDefaultLayout() {
+    return UIFieldLayout.LayoutBuilder
+      .builder(15, 50, 35)
+      .addRow(rb -> rb
+        .addCol("icon", HorizontalAlign.left)
+        .addCol("name", UIFieldLayout.HorizontalAlign.left)
+        .addCol("value", HorizontalAlign.right))
+      .build();
+  }
 
-    /**
-     * Scan all ui fields if they has 'GROUP.CHART' group and put it into separate tab
-     */
-    @SneakyThrows
-    @Override
-    public void configure(@NotNull List<EntityUIMetaData> result) {
-        for (EntityUIMetaData entityUIMetaData : result) {
-            ObjectNode meta = OBJECT_MAPPER.readValue(entityUIMetaData.getTypeMetaData(), ObjectNode.class);
-            if (meta.path("group").asText().startsWith("GROUP.CHART")) {
-                meta.put("tab", "CHART");
-                entityUIMetaData.setTypeMetaData(OBJECT_MAPPER.writeValueAsString(meta));
-            }
-        }
+  /**
+   * Scan all ui fields if they has 'GROUP.CHART' group and put it into separate tab
+   */
+  @SneakyThrows
+  @Override
+  public void configure(@NotNull List<EntityUIMetaData> result) {
+    for (EntityUIMetaData entityUIMetaData : result) {
+      ObjectNode meta = OBJECT_MAPPER.readValue(entityUIMetaData.getTypeMetaData(), ObjectNode.class);
+      if (meta.path("group").asText().startsWith("GROUP.CHART")) {
+        meta.put("tab", "CHART");
+        entityUIMetaData.setTypeMetaData(OBJECT_MAPPER.writeValueAsString(meta));
+      }
     }
+  }
 
-    @Override
-    public void beforePersist() {
-        setOverflow(Overflow.hidden);
-    }
+  @Override
+  public void beforePersist() {
+    setOverflow(Overflow.hidden);
+  }
 }

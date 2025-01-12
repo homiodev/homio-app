@@ -7,8 +7,8 @@ import org.homio.app.manager.common.ContextImpl;
  */
 public interface ContextCreated {
 
-    /**
-     * Fires only once after all beans had been constructed and all relations had been set
-     */
-    void onContextCreated(ContextImpl context) throws Exception;
+  /**
+   * Fires only once after all beans had been constructed and all relations had been set
+   */
+  void onContextCreated(ContextImpl context) throws Exception;
 }

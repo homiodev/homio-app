@@ -4,8 +4,8 @@ import org.homio.api.setting.SettingPluginBoolean;
 
 public class SidebarSmallMenuSetting implements SettingPluginBoolean {
 
-    @Override
-    public int order() {
-        return 10;
-    }
+  @Override
+  public int order() {
+    return 10;
+  }
 }

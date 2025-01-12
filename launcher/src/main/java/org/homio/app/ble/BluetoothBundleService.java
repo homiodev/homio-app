@@ -7,16 +7,16 @@ import org.homio.hquery.hardware.other.MachineHardwareRepository;
 @Controller
 public class BluetoothBundleService extends BaseBluetoothCharacteristicService {
 
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    public BluetoothBundleService(
-            MachineHardwareRepository machineHardwareRepository,
-            NetworkHardwareRepository networkHardwareRepository) {
-        super(machineHardwareRepository, networkHardwareRepository);
-        init();
-    }
+  @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+  public BluetoothBundleService(
+    MachineHardwareRepository machineHardwareRepository,
+    NetworkHardwareRepository networkHardwareRepository) {
+    super(machineHardwareRepository, networkHardwareRepository);
+    init();
+  }
 
-    @Override
-    public void updateBluetoothStatus(String status, String message) {
+  @Override
+  public void updateBluetoothStatus(String status, String message) {
 
-    }
+  }
 }

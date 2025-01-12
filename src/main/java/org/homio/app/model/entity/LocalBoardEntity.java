@@ -51,176 +51,176 @@ import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 @CreateSingleEntity
 @UISidebarChildren(icon = "fas fa-microchip", color = "#9C3866", allowCreateItem = false)
 public class LocalBoardEntity extends MicroControllerBaseEntity
-        implements EntityService<LocalBoardService>,
-        BaseFileSystemEntity<LocalFileSystemProvider> {
+  implements EntityService<LocalBoardService>,
+  BaseFileSystemEntity<LocalFileSystemProvider> {
 
-    public static LocalBoardEntity getEntity(Context context) {
-        return context.db().get(LocalBoardEntity.class, PRIMARY_DEVICE);
-    }
+  public static LocalBoardEntity getEntity(Context context) {
+    return context.db().get(LocalBoardEntity.class, PRIMARY_DEVICE);
+  }
 
-    @Override
-    public String getDefaultName() {
-        return "Local device";
-    }
+  @Override
+  public String getDefaultName() {
+    return "Local device";
+  }
 
-    @UIField(order = 200)
-    public @NotNull String getFileSystemRoot() {
-        return getJsonDataRequire("fs_root", CommonUtils.getRootPath().toString());
-    }
+  @UIField(order = 200)
+  public @NotNull String getFileSystemRoot() {
+    return getJsonDataRequire("fs_root", CommonUtils.getRootPath().toString());
+  }
 
-    public void setFileSystemRoot(String value) {
-        setJsonData("fs_root", value);
-    }
+  public void setFileSystemRoot(String value) {
+    setJsonData("fs_root", value);
+  }
 
-    @UIField(order = 250)
-    @UIFieldSlider(min = 1, max = 60)
-    public int getCpuFetchInterval() {
-        return getJsonData("cpu_interval", 10);
-    }
+  @UIField(order = 250)
+  @UIFieldSlider(min = 1, max = 60)
+  public int getCpuFetchInterval() {
+    return getJsonData("cpu_interval", 10);
+  }
 
-    public void setCpuFetchInterval(@Min(0) @Max(60) int value) {
-        setJsonData("cpu_interval", value);
-    }
+  public void setCpuFetchInterval(@Min(0) @Max(60) int value) {
+    setJsonData("cpu_interval", value);
+  }
 
-    @Override
-    public @NotNull String getFileSystemAlias() {
-        return "PRIMARY";
-    }
+  @Override
+  public @NotNull String getFileSystemAlias() {
+    return "PRIMARY";
+  }
 
-    @Override
-    public boolean isShowInFileManager() {
-        return true;
-    }
+  @Override
+  public boolean isShowInFileManager() {
+    return true;
+  }
 
-    @Override
-    public @NotNull Icon getFileSystemIcon() {
-        return new Icon("fas fa-computer", "#23819E");
-    }
+  @Override
+  public @NotNull Icon getFileSystemIcon() {
+    return new Icon("fas fa-computer", "#23819E");
+  }
 
-    @Override
-    public boolean requireConfigure() {
-        return false;
-    }
+  @Override
+  public boolean requireConfigure() {
+    return false;
+  }
 
-    @Override
-    public @NotNull LocalFileSystemProvider buildFileSystem(@NotNull Context context, int alias) {
-        return new LocalFileSystemProvider(this, alias);
-    }
+  @Override
+  public @NotNull LocalFileSystemProvider buildFileSystem(@NotNull Context context, int alias) {
+    return new LocalFileSystemProvider(this, alias);
+  }
 
-    @Override
-    public long getConnectionHashCode() {
-        return 0;
-    }
+  @Override
+  public long getConnectionHashCode() {
+    return 0;
+  }
 
-    @Override
-    public boolean isShowHiddenFiles() {
-        return true;
-    }
+  @Override
+  public boolean isShowHiddenFiles() {
+    return true;
+  }
 
-    @SneakyThrows
-    @UIContextMenuUploadAction(value = "UPLOAD_FONT", icon = "fas fa-font", supportedFormats = {".ttf"})
-    public ActionResponseModel uploadFont(JSONObject params) {
-        MultipartFile[] files = (MultipartFile[]) params.get("files");
-        for (MultipartFile file : files) {
-            String filename = file.getOriginalFilename();
-            if (filename != null && filename.endsWith(".ttf")) {
-                Path fonts = CommonUtils.createDirectoriesIfNotExists(CommonUtils.getConfigPath().resolve("fonts"));
-                file.transferTo(fonts.resolve(filename));
-            }
-        }
-        context().ui().dialog().reloadWindow("Apply new fonts", 5);
-        return ActionResponseModel.success();
+  @SneakyThrows
+  @UIContextMenuUploadAction(value = "UPLOAD_FONT", icon = "fas fa-font", supportedFormats = {".ttf"})
+  public ActionResponseModel uploadFont(JSONObject params) {
+    MultipartFile[] files = (MultipartFile[]) params.get("files");
+    for (MultipartFile file : files) {
+      String filename = file.getOriginalFilename();
+      if (filename != null && filename.endsWith(".ttf")) {
+        Path fonts = CommonUtils.createDirectoriesIfNotExists(CommonUtils.getConfigPath().resolve("fonts"));
+        file.transferTo(fonts.resolve(filename));
+      }
     }
+    context().ui().dialog().reloadWindow("Apply new fonts", 5);
+    return ActionResponseModel.success();
+  }
 
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public @NotNull Status getStatus() {
-        return Status.OFFLINE;
-    }
+  @Override
+  @JsonIgnore
+  @UIFieldIgnore
+  public @NotNull Status getStatus() {
+    return Status.OFFLINE;
+  }
 
-    @Override
-    public boolean isDisableDelete() {
-        return true;
-    }
+  @Override
+  public boolean isDisableDelete() {
+    return true;
+  }
 
-    @Override
-    public long getEntityServiceHashCode() {
-        return getJsonDataHashCode("cpu_interval", "fs_root");
-    }
+  @Override
+  public long getEntityServiceHashCode() {
+    return getJsonDataHashCode("cpu_interval", "fs_root");
+  }
 
-    @Override
-    public @NotNull Class<LocalBoardService> getEntityServiceItemClass() {
-        return LocalBoardService.class;
-    }
+  @Override
+  public @NotNull Class<LocalBoardService> getEntityServiceItemClass() {
+    return LocalBoardService.class;
+  }
 
-    @Override
-    public @Nullable LocalBoardService createService(@NotNull Context context) {
-        return new LocalBoardService(context, this);
-    }
+  @Override
+  public @Nullable LocalBoardService createService(@NotNull Context context) {
+    return new LocalBoardService(context, this);
+  }
 
-    @Override
-    protected @NotNull String getDevicePrefix() {
-        return "board";
-    }
+  @Override
+  protected @NotNull String getDevicePrefix() {
+    return "board";
+  }
 
-    @Override
-    public @NotNull Set<String> getSupportArchiveFormats() {
-        return Stream.of(ArchiveUtil.ArchiveFormat.values()).map(ArchiveFormat::getName).collect(Collectors.toSet());
-    }
+  @Override
+  public @NotNull Set<String> getSupportArchiveFormats() {
+    return Stream.of(ArchiveUtil.ArchiveFormat.values()).map(ArchiveFormat::getName).collect(Collectors.toSet());
+  }
 
-    @Override
-    public @NotNull List<TreeConfiguration> buildFileSystemConfiguration(@NotNull Context context) {
-        List<TreeConfiguration> configurations = BaseFileSystemEntity.super.buildFileSystemConfiguration(context);
-        for (DiskInfo usb : getService().getUsbDevices()) {
-            if (usb.getMount().isEmpty()) {
-                continue;
-            }
-            String label = Objects.toString(usb.getModel(), usb.getMount());
-            TreeConfiguration configuration = new TreeConfiguration(this, label, usb.alias, new Icon(usb.getIcon(), usb.getColor()));
-            try {
-                FileStore fileStore = Files.getFileStore(Path.of(usb.getMount()));
-                long totalSpace = fileStore.getTotalSpace();
-                long freeSpace = fileStore.getUsableSpace();
-                configuration.setSize(freeSpace, totalSpace);
-            } catch (IOException ignore) {
-            }
-            configurations.add(configuration);
-        }
-        return configurations;
+  @Override
+  public @NotNull List<TreeConfiguration> buildFileSystemConfiguration(@NotNull Context context) {
+    List<TreeConfiguration> configurations = BaseFileSystemEntity.super.buildFileSystemConfiguration(context);
+    for (DiskInfo usb : getService().getUsbDevices()) {
+      if (usb.getMount().isEmpty()) {
+        continue;
+      }
+      String label = Objects.toString(usb.getModel(), usb.getMount());
+      TreeConfiguration configuration = new TreeConfiguration(this, label, usb.alias, new Icon(usb.getIcon(), usb.getColor()));
+      try {
+        FileStore fileStore = Files.getFileStore(Path.of(usb.getMount()));
+        long totalSpace = fileStore.getTotalSpace();
+        long freeSpace = fileStore.getUsableSpace();
+        configuration.setSize(freeSpace, totalSpace);
+      } catch (IOException ignore) {
+      }
+      configurations.add(configuration);
     }
+    return configurations;
+  }
 
-    @Override
-    public String getAliasPath(int alias) {
-        DiskInfo info = getService().getUsbDevice(alias);
-        if (info != null) {
-            return info.getMount();
-        }
-        return BaseFileSystemEntity.super.getAliasPath(alias);
+  @Override
+  public String getAliasPath(int alias) {
+    DiskInfo info = getService().getUsbDevice(alias);
+    if (info != null) {
+      return info.getMount();
     }
+    return BaseFileSystemEntity.super.getAliasPath(alias);
+  }
 
-    @UIField(order = 900, type = UIFieldType.HTML, hideInEdit = true, hideOnEmpty = true)
-    public String getMounts() {
-        return optService().map(service -> {
-            StringBuilder html = new StringBuilder();
-            for (DiskInfo usbDevice : service.getUsbDevices()) {
-                html.append("<div><i class=\"fa-fw %s\" style=\"color: %s\"></i>%s - %s</div>".
-                        formatted(usbDevice.getIcon(), usbDevice.getColor(), usbDevice.getModel(),
-                                StringUtils.defaultIfEmpty(usbDevice.getMount(), "No mounted")));
-            }
-            return html.toString();
-        }).orElse(null);
-    }
+  @UIField(order = 900, type = UIFieldType.HTML, hideInEdit = true, hideOnEmpty = true)
+  public String getMounts() {
+    return optService().map(service -> {
+      StringBuilder html = new StringBuilder();
+      for (DiskInfo usbDevice : service.getUsbDevices()) {
+        html.append("<div><i class=\"fa-fw %s\" style=\"color: %s\"></i>%s - %s</div>".
+          formatted(usbDevice.getIcon(), usbDevice.getColor(), usbDevice.getModel(),
+            StringUtils.defaultIfEmpty(usbDevice.getMount(), "No mounted")));
+      }
+      return html.toString();
+    }).orElse(null);
+  }
 
-    @Override
-    public void assembleActions(UIInputBuilder uiInputBuilder) {
-        optService().ifPresent(service -> service.getUsbDevices().stream()
-                .filter(d -> d.getMount().isEmpty()).forEach(diskInfo -> {
-                    uiInputBuilder.addSelectableButton("mount_" + diskInfo.getUuid(),
-                            new Icon("fab fa-usb", "#215A6A"), (context, params) -> {
-                                service.getUsbListener().handleUsbDeviceAdded(diskInfo);
-                                return null;
-                            });
-                }));
-    }
+  @Override
+  public void assembleActions(UIInputBuilder uiInputBuilder) {
+    optService().ifPresent(service -> service.getUsbDevices().stream()
+      .filter(d -> d.getMount().isEmpty()).forEach(diskInfo -> {
+        uiInputBuilder.addSelectableButton("mount_" + diskInfo.getUuid(),
+          new Icon("fab fa-usb", "#215A6A"), (context, params) -> {
+            service.getUsbListener().handleUsbDeviceAdded(diskInfo);
+            return null;
+          });
+      }));
+  }
 }

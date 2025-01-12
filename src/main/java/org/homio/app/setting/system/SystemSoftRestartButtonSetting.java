@@ -21,61 +21,61 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 @Log4j2
 public class SystemSoftRestartButtonSetting
-        implements CoreSettingPlugin<JSONObject>, SettingPluginButton {
+  implements CoreSettingPlugin<JSONObject>, SettingPluginButton {
 
-    public static void restart(ContextImpl context) {
-        log.info("Fire homio app soft restarting...");
-        ConfigurableApplicationContext appContext = context.getBean(ConfigurableApplicationContext.class);
-        Thread thread = new Thread(() -> safeRestart(appContext));
-        thread.setDaemon(false);
-        thread.start();
-    }
+  public static void restart(ContextImpl context) {
+    log.info("Fire homio app soft restarting...");
+    ConfigurableApplicationContext appContext = context.getBean(ConfigurableApplicationContext.class);
+    Thread thread = new Thread(() -> safeRestart(appContext));
+    thread.setDaemon(false);
+    thread.start();
+  }
 
-    private static void safeRestart(ConfigurableApplicationContext context) {
-        try {
-            context.close();
-            new SpringApplicationBuilder(AppConfig.class).listeners(new LogService()).run();
-            log.info("Homio app context restarted");
-        } catch (Exception ex) {
-            log.info("Could not doRestart: {}", ex.getMessage());
-        }
+  private static void safeRestart(ConfigurableApplicationContext context) {
+    try {
+      context.close();
+      new SpringApplicationBuilder(AppConfig.class).listeners(new LogService()).run();
+      log.info("Homio app context restarted");
+    } catch (Exception ex) {
+      log.info("Could not doRestart: {}", ex.getMessage());
     }
+  }
 
-    @Override
-    public @NotNull GroupKey getGroupKey() {
-        return GroupKey.system;
-    }
+  @Override
+  public @NotNull GroupKey getGroupKey() {
+    return GroupKey.system;
+  }
 
-    @Override
-    public @NotNull Icon getIcon() {
-        return new Icon("fas fa-power-off");
-    }
+  @Override
+  public @NotNull Icon getIcon() {
+    return new Icon("fas fa-power-off");
+  }
 
-    @Override
-    public String getConfirmMsg() {
-        return "W.CONFIRM.SYS_RESTART";
-    }
+  @Override
+  public String getConfirmMsg() {
+    return "W.CONFIRM.SYS_RESTART";
+  }
 
-    @Override
-    public String getDialogColor() {
-        return Color.ERROR_DIALOG;
-    }
+  @Override
+  public String getDialogColor() {
+    return Color.ERROR_DIALOG;
+  }
 
-    @Override
-    public int order() {
-        return 200;
-    }
+  @Override
+  public int order() {
+    return 200;
+  }
 
-    @Override
-    public boolean isDisabled(Context context) {
-        return !SystemUtils.IS_OS_LINUX;
-    }
+  @Override
+  public boolean isDisabled(Context context) {
+    return !SystemUtils.IS_OS_LINUX;
+  }
 
-    @SneakyThrows
-    @Override
-    public void assertUserAccess(@NotNull Context context, @Nullable UserEntity user) {
-        UserGuestEntity.assertAction(context,
-                UserGuestEntity::getRestartDevice,
-                "User is not allowed to restart device");
-    }
+  @SneakyThrows
+  @Override
+  public void assertUserAccess(@NotNull Context context, @Nullable UserEntity user) {
+    UserGuestEntity.assertAction(context,
+      UserGuestEntity::getRestartDevice,
+      "User is not allowed to restart device");
+  }
 }

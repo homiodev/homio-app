@@ -24,44 +24,44 @@ import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 @RequiredArgsConstructor
 public class ImageService {
 
-    private final Context context;
-    private final AddonService addonService;
+  private final Context context;
+  private final AddonService addonService;
 
-    @SneakyThrows
-    public ImageResponse getImage(String entityID) {
-        Path filePath = CommonUtils.getImagePath().resolve(entityID);
-        if (!Files.exists(filePath)) {
-            LocalBoardEntity localBoardEntity = this.context.db().getRequire(LocalBoardEntity.class, PRIMARY_DEVICE);
-            filePath = Paths.get(localBoardEntity.getFileSystemRoot(), entityID);
-        }
-        if (Files.exists(filePath)) {
-            return new ImageResponse(
-                    Files.newInputStream(filePath),
-                    MediaType.parseMediaType(Files.probeContentType(filePath)));
-        }
-        InputStream stream = addonService.getImageStream(entityID);
-        if (stream != null) {
-            return new ImageResponse(stream, MediaType.IMAGE_PNG);
-        }
-        return null;
+  @SneakyThrows
+  public ImageResponse getImage(String entityID) {
+    Path filePath = CommonUtils.getImagePath().resolve(entityID);
+    if (!Files.exists(filePath)) {
+      LocalBoardEntity localBoardEntity = this.context.db().getRequire(LocalBoardEntity.class, PRIMARY_DEVICE);
+      filePath = Paths.get(localBoardEntity.getFileSystemRoot(), entityID);
     }
-
-    @SneakyThrows
-    public ImageResponse getAddonImage(String addonID, String imageID) {
-        AddonEntrypoint addonEntrypoint = addonService.getAddon(addonID);
-        InputStream stream = addonEntrypoint.getClass().getClassLoader().getResourceAsStream("images/" + imageID);
-        if (stream == null) {
-            URL image = addonEntrypoint.getResource(imageID);
-            if (image == null) {
-                throw new ServerException("Unable to find image <" + imageID + "> of addon: " + addonID)
-                        .setLog(false);
-            }
-            stream = image.openStream();
-        }
-        return new ImageResponse(stream, MediaType.IMAGE_PNG);
-
+    if (Files.exists(filePath)) {
+      return new ImageResponse(
+        Files.newInputStream(filePath),
+        MediaType.parseMediaType(Files.probeContentType(filePath)));
     }
-
-    public record ImageResponse(InputStream stream, MediaType mediaType) {
+    InputStream stream = addonService.getImageStream(entityID);
+    if (stream != null) {
+      return new ImageResponse(stream, MediaType.IMAGE_PNG);
     }
+    return null;
+  }
+
+  @SneakyThrows
+  public ImageResponse getAddonImage(String addonID, String imageID) {
+    AddonEntrypoint addonEntrypoint = addonService.getAddon(addonID);
+    InputStream stream = addonEntrypoint.getClass().getClassLoader().getResourceAsStream("images/" + imageID);
+    if (stream == null) {
+      URL image = addonEntrypoint.getResource(imageID);
+      if (image == null) {
+        throw new ServerException("Unable to find image <" + imageID + "> of addon: " + addonID)
+          .setLog(false);
+      }
+      stream = image.openStream();
+    }
+    return new ImageResponse(stream, MediaType.IMAGE_PNG);
+
+  }
+
+  public record ImageResponse(InputStream stream, MediaType mediaType) {
+  }
 }

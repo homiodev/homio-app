@@ -12,6 +12,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface UIFieldOptionColor {
 
-    // override default field prefix. Default field prefix - as field name that has this annotation
-    String value() default "";
+  // override default field prefix. Default field prefix - as field name that has this annotation
+  String value() default "";
 }

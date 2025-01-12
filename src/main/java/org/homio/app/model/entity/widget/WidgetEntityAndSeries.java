@@ -13,27 +13,27 @@ import java.util.Set;
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 public abstract class WidgetEntityAndSeries<T extends WidgetEntityAndSeries, S extends WidgetSeriesEntity<T>>
-        extends WidgetEntity<T> {
+  extends WidgetEntity<T> {
 
-    @Getter
-    @Setter
-    @OrderBy("priority asc")
-    @UIField(order = 30, hideInView = true)
-    @MaxItems(10)
-    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "widgetEntity", targetEntity = WidgetSeriesEntity.class)
-    private Set<S> series;
+  @Getter
+  @Setter
+  @OrderBy("priority asc")
+  @UIField(order = 30, hideInView = true)
+  @MaxItems(10)
+  @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "widgetEntity", targetEntity = WidgetSeriesEntity.class)
+  private Set<S> series;
 
-    @Override
-    public void validate() {
-        if (getWidgetTabEntity() == null) {
-            throw new ServerException("ERROR.WIDGET_NO_TAB");
-        }
+  @Override
+  public void validate() {
+    if (getWidgetTabEntity() == null) {
+      throw new ServerException("ERROR.WIDGET_NO_TAB");
     }
+  }
 
-    @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-        if (series == null || series.isEmpty()) {
-            fields.add("series");
-        }
+  @Override
+  protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+    if (series == null || series.isEmpty()) {
+      fields.add("series");
     }
+  }
 }

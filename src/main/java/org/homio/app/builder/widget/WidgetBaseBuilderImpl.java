@@ -19,92 +19,92 @@ import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 @Getter
 public class WidgetBaseBuilderImpl<T, W extends WidgetEntity> implements WidgetBaseBuilder<T> {
 
-    protected final W widget;
-    private final ContextImpl context;
+  protected final W widget;
+  private final ContextImpl context;
 
-    WidgetBaseBuilderImpl(W widget, ContextImpl context) {
-        this.widget = widget;
-        this.context = context;
-    }
+  WidgetBaseBuilderImpl(W widget, ContextImpl context) {
+    this.widget = widget;
+    this.context = context;
+  }
 
-    @Override
-    public @NotNull T setZIndex(int index) {
-        widget.setIndex(index);
-        return (T) this;
-    }
+  @Override
+  public @NotNull T setZIndex(int index) {
+    widget.setIndex(index);
+    return (T) this;
+  }
 
-    @Override
-    public @NotNull T setName(String name) {
-        widget.setName(name);
-        return (T) this;
-    }
+  @Override
+  public @NotNull T setName(String name) {
+    widget.setName(name);
+    return (T) this;
+  }
 
-    @Override
-    public @NotNull T setStyle(String... styles) {
-        widget.setStyle(String.join(LIST_DELIMITER, styles));
-        return (T) this;
-    }
+  @Override
+  public @NotNull T setStyle(String... styles) {
+    widget.setStyle(String.join(LIST_DELIMITER, styles));
+    return (T) this;
+  }
 
-    @Override
-    public @NotNull T setBackground(@Nullable String backgroundColor,
-                                    @Nullable Consumer<ThresholdBuilder> colorBuilder,
-                                    @Nullable Consumer<PulseBuilder> pulseBuilder) {
-        if (colorBuilder == null && pulseBuilder == null) {
-            widget.setBackground(backgroundColor);
-        } else {
-            ThresholdBuilderImpl builder = new ThresholdBuilderImpl(backgroundColor);
-            if (colorBuilder != null) {
-                colorBuilder.accept(builder);
-            }
-            if (pulseBuilder != null) {
-                pulseBuilder.accept(builder);
-            }
-            widget.setBackground(builder.build());
-        }
-        return (T) this;
+  @Override
+  public @NotNull T setBackground(@Nullable String backgroundColor,
+                                  @Nullable Consumer<ThresholdBuilder> colorBuilder,
+                                  @Nullable Consumer<PulseBuilder> pulseBuilder) {
+    if (colorBuilder == null && pulseBuilder == null) {
+      widget.setBackground(backgroundColor);
+    } else {
+      ThresholdBuilderImpl builder = new ThresholdBuilderImpl(backgroundColor);
+      if (colorBuilder != null) {
+        colorBuilder.accept(builder);
+      }
+      if (pulseBuilder != null) {
+        pulseBuilder.accept(builder);
+      }
+      widget.setBackground(builder.build());
     }
+    return (T) this;
+  }
 
-    @Override
-    public @NotNull T setBackground(String value) {
-        widget.setBackground(value);
-        return (T) this;
-    }
+  @Override
+  public @NotNull T setBackground(String value) {
+    widget.setBackground(value);
+    return (T) this;
+  }
 
-    @Override
-    public @NotNull T attachToTab(@NotNull String name) {
-        for (WidgetTabEntity widgetTabEntity : context.db().findAll(WidgetTabEntity.class)) {
-            if (Objects.equals(widgetTabEntity.getName(), name) ||
-                Objects.equals(widgetTabEntity.getEntityID(), name)) {
-                widget.setWidgetTabEntity(widgetTabEntity);
-                break;
-            }
-        }
-        return (T) this;
+  @Override
+  public @NotNull T attachToTab(@NotNull String name) {
+    for (WidgetTabEntity widgetTabEntity : context.db().findAll(WidgetTabEntity.class)) {
+      if (Objects.equals(widgetTabEntity.getName(), name) ||
+          Objects.equals(widgetTabEntity.getEntityID(), name)) {
+        widget.setWidgetTabEntity(widgetTabEntity);
+        break;
+      }
     }
+    return (T) this;
+  }
 
-    @Override
-    public @NotNull T attachToLayout(@NotNull String layoutEntityID, int rowNum, int columnNum) {
-        WidgetLayoutEntity entity = context.db().get(WidgetLayoutEntity.class, layoutEntityID);
-        if (entity == null) {
-            throw new IllegalArgumentException("Unable to find layout: " + layoutEntityID);
-        }
-        String[] items = entity.getLayout().split("x");
-        if (Integer.parseInt(items[1]) < rowNum + widget.getBh()) {
-            throw new IllegalArgumentException("Unable to put widget into layout. No height left");
-        }
-        if (Integer.parseInt(items[0]) < columnNum + widget.getBw()) {
-            throw new IllegalArgumentException("Unable to put widget into layout. No width left");
-        }
-        widget.setXb(columnNum);
-        widget.setYb(rowNum);
-        widget.setParent(entity.getEntityID());
-        return (T) this;
+  @Override
+  public @NotNull T attachToLayout(@NotNull String layoutEntityID, int rowNum, int columnNum) {
+    WidgetLayoutEntity entity = context.db().get(WidgetLayoutEntity.class, layoutEntityID);
+    if (entity == null) {
+      throw new IllegalArgumentException("Unable to find layout: " + layoutEntityID);
     }
+    String[] items = entity.getLayout().split("x");
+    if (Integer.parseInt(items[1]) < rowNum + widget.getBh()) {
+      throw new IllegalArgumentException("Unable to put widget into layout. No height left");
+    }
+    if (Integer.parseInt(items[0]) < columnNum + widget.getBw()) {
+      throw new IllegalArgumentException("Unable to put widget into layout. No width left");
+    }
+    widget.setXb(columnNum);
+    widget.setYb(rowNum);
+    widget.setParent(entity.getEntityID());
+    return (T) this;
+  }
 
-    @Override
-    public @NotNull T setBlockSize(int width, int height) {
-        widget.setBw(width);
-        widget.setBh(height);
-        return (T) this;
-    }
+  @Override
+  public @NotNull T setBlockSize(int width, int height) {
+    widget.setBw(width);
+    widget.setBh(height);
+    return (T) this;
+  }
 }

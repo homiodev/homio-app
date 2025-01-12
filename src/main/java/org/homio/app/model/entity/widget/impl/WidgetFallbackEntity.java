@@ -15,23 +15,23 @@ import java.util.Set;
 @UISidebarChildren(icon = "", color = "", allowCreateItem = false)
 public class WidgetFallbackEntity extends WidgetEntity<WidgetFallbackEntity> {
 
-    @Override
-    public String getDefaultName() {
-        return "Unknown discriminator";
-    }
+  @Override
+  public String getDefaultName() {
+    return "Unknown discriminator";
+  }
 
-    @Override
-    protected @NotNull String getWidgetPrefix() {
-        return "fallback";
-    }
+  @Override
+  protected @NotNull String getWidgetPrefix() {
+    return "fallback";
+  }
 
-    @Override
-    public @NotNull String getImage() {
-        return "fas fa-question";
-    }
+  @Override
+  public @NotNull String getImage() {
+    return "fas fa-question";
+  }
 
-    @Override
-    public boolean isVisible() {
-        return false;
-    }
+  @Override
+  public boolean isVisible() {
+    return false;
+  }
 }

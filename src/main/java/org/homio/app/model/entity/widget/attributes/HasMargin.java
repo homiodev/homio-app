@@ -8,15 +8,15 @@ import org.homio.app.model.entity.widget.UIFieldPadding;
 
 public interface HasMargin extends HasJsonData {
 
-    @UIField(order = 10)
-    @UIFieldPadding
-    @UIFieldGroup("GENERAL")
-    @UIFieldTab("UI")
-    default String getMargin() {
-        return getJsonData("margin", "{}");
-    }
+  @UIField(order = 10)
+  @UIFieldPadding
+  @UIFieldGroup("GENERAL")
+  @UIFieldTab("UI")
+  default String getMargin() {
+    return getJsonData("margin", "{}");
+  }
 
-    default void setMargin(String value) {
-        setJsonData("margin", value);
-    }
+  default void setMargin(String value) {
+    setJsonData("margin", value);
+  }
 }

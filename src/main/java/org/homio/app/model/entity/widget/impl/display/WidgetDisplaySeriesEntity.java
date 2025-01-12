@@ -9,42 +9,42 @@ import java.util.List;
 
 @Entity
 public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayEntity>
-        implements HasSingleValueDataSource, HasIcon, HasValueTemplate,
-        HasName, HasValueConverter {
+  implements HasSingleValueDataSource, HasIcon, HasValueTemplate,
+  HasName, HasValueConverter {
 
-    @UIField(order = 1)
-    @UIFieldGroup("UI")
-    @UIFieldColorPicker(allowThreshold = true)
-    public String getBackground() {
-        return getJsonData("bg", "transparent");
-    }
+  @UIField(order = 1)
+  @UIFieldGroup("UI")
+  @UIFieldColorPicker(allowThreshold = true)
+  public String getBackground() {
+    return getJsonData("bg", "transparent");
+  }
 
-    public void setBackground(String value) {
-        setJsonData("bg", value);
-    }
+  public void setBackground(String value) {
+    setJsonData("bg", value);
+  }
 
-    @Override
-    public String getDefaultName() {
-        return null;
-    }
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
 
-    @Override
-    protected String getSeriesPrefix() {
-        return "display";
-    }
+  @Override
+  protected String getSeriesPrefix() {
+    return "display";
+  }
 
-    @Override
-    public void beforePersist() {
-        HasIcon.randomColor(this);
-    }
+  @Override
+  public void beforePersist() {
+    HasIcon.randomColor(this);
+  }
 
-    @UIField(order = 500, type = UIFieldType.Chips)
-    @UIFieldGroup("UI")
-    public List<String> getStyle() {
-        return getJsonDataList("style");
-    }
+  @UIField(order = 500, type = UIFieldType.Chips)
+  @UIFieldGroup("UI")
+  public List<String> getStyle() {
+    return getJsonDataList("style");
+  }
 
-    public void setStyle(String value) {
-        setJsonData("style", value);
-    }
+  public void setStyle(String value) {
+    setJsonData("style", value);
+  }
 }

@@ -7,21 +7,21 @@ import org.homio.app.model.entity.widget.impl.simple.WidgetSimpleValueEntity;
 import org.jetbrains.annotations.NotNull;
 
 public class SimpleValueBuilderImpl extends WidgetBaseBuilderImpl<SimpleValueWidgetBuilder, WidgetSimpleValueEntity>
-        implements SimpleValueWidgetBuilder,
-        HasActionOnClickBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder>,
-        HasValueConverterBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder>,
-        HasMarginBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder>,
-        HasAlignBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder>,
-        HasIconColorThresholdBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder>,
-        HasValueTemplateBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder> {
+  implements SimpleValueWidgetBuilder,
+  HasActionOnClickBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder>,
+  HasValueConverterBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder>,
+  HasMarginBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder>,
+  HasAlignBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder>,
+  HasIconColorThresholdBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder>,
+  HasValueTemplateBuilder<WidgetSimpleValueEntity, SimpleValueWidgetBuilder> {
 
-    SimpleValueBuilderImpl(WidgetSimpleValueEntity widget, ContextImpl context) {
-        super(widget, context);
-    }
+  SimpleValueBuilderImpl(WidgetSimpleValueEntity widget, ContextImpl context) {
+    super(widget, context);
+  }
 
-    @Override
-    public @NotNull SimpleValueWidgetBuilder setValueDataSource(String value) {
-        widget.setValueDataSource(value);
-        return this;
-    }
+  @Override
+  public @NotNull SimpleValueWidgetBuilder setValueDataSource(String value) {
+    widget.setValueDataSource(value);
+    return this;
+  }
 }

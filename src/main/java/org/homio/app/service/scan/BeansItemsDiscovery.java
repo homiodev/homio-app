@@ -13,20 +13,20 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BeansItemsDiscovery extends BaseItemsDiscovery {
 
-    private final Class<? extends ItemDiscoverySupport> declaredBeanClass;
+  private final Class<? extends ItemDiscoverySupport> declaredBeanClass;
 
-    @Override
-    protected List<DevicesScanner> getScanners(Context context) {
-        List<DevicesScanner> list = new ArrayList<>();
-        for (ItemDiscoverySupport bean : context.getBeansOfType(declaredBeanClass)) {
-            DevicesScanner devicesScanner = new DevicesScanner(bean.getName(), bean::scan);
-            list.add(devicesScanner);
-        }
-        return list;
+  @Override
+  protected List<DevicesScanner> getScanners(Context context) {
+    List<DevicesScanner> list = new ArrayList<>();
+    for (ItemDiscoverySupport bean : context.getBeansOfType(declaredBeanClass)) {
+      DevicesScanner devicesScanner = new DevicesScanner(bean.getName(), bean::scan);
+      list.add(devicesScanner);
     }
+    return list;
+  }
 
-    @Override
-    protected String getBatchName() {
-        return declaredBeanClass.getSimpleName();
-    }
+  @Override
+  protected String getBatchName() {
+    return declaredBeanClass.getSimpleName();
+  }
 }

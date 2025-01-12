@@ -10,41 +10,41 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetLayoutEntity extends WidgetEntity<WidgetLayoutEntity>
-        implements HasLayout {
+  implements HasLayout {
 
-    @Override
-    public @NotNull String getImage() {
-        return "fas fa-layer-group";
-    }
+  public WidgetLayoutEntity() {
+    setBw(2);
+    setIndex(15);
+  }
 
-    @Override
-    protected @NotNull String getWidgetPrefix() {
-        return "layout";
-    }
+  @Override
+  public @NotNull String getImage() {
+    return "fas fa-layer-group";
+  }
 
-    @UIField(order = 35, showInContextMenu = true, icon = "fas fa-table")
-    @UIFieldTableLayout(maxRows = 30, maxColumns = 15)
-    @UIFieldDisableEditOnCondition("return context.get('hasChildren')")
-    public String getLayout() {
-        return getJsonData("layout", "2x2");
-    }
+  @Override
+  protected @NotNull String getWidgetPrefix() {
+    return "layout";
+  }
 
-    @Override
-    public String getDefaultName() {
-        return null;
-    }
+  @UIField(order = 35, showInContextMenu = true, icon = "fas fa-table")
+  @UIFieldTableLayout(maxRows = 30, maxColumns = 15)
+  @UIFieldDisableEditOnCondition("return context.get('hasChildren')")
+  public String getLayout() {
+    return getJsonData("layout", "2x2");
+  }
 
-    @Override
-    public void afterDelete() {
-        for (WidgetEntity entity : context().db().findAll(WidgetEntity.class)) {
-            if (getEntityID().equals(entity.getParent())) {
-                context().db().delete(entity);
-            }
-        }
-    }
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
 
-    public WidgetLayoutEntity() {
-        setBw(2);
-        setIndex(15);
+  @Override
+  public void afterDelete() {
+    for (WidgetEntity entity : context().db().findAll(WidgetEntity.class)) {
+      if (getEntityID().equals(entity.getParent())) {
+        context().db().delete(entity);
+      }
     }
+  }
 }

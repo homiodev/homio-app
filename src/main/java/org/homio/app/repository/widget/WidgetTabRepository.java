@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class WidgetTabRepository extends AbstractRepository<WidgetTabEntity> {
 
-    public WidgetTabRepository() {
-        super(WidgetTabEntity.class);
-    }
+  public WidgetTabRepository() {
+    super(WidgetTabEntity.class);
+  }
 }

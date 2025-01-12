@@ -14,12 +14,12 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetDoughnutChartEntity
-        extends ChartBaseEntity<WidgetDoughnutChartEntity, WidgetDoughnutChartSeriesEntity>
-        implements HasSingleValueDataSource, HasChartTimePeriod, HasValueConverter, HasValueTemplate {
+  extends ChartBaseEntity<WidgetDoughnutChartEntity, WidgetDoughnutChartSeriesEntity>
+  implements HasSingleValueDataSource, HasChartTimePeriod, HasValueConverter, HasValueTemplate {
 
-    //   @UIField(order = 3)
+  //   @UIField(order = 3)
 
-    // TODO:??????????/
+  // TODO:??????????/
     /*public double getValueFontSize() {
         return getJsonData("vfs", 18);
     }*/
@@ -28,47 +28,47 @@ public class WidgetDoughnutChartEntity
         setJsonData("vfs", value);
     }*/
 
-    @UIField(order = 4)
-    @UIFieldGroup("VALUE")
-    @UIFieldColorPicker(allowThreshold = true)
-    public String getValueColor() {
-        return getJsonData("vc", UI.Color.WHITE);
-    }
+  @UIField(order = 4)
+  @UIFieldGroup("VALUE")
+  @UIFieldColorPicker(allowThreshold = true)
+  public String getValueColor() {
+    return getJsonData("vc", UI.Color.WHITE);
+  }
 
-    public void setValueColor(String value) {
-        setJsonData("vc", value);
-    }
+  public void setValueColor(String value) {
+    setJsonData("vc", value);
+  }
 
-    @UIField(order = 52)
-    @UIFieldSlider(min = 1, max = 4)
-    public int getBorderWidth() {
-        return getJsonData("bw", 1);
-    }
+  @UIField(order = 52)
+  @UIFieldSlider(min = 1, max = 4)
+  public int getBorderWidth() {
+    return getJsonData("bw", 1);
+  }
 
-    public WidgetDoughnutChartEntity setBorderWidth(int value) {
-        setJsonData("bw", value);
-        return this;
-    }
+  public WidgetDoughnutChartEntity setBorderWidth(int value) {
+    setJsonData("bw", value);
+    return this;
+  }
 
-    @Override
-    public @NotNull String getImage() {
-        return "fas fa-circle-dot";
-    }
+  @Override
+  public @NotNull String getImage() {
+    return "fas fa-circle-dot";
+  }
 
-    @Override
-    protected @NotNull String getWidgetPrefix() {
-        return "doughnut";
-    }
+  @Override
+  protected @NotNull String getWidgetPrefix() {
+    return "doughnut";
+  }
 
-    @Override
-    public String getDefaultName() {
-        return null;
-    }
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
 
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public boolean getShowChartFullScreenButton() {
-        throw new NotImplementedException();
-    }
+  @Override
+  @JsonIgnore
+  @UIFieldIgnore
+  public boolean getShowChartFullScreenButton() {
+    throw new NotImplementedException();
+  }
 }

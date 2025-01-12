@@ -18,148 +18,148 @@ import java.util.Set;
 @SuppressWarnings("unused")
 @Entity
 public class WidgetFMEntity extends WidgetEntity<WidgetFMEntity>
-        implements
-        HasDynamicContextMenuActions,
-        HasLayout,
-        HasSingleValueDataSource {
+  implements
+  HasDynamicContextMenuActions,
+  HasLayout,
+  HasSingleValueDataSource {
 
-    @Override
-    protected @NotNull String getWidgetPrefix() {
-        return "fm";
-    }
+  public WidgetFMEntity() {
+    setBw(3);
+    setBh(3);
+  }
 
-    @Override
-    public WidgetGroup getGroup() {
-        return WidgetGroup.Media;
-    }
+  @Override
+  protected @NotNull String getWidgetPrefix() {
+    return "fm";
+  }
 
-    @Override
-    public @NotNull String getImage() {
-        return "fas fa-folder-tree";
-    }
+  @Override
+  public WidgetGroup getGroup() {
+    return WidgetGroup.Media;
+  }
 
-    @Override
-    public String getDefaultName() {
-        return null;
-    }
+  @Override
+  public @NotNull String getImage() {
+    return "fas fa-folder-tree";
+  }
 
-    @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-        if (getValueDataSource().isEmpty()) {
-            fields.add("valueDataSource");
-        }
-    }
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
 
-    @UIField(order = 26)
-    @UIFieldSlider(min = 0, max = 10)
-    public int getInnerMargin() {
-        return getJsonData("mg", 1);
+  @Override
+  protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
+    if (getValueDataSource().isEmpty()) {
+      fields.add("valueDataSource");
     }
+  }
 
-    public WidgetFMEntity setInnerMargin(int value) {
-        setJsonData("mg", value);
-        return this;
-    }
+  @UIField(order = 26)
+  @UIFieldSlider(min = 0, max = 10)
+  public int getInnerMargin() {
+    return getJsonData("mg", 1);
+  }
 
-    @Override
-    @UIField(order = 35, showInContextMenu = true, icon = "fas fa-table")
-    @UIFieldTableLayout
-    public String getLayout() {
-        return getJsonData("layout", "2x2");
-    }
+  public WidgetFMEntity setInnerMargin(int value) {
+    setJsonData("mg", value);
+    return this;
+  }
 
-    @UIField(order = 40, showInContextMenu = true, icon = "fas fa-clock")
-    @UIFieldSlider(min = 0, max = 600)
-    public int getAutoRefreshTimeout() {
-        return getJsonData("art", 0);
-    }
+  @Override
+  @UIField(order = 35, showInContextMenu = true, icon = "fas fa-table")
+  @UIFieldTableLayout
+  public String getLayout() {
+    return getJsonData("layout", "2x2");
+  }
 
-    public WidgetFMEntity setAutoRefreshTimeout(int value) {
-        setJsonData("art", value);
-        return this;
-    }
+  @UIField(order = 40, showInContextMenu = true, icon = "fas fa-clock")
+  @UIFieldSlider(min = 0, max = 600)
+  public int getAutoRefreshTimeout() {
+    return getJsonData("art", 0);
+  }
 
-    @UIField(order = 50, showInContextMenu = true, icon = "fas fa-eye")
-    @UIFieldGroup("UI")
-    public boolean getShowFileName() {
-        return getJsonData("sfn", true);
-    }
+  public WidgetFMEntity setAutoRefreshTimeout(int value) {
+    setJsonData("art", value);
+    return this;
+  }
 
-    public WidgetFMEntity setShowFileName(boolean value) {
-        setJsonData("sfn", value);
-        return this;
-    }
+  @UIField(order = 50, showInContextMenu = true, icon = "fas fa-eye")
+  @UIFieldGroup("UI")
+  public boolean getShowFileName() {
+    return getJsonData("sfn", true);
+  }
 
-    @UIField(order = 55)
-    @UIFieldGroup("UI")
-    public boolean getDrawTextAsThumbnail() {
-        return getJsonData("dtat", false);
-    }
+  public WidgetFMEntity setShowFileName(boolean value) {
+    setJsonData("sfn", value);
+    return this;
+  }
 
-    public void setDrawTextAsThumbnail(boolean value) {
-        setJsonData("dtat", value);
-    }
+  @UIField(order = 55)
+  @UIFieldGroup("UI")
+  public boolean getDrawTextAsThumbnail() {
+    return getJsonData("dtat", false);
+  }
 
-    @UIField(order = 56, showInContextMenu = true, icon = "fas fa-eye")
-    @UIFieldGroup("UI")
-    public boolean getShowFileCount() {
-        return getJsonData("sfc", true);
-    }
+  public void setDrawTextAsThumbnail(boolean value) {
+    setJsonData("dtat", value);
+  }
 
-    public WidgetFMEntity setShowFileCount(boolean value) {
-        setJsonData("sfc", value);
-        return this;
-    }
+  @UIField(order = 56, showInContextMenu = true, icon = "fas fa-eye")
+  @UIFieldGroup("UI")
+  public boolean getShowFileCount() {
+    return getJsonData("sfc", true);
+  }
 
-    @Override
-    @UIField(order = 14, required = true)
-    @UIFieldTreeNodeSelection(
-            allowSelectDirs = true,
-            allowSelectFiles = false,
-            iconColor = "#14A669")
-    @UIFieldIgnoreParent
-    public String getValueDataSource() {
-        return HasSingleValueDataSource.super.getValueDataSource();
-    }
+  public WidgetFMEntity setShowFileCount(boolean value) {
+    setJsonData("sfc", value);
+    return this;
+  }
 
-    @UIField(order = 1)
-    @UIFieldGroup(value = "FILTER", order = 100, borderColor = "#C1C436")
-    public boolean getShowDirectories() {
-        return getJsonData("sd", false);
-    }
+  @Override
+  @UIField(order = 14, required = true)
+  @UIFieldTreeNodeSelection(
+    allowSelectDirs = true,
+    allowSelectFiles = false,
+    iconColor = "#14A669")
+  @UIFieldIgnoreParent
+  public String getValueDataSource() {
+    return HasSingleValueDataSource.super.getValueDataSource();
+  }
 
-    public void setShowDirectories(boolean value) {
-        setJsonData("sd", value);
-    }
+  @UIField(order = 1)
+  @UIFieldGroup(value = "FILTER", order = 100, borderColor = "#C1C436")
+  public boolean getShowDirectories() {
+    return getJsonData("sd", false);
+  }
 
-    @UIField(order = 2, type = UIFieldType.Chips)
-    @UIFieldGroup("FILTER")
-    public List<String> getFileFilters() {
-        return getJsonDataList("flt");
-    }
+  public void setShowDirectories(boolean value) {
+    setJsonData("sd", value);
+  }
 
-    public void setFileFilters(String value) {
-        setJsonData("flt", value);
-    }
+  @UIField(order = 2, type = UIFieldType.Chips)
+  @UIFieldGroup("FILTER")
+  public List<String> getFileFilters() {
+    return getJsonDataList("flt");
+  }
 
-    @Override
-    public void assembleActions(UIInputBuilder uiInputBuilder) {
-        uiInputBuilder.addTableLayoutButton("LAYOUT", 8, 8, getLayout(), null,
-                (context, params) -> {
-                    this.setLayout(params.getString("value"));
-                    context.db().save(this);
-                    return ActionResponseModel.showSuccess("SUCCESS");
-                },
-                0);
-    }
+  public void setFileFilters(String value) {
+    setJsonData("flt", value);
+  }
 
-    public WidgetFMEntity() {
-        setBw(3);
-        setBh(3);
-    }
+  @Override
+  public void assembleActions(UIInputBuilder uiInputBuilder) {
+    uiInputBuilder.addTableLayoutButton("LAYOUT", 8, 8, getLayout(), null,
+      (context, params) -> {
+        this.setLayout(params.getString("value"));
+        context.db().save(this);
+        return ActionResponseModel.showSuccess("SUCCESS");
+      },
+      0);
+  }
 
-    @Override
-    public void beforePersist() {
-        setOverflow(Overflow.hidden);
-    }
+  @Override
+  public void beforePersist() {
+    setOverflow(Overflow.hidden);
+  }
 }

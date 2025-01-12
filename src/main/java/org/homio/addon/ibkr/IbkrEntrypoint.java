@@ -13,13 +13,13 @@ import java.net.URL;
 @RequiredArgsConstructor
 public class IbkrEntrypoint implements AddonEntrypoint {
 
-    @SneakyThrows
-    public void init() {
+  @SneakyThrows
+  public void init() {
 
-    }
+  }
 
-    @Override
-    public URL getAddonImageURL() {
-        return getResource("images/ibkr.png");
-    }
+  @Override
+  public URL getAddonImageURL() {
+    return getResource("images/ibkr.png");
+  }
 }

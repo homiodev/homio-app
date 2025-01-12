@@ -7,8 +7,8 @@ import org.homio.api.Context;
  */
 public interface ContextRefreshed {
 
-    /**
-     * Fires every time when new addon has been added to context or removed. Also fires at app startup after postConstruct()
-     */
-    void onContextRefresh(Context context) throws Exception;
+  /**
+   * Fires every time when new addon has been added to context or removed. Also fires at app startup after postConstruct()
+   */
+  void onContextRefresh(Context context) throws Exception;
 }

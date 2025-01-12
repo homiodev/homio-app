@@ -8,32 +8,32 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetSimpleValueEntity extends WidgetEntity<WidgetSimpleValueEntity>
-        implements
-        HasIcon,
-        HasActionOnClick,
-        HasSingleValueDataSource,
-        HasValueTemplate,
-        HasMargin,
-        HasAlign,
-        HasValueConverter {
+  implements
+  HasIcon,
+  HasActionOnClick,
+  HasSingleValueDataSource,
+  HasValueTemplate,
+  HasMargin,
+  HasAlign,
+  HasValueConverter {
 
-    @Override
-    public WidgetGroup getGroup() {
-        return WidgetGroup.Simple;
-    }
+  @Override
+  public WidgetGroup getGroup() {
+    return WidgetGroup.Simple;
+  }
 
-    @Override
-    public @NotNull String getImage() {
-        return "fab fa-pix";
-    }
+  @Override
+  public @NotNull String getImage() {
+    return "fab fa-pix";
+  }
 
-    @Override
-    protected @NotNull String getWidgetPrefix() {
-        return "sim-val";
-    }
+  @Override
+  protected @NotNull String getWidgetPrefix() {
+    return "sim-val";
+  }
 
-    @Override
-    public String getDefaultName() {
-        return null;
-    }
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
 }

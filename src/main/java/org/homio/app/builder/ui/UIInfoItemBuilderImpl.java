@@ -12,25 +12,25 @@ import org.jetbrains.annotations.Nullable;
 @Setter
 @Accessors(chain = true)
 public class UIInfoItemBuilderImpl extends UIBaseEntityItemBuilderImpl<UIInfoItemBuilder, String>
-        implements UIInfoItemBuilder {
+  implements UIInfoItemBuilder {
 
-    private final InfoType infoType;
-    private String link;
-    private String linkType;
-    private int height;
+  private final InfoType infoType;
+  private String link;
+  private String linkType;
+  private int height;
 
-    public UIInfoItemBuilderImpl(String entityID, int order, String value, UIInfoItemBuilder.InfoType infoType) {
-        super(UIItemType.Text, entityID, order, null);
-        this.infoType = infoType;
-        setValue(value);
+  public UIInfoItemBuilderImpl(String entityID, int order, String value, UIInfoItemBuilder.InfoType infoType) {
+    super(UIItemType.Text, entityID, order, null);
+    this.infoType = infoType;
+    setValue(value);
+  }
+
+  @Override
+  public UIInfoItemBuilder linkToEntity(@Nullable BaseEntity entity) {
+    if (entity != null) {
+      link = entity.getEntityID();
+      linkType = UIFieldUtils.getClassEntityNavLink(getEntityID(), entity.getClass());
     }
-
-    @Override
-    public UIInfoItemBuilder linkToEntity(@Nullable BaseEntity entity) {
-        if (entity != null) {
-            link = entity.getEntityID();
-            linkType = UIFieldUtils.getClassEntityNavLink(getEntityID(), entity.getClass());
-        }
-        return this;
-    }
+    return this;
+  }
 }

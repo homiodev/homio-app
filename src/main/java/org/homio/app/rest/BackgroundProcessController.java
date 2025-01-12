@@ -15,19 +15,19 @@ import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
 @RequiredArgsConstructor
 public class BackgroundProcessController {
 
-    private final ContextImpl context;
+  private final ContextImpl context;
 
-    @DeleteMapping("/{name}")
-    @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
-    public void cancelProcess(@PathVariable("name") String name) {
-        context.bgp().cancelThread(name);
-        context.ui().progress().cancel(name);
-    }
+  @DeleteMapping("/{name}")
+  @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
+  public void cancelProcess(@PathVariable("name") String name) {
+    context.bgp().cancelThread(name);
+    context.ui().progress().cancel(name);
+  }
 
-    @GetMapping
-    public BgpProcessResponse getProcesses() {
-        return context.bgp().getProcesses();
-    }
+  @GetMapping
+  public BgpProcessResponse getProcesses() {
+    return context.bgp().getProcesses();
+  }
 
     /* @GetMapping("/dynamic/stop/{url}")
     public void stopScriptByName(@PathVariable String url) {

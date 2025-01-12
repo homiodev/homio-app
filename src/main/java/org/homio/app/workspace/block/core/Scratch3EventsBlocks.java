@@ -12,32 +12,32 @@ import org.springframework.stereotype.Component;
 @Component
 public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
 
-    public Scratch3EventsBlocks(Context context) {
-        super("event", context);
+  public Scratch3EventsBlocks(Context context) {
+    super("event", context);
 
-        blockHat("gotbroadcast", this::receiveEventHandler);
-        blockCommand("broadcast", this::broadcastEventHandler);
-    }
+    blockHat("gotbroadcast", this::receiveEventHandler);
+    blockCommand("broadcast", this::broadcastEventHandler);
+  }
 
-    public void fireBroadcastEvent(String broadcastRefEntityID) {
-        context.var().set(broadcastRefEntityID, "event");
-    }
+  public void fireBroadcastEvent(String broadcastRefEntityID) {
+    context.var().set(broadcastRefEntityID, "event");
+  }
 
-    private void broadcastEventHandler(WorkspaceBlock workspaceBlock) {
-        fireBroadcastEvent(workspaceBlock.getInputString("BROADCAST_INPUT"));
-    }
+  private void broadcastEventHandler(WorkspaceBlock workspaceBlock) {
+    fireBroadcastEvent(workspaceBlock.getInputString("BROADCAST_INPUT"));
+  }
 
-    @SneakyThrows
-    private void receiveEventHandler(WorkspaceBlock workspaceBlock) {
-        workspaceBlock.handleNext(
-                next -> {
-                    String broadcastRefEntityID = workspaceBlock.getFieldId("BROADCAST_OPTION");
-                    Lock lock =
-                            workspaceBlock
-                                    .getLockManager()
-                                    .getLock(workspaceBlock, broadcastRefEntityID);
+  @SneakyThrows
+  private void receiveEventHandler(WorkspaceBlock workspaceBlock) {
+    workspaceBlock.handleNext(
+      next -> {
+        String broadcastRefEntityID = workspaceBlock.getFieldId("BROADCAST_OPTION");
+        Lock lock =
+          workspaceBlock
+            .getLockManager()
+            .getLock(workspaceBlock, broadcastRefEntityID);
 
-                    workspaceBlock.subscribeToLock(lock, next::handle);
-                });
-    }
+        workspaceBlock.subscribeToLock(lock, next::handle);
+      });
+  }
 }

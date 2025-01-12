@@ -1,4 +1,4 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <artifactId>homio-app</artifactId>
     <modelVersion>4.0.0</modelVersion>
@@ -16,6 +16,8 @@
         <homio-api.version>1.3.2</homio-api.version>
         <homio-primary-addons.version>1.3.2</homio-primary-addons.version>
         <start-class>org.homio.app.HomioApplication</start-class>
+        <!-- Do not use 5.2  reports wire version 6, but this version of the driver requires at least 7 (MongoDB 3.6)-->
+        <mongodb.version>5.1.3</mongodb.version>
     </properties>
 
     <build>

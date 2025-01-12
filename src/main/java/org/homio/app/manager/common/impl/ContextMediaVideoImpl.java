@@ -22,16 +22,14 @@ import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION
 @RequiredArgsConstructor
 public class ContextMediaVideoImpl implements ContextMediaVideo {
 
+  public static final Map<String, Integer> webRTCProviders = new HashMap<>();
+  public static final Map<String, Integer> hlsProviders = new HashMap<>();
   @Getter
   private final Map<String, VideoPlayer> videoPlayers = new HashMap<>();
   @Getter
   @Accessors(fluent = true)
   private final Context context;
   private final FfmpegHardwareRepository repo;
-
-  public static final Map<String, Integer> webRTCProviders = new HashMap<>();
-  public static final Map<String, Integer> hlsProviders = new HashMap<>();
-
   private final Map<String, ContextMediaVideo.RegisterVideoSourceListener> registerVideoSourceListeners = new HashMap<>();
   private final Map<String, ContextMediaVideo.VideoSourceInfoListener> registerVideoSourceInfoListeners = new HashMap<>();
 

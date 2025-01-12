@@ -14,24 +14,24 @@ import java.util.List;
 
 public abstract class FileRequireThumbnailer implements Thumbnailer {
 
-    public static Logger log = LogManager.getLogger(FileRequireThumbnailer.class);
+  public static Logger log = LogManager.getLogger(FileRequireThumbnailer.class);
 
-    @Override
-    public final List<BufferedImage> getThumbnails(File input, List<Dimensions> dimensions) {
-        return List.of(getThumbnail(input, dimensions.iterator().next()));
-    }
+  @Override
+  public final List<BufferedImage> getThumbnails(File input, List<Dimensions> dimensions) {
+    return List.of(getThumbnail(input, dimensions.iterator().next()));
+  }
 
-    @SneakyThrows
-    protected BufferedImage getThumbnail(File input, Dimensions dimensions) {
-        return getThumbnail(new FileInputStream(input), dimensions);
-    }
+  @SneakyThrows
+  protected BufferedImage getThumbnail(File input, Dimensions dimensions) {
+    return getThumbnail(new FileInputStream(input), dimensions);
+  }
 
-    @Override
-    public final List<BufferedImage> getThumbnails(InputStream inputStream, List<Dimensions> dimensions) {
-        return List.of(getThumbnail(inputStream, dimensions.iterator().next()));
-    }
+  @Override
+  public final List<BufferedImage> getThumbnails(InputStream inputStream, List<Dimensions> dimensions) {
+    return List.of(getThumbnail(inputStream, dimensions.iterator().next()));
+  }
 
-    protected BufferedImage getThumbnail(InputStream inputStream, Dimensions dimensions) {
-        throw new IllegalStateException("Unable to evaluate tag image from input stream");
-    }
+  protected BufferedImage getThumbnail(InputStream inputStream, Dimensions dimensions) {
+    throw new IllegalStateException("Unable to evaluate tag image from input stream");
+  }
 }

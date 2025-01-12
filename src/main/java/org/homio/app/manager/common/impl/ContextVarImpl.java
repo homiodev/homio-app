@@ -77,6 +77,18 @@ public class ContextVarImpl implements ContextVar {
   private final VariableBackupRepository variableBackupRepository;
   private final ReentrantLock createContextLock = new ReentrantLock();
 
+  public static @NotNull String buildDataSource(WorkspaceVariable variable) {
+    List<String> items = new ArrayList<>();
+    WorkspaceGroup group = variable.getWorkspaceGroup();
+    if (group.getParent() != null) {
+      items.add(group.getParent().getEntityID());
+    }
+    items.add(group.getEntityID());
+    items.add(variable.getEntityID());
+
+    return String.join("-->", items);
+  }
+
   public void onContextCreated() {
     context.var().createGroup(GROUP_HARDWARE, "Hardware", group ->
       group.setIcon(new Icon("fas fa-server", "#2662a3")).setLocked(true));
@@ -295,18 +307,6 @@ public class ContextVarImpl implements ContextVar {
   public @NotNull String buildDataSource(@NotNull String variableId) {
     WorkspaceVariable variable = context.db().getRequire(variableId);
     return buildDataSource(variable);
-  }
-
-  public static @NotNull String buildDataSource(WorkspaceVariable variable) {
-    List<String> items = new ArrayList<>();
-    WorkspaceGroup group = variable.getWorkspaceGroup();
-    if (group.getParent() != null) {
-      items.add(group.getParent().getEntityID());
-    }
-    items.add(group.getEntityID());
-    items.add(variable.getEntityID());
-
-    return String.join("-->", items);
   }
 
   public Object aggregate(@NotNull String variableId, @Nullable Long from, @Nullable Long to, @NotNull AggregationType aggregationType, boolean exactNumber) {
@@ -646,9 +646,9 @@ public class ContextVarImpl implements ContextVar {
   @RequiredArgsConstructor
   public static class VariableContext {
 
-    public long lastBackupTimestamp = System.currentTimeMillis();
     private final DataStorageService<WorkspaceVariableMessage> storageService;
     private final Function<Object, Object> valueConverter;
+    public long lastBackupTimestamp = System.currentTimeMillis();
     private WorkspaceVariable variable;
     // fire every link listener in separate thread
     private ThrowingConsumer<Object, Exception> linkListener;
@@ -810,11 +810,20 @@ public class ContextVarImpl implements ContextVar {
     }
   }
 
+  public static class FetchBroadcastSubGroups implements DynamicOptionLoader {
+
+    @Override
+    public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
+      WorkspaceGroup entity = parameters.context().db().getRequire(WorkspaceGroup.PREFIX + GROUP_BROADCAST);
+      return OptionModel.entityList(entity.getChildrenGroups(), parameters.context());
+    }
+  }
+
   public class TransformVariableContext {
 
     private final VariableContext varContext;
-    private DynamicVariableSet variables;
     boolean error = false;
+    private DynamicVariableSet variables;
 
     public TransformVariableContext(VariableContext varContext) {
       this.varContext = varContext;
@@ -863,7 +872,6 @@ public class ContextVarImpl implements ContextVar {
 
       private static final Map<String, BiFunction<Iterator<Object>, ContextVarImpl, Double>> functions = new HashMap<>();
       private static final Parameters params = DoubleEvaluator.getDefaultParameters();
-      private final ContextVarImpl var;
 
       static {
         for (AggregationType aggregationType : AggregationType.values()) {
@@ -885,13 +893,15 @@ public class ContextVarImpl implements ContextVar {
         }
       }
 
-      private static Long getSince(Double seconds) {
-        return System.currentTimeMillis() - seconds.intValue() * 1000L;
-      }
+      private final ContextVarImpl var;
 
       public ExtendedDoubleEvaluator(ContextVarImpl var) {
         super(params);
         this.var = var;
+      }
+
+      private static Long getSince(Double seconds) {
+        return System.currentTimeMillis() - seconds.intValue() * 1000L;
       }
 
       @Override
@@ -907,15 +917,6 @@ public class ContextVarImpl implements ContextVar {
       protected Object evaluate(Operator operator, Iterator<Object> operands, Object evaluationContext) {
         return super.evaluate(operator, operands, evaluationContext);
       }
-    }
-  }
-
-  public static class FetchBroadcastSubGroups implements DynamicOptionLoader {
-
-    @Override
-    public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
-      WorkspaceGroup entity = parameters.context().db().getRequire(WorkspaceGroup.PREFIX + GROUP_BROADCAST);
-      return OptionModel.entityList(entity.getChildrenGroups(), parameters.context());
     }
   }
 }

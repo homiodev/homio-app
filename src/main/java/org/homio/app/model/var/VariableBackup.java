@@ -16,20 +16,20 @@ import lombok.Setter;
 @Table(name = "variable_backup")
 public class VariableBackup {
 
-    @Id
-    private Integer id;
+  @Id
+  private Integer id;
 
-    private long created;
+  private long created;
 
-    private String value;
+  private String value;
 
-    @ManyToOne(fetch = FetchType.LAZY, targetEntity = WorkspaceVariable.class)
-    private WorkspaceVariable workspaceVariable;
+  @ManyToOne(fetch = FetchType.LAZY, targetEntity = WorkspaceVariable.class)
+  private WorkspaceVariable workspaceVariable;
 
-    public VariableBackup(Integer id, WorkspaceVariable variable, WorkspaceVariableMessage message) {
-        this.id = id;
-        this.workspaceVariable = variable;
-        this.created = message.getCreated();
-        this.value = message.getValue().toString();
-    }
+  public VariableBackup(Integer id, WorkspaceVariable variable, WorkspaceVariableMessage message) {
+    this.id = id;
+    this.workspaceVariable = variable;
+    this.created = message.getCreated();
+    this.value = message.getValue().toString();
+  }
 }

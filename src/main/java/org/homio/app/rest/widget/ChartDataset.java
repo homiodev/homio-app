@@ -13,8 +13,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ChartDataset {
 
-    private final String id;
-    private final String entityID;
-    private String label;
-    private List<Float> data;
+  private final String id;
+  private final String entityID;
+  private String label;
+  private List<Float> data;
 }

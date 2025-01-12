@@ -23,73 +23,73 @@ import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 @Getter
 @Accessors(chain = true)
 public class UISelectBoxItemBuilderImpl
-        extends UIBaseEntityItemBuilderImpl<UISelectBoxItemBuilder, String>
-        implements UISelectBoxItemBuilder, UIInputEntityActionHandler {
+  extends UIBaseEntityItemBuilderImpl<UISelectBoxItemBuilder, String>
+  implements UISelectBoxItemBuilder, UIInputEntityActionHandler {
 
-    @Setter
-    private Collection<OptionModel> options;
-    private String optionFetcher;
-    private String selectReplacer;
-    private boolean asButton;
-    private boolean primary;
-    private int height = 32;
-    private String text;
-    @Setter
-    private String placeholder;
-    @Setter
-    private boolean highlightSelected;
+  @Setter
+  private Collection<OptionModel> options;
+  private String optionFetcher;
+  private String selectReplacer;
+  private boolean asButton;
+  private boolean primary;
+  private int height = 32;
+  private String text;
+  @Setter
+  private String placeholder;
+  @Setter
+  private boolean highlightSelected;
 
-    public UISelectBoxItemBuilderImpl(String entityID, int order, UIActionHandler actionHandler) {
-        super(UIItemType.SelectBox, entityID, order, actionHandler);
+  public UISelectBoxItemBuilderImpl(String entityID, int order, UIActionHandler actionHandler) {
+    super(UIItemType.SelectBox, entityID, order, actionHandler);
+  }
+
+  @Override
+  public @NotNull UISelectBoxItemBuilderImpl setSelectReplacer(int min, int max, String selectReplacer) {
+    if (StringUtils.isNotEmpty(selectReplacer)) {
+      this.selectReplacer = min + LIST_DELIMITER + max + LIST_DELIMITER + selectReplacer;
     }
+    return this;
+  }
 
-    @Override
-    public @NotNull UISelectBoxItemBuilderImpl setSelectReplacer(int min, int max, String selectReplacer) {
-        if (StringUtils.isNotEmpty(selectReplacer)) {
-            this.selectReplacer = min + LIST_DELIMITER + max + LIST_DELIMITER + selectReplacer;
-        }
+  @Override
+  public @NotNull UIButtonItemBuilder setAsButton(@Nullable Icon icon, @Nullable String text) {
+    this.setIcon(icon);
+    this.text = text;
+    this.asButton = true;
+    return new UIButtonItemBuilderImpl(UIItemType.Button, "", null, 0, null) {
+      @Override
+      public UIButtonItemBuilderImpl setPrimary(boolean value) {
+        primary = value;
         return this;
-    }
+      }
 
-    @Override
-    public @NotNull UIButtonItemBuilder setAsButton(@Nullable Icon icon, @Nullable String text) {
-        this.setIcon(icon);
-        this.text = text;
-        this.asButton = true;
-        return new UIButtonItemBuilderImpl(UIItemType.Button, "", null, 0, null) {
-            @Override
-            public UIButtonItemBuilderImpl setPrimary(boolean value) {
-                primary = value;
-                return this;
-            }
-
-            @Override
-            public UIButtonItemBuilderImpl setHeight(int value) {
-                height = value;
-                return this;
-            }
-        };
-    }
-
-    @Override
-    public @NotNull UISelectBoxItemBuilder setLazyItemOptions(@NotNull Class<? extends BaseEntity> itemClass) {
-        optionFetcher = "rest/item/type/%s/options".formatted(itemClass.getSimpleName());
+      @Override
+      public UIButtonItemBuilderImpl setHeight(int value) {
+        height = value;
         return this;
-    }
+      }
+    };
+  }
 
-    @Override
-    public @NotNull UISelectBoxItemBuilder setLazyOptionLoader(@NotNull Class<? extends DynamicOptionLoader> itemClass) {
-        ItemController.className2Class.put(itemClass.getSimpleName(), itemClass);
-        optionFetcher = "rest/item/type/%s/options".formatted(itemClass.getSimpleName());
-        return this;
-    }
+  @Override
+  public @NotNull UISelectBoxItemBuilder setLazyItemOptions(@NotNull Class<? extends BaseEntity> itemClass) {
+    optionFetcher = "rest/item/type/%s/options".formatted(itemClass.getSimpleName());
+    return this;
+  }
 
-    @Override
-    public @NotNull UISelectBoxItemBuilderImpl addOption(@NotNull OptionModel option) {
-        if (options == null) {
-            options = new ArrayList<>();
-        }
-        options.add(option);
-        return this;
+  @Override
+  public @NotNull UISelectBoxItemBuilder setLazyOptionLoader(@NotNull Class<? extends DynamicOptionLoader> itemClass) {
+    ItemController.className2Class.put(itemClass.getSimpleName(), itemClass);
+    optionFetcher = "rest/item/type/%s/options".formatted(itemClass.getSimpleName());
+    return this;
+  }
+
+  @Override
+  public @NotNull UISelectBoxItemBuilderImpl addOption(@NotNull OptionModel option) {
+    if (options == null) {
+      options = new ArrayList<>();
     }
+    options.add(option);
+    return this;
+  }
 }

@@ -5,18 +5,18 @@ import org.jetbrains.annotations.NotNull;
 
 public interface CoreSettingPlugin<T> extends SettingPlugin<T> {
 
-    @NotNull
-    GroupKey getGroupKey();
+  @NotNull
+  GroupKey getGroupKey();
 
-    @NotNull
-    default String getSubGroupKey() {
-        return "GENERAL";
-    }
+  @NotNull
+  default String getSubGroupKey() {
+    return "GENERAL";
+  }
 
-    enum GroupKey {
-        dashboard,
-        workspace,
-        usb,
-        system
-    }
+  enum GroupKey {
+    dashboard,
+    workspace,
+    usb,
+    system
+  }
 }

@@ -29,47 +29,47 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class ResourceController {
 
-    @SneakyThrows
-    @GetMapping(value = "/fonts", produces = "text/css; charset=utf-8")
-    public String getFonts() {
-        StringBuilder css = new StringBuilder();
-        for (Path fontFile : getFontFiles()) {
-            Font trueFont = Font.createFont(Font.TRUETYPE_FONT, fontFile.toFile());
-            css.append("""
-                    @font-face {
-                      font-family: '%s';
-                      font-style: normal;
-                      font-weight: 400;
-                      font-display: swap;
-                      src: url($DEVICE_URL/rest/resource/font/%s) format('truetype');
-                    }
-                    """.formatted(trueFont.getFamily(), fontFile.getFileName()));
-        }
-        return css.toString();
+  @SneakyThrows
+  private static List<Path> getFontFiles() {
+    Path fonts = CommonUtils.createDirectoriesIfNotExists(CommonUtils.getConfigPath().resolve("fonts"));
+    try (Stream<Path> walk = Files.walk(fonts, 1)) {
+      return walk
+        .filter(p -> !Files.isDirectory(p))
+        .filter(f -> f.getFileName().toString().endsWith(".ttf"))
+        .toList();
     }
+  }
 
-    @GetMapping(value = "/font/{name}", produces = "text/css; charset=utf-8")
-    public ResponseEntity<StreamingResponseBody> getFont(@PathVariable("name") String name) {
-        Path fonts = CommonUtils.createDirectoriesIfNotExists(CommonUtils.getConfigPath().resolve("fonts"));
-        return new ResponseEntity<>(
-                outputStream -> {
-                    try (FileChannel inChannel = FileChannel.open(fonts.resolve(name), StandardOpenOption.READ)) {
-                        long size = inChannel.size();
-                        WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
-                        inChannel.transferTo(0, size, writableByteChannel);
-                    }
-                },
-                HttpStatus.OK);
-    }
-
-    @SneakyThrows
-    private static List<Path> getFontFiles() {
-        Path fonts = CommonUtils.createDirectoriesIfNotExists(CommonUtils.getConfigPath().resolve("fonts"));
-        try (Stream<Path> walk = Files.walk(fonts, 1)) {
-            return walk
-                    .filter(p -> !Files.isDirectory(p))
-                    .filter(f -> f.getFileName().toString().endsWith(".ttf"))
-                    .toList();
+  @SneakyThrows
+  @GetMapping(value = "/fonts", produces = "text/css; charset=utf-8")
+  public String getFonts() {
+    StringBuilder css = new StringBuilder();
+    for (Path fontFile : getFontFiles()) {
+      Font trueFont = Font.createFont(Font.TRUETYPE_FONT, fontFile.toFile());
+      css.append("""
+        @font-face {
+          font-family: '%s';
+          font-style: normal;
+          font-weight: 400;
+          font-display: swap;
+          src: url($DEVICE_URL/rest/resource/font/%s) format('truetype');
         }
+        """.formatted(trueFont.getFamily(), fontFile.getFileName()));
     }
+    return css.toString();
+  }
+
+  @GetMapping(value = "/font/{name}", produces = "text/css; charset=utf-8")
+  public ResponseEntity<StreamingResponseBody> getFont(@PathVariable("name") String name) {
+    Path fonts = CommonUtils.createDirectoriesIfNotExists(CommonUtils.getConfigPath().resolve("fonts"));
+    return new ResponseEntity<>(
+      outputStream -> {
+        try (FileChannel inChannel = FileChannel.open(fonts.resolve(name), StandardOpenOption.READ)) {
+          long size = inChannel.size();
+          WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
+          inChannel.transferTo(0, size, writableByteChannel);
+        }
+      },
+      HttpStatus.OK);
+  }
 }

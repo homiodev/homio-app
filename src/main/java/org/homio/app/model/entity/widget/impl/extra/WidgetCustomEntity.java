@@ -32,94 +32,94 @@ import java.util.Map;
 @Setter
 @Accessors(chain = true)
 public class WidgetCustomEntity extends WidgetEntity<WidgetCustomEntity> implements
-        HasDynamicUIFields,
-        HasDynamicContextMenuActions,
-        HasJsonData {
+  HasDynamicUIFields,
+  HasDynamicContextMenuActions,
+  HasJsonData {
 
-    @JsonAnyGetter
-    public Map<String, Object> getDynamicUiProperties() {
-        Map<String, Object> dynamicProperties = new HashMap<>();
-        UIFieldBuilderImpl builder = new UIFieldBuilderImpl();
-        assembleUIFields(builder);
-        builder.getFields().forEach((field, fieldBuilder) ->
-                dynamicProperties.put(field, fieldBuilder.getValue().getValue()));
-        return dynamicProperties;
-    }
+  @JsonAnyGetter
+  public Map<String, Object> getDynamicUiProperties() {
+    Map<String, Object> dynamicProperties = new HashMap<>();
+    UIFieldBuilderImpl builder = new UIFieldBuilderImpl();
+    assembleUIFields(builder);
+    builder.getFields().forEach((field, fieldBuilder) ->
+      dynamicProperties.put(field, fieldBuilder.getValue().getValue()));
+    return dynamicProperties;
+  }
 
-    @Override
-    protected @NotNull String getWidgetPrefix() {
-        return "custom";
-    }
+  @Override
+  protected @NotNull String getWidgetPrefix() {
+    return "custom";
+  }
 
-    @UIField(order = 1)
-    @UIFieldOptionFontSize
-    public String getName() {
-        return super.getName();
-    }
+  @UIField(order = 1)
+  @UIFieldOptionFontSize
+  public String getName() {
+    return super.getName();
+  }
 
-    @UIField(order = 13)
-    @UIFieldCodeEditor(editorType = MonacoLanguage.JavaScript)
-    public String getCode() {
-        return getJsonData("code");
-    }
+  @UIField(order = 13)
+  @UIFieldCodeEditor(editorType = MonacoLanguage.JavaScript)
+  public String getCode() {
+    return getJsonData("code");
+  }
 
-    public WidgetCustomEntity setCode(String value) {
-        setJsonData("code", value);
-        return this;
-    }
+  public WidgetCustomEntity setCode(String value) {
+    setJsonData("code", value);
+    return this;
+  }
 
-    public @NotNull String getImage() {
-        return "fas fa-panorama";
-    }
+  public @NotNull String getImage() {
+    return "fas fa-panorama";
+  }
 
-    @Override
-    public @Nullable String getDefaultName() {
-        return "Custom";
-    }
+  @Override
+  public @Nullable String getDefaultName() {
+    return "Custom";
+  }
 
-    @UIField(order = 50, required = true)
-    @UIFieldEntityByClassSelection(CustomWidgetConfigurableEntity.class)
-    public String getParameterEntity() {
-        return getJsonData("pe");
-    }
+  @UIField(order = 50, required = true)
+  @UIFieldEntityByClassSelection(CustomWidgetConfigurableEntity.class)
+  public String getParameterEntity() {
+    return getJsonData("pe");
+  }
 
-    public void setParameterEntity(String value) {
-        setJsonData("pe", value);
-    }
+  public void setParameterEntity(String value) {
+    setJsonData("pe", value);
+  }
 
-    @Override
-    public void assembleUIFields(@NotNull HasDynamicUIFields.UIFieldBuilder uiFieldBuilder) {
-        String parameterEntity = getParameterEntity();
-        if (!parameterEntity.isEmpty()) {
-            BaseEntity entity = context().db().get(parameterEntity);
-            if (entity instanceof CustomWidgetConfigurableEntity configurableEntity) {
-                configurableEntity.assembleUIFields(uiFieldBuilder, this);
-            }
-        }
+  @Override
+  public void assembleUIFields(@NotNull HasDynamicUIFields.UIFieldBuilder uiFieldBuilder) {
+    String parameterEntity = getParameterEntity();
+    if (!parameterEntity.isEmpty()) {
+      BaseEntity entity = context().db().get(parameterEntity);
+      if (entity instanceof CustomWidgetConfigurableEntity configurableEntity) {
+        configurableEntity.assembleUIFields(uiFieldBuilder, this);
+      }
     }
+  }
 
-    @Override
-    public void assembleActions(UIInputBuilder uiInputBuilder) {
-        String parameterEntity = getParameterEntity();
-        if (!parameterEntity.isEmpty()) {
-            BaseEntity entity = context().db().get(parameterEntity);
-            if (entity instanceof CustomWidgetConfigurableEntity configurableEntity) {
-                configurableEntity.assembleActions(uiInputBuilder);
-            }
-        }
+  @Override
+  public void assembleActions(UIInputBuilder uiInputBuilder) {
+    String parameterEntity = getParameterEntity();
+    if (!parameterEntity.isEmpty()) {
+      BaseEntity entity = context().db().get(parameterEntity);
+      if (entity instanceof CustomWidgetConfigurableEntity configurableEntity) {
+        configurableEntity.assembleActions(uiInputBuilder);
+      }
     }
+  }
 
-    public String getCss() {
-        return getJsonData("css");
-    }
+  public String getCss() {
+    return getJsonData("css");
+  }
 
-    public void setCss(String value) {
-        setJsonData("css", value);
-    }
+  public void setCss(String value) {
+    setJsonData("css", value);
+  }
 
-    @JsonIgnore
-    @UIFieldIgnore
-    public List<String> getStyle() {
-        return super.getStyle();
-    }
+  @JsonIgnore
+  @UIFieldIgnore
+  public List<String> getStyle() {
+    return super.getStyle();
+  }
 }

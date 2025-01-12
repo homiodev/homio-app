@@ -9,28 +9,28 @@ import org.json.JSONObject;
 
 public class ConsoleFMClearCacheButtonSetting implements ConsoleSettingPlugin<JSONObject>, SettingPluginButton {
 
-    @Override
-    public @NotNull Icon getIcon() {
-        return new Icon("fas fa-brush");
-    }
+  @Override
+  public @NotNull Icon getIcon() {
+    return new Icon("fas fa-brush");
+  }
 
-    @Override
-    public int order() {
-        return 100;
-    }
+  @Override
+  public int order() {
+    return 100;
+  }
 
-    @Override
-    public String getConfirmMsg() {
-        return "W.CONFIRM.FM_CLEAR";
-    }
+  @Override
+  public String getConfirmMsg() {
+    return "W.CONFIRM.FM_CLEAR";
+  }
 
-    @Override
-    public String getDialogColor() {
-        return Color.ERROR_DIALOG;
-    }
+  @Override
+  public String getDialogColor() {
+    return Color.ERROR_DIALOG;
+  }
 
-    @Override
-    public String[] pages() {
-        return new String[]{"fm"};
-    }
+  @Override
+  public String[] pages() {
+    return new String[]{"fm"};
+  }
 }

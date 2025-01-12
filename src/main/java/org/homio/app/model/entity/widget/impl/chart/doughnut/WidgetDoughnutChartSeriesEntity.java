@@ -9,45 +9,45 @@ import org.homio.app.model.entity.widget.attributes.HasValueConverter;
 
 @Entity
 public class WidgetDoughnutChartSeriesEntity extends WidgetSeriesEntity<WidgetDoughnutChartEntity>
-        implements HasSingleValueDataSource, HasValueConverter {
+  implements HasSingleValueDataSource, HasValueConverter {
 
-    @UIField(order = 20)
-    @UIFieldGroup("CHART_UI")
-    @UIFieldColorPicker
-    public String getChartColor() {
-        return getJsonData("chartC", UI.Color.WHITE);
-    }
+  @UIField(order = 20)
+  @UIFieldGroup("CHART_UI")
+  @UIFieldColorPicker
+  public String getChartColor() {
+    return getJsonData("chartC", UI.Color.WHITE);
+  }
 
-    public WidgetDoughnutChartSeriesEntity setChartColor(String value) {
-        setJsonData("chartC", value);
-        return this;
-    }
+  public WidgetDoughnutChartSeriesEntity setChartColor(String value) {
+    setJsonData("chartC", value);
+    return this;
+  }
 
-    @UIField(order = 21)
-    @UIFieldSlider(min = 0, max = 100, step = 5)
-    @UIFieldGroup("CHART_UI")
-    public int getChartColorOpacity() {
-        return getJsonData("chartCO", 50);
-    }
+  @UIField(order = 21)
+  @UIFieldSlider(min = 0, max = 100, step = 5)
+  @UIFieldGroup("CHART_UI")
+  public int getChartColorOpacity() {
+    return getJsonData("chartCO", 50);
+  }
 
-    public void setChartColorOpacity(int value) {
-        setJsonData("chartCO", value);
-    }
+  public void setChartColorOpacity(int value) {
+    setJsonData("chartCO", value);
+  }
 
-    @Override
-    protected String getSeriesPrefix() {
-        return "doughnut";
-    }
+  @Override
+  protected String getSeriesPrefix() {
+    return "doughnut";
+  }
 
-    @Override
-    public String getDefaultName() {
-        return null;
-    }
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
 
-    @Override
-    public void beforePersist() {
-        if (!getJsonData().has("chartC")) {
-            setChartColor(UI.Color.random());
-        }
+  @Override
+  public void beforePersist() {
+    if (!getJsonData().has("chartC")) {
+      setChartColor(UI.Color.random());
     }
+  }
 }
