@@ -1,5 +1,6 @@
 package org.homio.app.manager.common.impl;
 
+import jakarta.persistence.EntityManagerFactory;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -126,12 +127,15 @@ public class ContextAddonImpl {
       applicationContext.getBean(ExtRequestMappingHandlerMapping.class).registerAddonRestControllers(addonContext);
     }
     context.rebuildRepositoryByPrefixMap();
+    // we need rebuild Hibernate entityManagerFactory to fetch new models
     applicationContext.getBean(TransactionManagerContext.class).invalidate();
     context.fireRefreshBeans();
-    // we need rebuild Hibernate entityManagerFactory to fetch new models
     cacheService.clearCache();
     context.registerAllFieldSubTypes();
     Lang.clear();
+
+    // create entities that has CreateSingleEntity.class
+    context.createSingleMandatoryEntities();
 
     for (AddonContext addonContext : loadedAddons) {
       ApplicationContext appContext = addonContext.getApplicationContext();

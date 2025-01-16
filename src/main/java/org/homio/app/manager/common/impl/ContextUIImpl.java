@@ -670,7 +670,9 @@ public class ContextUIImpl implements ContextUI {
     video,
     stream,
     // next generation
-    dynamicUpdate
+    dynamicUpdate,
+    // search  callback from file manager
+    fmSearch
   }
 
   private record UiUpdateListener(String dataSourceEntityID, String discriminator,

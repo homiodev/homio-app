@@ -9,6 +9,7 @@ import org.hibernate.internal.SessionFactoryImpl;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.extloader.CustomPersistenceManagedTypes;
 import org.homio.app.manager.CacheService;
+import org.homio.app.manager.common.ContextImpl;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateProperties;
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateSettings;
@@ -147,6 +148,10 @@ public class TransactionManagerContext {
       blocker.countDown();
       blocker = null;
     }
+
+    // re-register all load events
+    var contextImpl = context.getBean(ContextImpl.class);
+    contextImpl.event().registerEntityListeners(entityManagerFactory);
   }
 
   private EntityManagerFactory createEntityManagerFactory() {

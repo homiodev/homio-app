@@ -457,7 +457,7 @@ public class WorkspaceGroup extends BaseEntity
         .put("color", variable.getIconColor())
         .put("name", variable.getName())
         .put("description", variable.getDescription())
-        .put("listeners", context.event().getEventCount(variable.getEntityID()))
+        .put("listeners", context.event().getEventCount(variable.getFullEntityID()))
         .put("linked", context.var().isLinked(variable.getEntityID()))
         .put("source", ContextVarImpl.buildDataSource(variable))
         .put("readOnly", variable.isReadOnly());

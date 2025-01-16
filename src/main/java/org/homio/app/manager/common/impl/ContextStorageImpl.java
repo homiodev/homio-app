@@ -193,9 +193,15 @@ public class ContextStorageImpl implements ContextStorage {
       entity.validate();
 
       // hack to save entity with defined id
-      HomioIdGenerator.PERSIST_IDS.put(entityID, Pair.of(entityID, entity.getName()));
-      entity.setName(entityID);
-      entity.setEntityID(null);
+      if(entityID != null) {
+        HomioIdGenerator.PERSIST_IDS.put(entityID, Pair.of(entityID, entity.getName()));
+        if(entity instanceof DeviceBaseEntity dbe) {
+          dbe.getJsonData().put("name", entityID);
+        } else {
+          entity.setName(entityID);
+        }
+        entity.setEntityID(null);
+      }
     } else {
       if (entityID == null) {
         throw new IllegalStateException("Entity ID is null");

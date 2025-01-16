@@ -287,7 +287,7 @@ public class ContextImpl implements Context {
     INSTANCE = this;
   }
 
-  private void createSingleMandatoryEntities() {
+  public void createSingleMandatoryEntities() {
     List<Class<?>> createSingleItems = classFinder.getClassesWithAnnotation(CreateSingleEntity.class);
     for (Class<?> createSingleItem : createSingleItems) {
       CreateSingleEntity createSingleEntity = createSingleItem.getDeclaredAnnotation(CreateSingleEntity.class);

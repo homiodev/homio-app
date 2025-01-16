@@ -157,6 +157,7 @@ public class HomioApplication implements WebMvcConfigurer {
     setProperty("spring.datasource.url", "dbUrl", defaultIfEmpty(url, defaultURL));
     setProperty("spring.datasource.username", "dbUser", user);
     setProperty("spring.datasource.password", "dbPassword", pwd);
+    System.setProperty("hibernate.physical_naming_strategy", "org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl");
     System.setProperty("hibernate.dialect", dialect);
     System.setProperty("spring.datasource.driverClassName", driverClassName);
   }

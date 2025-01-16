@@ -65,6 +65,9 @@ public class FirefoxWebDriverEntity extends MediaEntity implements HasFirmwareVe
     if (Files.exists(Paths.get("/opt/homio/installs/geckodriver"))) {
       System.setProperty("webdriver.gecko.driver", "/opt/homio/installs/geckodriver");
     }
+    if (System.getProperty("spring.profiles.active").contains("offline")) {
+      throw new IllegalStateException("Unable to run driver in offline mode");
+    }
 
     if (driverInUseThread != null) {
       throw new IllegalStateException("Firefox driver currently in use");

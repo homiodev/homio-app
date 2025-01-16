@@ -388,7 +388,7 @@ public class ContextEventImpl implements ContextEvent {
     eventQueue.add(new Event(key, value));
   }
 
-  private void registerEntityListeners(EntityManagerFactory entityManagerFactory) {
+  public void registerEntityListeners(EntityManagerFactory entityManagerFactory) {
     SessionFactoryImpl sessionFactory = entityManagerFactory.unwrap(SessionFactoryImpl.class);
     EventListenerRegistry registry = sessionFactory.getServiceRegistry().getService(EventListenerRegistry.class);
     if (registry == null) {

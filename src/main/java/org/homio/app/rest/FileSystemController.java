@@ -4,11 +4,15 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.pivovarit.function.ThrowingSupplier;
 import jakarta.ws.rs.BadRequestException;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
-import org.homio.api.Context;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.fs.FileSystemProvider;
@@ -21,6 +25,8 @@ import org.homio.api.stream.audio.AudioFormat;
 import org.homio.api.stream.impl.FileContentStream;
 import org.homio.api.stream.impl.InputContentStream;
 import org.homio.api.util.CommonUtils;
+import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.manager.common.impl.ContextUIImpl;
 import org.homio.app.model.entity.user.UserGuestEntity;
 import org.homio.app.model.entity.widget.impl.media.WidgetFMNodeValue;
 import org.homio.app.service.FileSystemService;
@@ -30,7 +36,13 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
@@ -43,7 +55,14 @@ import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -59,7 +78,9 @@ public class FileSystemController {
 
   // constructor parameters
   private final FileSystemService fileSystemService;
-  private final Context context;
+  private final ContextImpl context;
+
+  private FileSystemProvider.SearchThread currentSearch;
 
   @NotNull
   private static MediaType findMediaType(TreeNode treeNode) {
@@ -327,31 +348,39 @@ public class FileSystemController {
     }
   }
 
-  @GetMapping("/search")
-  public List<TreeNode> search(@RequestParam("query") String query) {
-    UserGuestEntity.assertFileManagerReadAccess(context);
-    //  if (StringUtils.isEmpty(query)) {
-    return null;
-    // }
-        /*List<TreeNode> result = new ArrayList<>();
-        Files.walkFileTree(Paths.get(defaultPath), new SimpleFileVisitor<Path>() {
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                if (file.getFileName().toString().contains(query)) {
-                    result.add(new TreeNode(file.toFile()));
-                }
-                return FileVisitResult.CONTINUE;
-            }
+  @DeleteMapping("/search")
+  public void cancelSearch() {
+    var search = currentSearch;
+    if (search != null) {
+      search.cancel();
+    }
+  }
 
-            @Override
-            public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-                if (exc instanceof AccessDeniedException) {
-                    return FileVisitResult.SKIP_SUBTREE;
-                }
-                return super.visitFileFailed(file, exc);
-            }
-        });*/
-    // return result;
+  @PostMapping("/{sourceFs}/search")
+  public void search(@PathVariable("sourceFs") String sourceFs,
+                     @RequestBody SearchRequest request) {
+    UserGuestEntity.assertFileManagerReadAccess(context);
+    var fileSystem = fileSystemService.getFileSystem(sourceFs, request.alias);
+    currentSearch = fileSystem.search(new FileSystemProvider.SearchParameters(
+      request.searchOptions.caseSensitive,
+        request.searchOptions.folders,
+        request.searchOptions.files,
+        request.searchOptions.wordOnly,
+        request.searchOptions.maxFiles,
+        request.searchOptions.searchInArchive,
+        request.query,
+        request.queryText),
+      new FileSystemProvider.SearchCallback() {
+        @Override
+        public void found(TreeNode treeNode) {
+          context.ui().sendGlobal(ContextUIImpl.GlobalSendType.fmSearch, null, treeNode, null, null);
+        }
+
+        @Override
+        public void done() {
+          context.ui().sendGlobal(ContextUIImpl.GlobalSendType.fmSearch, null, null, null, null);
+        }
+      });
   }
 
   private Path archiveSource(String fs, int alias, String format, Set<String> sourceFileIds, String targetName, String level, String password)
@@ -505,5 +534,25 @@ public class FileSystemController {
 
     public String password;
     public boolean replace;
+  }
+
+  @Getter
+  @Setter
+  public static class SearchRequest extends BaseNodeRequest {
+
+    private String id;
+    private String query;
+    private String queryText;
+
+    private SearchOptions searchOptions;
+  }
+
+  public record SearchOptions(boolean folders,
+                              boolean files,
+                              boolean wordOnly,
+                              boolean searchInArchive,
+                              int maxFiles,
+                              int subdirDepth,
+                              boolean caseSensitive) {
   }
 }

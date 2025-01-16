@@ -4,6 +4,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.id.IdentifierGenerator;
 import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.device.DeviceBaseEntity;
 
 import java.util.Map;
 import java.util.UUID;
@@ -17,7 +18,8 @@ public class HomioIdGenerator implements IdentifierGenerator {
   @Override
   public Object generate(SharedSessionContractImplementor session, Object object) {
     if (object instanceof BaseEntity baseEntity) {
-      var data = PERSIST_IDS.remove(baseEntity.getName());
+      String name = getName(baseEntity);
+      var data = name == null ? null : PERSIST_IDS.remove(name);
       if (data != null) {
         baseEntity.setEntityID(data.getLeft());
         baseEntity.setName(data.getRight());
@@ -31,5 +33,12 @@ public class HomioIdGenerator implements IdentifierGenerator {
       return entityID;
     }
     return UUID.randomUUID().toString();
+  }
+
+  private static String getName(BaseEntity object) {
+    if (object instanceof DeviceBaseEntity dbe) {
+      return (String) dbe.getJsonData().remove("name");
+    }
+    return object.getName();
   }
 }

@@ -2,7 +2,9 @@ package org.homio.app.service.device;
 
 import lombok.Getter;
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.homio.api.ContextBGP;
 import org.homio.api.fs.FileSystemProvider;
 import org.homio.api.fs.TreeNode;
 import org.homio.api.fs.archive.ArchiveUtil;
@@ -10,24 +12,50 @@ import org.homio.api.ui.UI.Color;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.hquery.Curl;
-import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.*;
-import java.util.*;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.CopyOption;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileStore;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.util.regex.Pattern.compile;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 import static org.homio.api.fs.BaseCachedFileSystemProvider.fixPath;
 import static org.homio.api.util.CommonUtils.TIKA;
@@ -526,5 +554,107 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     } catch (Exception ignore) {
     }
     return rootPath;
+  }
+
+  // very slow implementation )))
+  @SneakyThrows
+  @Override
+  public @Nullable SearchThread search(@NotNull SearchParameters request, @NotNull SearchCallback searchCallback) {
+    Matcher fileMatcher = getFileSearchMather(request);
+
+    AtomicInteger resultCount = new AtomicInteger(0);
+    AtomicReference<ContextBGP.ThreadContext<Object>> threadRef = new AtomicReference<>();
+    threadRef.set(entity.context().bgp().builder("searching")
+      .delay(Duration.ofMillis(200))
+      .execute(context -> {
+        try (Stream<Path> stream = Files.walk(Paths.get(entity.getFileSystemRoot()), 50)) {
+          stream.parallel().forEach(path -> {
+            if (context.isStopped()) {
+              throw new CancellationException("Search stopped");
+            }
+            if (acceptSearch(request, path, fileMatcher)) {
+              if (resultCount.incrementAndGet() > request.maxResults()) {
+                searchCallback.done();
+                threadRef.get().cancel();
+              }
+              TreeNode treeNode = buildTreeNode(path, path.toFile());
+              treeNode.setName(path.toAbsolutePath().toString());
+              searchCallback.found(treeNode);
+            }
+          });
+        }
+        searchCallback.done();
+        return null;
+      }));
+    return () -> threadRef.get().cancel();
+  }
+
+  private static @Nullable Matcher getFileSearchMather(@NotNull SearchParameters request) {
+    Matcher fileMatcher = null;
+    if(StringUtils.isNotEmpty(request.searchFor())) {
+      String quotedRequestFor = Pattern.quote(request.searchFor());
+      Pattern filePattern = compile(quotedRequestFor, Pattern.CASE_INSENSITIVE);
+      fileMatcher = filePattern.matcher("");
+    }
+    return fileMatcher;
+  }
+
+  private boolean acceptSearch(@NotNull FileSystemProvider.SearchParameters request, Path path, Matcher fileMatcher) {
+    try {
+      if (Files.isHidden(path)) {
+        return false;
+      }
+      if (Files.isDirectory(path)) {
+        if (!request.searchFolder()) {
+          return false;
+        }
+      } else {
+        if (!request.searchFiles()) {
+          return false;
+        }
+      }
+      fileMatcher.reset(path.getFileName().toString());
+      if (!fileMatcher.find()) {
+        return false;
+      }
+      if (StringUtils.isNotEmpty(request.searchText()) && Files.isRegularFile(path) && isTextFile(path)) {
+        return fileContainsText(path, request.searchText(), request.caseSensitive());
+      }
+      return true;
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  private boolean fileContainsText(Path path, String searchText, boolean caseSensitive) {
+    try {
+      // ignore check text content if file > 10mb
+      if (Files.size(path) > 10L * 1024 * 1024) {
+        return false;
+      }
+      try (BufferedReader reader = Files.newBufferedReader(path)) {
+        String line;
+        while ((line = reader.readLine()) != null) {
+          if (!caseSensitive) {
+            line = line.toLowerCase();
+            searchText = searchText.toLowerCase();
+          }
+          if (line.contains(searchText)) {
+            return true;
+          }
+        }
+      }
+    } catch (IOException ignored) {
+    }
+    return false;
+  }
+
+  private boolean isTextFile(Path path) {
+    try {
+      String contentType = Files.probeContentType(path);
+      return contentType != null && contentType.startsWith("text");
+    } catch (IOException e) {
+      return false;
+    }
   }
 }
