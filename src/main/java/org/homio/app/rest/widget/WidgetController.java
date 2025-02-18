@@ -19,6 +19,7 @@ import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.HasOrder;
 import org.homio.api.entity.UserEntity;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
@@ -33,6 +34,7 @@ import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.api.util.DataSourceUtil.SelectionSource;
 import org.homio.api.util.Lang;
+import org.homio.api.widget.HasCustomWidget;
 import org.homio.app.config.cacheControl.CacheControl;
 import org.homio.app.config.cacheControl.CachePolicy;
 import org.homio.app.manager.WidgetService;
@@ -47,10 +49,9 @@ import org.homio.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.impl.color.WidgetColorEntity;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplayEntity;
-import org.homio.app.model.entity.widget.impl.display.WidgetDisplaySeriesEntity;
-import org.homio.app.model.entity.widget.impl.extra.WidgetCustomEntity;
 import org.homio.app.model.entity.widget.impl.extra.WidgetJsEntity;
 import org.homio.app.model.entity.widget.impl.gauge.WidgetGaugeEntity;
+import org.homio.app.model.entity.widget.impl.gauge.WidgetGaugeSeriesEntity;
 import org.homio.app.model.entity.widget.impl.media.WidgetCalendarEntity;
 import org.homio.app.model.entity.widget.impl.media.WidgetFMEntity;
 import org.homio.app.model.entity.widget.impl.media.WidgetFMNodeValue;
@@ -64,7 +65,6 @@ import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 import org.homio.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver;
 import org.homio.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver.VideoEntityResponse;
 import org.homio.app.model.rest.WidgetDataRequest;
-import org.homio.app.model.var.WorkspaceVariable;
 import org.homio.app.rest.widget.WidgetChartsController.SingleValueData;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
@@ -99,7 +99,7 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 @Log4j2
 @RestController
-@RequestMapping("/rest/widget")
+@RequestMapping(value = "/rest/widget", produces = "application/json")
 public class WidgetController {
 
   private final ObjectMapper objectMapper;
@@ -605,6 +605,14 @@ public class WidgetController {
     }
   }
 
+  @PostMapping("/gauge/btn")
+  public void fireGaugeButton(@RequestBody GaugeBtnRequest request) throws ExecutionException {
+    WidgetGaugeSeriesEntity entity = getEntity(request.seriesEntityID);
+    if (entity.getFireValueOnClick()) {
+      setValue(entity.getSendValue(), entity.getSetValueOnClick(), null);
+    }
+  }
+
   @PostMapping("/toggle/update")
   public void updateToggleValue(@RequestBody SingleValueRequest<Boolean> request) {
     BaseEntity widget = getEntity(request.entityID);
@@ -717,9 +725,12 @@ public class WidgetController {
 
     WidgetEntity<?> baseEntity;
     if (typeClass == null) {
-      baseEntity = new WidgetCustomEntity().setCode("test");
-      baseEntity.setBw(3).setBh(3);
-      // baseEntity.setWidgetTabEntity(widgetTabEntity)/*.setFieldFetchType(template.getName())*/;
+      for (DeviceBaseEntity entity : context.db().findAll(DeviceBaseEntity.class)) {
+        if (entity instanceof HasCustomWidget widget && widget.getAvailableWidgets() != null && widget.getAvailableWidgets().containsKey(type)) {
+          return widget.createWidget(context, type, tabId, width, height);
+        }
+      }
+      throw new IllegalArgumentException("Unable to find suitable handler for creating widget: " + type);
     } else {
       baseEntity = (WidgetEntity<?>) typeClass.getConstructor()
         .newInstance();
@@ -1053,6 +1064,14 @@ public class WidgetController {
 
   @Getter
   @Setter
+  public static class GaugeBtnRequest {
+
+    private String entityID;
+    private String seriesEntityID;
+  }
+
+  @Getter
+  @Setter
   public static class VideoSourceRequest {
 
     private String source;
@@ -1068,7 +1087,7 @@ public class WidgetController {
 
   @Getter
   @Setter
-  private static class LayoutTabRequest {
+  public static class LayoutTabRequest {
 
     private int hb;
     private int vb;

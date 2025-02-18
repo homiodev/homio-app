@@ -1,7 +1,5 @@
 package org.homio.addon.ui;
 
-import java.util.function.BiConsumer;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -17,6 +15,8 @@ import org.homio.app.setting.SendBroadcastSetting;
 import org.homio.app.workspace.WorkspaceService;
 import org.homio.app.workspace.block.core.Scratch3EventsBlocks;
 import org.springframework.stereotype.Component;
+
+import java.util.function.BiConsumer;
 
 @Log4j2
 @Getter

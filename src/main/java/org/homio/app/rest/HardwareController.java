@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Collection;
 
 @RestController
-@RequestMapping("/rest/hardware")
+@RequestMapping(value = "/rest/hardware", produces = "application/json")
 @RequiredArgsConstructor
 public class HardwareController {
 

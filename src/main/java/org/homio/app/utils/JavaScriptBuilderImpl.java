@@ -10,7 +10,14 @@ import org.json.JSONObject;
 import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.cglib.proxy.MethodInterceptor;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -738,7 +745,7 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
       for (JSInput jsInput : jsInputs) {
         builder.append(jsInput.build());
       }
-      rawContent = "return '" + builder.toString() + "';";
+      rawContent = "return '" + builder + "';";
       return rawContent;
     }
 

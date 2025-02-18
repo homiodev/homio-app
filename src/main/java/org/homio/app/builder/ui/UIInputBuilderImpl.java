@@ -97,10 +97,9 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
 
   @Override
   public UIInputBuilder.DialogEntity<UIButtonItemBuilder> addOpenDialogSelectableButton(@NotNull String name, Icon icon,
-                                                                                        @Nullable Integer dialogWidth,
                                                                                         @NotNull UIActionHandler action,
                                                                                         int order) {
-    return addOpenDialogSelectableButtonInternal(name, icon, dialogWidth, action);
+    return addOpenDialogSelectableButtonInternal(name, icon, action);
   }
 
   @Override
@@ -116,8 +115,8 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
   }
 
   public UIInputBuilder.DialogEntity<UIButtonItemBuilder> addOpenDialogSelectableButtonInternal(
-    String name, Icon icon, Integer dialogWidth, UIActionHandler action) {
-    var uiDialogLayoutBuilder = new UIDialogLayoutBuilderImpl(name, dialogWidth);
+    String name, Icon icon, UIActionHandler action) {
+    var uiDialogLayoutBuilder = new UIDialogLayoutBuilderImpl(name);
     var dialogEntityBuilder = addEntity(uiDialogLayoutBuilder);
     var entityBuilder = ((UIButtonItemBuilderImpl) addSelectableButton(name, icon, action))
       .setActionReference(dialogEntityBuilder.getEntityID());
@@ -125,6 +124,12 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
       @Override
       public @NotNull UIInputBuilder up() {
         return UIInputBuilderImpl.this;
+      }
+
+      @Override
+      public UIInputBuilder.@NotNull DialogEntity<UIButtonItemBuilder> dialogWidth(int dialogWidth) {
+        uiDialogLayoutBuilder.setWidth(dialogWidth);
+        return this;
       }
 
       @Override

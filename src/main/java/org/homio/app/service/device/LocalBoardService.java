@@ -209,6 +209,9 @@ public class LocalBoardService extends ServiceInstance<LocalBoardEntity>
   }
 
   private long getNetworkDiff(Predicate<String> ifaceMatcher, Function<NetworkStat, Long> handler) {
+    if (newNetStat == null) {
+      return -1;
+    }
     long value = 0;
     for (Map.Entry<String, NetworkStat> entry : newNetStat.entrySet()) {
       String iface = entry.getKey();

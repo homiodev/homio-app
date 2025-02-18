@@ -17,6 +17,7 @@ import lombok.experimental.Accessors;
 import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
+import org.homio.api.ContextUI;
 import org.homio.api.ContextVar;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
@@ -73,6 +74,7 @@ import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.api.ContextVar.GROUP_BROADCAST;
+import static org.homio.api.ui.UI.Color.RED;
 import static org.homio.api.ui.field.UIFieldType.HTML;
 import static org.homio.api.ui.field.action.ActionInputParameter.select;
 import static org.homio.api.ui.field.action.ActionInputParameter.textRequired;
@@ -250,7 +252,8 @@ public class WorkspaceGroup extends BaseEntity
     return "GroupVariable: " + getTitle();
   }
 
-  @UIContextMenuAction(value = "CLEAR_BACKUP", icon = "fas fa-database", inputs = {
+  @UIContextMenuAction(value = "CLEAR_BACKUP", icon = "fas fa-trash", iconColor = RED, inputs = {
+    @UIActionInput(name = "description", type = Type.info, value = "TITLE.CLEAR_BACKUP_DESCR"),
     @UIActionInput(name = "keepDays", type = Type.number, value = "-1", min = -1, max = 365),
     @UIActionInput(name = "keepCount", type = Type.number, value = "-1", min = -1, max = 100_000)
   })
@@ -312,13 +315,13 @@ public class WorkspaceGroup extends BaseEntity
 
   @Override
   public void assembleActions(UIInputBuilder uiInputBuilder) {
-    uiInputBuilder.addOpenDialogSelectableButton("ADD_GROUP", new Icon("fas fa-layer-group"), null,
+    uiInputBuilder.addOpenDialogSelectableButton("ADD_GROUP", new Icon("fas fa-layer-group"),
         (context, params) -> ((ContextImpl) context).var().createSubGroup(params, getEntityID()))
       .editDialog(dialogBuilder -> addCommonFields(dialogBuilder, "field.GROUP_NAME", builder -> {
       }));
 
     if (this.getEntityID().equals("group_broadcast")) {
-      uiInputBuilder.addOpenDialogSelectableButton("ADD_BROADCAST_VARIABLE", new Icon("fas fa-rss"), null,
+      uiInputBuilder.addOpenDialogSelectableButton("ADD_BROADCAST_VARIABLE", new Icon("fas fa-rss"),
           (context, params) -> createVar(context, params, ContextVar.VariableType.Json, true))
         .editDialog(dialogBuilder ->
           addCommonFields(dialogBuilder, "field.BROADCAST_NAME", builder ->
@@ -490,7 +493,16 @@ public class WorkspaceGroup extends BaseEntity
       return entity;
     }
 
-    @UIContextMenuAction(value = "TITLE.CREATE_DISPLAY_WIDGET", icon = "fas fa-chart-simple")
+    @UIContextMenuAction(value = "CLEAR_ALL_BACKUP", icon = "fas fa-trash", iconColor = RED,
+      confirmMessage = "W.CONFIRM.CLEAR_BACKUP_WARN")
+    public ActionResponseModel clearBackup(Context context) {
+      val repository = context.getBean(VariableBackupRepository.class);
+      repository.delete(variable);
+      context.ui().updateItem(variable.getTopGroup());
+      return ActionResponseModel.success();
+    }
+
+    @UIContextMenuAction(value = "TITLE.CREATE_DISPLAY_WIDGET", icon = "fas fa-chart-simple", iconColor = "#2DA3A4")
     public ActionResponseModel createDisplayWidget(Context context) {
       context.ui().dialog().sendDialogRequest("create-display-widget", "TITLE.CREATE_DISPLAY_WIDGET",
         (responseType, pressedButton, parameters) ->
@@ -530,10 +542,13 @@ public class WorkspaceGroup extends BaseEntity
       return null;
     }
 
-    @UIContextMenuAction(value = "TITLE.CREATE_GAUGE_WIDGET", icon = "fas fa-gauge")
+    @UIContextMenuAction(value = "TITLE.CREATE_GAUGE_WIDGET", icon = "fas fa-gauge", iconColor = "#2DA3A4")
     public ActionResponseModel createGaugeWidget(Context context) {
       context.ui().dialog().sendDialogRequest("create-gauge-widget", "TITLE.CREATE_GAUGE_WIDGET",
-        (responseType, pressedButton, parameters) ->
+        (responseType, pressedButton, parameters) -> {
+          if (responseType != ContextUI.DialogResponseType.Accepted) {
+            return;
+          }
           context.widget().createGaugeWidget(variable.getEntityID(), builder -> {
             builder
               .setValueDataSource(variable.getFullEntityID())
@@ -556,7 +571,8 @@ public class WorkspaceGroup extends BaseEntity
             if (variable.getMax() != null) {
               builder.setMax(variable.getMax().intValue());
             }
-          }), dialogEditor -> {
+          });
+        }, dialogEditor -> {
           dialogEditor.disableKeepOnUi();
           dialogEditor.appearance(new Icon(variable.getIcon(), variable.getIconColor()), null);
           List<ActionInputParameter> inputs = List.of(

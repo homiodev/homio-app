@@ -22,12 +22,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
+import static org.homio.api.ContextWidget.GaugeCapType;
+import static org.homio.api.ContextWidget.GaugeSeriesType;
 import static org.homio.api.ContextWidget.GaugeSeriesType.CustomValue;
 import static org.homio.api.ContextWidget.GaugeSeriesType.GaugeValue;
-import static org.homio.api.ContextWidget.GaugeSeriesType;
-import static org.homio.api.ContextWidget.GaugeCapType;
 import static org.homio.api.ContextWidget.GaugeSeriesType.Line;
-import static org.homio.api.ContextWidget.GaugeBaseWidgetSeriesBuilder;
 
 @Getter
 public class GaugeBuilderImpl extends WidgetBaseBuilderImpl<GaugeWidgetBuilder, WidgetGaugeEntity>

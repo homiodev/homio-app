@@ -28,8 +28,8 @@ public final class CollectionUtils {
   }
 
   public static class LastBytesBuffer {
-    private byte[] buffer;
-    private int size;
+    private final byte[] buffer;
+    private final int size;
     private int head;
 
     public LastBytesBuffer(int size) {

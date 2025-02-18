@@ -1,7 +1,5 @@
 package org.homio.app.manager.common.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -9,22 +7,16 @@ import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
-import org.homio.api.Context;
 import org.homio.api.ContextService;
 import org.homio.api.ContextService.RouteProxyBuilder.ProxyUrl;
-import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.device.DeviceBaseEntity;
-import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.OptionModel;
 import org.homio.api.service.BaseService;
 import org.homio.api.service.EntityService;
 import org.homio.api.service.EntityService.ServiceInstance;
-import org.homio.app.manager.bgp.WatchdogBgpService;
 import org.homio.app.manager.common.ContextImpl;
-import org.homio.app.model.entity.user.UserBaseEntity;
 import org.jetbrains.annotations.NotNull;
-import org.json.JSONObject;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.web.socket.WebSocketHandler;
@@ -33,16 +25,17 @@ import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
 import org.springframework.web.socket.server.support.WebSocketHandlerMapping;
 import org.springframework.web.socket.server.support.WebSocketHttpRequestHandler;
 
-import java.lang.reflect.AnnotatedType;
-import java.lang.reflect.Method;
-import java.net.URI;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
 
 @Log4j2

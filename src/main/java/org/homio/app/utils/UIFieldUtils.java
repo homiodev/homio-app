@@ -146,7 +146,7 @@ public class UIFieldUtils {
         Icon icon = new Icon(action.icon(), action.iconColor());
         if (action.inputs().length > 0) {
           ((UIInputBuilderImpl) uiInputBuilder)
-            .addOpenDialogSelectableButtonInternal(action.value(), icon, null, null)
+            .addOpenDialogSelectableButtonInternal(action.value(), icon, null)
             .editDialog(dialogLayoutBuilder -> {
               for (UIActionInput actionInput : action.inputs()) {
                 ((UIDialogLayoutBuilderImpl) dialogLayoutBuilder).addInput(actionInput);
@@ -170,12 +170,12 @@ public class UIFieldUtils {
   }
 
   @SneakyThrows
-  public static List<EntityUIMetaData> fillEntityUIMetadataList(Class entityClassByType, Context context) {
+  public static List<EntityUIMetaData> fillEntityUIMetadataList(Class<?> entityClassByType, Context context) {
     return fillEntityUIMetadataList(entityClassByType, new HashSet<>(), context);
   }
 
   @SneakyThrows
-  public static List<EntityUIMetaData> fillEntityUIMetadataList(Class entityClassByType,
+  public static List<EntityUIMetaData> fillEntityUIMetadataList(Class<?> entityClassByType,
                                                                 Set<EntityUIMetaData> entityUIMetaDataSet,
                                                                 Context context) {
     if (entityClassByType == null) {
@@ -297,7 +297,7 @@ public class UIFieldUtils {
 
     ObjectNode jsonTypeMetadata = OBJECT_MAPPER.createObjectNode();
 
-    if (type.isEnum()) {
+    if (type.isEnum() && !noReadDefaultValue) {
       entityUIMetaData.setDefaultValue(fieldContext.getDefaultValue(instance));
     }
 

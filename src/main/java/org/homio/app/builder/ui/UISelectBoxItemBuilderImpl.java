@@ -11,6 +11,8 @@ import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.item.UIButtonItemBuilder;
 import org.homio.api.ui.field.action.v1.item.UISelectBoxItemBuilder;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
+import org.homio.app.model.var.WorkspaceGroup;
+import org.homio.app.model.var.WorkspaceVariable;
 import org.homio.app.rest.ItemController;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -38,6 +40,8 @@ public class UISelectBoxItemBuilderImpl
   private String placeholder;
   @Setter
   private boolean highlightSelected;
+  @Getter
+  private boolean multiSelect;
 
   public UISelectBoxItemBuilderImpl(String entityID, int order, UIActionHandler actionHandler) {
     super(UIItemType.SelectBox, entityID, order, actionHandler);
@@ -48,6 +52,12 @@ public class UISelectBoxItemBuilderImpl
     if (StringUtils.isNotEmpty(selectReplacer)) {
       this.selectReplacer = min + LIST_DELIMITER + max + LIST_DELIMITER + selectReplacer;
     }
+    return this;
+  }
+
+  @Override
+  public @NotNull UISelectBoxItemBuilder setMultiSelect(boolean value) {
+    this.multiSelect = value;
     return this;
   }
 
@@ -69,6 +79,16 @@ public class UISelectBoxItemBuilderImpl
         return this;
       }
     };
+  }
+
+  @Override
+  public @NotNull UISelectBoxItemBuilder setLazyVariableGroup() {
+    return setLazyItemOptions(WorkspaceGroup.class);
+  }
+
+  @Override
+  public @NotNull UISelectBoxItemBuilder setLazyVariable() {
+    return setLazyItemOptions(WorkspaceVariable.class);
   }
 
   @Override

@@ -638,7 +638,10 @@ public class ContextVarImpl implements ContextVar {
   private WorkspaceGroup assertGroupExists(@NotNull String groupId) {
     WorkspaceGroup entity = context.db().get(WorkspaceGroup.class, groupId);
     if (entity == null) {
-      throw new IllegalArgumentException("Variable group with id: " + groupId + " not exists");
+      entity = DataSourceUtil.getSelection(groupId).getValue(context);
+      if (entity == null) {
+        throw new IllegalArgumentException("Variable group with id: " + groupId + " not exists");
+      }
     }
     return entity;
   }

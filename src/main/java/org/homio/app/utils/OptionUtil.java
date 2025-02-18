@@ -2,8 +2,13 @@ package org.homio.app.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.homio.api.Context;
@@ -33,7 +38,12 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
@@ -228,7 +238,13 @@ public final class OptionUtil {
     }
 
     if (item.key != null) {
-      optionModel.json(json -> json.set("sp", OBJECT_MAPPER.valueToTree(item)));
+      if (!optionModel.getKey().equals(item.key)) {
+        optionModel.json(json -> json.set("sp", OBJECT_MAPPER.valueToTree(item)));
+      } else {
+        optionModel.setIcon(item.getIcon());
+        optionModel.setColor(item.getIconColor());
+        optionModel.setDescription(item.getDescription());
+      }
     }
 
     if (target instanceof SelectionWithDynamicParameterFields) {
@@ -303,6 +319,8 @@ public final class OptionUtil {
     SelectionParent parent) {
     OptionModel parentModel = OptionModel.of(parent.key, parent.getName()).setIcon(parent.icon).setColor(parent.iconColor)
       .setDescription(parent.description).setChildren(entry.getValue());
+    entry.getValue().removeIf(optionModel -> optionModel.getKey().equals(parentModel.getKey()));
+
     if (parent.getParent() != null) {
       JsonNode superParent = entry.getKey().getParent();
       String superParentKey = superParent.get("key").asText();

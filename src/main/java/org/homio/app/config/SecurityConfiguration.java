@@ -85,7 +85,6 @@ public class SecurityConfiguration {
           "/rest/media/image/**",
           "/rest/media/video/**",
           "/rest/media/video/playback/**",
-          "/rest/addon/image/**",
           "/rest/route/proxy/**",
           "/rest/device/**"
         ));

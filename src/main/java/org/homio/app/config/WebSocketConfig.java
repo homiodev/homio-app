@@ -8,8 +8,14 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.handler.invocation.HandlerMethodArgumentResolver;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.security.messaging.context.AuthenticationPrincipalArgumentResolver;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
-import org.springframework.web.socket.config.annotation.*;
+import org.springframework.web.socket.config.annotation.EnableWebSocket;
+import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
+import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
+import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 import org.springframework.web.socket.messaging.StompSubProtocolErrorHandler;
 import org.springframework.web.socket.server.support.OriginHandshakeInterceptor;
@@ -54,8 +60,21 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSoc
   public void registerWebSocketHandlers(WebSocketHandlerRegistry webSocketHandlerRegistry) {
     webSocketHandlerRegistry.addHandler(new AbstractWebSocketHandler() {
         @Override
-        public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+          super.handleTransportError(session, exception);
+          log.error("WebSocket transport error: <{}>", exception.getMessage());
+        }
+
+        @Override
+        public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+          super.afterConnectionClosed(session, status);
+          log.warn("WebSocket connection closed: <{}>", session.getId());
+        }
+
+        @Override
+        public void afterConnectionEstablished(@NotNull WebSocketSession session) throws Exception {
           super.afterConnectionEstablished(session);
+          log.info("WebSocket connection established: <{}>", session.getId());
         }
       }, "/tttt")
       .addInterceptors(new OriginHandshakeInterceptor())

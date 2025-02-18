@@ -23,7 +23,12 @@ import org.homio.api.util.Lang;
 import org.homio.app.ssh.SshCloudEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
@@ -184,6 +189,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
       dialogModel -> {
         dialogModel.disableKeepOnUi();
         List<ActionInputParameter> inputs = new ArrayList<>();
+        inputs.add(ActionInputParameter.message("CLOUD.SYNC_MSG"));
         inputs.add(ActionInputParameter.text("email", context.user().getLoggedInUserRequire().getEmail()));
         inputs.add(ActionInputParameter.textRequired("password", "", 8, 40));
         inputs.add(ActionInputParameter.text("passphrase", ""));

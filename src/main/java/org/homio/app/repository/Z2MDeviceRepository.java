@@ -1,8 +1,5 @@
 package org.homio.app.repository;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.homio.addon.z2m.model.Z2MDeviceEntity;
 import org.homio.addon.z2m.model.Z2MLocalCoordinatorEntity;
 import org.homio.addon.z2m.service.Z2MDeviceService;
@@ -11,6 +8,9 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Repository;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Repository
 public class Z2MDeviceRepository extends AbstractRepository<Z2MDeviceEntity> {

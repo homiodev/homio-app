@@ -113,6 +113,9 @@ public class ContextInstallImpl implements ContextInstall {
             finishHandler.accept(false, null);
             return;
           }
+          if (System.getProperty("spring.profiles.active").contains("offline")) {
+            return;
+          }
           waiters.add(finishHandler);
           if (installing) { // installing - just return. thread will fire finishHandler
             return;

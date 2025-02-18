@@ -23,8 +23,6 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.CopyOption;
 import java.nio.file.FileAlreadyExistsException;
@@ -34,7 +32,6 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -72,6 +69,16 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     this.entity = entity;
     this.fileSystemAlias = fileSystemAlias;
     this.updateBasePath();
+  }
+
+  private static @Nullable Matcher getFileSearchMather(@NotNull SearchParameters request) {
+    Matcher fileMatcher = null;
+    if (StringUtils.isNotEmpty(request.searchFor())) {
+      String quotedRequestFor = Pattern.quote(request.searchFor());
+      Pattern filePattern = compile(quotedRequestFor, Pattern.CASE_INSENSITIVE);
+      fileMatcher = filePattern.matcher("");
+    }
+    return fileMatcher;
   }
 
   @Override
@@ -214,7 +221,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
   private void updateBasePath() {
     Path basePath = Paths.get(entity.getFileSystemRoot());
     if (fileSystemAlias > 0) {
-      basePath = basePath.resolve(entity.getAliasPath(fileSystemAlias));
+      basePath = basePath.resolve(entity.getAlias(fileSystemAlias).getPath());
     }
     this.basePath = basePath.toString();
   }
@@ -232,7 +239,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
 
   @Override
   @SneakyThrows
-  public TreeNode delete(Set<String> ids) {
+  public @NotNull TreeNode delete(Set<String> ids) {
     Set<Path> removedFiles = new HashSet<>();
     Map<Path, Set<String>> archiveIds = new HashMap<>();
     for (String id : ids) {
@@ -328,7 +335,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
 
   @Override
   @SneakyThrows
-  public @NotNull TreeNode copy(@NotNull Collection<TreeNode> entries, @NotNull String targetId, UploadOption uploadOption) {
+  public @NotNull TreeNode copy(@NotNull Collection<TreeNode> entries, @NotNull String targetId, @NotNull UploadOption uploadOption) {
     CopyOption[] options = uploadOption == UploadOption.Replace ? new CopyOption[]{REPLACE_EXISTING} : new CopyOption[0];
     List<Path> result = new ArrayList<>();
     Path targetPath = buildPath(targetId);
@@ -492,9 +499,11 @@ public class LocalFileSystemProvider implements FileSystemProvider {
   private TreeNode buildTreeNode(boolean exists, File file, boolean isDirectory, String fullPath, String contentType) {
     boolean isEmpty = !exists || (file.isDirectory() && Objects.requireNonNull(file.list()).length == 0);
     if (isEmpty) {
-      return new TreeNode(isDirectory, true, file.getName(), fullPath, 0L, 0L, this, contentType);
+      return new TreeNode(isDirectory, true, file.getName(), fullPath, 0L, 0L,
+        this, contentType, file.hashCode());
     }
-    return new TreeNode(isDirectory, false, file.getName(), fullPath, file.length(), file.lastModified(), this, contentType);
+    return new TreeNode(isDirectory, false, file.getName(), fullPath, file.length(),
+      file.lastModified(), this, contentType, file.hashCode());
   }
 
   private TreeNode buildArchiveEntries(Path archivePath, List<File> files, boolean includeRoot) {
@@ -567,7 +576,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     threadRef.set(entity.context().bgp().builder("searching")
       .delay(Duration.ofMillis(200))
       .execute(context -> {
-        try (Stream<Path> stream = Files.walk(Paths.get(entity.getFileSystemRoot()), 50)) {
+        try (Stream<Path> stream = Files.walk(Paths.get(entity.getFileSystemRoot()), request.subdirDepth())) {
           stream.parallel().forEach(path -> {
             if (context.isStopped()) {
               throw new CancellationException("Search stopped");
@@ -589,36 +598,26 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     return () -> threadRef.get().cancel();
   }
 
-  private static @Nullable Matcher getFileSearchMather(@NotNull SearchParameters request) {
-    Matcher fileMatcher = null;
-    if(StringUtils.isNotEmpty(request.searchFor())) {
-      String quotedRequestFor = Pattern.quote(request.searchFor());
-      Pattern filePattern = compile(quotedRequestFor, Pattern.CASE_INSENSITIVE);
-      fileMatcher = filePattern.matcher("");
-    }
-    return fileMatcher;
-  }
-
   private boolean acceptSearch(@NotNull FileSystemProvider.SearchParameters request, Path path, Matcher fileMatcher) {
     try {
       if (Files.isHidden(path)) {
         return false;
       }
-      if (Files.isDirectory(path)) {
+      boolean searchInFiles = StringUtils.isNotEmpty(request.searchText());
+      if (Files.isDirectory(path) && !searchInFiles) {
         if (!request.searchFolder()) {
           return false;
         }
-      } else {
-        if (!request.searchFiles()) {
-          return false;
-        }
+      } else if (!request.searchFiles()) {
+        return false;
       }
       fileMatcher.reset(path.getFileName().toString());
       if (!fileMatcher.find()) {
         return false;
       }
-      if (StringUtils.isNotEmpty(request.searchText()) && Files.isRegularFile(path) && isTextFile(path)) {
-        return fileContainsText(path, request.searchText(), request.caseSensitive());
+      if (searchInFiles && Files.isRegularFile(path) && isTextFile(path)) {
+        boolean containsText = fileContainsText(path, request.searchText(), request.caseSensitive());
+        return request.revertSearch() != containsText;
       }
       return true;
     } catch (Exception e) {
@@ -651,8 +650,8 @@ public class LocalFileSystemProvider implements FileSystemProvider {
 
   private boolean isTextFile(Path path) {
     try {
-      String contentType = Files.probeContentType(path);
-      return contentType != null && contentType.startsWith("text");
+      String mimeType = TIKA.detect(path);
+      return mimeType.startsWith("text/");
     } catch (IOException e) {
       return false;
     }

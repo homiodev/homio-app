@@ -1,7 +1,14 @@
 package org.homio.app.model.entity.widget;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -11,7 +18,13 @@ import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasPermissions;
 import org.homio.api.model.JSON;
 import org.homio.api.ui.UISidebarMenu;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.UIFieldTab;
+import org.homio.api.ui.field.UIFieldType;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.jetbrains.annotations.NotNull;
@@ -55,7 +68,7 @@ public abstract class WidgetEntity<T extends WidgetEntity> extends BaseEntity
   }
 
   public String getFieldFetchType() {
-    return getJsonData("fieldFetchType", (String) null);
+    return getJsonData("fieldFetchType", null);
   }
 
   public T setFieldFetchType(String value) {
@@ -69,6 +82,7 @@ public abstract class WidgetEntity<T extends WidgetEntity> extends BaseEntity
     return super.getName();
   }
 
+  @JsonIgnore
   public abstract @NotNull String getImage();
 
   /**

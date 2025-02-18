@@ -10,7 +10,6 @@ import org.homio.api.Context;
 import org.homio.api.ContextService.RouteProxyBuilder.ProxyUrl;
 import org.homio.api.exception.ServerException;
 import org.homio.api.ui.UISidebarMenu;
-import org.homio.app.auth.JwtTokenProvider;
 import org.homio.app.manager.AddonService;
 import org.homio.app.manager.AddonService.AddonJson;
 import org.homio.app.manager.common.ClassFinder;
@@ -24,18 +23,28 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.DataNode;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.mvc.ProxyExchange;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.WebRequest;
 
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URLDecoder;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -44,7 +53,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
 
 @RestController
-@RequestMapping("/rest/route")
+@RequestMapping(value = "/rest/route", produces = "application/json")
 public class RouteController {
 
   private final Context context;

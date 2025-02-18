@@ -1,32 +1,7 @@
 package org.homio.addon.http;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.springframework.http.HttpHeaders.ACCEPT;
-import static org.springframework.http.HttpHeaders.ACCEPT_ENCODING;
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
-import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
-import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
-import static org.springframework.http.HttpHeaders.HOST;
-import static org.springframework.http.HttpHeaders.LOCATION;
-import static org.springframework.http.HttpHeaders.USER_AGENT;
-import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
-import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
-import static org.springframework.http.MediaType.TEXT_HTML_VALUE;
-import static org.springframework.http.MediaType.TEXT_PLAIN_VALUE;
-
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.pivovarit.function.ThrowingBiConsumer;
-
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
-import java.net.SocketException;
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
-import java.util.Map.Entry;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -49,7 +24,6 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.homio.api.Context;
-import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.state.JsonType;
 import org.homio.api.state.RawType;
 import org.homio.api.state.State;
@@ -69,6 +43,30 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
+import java.net.SocketException;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.springframework.http.HttpHeaders.ACCEPT;
+import static org.springframework.http.HttpHeaders.ACCEPT_ENCODING;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
+import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
+import static org.springframework.http.HttpHeaders.HOST;
+import static org.springframework.http.HttpHeaders.LOCATION;
+import static org.springframework.http.HttpHeaders.USER_AGENT;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
+import static org.springframework.http.MediaType.TEXT_HTML_VALUE;
+import static org.springframework.http.MediaType.TEXT_PLAIN_VALUE;
 
 @Getter
 @Component

@@ -2,11 +2,12 @@ package org.homio.app.manager;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
+import org.homio.api.entity.device.DeviceBaseEntity;
+import org.homio.api.model.Icon;
 import org.homio.api.state.JsonType;
+import org.homio.api.widget.HasCustomWidget;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.WidgetGroup;
@@ -14,12 +15,20 @@ import org.homio.app.model.entity.widget.WidgetTabEntity;
 import org.homio.app.model.entity.widget.impl.media.WidgetCalendarEntity;
 import org.homio.app.spring.ContextCreated;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.locks.ReentrantLock;
+
+import static java.util.Objects.requireNonNull;
 
 @Log4j2
 @Component
@@ -116,13 +125,13 @@ public class WidgetService implements ContextCreated {
 
     for (WidgetEntity<?> entity : this.widgetBaseEntities) {
       if (entity.isVisible()) {
-        AvailableWidget widget = new AvailableWidget(entity.getType(), entity.getImage(), null);
+        AvailableWidget widget = new AvailableWidget(entity.getType(), entity.getImage(), null, null);
 
         if (entity.getGroup() == null) {
           options.add(widget); // Add directly if group is null
         } else {
           widgetMap.computeIfAbsent(entity.getGroup(), group -> {
-            AvailableWidget parentWidget = new AvailableWidget(group.name().toLowerCase() + "-widgets", group.getIcon(), new ArrayList<>());
+            AvailableWidget parentWidget = new AvailableWidget(group.name().toLowerCase() + "-widgets", group.getIcon(), null, new ArrayList<>());
             options.add(parentWidget);
             return parentWidget;
           }).children.add(widget);
@@ -133,24 +142,18 @@ public class WidgetService implements ContextCreated {
     options.sort(Comparator.comparing((AvailableWidget w) -> w.children == null || w.children.isEmpty())
       .thenComparing(AvailableWidget::getKey));
 
-    AvailableWidget extraWidgets = new AvailableWidget("extra-widgets", "fas fa-cheese", new ArrayList<>());
-    extraWidgets.children.add(new AvailableWidget("IBKR", "fas fa-user", null));
-    options.add(extraWidgets);
-
-        /*AvailableWidget extraWidgets = new AvailableWidget("extra-widgets", "fas fa-cheese", new ArrayList<>());
-        Map<ParentWidget, AvailableWidget> widgetMap = new HashMap<>();
-
-        for (WidgetBaseTemplate template : context.getBeansOfType(WidgetBaseTemplate.class)) {
-                ParentWidget parent = template.getParent();
-                widgetMap.computeIfAbsent(parent, parentWidget ->
-                             new AvailableWidget(parentWidget.name(), parentWidget.getIcon(), new ArrayList<>()).setColor(parentWidget.getColor()))
-                         .getChildren()
-                         .add(new AvailableWidget(template.getName(), template.getIcon().getIcon(), null).setColor(template.getIcon().getColor()));
+    var extraWidgets = new ArrayList<AvailableWidget>();
+    for (DeviceBaseEntity entity : context.db().findAll(DeviceBaseEntity.class)) {
+      if (entity instanceof HasCustomWidget widget && widget.getAvailableWidgets() != null) {
+        for (Map.Entry<String, Icon> widgetInfo : widget.getAvailableWidgets().entrySet()) {
+          var icon = widgetInfo.getValue();
+          extraWidgets.add(new AvailableWidget(widgetInfo.getKey(), requireNonNull(icon.getIcon()), icon.getColor(), null));
         }
-        extraWidgets.children.addAll(widgetMap.values());
-        if (!extraWidgets.children.isEmpty()) {
-            options.add(extraWidgets);
-        }*/
+      }
+    }
+    if (!extraWidgets.isEmpty()) {
+      options.add(new AvailableWidget("extra-widgets", "fas fa-cheese", null, extraWidgets));
+    }
     return options;
   }
 
@@ -158,11 +161,9 @@ public class WidgetService implements ContextCreated {
   @RequiredArgsConstructor
   public static class AvailableWidget {
 
-    private @NotNull
-    final String key;
-    private final String icon;
-    private final List<AvailableWidget> children;
-    private @Setter
-    @Accessors(chain = true) String color;
+    private final @NotNull String key;
+    private final @NotNull String icon;
+    private final @Nullable String color;
+    private final @Nullable List<AvailableWidget> children;
   }
 }

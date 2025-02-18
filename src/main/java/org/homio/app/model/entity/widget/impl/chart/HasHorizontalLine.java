@@ -2,7 +2,10 @@ package org.homio.app.model.entity.widget.impl.chart;
 
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldSlider;
 
 public interface HasHorizontalLine extends HasJsonData {
 

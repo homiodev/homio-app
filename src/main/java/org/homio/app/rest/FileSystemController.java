@@ -13,6 +13,7 @@ import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
+import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.fs.FileSystemProvider;
@@ -20,6 +21,7 @@ import org.homio.api.fs.TreeConfiguration;
 import org.homio.api.fs.TreeNode;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
+import org.homio.api.model.Icon;
 import org.homio.api.stream.ContentStream;
 import org.homio.api.stream.audio.AudioFormat;
 import org.homio.api.stream.impl.FileContentStream;
@@ -72,7 +74,7 @@ import static org.homio.hquery.Curl.ONE_MB;
 
 @Log4j2
 @RestController
-@RequestMapping("/rest/fs")
+@RequestMapping(value = "/rest/fs", produces = "application/json")
 @RequiredArgsConstructor
 public class FileSystemController {
 
@@ -107,7 +109,7 @@ public class FileSystemController {
     }
     Collection<BaseFileSystemEntity> fsItems = getRequestedFileSystems(request);
     for (BaseFileSystemEntity fileSystem : fsItems) {
-      List<TreeConfiguration> fsConfigurations = fileSystem.buildFileSystemConfiguration(context);
+      List<TreeConfiguration> fsConfigurations = fileSystem.buildFileSystemConfiguration();
       loadSelectedChildren(request, fileSystem, fsConfigurations.get(0));
       configurations.addAll(fsConfigurations);
     }
@@ -305,7 +307,7 @@ public class FileSystemController {
         urlConnection.setConnectTimeout(10_000);
         urlConnection.setReadTimeout(10_000);
         TreeNode treeNode = new TreeNode(false, false, name, name,
-          (long) size, null, null, null)
+          (long) size, null, null, null, name.hashCode())
           .setInputStream(urlConnection.getInputStream());
         treeNode.setFileSystem(fileSystem);
         return fileSystem.copy(treeNode, sourceFileId, FileSystemProvider.UploadOption.Replace);
@@ -356,20 +358,48 @@ public class FileSystemController {
     }
   }
 
+  @DeleteMapping("/{sourceFs}/alias")
+  public void deleteAlias(@PathVariable("sourceFs") String sourceFs,
+                          @RequestBody CreateAliasRequest request) {
+    UserGuestEntity.assertFileManagerReadAccess(context);
+    var fileSystemEntity = fileSystemService.getFileSystemEntity(sourceFs);
+    if (fileSystemEntity.removeAlias(request.alias) && fileSystemEntity instanceof BaseEntity be) {
+      context.db().save(be);
+    }
+  }
+
+  @PostMapping("/{sourceFs}/alias")
+  public void createAlias(@PathVariable("sourceFs") String sourceFs,
+                          @RequestBody CreateAliasRequest request) {
+    UserGuestEntity.assertFileManagerReadAccess(context);
+    var fileSystem = fileSystemService.getFileSystem(sourceFs, request.alias);
+
+    TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileId);
+    var fileSystemEntity = fileSystemService.getFileSystemEntity(sourceFs);
+    if (fileSystemEntity.createAlias(treeNode, request.name, request.icon)) {
+      if (fileSystemEntity instanceof BaseEntity be) {
+        context.db().save(be);
+      }
+    }
+  }
+
   @PostMapping("/{sourceFs}/search")
   public void search(@PathVariable("sourceFs") String sourceFs,
                      @RequestBody SearchRequest request) {
     UserGuestEntity.assertFileManagerReadAccess(context);
     var fileSystem = fileSystemService.getFileSystem(sourceFs, request.alias);
+    var options = request.searchOptions;
     currentSearch = fileSystem.search(new FileSystemProvider.SearchParameters(
-      request.searchOptions.caseSensitive,
-        request.searchOptions.folders,
-        request.searchOptions.files,
-        request.searchOptions.wordOnly,
-        request.searchOptions.maxFiles,
-        request.searchOptions.searchInArchive,
+        options.maxFiles,
+        options.subdirDepth,
+        options.folders,
+        options.files,
         request.query,
-        request.queryText),
+        request.queryText,
+        options.caseSensitive,
+        options.revertSearch,
+        options.wordOnly,
+        options.searchInArchive),
       new FileSystemProvider.SearchCallback() {
         @Override
         public void found(TreeNode treeNode) {
@@ -538,6 +568,15 @@ public class FileSystemController {
 
   @Getter
   @Setter
+  public static class CreateAliasRequest extends BaseNodeRequest {
+
+    private String sourceFileId;
+    private String name;
+    private Icon icon;
+  }
+
+  @Getter
+  @Setter
   public static class SearchRequest extends BaseNodeRequest {
 
     private String id;
@@ -550,6 +589,7 @@ public class FileSystemController {
   public record SearchOptions(boolean folders,
                               boolean files,
                               boolean wordOnly,
+                              boolean revertSearch,
                               boolean searchInArchive,
                               int maxFiles,
                               int subdirDepth,

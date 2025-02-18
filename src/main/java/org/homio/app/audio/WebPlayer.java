@@ -17,7 +17,12 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.core.io.Resource;
 import org.springframework.util.MimeType;
 
-import javax.sound.sampled.*;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.Line;
+import javax.sound.sampled.Mixer;
+import javax.sound.sampled.SourceDataLine;
 import java.io.InputStream;
 import java.time.Duration;
 

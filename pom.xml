@@ -3,7 +3,7 @@
     <artifactId>homio-app</artifactId>
     <modelVersion>4.0.0</modelVersion>
     <packaging>jar</packaging>
-    <version>0.1.4</version>
+    <version>0.1.7</version>
 
     <parent>
         <artifactId>homio-dependency</artifactId>
@@ -202,6 +202,18 @@
         <dependency>
             <artifactId>maverick-synergy-client</artifactId>
             <groupId>com.sshtools</groupId>
+        </dependency>
+
+        <dependency>
+            <artifactId>addon-ibkr</artifactId>
+            <groupId>org.homio.addon</groupId>
+            <version>1.0.1-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <artifactId>addon-openweathermap</artifactId>
+            <groupId>org.homio.addon</groupId>
+            <version>1.0.4-SNAPSHOT</version>
         </dependency>
 
         <dependency>
@@ -483,7 +495,6 @@
         <dependency>
             <artifactId>Java-WebSocket</artifactId>
             <groupId>org.java-websocket</groupId>
-            <version>1.5.7</version>
         </dependency>
 
         <dependency>

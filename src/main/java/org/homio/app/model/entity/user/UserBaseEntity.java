@@ -120,7 +120,7 @@ public abstract class UserBaseEntity extends IdentityEntity
     UserEntity user = uiInputBuilder.context().user().getLoggedInUser();
     if (user != null && user.isAdmin()) {
       uiInputBuilder.addOpenDialogSelectableButton("CHANGE_PASSWORD", new Icon("fas fa-unlock-keyhole",
-          Color.RED), null, this::changePassword)
+          Color.RED), this::changePassword)
         .editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
           if (this.getUserType() == UserType.ADMIN) {
             flex.addTextInput("currentPassword", "", true);
@@ -129,7 +129,7 @@ public abstract class UserBaseEntity extends IdentityEntity
           flex.addTextInput("repeatNewPassword", "", true);
         }));
       uiInputBuilder.addOpenDialogSelectableButton("CHANGE_EMAIL", new Icon("fas fa-at",
-          Color.PRIMARY_COLOR), null, this::changeEmail)
+          Color.PRIMARY_COLOR), this::changeEmail)
         .editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
           if (this.getUserType() == UserType.ADMIN) {
             flex.addTextInput("currentPassword", "", true);

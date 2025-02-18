@@ -139,11 +139,10 @@ public class CacheControlHandlerInterceptor implements HandlerInterceptor {
     final HttpServletResponse response,
     final Object handler) {
 
-    if (handler == null || !(handler instanceof HandlerMethod)) {
+    if (handler == null || !(handler instanceof HandlerMethod handlerMethod)) {
       return null;
     }
 
-    final HandlerMethod handlerMethod = (HandlerMethod) handler;
     CacheControl cacheControl = handlerMethod.getMethodAnnotation(CacheControl.class);
 
     if (cacheControl == null) {

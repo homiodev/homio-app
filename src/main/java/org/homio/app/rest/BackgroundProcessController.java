@@ -5,13 +5,17 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.app.json.BgpProcessResponse;
 import org.homio.app.manager.common.ContextImpl;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
 
 @Log4j2
 @RestController
-@RequestMapping("/rest/bgp")
+@RequestMapping(value = "/rest/bgp", produces = "application/json")
 @RequiredArgsConstructor
 public class BackgroundProcessController {
 

@@ -106,8 +106,8 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
 
     int diffWithTo = nowDateTime.compareTo(nextToRun);
 
-    if (nowDateTime.compareTo(nextFromRun) > 0) {
-      if (toDiffFrom > 0 && nowDateTime.compareTo(nextToRun) < 0) {
+    if (nowDateTime.isAfter(nextFromRun)) {
+      if (toDiffFrom > 0 && nowDateTime.isBefore(nextToRun)) {
         Duration singleTimeToExecute = Duration.between(nowDateTime, nextToRun);
         runWhenTimeInRange(workspaceBlock, singleTimeToExecute);
       } else if (toDiffFrom < 0 && diffWithTo > 0) {
@@ -123,7 +123,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     context
       .bgp()
       .builder("when-time-in-range" + workspaceBlock.getId())
-      .tap(context -> ((WorkspaceBlockImpl) workspaceBlock).setThreadContext(context))
+      .tap(context -> workspaceBlock.setThreadContext(context))
       .delay(duration)
       .interval(Duration.ofDays(1))
       .execute(
@@ -250,7 +250,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     context
       .bgp()
       .builder("stop-in-timeout" + workspaceBlock.getId())
-      .tap(context -> ((WorkspaceBlockImpl) workspaceBlock).setThreadContext(context))
+      .tap(context -> workspaceBlock.setThreadContext(context))
       .interval(stopInDuration)
       .execute(
         () -> {
@@ -307,7 +307,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
       .bgp()
       .builder("workspace-schedule-" + name + "-" + workspaceBlock.getId())
       .interval(Duration.ofMillis(Math.max(100, (int) timeout)))
-      .tap(context -> ((WorkspaceBlockImpl) workspaceBlock).setThreadContext(context))
+      .tap(context -> workspaceBlock.setThreadContext(context))
       .execute(
         () -> {
           ((WorkspaceBlockImpl) workspaceBlock).setActiveWorkspace();

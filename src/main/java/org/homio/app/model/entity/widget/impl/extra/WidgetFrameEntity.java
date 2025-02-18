@@ -14,8 +14,6 @@ import org.homio.api.ui.field.UIFieldCodeEditor;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Set;
-
 @Entity
 @Getter
 @Setter

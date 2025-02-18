@@ -14,10 +14,7 @@ import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.ssh.SshCloudEntity;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
-
-import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
 
 @Log4j2
 @Component

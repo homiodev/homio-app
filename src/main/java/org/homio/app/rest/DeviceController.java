@@ -16,7 +16,13 @@ import org.homio.api.model.endpoint.DeviceEndpoint.EndpointType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,7 +36,7 @@ import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
 
 @Log4j2
 @RestController
-@RequestMapping("/rest/device")
+@RequestMapping(value = "/rest/device", produces = "application/json")
 @RequiredArgsConstructor
 public class DeviceController {
 

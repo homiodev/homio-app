@@ -15,6 +15,13 @@ public class HomioIdGenerator implements IdentifierGenerator {
   // hack to persist entity with defined id
   public static Map<String, Pair<String, String>> PERSIST_IDS = new ConcurrentHashMap<>();
 
+  private static String getName(BaseEntity object) {
+    if (object instanceof DeviceBaseEntity dbe) {
+      return (String) dbe.getJsonData().remove("name");
+    }
+    return object.getName();
+  }
+
   @Override
   public Object generate(SharedSessionContractImplementor session, Object object) {
     if (object instanceof BaseEntity baseEntity) {
@@ -33,12 +40,5 @@ public class HomioIdGenerator implements IdentifierGenerator {
       return entityID;
     }
     return UUID.randomUUID().toString();
-  }
-
-  private static String getName(BaseEntity object) {
-    if (object instanceof DeviceBaseEntity dbe) {
-      return (String) dbe.getJsonData().remove("name");
-    }
-    return object.getName();
   }
 }

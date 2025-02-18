@@ -3,7 +3,13 @@ package org.homio.app.model.entity.widget.impl.gauge;
 import org.homio.api.ContextWidget;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldNumber;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.UIFieldTab;
+import org.homio.api.ui.field.UIFieldType;
 import org.homio.app.model.entity.widget.UIFieldMarkers;
 
 public interface WidgetGaugeUITab extends HasJsonData {

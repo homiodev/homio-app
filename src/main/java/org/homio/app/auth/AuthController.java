@@ -22,7 +22,11 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -31,7 +35,7 @@ import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 @RestController
-@RequestMapping("/rest/auth")
+@RequestMapping(value = "/rest/auth", produces = "application/json")
 @RequiredArgsConstructor
 public class AuthController {
 

@@ -14,10 +14,20 @@ import org.homio.api.ui.field.action.v1.item.UISliderItemBuilder;
 import org.homio.api.ui.field.action.v1.item.UITextInputItemBuilder;
 import org.homio.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
 import org.homio.api.ui.field.action.v1.layout.dialog.UIDialogLayoutBuilder;
-import org.homio.app.builder.ui.*;
+import org.homio.app.builder.ui.UICheckboxItemBuilderImpl;
+import org.homio.app.builder.ui.UIDialogInputEntity;
+import org.homio.app.builder.ui.UIInfoItemBuilderImpl;
+import org.homio.app.builder.ui.UIItemType;
+import org.homio.app.builder.ui.UISelectBoxItemBuilderImpl;
+import org.homio.app.builder.ui.UISliderItemBuilderImpl;
+import org.homio.app.builder.ui.UITextInputItemBuilderImpl;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -29,10 +39,9 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
 
   @Getter
   private final String entityID;
-
-  private final Integer width;
   private final Map<String, UIEntityBuilder> inputBuilders = new LinkedHashMap<>();
-
+  @Setter
+  private Integer width;
   private String title;
   private String icon;
   private String iconColor;
@@ -44,10 +53,9 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
   @JsonIgnore
   private Map<String, String> styleMap;
 
-  public UIDialogLayoutBuilderImpl(String entityID, Integer width) {
+  public UIDialogLayoutBuilderImpl(String entityID) {
     this.entityID = entityID + "_dialog";
     this.title = entityID;
-    this.width = width;
   }
 
   @Override
@@ -133,7 +141,7 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
           .setSliderType(UISliderItemBuilder.SliderType.Input)
           .setRequired(input.required()));
       case info ->
-        addEntity(input.value(), new UIInfoItemBuilderImpl("txt_" + input.value().hashCode(), nextOrder(), input.value(), InfoType.Text));
+        addEntity(input.value(), new UIInfoItemBuilderImpl("txt_" + Math.abs(input.value().hashCode()), nextOrder(), input.value(), InfoType.Text));
       case bool ->
         addEntity(input.name(), new UICheckboxItemBuilderImpl(input.name(), nextOrder(), null, Boolean.parseBoolean(input.value())));
     }

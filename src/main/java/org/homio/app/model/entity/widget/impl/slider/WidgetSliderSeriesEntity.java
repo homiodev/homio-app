@@ -6,11 +6,21 @@ import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldNumber;
+import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.app.model.entity.widget.HasOptionsForEntityByClassFilter;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
-import org.homio.app.model.entity.widget.attributes.*;
+import org.homio.app.model.entity.widget.attributes.HasIcon;
+import org.homio.app.model.entity.widget.attributes.HasMargin;
+import org.homio.app.model.entity.widget.attributes.HasName;
+import org.homio.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
+import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
+import org.homio.app.model.entity.widget.attributes.HasValueConverter;
+import org.homio.app.model.entity.widget.attributes.HasValueTemplate;
 
 @Entity
 public class WidgetSliderSeriesEntity

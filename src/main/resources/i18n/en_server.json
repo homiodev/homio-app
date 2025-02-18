@@ -3,12 +3,10 @@
     "APPLICATION": "Application: {{VALUE}}",
     "NEW_DEVICE_QUESTION": "Do you want create new chromecast device?"
   },
-  "IBKR_DESCRIPTION": "Use <a href=\"{{VALUE}}\" target=\"_blank\">IBKR login</a> to authenticate to ibkr gateway",
   "MOUNT": {
     "SUCCESS": "Mount device to {{VALUE}} successfully",
     "SUCCESS_P": "Mount device to {{VALUE}} permanent successfully"
   },
-  "OPEN_WEATHER_VAR_NAME": "OpenWeather var of {{VALUE}}",
   "INSTALL_ERROR": "Error during installation",
   "BOARD_INFO": "Board info",
   "NO_BOARD_SELECTED": "No selected board",

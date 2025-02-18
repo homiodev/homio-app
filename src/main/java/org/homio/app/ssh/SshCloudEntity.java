@@ -37,7 +37,10 @@ import java.util.Set;
 import static org.homio.api.ui.field.action.UIActionInput.Type.text;
 import static org.homio.api.ui.field.action.UIActionInput.Type.textarea;
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-import static org.homio.app.ssh.SshGenericEntity.*;
+import static org.homio.app.ssh.SshGenericEntity.PublicKeyAuthSign;
+import static org.homio.app.ssh.SshGenericEntity.execDeletePrivateKey;
+import static org.homio.app.ssh.SshGenericEntity.execUploadPrivateKey;
+import static org.homio.app.ssh.SshGenericEntity.updateSSHData;
 
 @Log4j2
 @Entity

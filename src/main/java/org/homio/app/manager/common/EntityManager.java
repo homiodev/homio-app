@@ -16,7 +16,9 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import static org.homio.app.manager.CacheService.*;
+import static org.homio.app.manager.CacheService.CACHE_CLASS_BY_TYPE;
+import static org.homio.app.manager.CacheService.ENTITY_IDS_BY_CLASS_NAME;
+import static org.homio.app.manager.CacheService.ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI;
 
 @Log4j2
 @Component

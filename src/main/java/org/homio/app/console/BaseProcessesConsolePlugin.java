@@ -1,12 +1,21 @@
 package org.homio.app.console;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.ContextBGP;
 import org.homio.api.console.ConsolePluginTable;
-import org.homio.api.model.*;
+import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.FileContentType;
+import org.homio.api.model.FileModel;
+import org.homio.api.model.HasEntityIdentifier;
+import org.homio.api.model.Icon;
+import org.homio.api.model.Status;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;

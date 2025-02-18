@@ -106,7 +106,7 @@ import static org.springframework.http.HttpStatus.PARTIAL_CONTENT;
 
 @Log4j2
 @RestController
-@RequestMapping("/rest/media")
+@RequestMapping(value = "/rest/media", produces = "application/json")
 @RequiredArgsConstructor
 public class MediaController implements ContextCreated {
 
@@ -223,14 +223,14 @@ public class MediaController implements ContextCreated {
   }
 
   @PatchMapping("/{entityID}/mediamtx/video.webrtc")
-  public ResponseEntity<?> patchMediaMtxWebRTC(@PathVariable("entityID") String ignore) {
+  public ResponseEntity<?> patchWebRTC(@PathVariable("entityID") String ignore) {
     return new ResponseEntity<>(HttpStatus.NO_CONTENT);
   }
 
   @GetMapping("/{entityID}/{provider}/{filename}.m3u8")
-  public ResponseEntity<?> getMediaMtxHls(@PathVariable("entityID") String entityID,
-                                          @PathVariable("provider") String provider,
-                                          @PathVariable("filename") String filename, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
+  public ResponseEntity<?> getMediaHls(@PathVariable("entityID") String entityID,
+                                       @PathVariable("provider") String provider,
+                                       @PathVariable("filename") String filename, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
     Integer port = ContextMediaVideoImpl.hlsProviders.get(provider);
     if (port == null) {
       throw new IllegalArgumentException("Unable to find webrtc provider: " + provider);
@@ -239,9 +239,9 @@ public class MediaController implements ContextCreated {
   }
 
   @GetMapping("/{entityID}/{provider}/{filename}.mp4")
-  public ResponseEntity<?> getMediaMtxHlsMp4(@PathVariable("entityID") String entityID,
-                                             @PathVariable("provider") String provider,
-                                             @PathVariable("filename") String filename, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
+  public ResponseEntity<?> getHlsMp4(@PathVariable("entityID") String entityID,
+                                     @PathVariable("provider") String provider,
+                                     @PathVariable("filename") String filename, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
     Integer port = ContextMediaVideoImpl.webRTCProviders.get(provider);
     if (port == null) {
       throw new IllegalArgumentException("Unable to find webrtc provider: " + provider);

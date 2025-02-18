@@ -1,6 +1,10 @@
 package org.homio.app.manager.common.impl.javaluator;
 
-import com.fathzer.soft.javaluator.*;
+import com.fathzer.soft.javaluator.AbstractEvaluator;
+import com.fathzer.soft.javaluator.Constant;
+import com.fathzer.soft.javaluator.Function;
+import com.fathzer.soft.javaluator.Operator;
+import com.fathzer.soft.javaluator.Parameters;
 
 import java.text.NumberFormat;
 import java.text.ParsePosition;
@@ -11,7 +15,36 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.fathzer.soft.javaluator.DoubleEvaluator.*;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.ABS;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.ACOSINE;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.ASINE;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.ATAN;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.AVERAGE;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.CEIL;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.COSINE;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.COSINEH;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.DIVIDE;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.E;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.EXPONENT;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.FLOOR;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.LN;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.LOG;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.MAX;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.MIN;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.MINUS;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.MODULO;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.MULTIPLY;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.NEGATE;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.NEGATE_HIGH;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.PI;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.PLUS;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.RANDOM;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.ROUND;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.SINE;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.SINEH;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.SUM;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.TANGENT;
+import static com.fathzer.soft.javaluator.DoubleEvaluator.TANGENTH;
 
 public class ObjectEvaluator extends AbstractEvaluator<Object> {
 

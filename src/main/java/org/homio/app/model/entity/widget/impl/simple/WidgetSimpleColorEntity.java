@@ -1,8 +1,12 @@
 package org.homio.app.model.entity.widget.impl.simple;
 
 import jakarta.persistence.Entity;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldKeyValue;
 import org.homio.api.ui.field.UIFieldKeyValue.KeyValueType;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.UIFieldType;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.homio.app.model.entity.widget.attributes.HasAlign;

@@ -27,7 +27,7 @@ public class WorkspaceVariableMessage extends DataStorageEntity {
   public static WorkspaceVariableMessage average(List<WorkspaceVariableMessage> values) {
     double sum = 0.0;
     for (WorkspaceVariableMessage message : values) {
-      sum += (Double) message.value;
+      sum += ((Number) message.value).doubleValue();
     }
     return new WorkspaceVariableMessage(sum / values.size());
   }

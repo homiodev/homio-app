@@ -3,7 +3,6 @@ package org.homio.app.rest;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.NotImplementedException;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.UpdatableValue;
 import org.homio.api.ui.field.UIFieldType;
@@ -48,7 +47,8 @@ public class UIFieldBuilderImpl implements UIFieldBuilder {
 
   @Override
   public @NotNull HasDynamicUIFields.FieldBuilder addInput(int order, @NotNull UpdatableValue<String> value) {
-    throw new NotImplementedException();
+    FieldBuilderImpl builder = new FieldBuilderImpl(order, value, UIFieldType.String);
+    return addField(value.getName(), builder);
   }
 
   @Override

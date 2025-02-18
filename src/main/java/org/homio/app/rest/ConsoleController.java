@@ -2,8 +2,12 @@ package org.homio.app.rest;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import lombok.*;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
+import lombok.val;
 import org.homio.api.Context;
 import org.homio.api.ContextNetwork;
 import org.homio.api.console.ConsolePlugin;
@@ -41,18 +45,31 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.model.entity.user.UserBaseEntity.log;
 
 @RestController
-@RequestMapping("/rest/console")
+@RequestMapping(value = "/rest/console", produces = "application/json")
 @RequiredArgsConstructor
 public class ConsoleController implements ContextCreated {
 

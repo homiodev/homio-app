@@ -51,7 +51,13 @@ import org.springframework.cglib.proxy.MethodInterceptor;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -193,9 +199,9 @@ public class ContextStorageImpl implements ContextStorage {
       entity.validate();
 
       // hack to save entity with defined id
-      if(entityID != null) {
+      if (entityID != null) {
         HomioIdGenerator.PERSIST_IDS.put(entityID, Pair.of(entityID, entity.getName()));
-        if(entity instanceof DeviceBaseEntity dbe) {
+        if (entity instanceof DeviceBaseEntity dbe) {
           dbe.getJsonData().put("name", entityID);
         } else {
           entity.setName(entityID);

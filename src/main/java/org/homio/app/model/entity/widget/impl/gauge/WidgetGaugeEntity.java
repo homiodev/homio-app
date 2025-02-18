@@ -6,7 +6,12 @@ import org.homio.api.entity.validation.MaxItems;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.UIFieldTab;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;
 import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
@@ -139,8 +144,8 @@ public class WidgetGaugeEntity extends WidgetEntityAndSeries<WidgetGaugeEntity, 
     setJsonData("dotsc", value);
   }
 
-  @UIField(order = 1)
-  @UIFieldGroup(value = "GAUGE", borderColor = "#FF00FF", order = 100)
+  @UIField(order = 100)
+  @UIFieldGroup("SET_VALUE")
   public Boolean isUpdateOnMove() {
     return getJsonData("uom", Boolean.FALSE);
   }

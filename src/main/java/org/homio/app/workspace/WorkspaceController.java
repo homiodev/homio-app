@@ -1,13 +1,5 @@
 package org.homio.app.workspace;
 
-import static org.homio.api.ContextVar.GROUP_BROADCAST;
-import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -20,7 +12,6 @@ import org.homio.app.model.var.WorkspaceGroup;
 import org.homio.app.model.var.WorkspaceVariable;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,10 +19,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import static org.homio.api.ContextVar.GROUP_BROADCAST;
+
 @Log4j2
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/rest/workspace")
+@RequestMapping(value = "/rest/workspace", produces = "application/json")
 public class WorkspaceController {
 
   private final ContextImpl context;

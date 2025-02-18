@@ -14,7 +14,13 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Log4j2
@@ -109,9 +115,7 @@ public class MDNSClient {
   public @NotNull List<ServiceInfo> list(@NotNull String type) {
     List<ServiceInfo> services = new ArrayList<>();
     for (JmDNS instance : jmdnsInstances.values()) {
-      for (ServiceInfo serviceInfo : instance.list(type)) {
-        services.add(serviceInfo);
-      }
+      Collections.addAll(services, instance.list(type));
     }
     return services;
   }
@@ -119,9 +123,7 @@ public class MDNSClient {
   public @NotNull List<ServiceInfo> list(@NotNull String type, @NotNull Duration timeout) {
     List<ServiceInfo> services = new ArrayList<>();
     for (JmDNS instance : jmdnsInstances.values()) {
-      for (ServiceInfo serviceInfo : instance.list(type, timeout.toMillis())) {
-        services.add(serviceInfo);
-      }
+      Collections.addAll(services, instance.list(type, timeout.toMillis()));
     }
     return services;
   }

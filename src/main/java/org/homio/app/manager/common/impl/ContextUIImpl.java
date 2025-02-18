@@ -2,9 +2,13 @@ package org.homio.app.manager.common.impl;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pivovarit.function.ThrowingBiFunction;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
+import lombok.val;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
@@ -40,12 +44,13 @@ import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
 import org.homio.api.util.NotificationLevel;
-import org.homio.api.widget.CustomWidgetConfigurableEntity;
+import org.homio.api.widget.HasCustomWidget;
 import org.homio.app.builder.ui.UIInputBuilderImpl;
 import org.homio.app.builder.ui.UIInputEntityActionHandler;
 import org.homio.app.config.WebSocketConfig;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.widget.WidgetEntity;
+import org.homio.app.model.entity.widget.impl.extra.WidgetCustomEntity;
 import org.homio.app.model.rest.DynamicUpdateRequest;
 import org.homio.app.notification.HeaderButtonNotification;
 import org.homio.app.notification.HeaderButtonSelection;
@@ -61,8 +66,15 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.lang.reflect.Method;
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
@@ -195,12 +207,15 @@ public class ContextUIImpl implements ContextUI {
 
   public void registerForUpdates(DynamicUpdateRequest request) {
     DynamicUpdateContext duc = dynamicUpdateRegisters.get(request);
+    String dud = request.getDynamicUpdateId();
     if (duc == null) {
       if (request.getEntityID() != null) {
         BaseEntity entity = context.db().get(request.getEntityID());
-        if (entity instanceof CustomWidgetConfigurableEntity cwce) {
+        if (entity instanceof HasCustomWidget cwce) {
+          WidgetCustomEntity widgetEntity = context.db().get(dud.substring(0, dud.length() - request.getEntityID().length() - 1));
           cwce.setWidgetDataStore(data ->
-            context.event().fireEvent(request.getDynamicUpdateId(), new ObjectType(data)));
+              context.event().fireEvent(dud, new ObjectType(data)),
+            widgetEntity.getEntityID(), widgetEntity.getJsonData());
         }
       }
       dynamicUpdateRegisters.put(request, new DynamicUpdateContext());
@@ -208,13 +223,18 @@ public class ContextUIImpl implements ContextUI {
       duc.timeout = System.currentTimeMillis(); // refresh timer
       duc.registerCounter.incrementAndGet();
     }
-    UiUpdateListener uiUpdateListener = updateListenerRefreshHandler.get(request.getEntityID() + "~~~" + request.getDynamicUpdateId());
+    UiUpdateListener uiUpdateListener = updateListenerRefreshHandler.get(request.getEntityID() + "~~~" + dud);
     if (uiUpdateListener != null) {
       uiUpdateListener.listener.refresh();
     } else {
-      context.event().addEventBehaviourListener(request.getDynamicUpdateId(), request.getEntityID(),
+      context.event().addEventBehaviourListener(dud, request.getEntityID(),
         Duration.ofSeconds(60), value -> sendDynamicUpdateSupplied(request, () -> value));
     }
+  }
+
+  public void unRegisterForUpdates(String entityID) {
+    dynamicUpdateRegisters.keySet().removeIf(request ->
+      request.getDynamicUpdateId().startsWith(entityID));
   }
 
   public void unRegisterForUpdates(DynamicUpdateRequest request) {

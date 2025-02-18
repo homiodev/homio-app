@@ -67,6 +67,7 @@ import org.homio.app.model.entity.DeviceFallbackEntity;
 import org.homio.app.model.entity.user.UserGuestEntity;
 import org.homio.app.model.entity.widget.impl.WidgetFallbackEntity;
 import org.homio.app.model.rest.EntityUIMetaData;
+import org.homio.app.model.var.WorkspaceGroup;
 import org.homio.app.repository.AbstractRepository;
 import org.homio.app.rest.UIFieldBuilderImpl.FieldBuilderImpl;
 import org.homio.app.setting.system.SystemClearCacheButtonSetting;
@@ -138,7 +139,7 @@ import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
 
 @Log4j2
 @RestController
-@RequestMapping("/rest/item")
+@RequestMapping(value = "/rest/item", produces = "application/json")
 @RequiredArgsConstructor
 public class ItemController implements ContextCreated, ContextRefreshed {
 
@@ -209,10 +210,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     } catch (Exception e) {
       entityID = i.getClass().getDeclaredField("ieeeAddress");
     }
-    if (variableEntityID.equals(FieldUtils.readField(entityID, i, true))) {
-      return true;
-    }
-    return false;
+    return variableEntityID.equals(FieldUtils.readField(entityID, i, true));
   }
 
   @PostConstruct
@@ -247,12 +245,12 @@ public class ItemController implements ContextCreated, ContextRefreshed {
   @Override
   public void onContextRefresh(Context context) {
     List<Class<? extends BaseEntity>> baseEntityClasses = classFinder.getClassesWithParent(BaseEntity.class);
-    this.baseEntitySimpleClasses = baseEntityClasses.stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
+    baseEntitySimpleClasses = baseEntityClasses.stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
 
     for (Class<? extends BaseEntity> baseEntityClass : baseEntityClasses) {
       Class<?> cursor = baseEntityClass.getSuperclass();
       while (!cursor.getSimpleName().equals(BaseEntity.class.getSimpleName())) {
-        this.baseEntitySimpleClasses.put(cursor.getSimpleName(), cursor);
+        baseEntitySimpleClasses.put(cursor.getSimpleName(), cursor);
         cursor = cursor.getSuperclass();
       }
     }
@@ -430,6 +428,9 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         entities.addAll(context.db().findAll((Class<BaseEntity>) aClass));
       }
     }
+    if (type.equals(WorkspaceGroup.class.getSimpleName())) {
+      entities.removeIf(e -> e.getEntityID().equals("group_broadcast") || e.getEntityID().equals("group_hardware"));
+    }
     if (!entities.isEmpty()) {
       return context.toOptionModels(entities);
     }
@@ -574,6 +575,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         if (resultField == null) {
           resultField = savedEntity;
         }
+        context.ui().unRegisterForUpdates(entityId);
       }
       return resultField;
     } finally {
@@ -963,7 +965,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         json.put("icon", uiSidebarChildren.icon())
           .put("color", uiSidebarChildren.color())
           .put("maxExceeded", uiSidebarChildren.maxAllowCreateItem() > 0 &&
-                              uiSidebarChildren.maxAllowCreateItem() >= getItems(aClass.getSimpleName()).size()));
+                              uiSidebarChildren.maxAllowCreateItem() < getItems(aClass.getSimpleName()).size()));
     }
     return optionModel;
   }
@@ -1024,9 +1026,10 @@ public class ItemController implements ContextCreated, ContextRefreshed {
       if (!((Collection<?>) targetValue).isEmpty()) {
         for (Object o : (Collection<?>) targetValue) {
           o.toString(); // hibernate initialize
-          BaseEntity entity = (BaseEntity) o;
-          usages.put(entity.getEntityID(), entity);
-          fillEntityRelationships(entity, usages);
+          if (o instanceof BaseEntity entity) {
+            usages.put(entity.getEntityID(), entity);
+            fillEntityRelationships(entity, usages);
+          }
         }
       }
     } else if (targetValue != null) {

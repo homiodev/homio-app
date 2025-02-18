@@ -13,8 +13,6 @@ import org.homio.app.model.entity.widget.WidgetEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Set;
-
 @Entity
 @Getter
 @Setter

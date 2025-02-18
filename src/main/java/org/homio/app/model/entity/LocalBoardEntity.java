@@ -169,9 +169,16 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
     return Stream.of(ArchiveUtil.ArchiveFormat.values()).map(ArchiveFormat::getName).collect(Collectors.toSet());
   }
 
+  @SneakyThrows
   @Override
-  public @NotNull List<TreeConfiguration> buildFileSystemConfiguration(@NotNull Context context) {
-    List<TreeConfiguration> configurations = BaseFileSystemEntity.super.buildFileSystemConfiguration(context);
+  public @Nullable FileSystemSize requestDbSize() {
+    FileStore fileStore = Files.getFileStore(Path.of(getFileSystemRoot()));
+    return new FileSystemSize(fileStore.getTotalSpace(), fileStore.getUsableSpace());
+  }
+
+  @Override
+  public @NotNull List<TreeConfiguration> buildFileSystemConfiguration() {
+    List<TreeConfiguration> configurations = BaseFileSystemEntity.super.buildFileSystemConfiguration();
     for (DiskInfo usb : getService().getUsbDevices()) {
       if (usb.getMount().isEmpty()) {
         continue;
@@ -191,12 +198,13 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
   }
 
   @Override
-  public String getAliasPath(int alias) {
+  public Alias getAlias(int alias) {
     DiskInfo info = getService().getUsbDevice(alias);
     if (info != null) {
-      return info.getMount();
+      return new Alias(info.getMount(), info.getAlias(), info.getMount(),
+        new Icon(info.getIcon(), info.getColor()));
     }
-    return BaseFileSystemEntity.super.getAliasPath(alias);
+    return BaseFileSystemEntity.super.getAlias(alias);
   }
 
   @UIField(order = 900, type = UIFieldType.HTML, hideInEdit = true, hideOnEmpty = true)

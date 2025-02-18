@@ -1,10 +1,6 @@
 package org.homio.addon.weather;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-
-import java.text.SimpleDateFormat;
-import java.util.function.Function;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -22,6 +18,9 @@ import org.homio.api.workspace.scratch.MenuBlock.StaticMenuBlock;
 import org.homio.api.workspace.scratch.Scratch3Block;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.springframework.stereotype.Component;
+
+import java.text.SimpleDateFormat;
+import java.util.function.Function;
 
 @Getter
 @Component

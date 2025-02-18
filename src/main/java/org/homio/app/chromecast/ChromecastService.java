@@ -15,7 +15,13 @@ import org.homio.api.state.State;
 import org.homio.api.state.StringType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import su.litvak.chromecast.api.v2.*;
+import su.litvak.chromecast.api.v2.Application;
+import su.litvak.chromecast.api.v2.ChromeCast;
+import su.litvak.chromecast.api.v2.ChromeCastConnectionEvent;
+import su.litvak.chromecast.api.v2.ChromeCastConnectionEventListener;
+import su.litvak.chromecast.api.v2.ChromeCastSpontaneousEvent;
+import su.litvak.chromecast.api.v2.ChromeCastSpontaneousEventListener;
+import su.litvak.chromecast.api.v2.MediaStatus;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;

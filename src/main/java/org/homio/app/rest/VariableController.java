@@ -32,9 +32,18 @@ import org.homio.app.rest.widget.WidgetChartsController;
 import org.homio.app.rest.widget.WidgetChartsController.TimeSeriesChartData;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -46,7 +55,7 @@ import static org.homio.app.rest.widget.EvaluateDatesAndValues.convertValuesToFl
 
 @Log4j2
 @RestController
-@RequestMapping("/rest/var")
+@RequestMapping(value = "/rest/var", produces = "application/json")
 @RequiredArgsConstructor
 public class VariableController {
 

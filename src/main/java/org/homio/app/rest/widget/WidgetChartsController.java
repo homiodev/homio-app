@@ -31,7 +31,7 @@ import java.util.List;
 
 @Log4j2
 @RestController
-@RequestMapping("/rest/widget/chart")
+@RequestMapping(value = "/rest/widget/chart", produces = "application/json")
 public class WidgetChartsController {
 
   private final ContextImpl context;

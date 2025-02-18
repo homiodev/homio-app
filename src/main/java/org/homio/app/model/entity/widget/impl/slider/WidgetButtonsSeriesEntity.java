@@ -1,17 +1,12 @@
 package org.homio.app.model.entity.widget.impl.slider;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import org.apache.commons.lang3.NotImplementedException;
-import org.homio.api.entity.BaseEntity;
-import org.homio.api.entity.widget.ability.HasGetStatusValue;
-import org.homio.api.entity.widget.ability.HasSetStatusValue;
-import org.homio.api.model.HasEntityIdentifier;
-import org.homio.api.ui.UI;
-import org.homio.api.ui.field.*;
-import org.homio.app.model.entity.widget.HasOptionsForEntityByClassFilter;
+import org.homio.api.ui.field.UIField;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
-import org.homio.app.model.entity.widget.attributes.*;
+import org.homio.app.model.entity.widget.attributes.HasIcon;
+import org.homio.app.model.entity.widget.attributes.HasName;
+import org.homio.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
+import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 
 @Entity
 public class WidgetButtonsSeriesEntity

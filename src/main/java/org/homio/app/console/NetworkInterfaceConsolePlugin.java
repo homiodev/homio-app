@@ -1,6 +1,10 @@
 package org.homio.app.console;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.Context;
@@ -14,7 +18,12 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
 
 import java.net.NetworkInterface;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;

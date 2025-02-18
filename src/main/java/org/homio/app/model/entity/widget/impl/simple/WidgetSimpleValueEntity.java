@@ -3,7 +3,13 @@ package org.homio.app.model.entity.widget.impl.simple;
 import jakarta.persistence.Entity;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.WidgetGroup;
-import org.homio.app.model.entity.widget.attributes.*;
+import org.homio.app.model.entity.widget.attributes.HasActionOnClick;
+import org.homio.app.model.entity.widget.attributes.HasAlign;
+import org.homio.app.model.entity.widget.attributes.HasIcon;
+import org.homio.app.model.entity.widget.attributes.HasMargin;
+import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
+import org.homio.app.model.entity.widget.attributes.HasValueConverter;
+import org.homio.app.model.entity.widget.attributes.HasValueTemplate;
 import org.jetbrains.annotations.NotNull;
 
 @Entity

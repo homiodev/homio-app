@@ -1,25 +1,6 @@
 package org.homio.app.setting.system;
 
-import static java.lang.String.format;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-
 import com.fasterxml.jackson.core.type.TypeReference;
-
-import java.io.IOException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
@@ -39,6 +20,24 @@ import org.homio.hquery.Curl;
 import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
+
+import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static java.lang.String.format;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 @Log4j2
 public class SystemAddonLibraryManagerSetting
@@ -130,7 +129,6 @@ public class SystemAddonLibraryManagerSetting
         entity.setIcon(Base64.getEncoder().encodeToString(getIcon(iconsPath.resolve(name + ".png"))));
         entity.setReadmeLazyLoading(true);
         // entity.setReadme(addonRepo.getFile("README.md", String.class));
-        entity.setRemovable(true);
         return entity;
       }
     } catch (Exception ae) {

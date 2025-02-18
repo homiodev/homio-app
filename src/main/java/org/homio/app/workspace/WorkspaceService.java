@@ -1,22 +1,6 @@
 package org.homio.app.workspace;
 
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-
 import com.pivovarit.function.ThrowingRunnable;
-
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Consumer;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -26,9 +10,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.fs.Scratch3FSBlocks;
 import org.homio.addon.hardware.Scratch3HardwareBlocks;
 import org.homio.addon.http.Scratch3NetworkBlocks;
-import org.homio.addon.ibkr.Scratch3IBKRBlocks;
-import org.homio.addon.media.Scratch3MediaBlocks;
 import org.homio.addon.media.Scratch3ImageEditBlocks;
+import org.homio.addon.media.Scratch3MediaBlocks;
 import org.homio.addon.ui.Scratch3UIBlocks;
 import org.homio.addon.weather.Scratch3WeatherBlocks;
 import org.homio.api.AddonEntrypoint;
@@ -53,6 +36,21 @@ import org.homio.app.workspace.block.core.Scratch3OperatorBlocks;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+
 @Log4j2
 @Component
 @RequiredArgsConstructor
@@ -71,7 +69,6 @@ public class WorkspaceService implements ContextRefreshed {
 
   private static final List<Class<?>> inlineScratches =
     Arrays.asList(
-      Scratch3IBKRBlocks.class,
       Scratch3MediaBlocks.class,
       Scratch3NetworkBlocks.class,
       Scratch3HardwareBlocks.class,

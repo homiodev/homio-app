@@ -2,8 +2,8 @@ package org.homio.app.model.entity.widget.impl.gauge;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import org.homio.api.ContextWidget;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
+import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldColorPicker;
 import org.homio.api.ui.field.UIFieldGroup;
@@ -20,8 +20,8 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasValueConverter;
 import org.homio.app.model.entity.widget.attributes.HasValueTemplate;
 
-import static org.homio.api.ContextWidget.GaugeSeriesType;
 import static org.homio.api.ContextWidget.GaugeLineWidgetSeriesBuilder.GaugeLineType;
+import static org.homio.api.ContextWidget.GaugeSeriesType;
 
 @Entity
 public class WidgetGaugeSeriesEntity extends WidgetSeriesEntity<WidgetGaugeEntity>
@@ -189,5 +189,38 @@ public class WidgetGaugeSeriesEntity extends WidgetSeriesEntity<WidgetGaugeEntit
   @UIFieldShowOnCondition("return context.get('seriesType') != 'Line'")
   public String getValueConverter() {
     return HasValueConverter.super.getValueConverter();
+  }
+
+  @UIField(order = 1)
+  @UIFieldGroup(value = "ACTION_ON_CLICK", order = 50, borderColor = "#71B12B")
+  public boolean getFireValueOnClick() {
+    return getJsonData("fvoc", false);
+  }
+
+  public void setFireValueOnClick(boolean value) {
+    setJsonData("fvoc", value);
+  }
+
+  @UIField(order = 2, label = "widget.pushValueDataSource")
+  @UIFieldEntityByClassSelection(HasSetStatusValue.class)
+  @UIFieldGroup("ACTION_ON_CLICK")
+  @UIFieldShowOnCondition("return context.get('fireValueOnClick')")
+  public String getSetValueOnClick() {
+    return getJsonData("svoc");
+  }
+
+  public void setSetValueOnClick(String value) {
+    setJsonData("svoc", value);
+  }
+
+  @UIField(order = 3)
+  @UIFieldGroup("ACTION_ON_CLICK")
+  @UIFieldShowOnCondition("return context.get('fireValueOnClick')")
+  public String getSendValue() {
+    return getJsonData("sval");
+  }
+
+  public void setSendValue(String value) {
+    setJsonData("sval", value);
   }
 }

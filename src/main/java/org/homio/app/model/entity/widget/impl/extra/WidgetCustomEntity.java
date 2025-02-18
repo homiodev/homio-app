@@ -16,7 +16,7 @@ import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.HasDynamicUIFields;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
-import org.homio.api.widget.CustomWidgetConfigurableEntity;
+import org.homio.api.widget.HasCustomWidget;
 import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.rest.UIFieldBuilderImpl;
@@ -78,7 +78,7 @@ public class WidgetCustomEntity extends WidgetEntity<WidgetCustomEntity> impleme
   }
 
   @UIField(order = 50, required = true)
-  @UIFieldEntityByClassSelection(CustomWidgetConfigurableEntity.class)
+  @UIFieldEntityByClassSelection(HasCustomWidget.class)
   public String getParameterEntity() {
     return getJsonData("pe");
   }
@@ -92,7 +92,7 @@ public class WidgetCustomEntity extends WidgetEntity<WidgetCustomEntity> impleme
     String parameterEntity = getParameterEntity();
     if (!parameterEntity.isEmpty()) {
       BaseEntity entity = context().db().get(parameterEntity);
-      if (entity instanceof CustomWidgetConfigurableEntity configurableEntity) {
+      if (entity instanceof HasCustomWidget configurableEntity) {
         configurableEntity.assembleUIFields(uiFieldBuilder, this);
       }
     }
@@ -103,7 +103,7 @@ public class WidgetCustomEntity extends WidgetEntity<WidgetCustomEntity> impleme
     String parameterEntity = getParameterEntity();
     if (!parameterEntity.isEmpty()) {
       BaseEntity entity = context().db().get(parameterEntity);
-      if (entity instanceof CustomWidgetConfigurableEntity configurableEntity) {
+      if (entity instanceof HasCustomWidget configurableEntity) {
         configurableEntity.assembleActions(uiInputBuilder);
       }
     }

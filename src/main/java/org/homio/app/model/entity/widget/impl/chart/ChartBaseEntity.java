@@ -1,7 +1,9 @@
 package org.homio.app.model.entity.widget.impl.chart;
 
 import jakarta.persistence.Entity;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;

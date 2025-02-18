@@ -3,12 +3,9 @@ package org.homio.app.model.entity.widget.impl;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 import org.hibernate.mapping.PersistentClass;
-import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.Set;
 
 @Entity
 @DiscriminatorValue(PersistentClass.NOT_NULL_DISCRIMINATOR_MAPPING)

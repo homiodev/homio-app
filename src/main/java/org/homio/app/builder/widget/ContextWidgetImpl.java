@@ -7,6 +7,7 @@ import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.homio.api.Context;
 import org.homio.api.ContextWidget;
+import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
@@ -44,6 +45,7 @@ import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import static org.homio.app.model.entity.widget.WidgetTabEntity.MAIN_TAB_ID;
@@ -244,8 +246,17 @@ public class ContextWidgetImpl implements ContextWidget {
   }
 
   @Override
-  public void createCustomWidget(@NotNull String entityID, @NotNull Consumer<CustomWidgetBuilder> widgetBuilder) {
+  public @NotNull BaseEntity createCustomWidget(@NotNull String entityID, @NotNull String tab,
+                                                @NotNull Consumer<CustomWidgetBuilder> widgetBuilder) {
     WidgetCustomEntity widget = new WidgetCustomEntity();
+    widget.setEntityID(entityID);
+    for (WidgetTabEntity widgetTabEntity : context.db().findAll(WidgetTabEntity.class)) {
+      if (Objects.equals(widgetTabEntity.getName(), tab) ||
+          Objects.equals(widgetTabEntity.getEntityID(), tab)) {
+        widget.setWidgetTabEntity(widgetTabEntity);
+        break;
+      }
+    }
     widgetBuilder.accept(new CustomWidgetBuilder() {
       @Override
       public @NotNull CustomWidgetBuilder css(@NotNull String value) {
@@ -271,6 +282,7 @@ public class ContextWidgetImpl implements ContextWidget {
         return this;
       }
     });
+    return context.db().save(widget);
   }
 
   @Override
@@ -293,7 +305,7 @@ public class ContextWidgetImpl implements ContextWidget {
       Icon icon = new Icon(widgetDefinition.getIcon(), UI.Color.random());
       String title = "WIDGET.CREATE_" + widgetDefinition.getName();
       uiInputBuilder
-        .addOpenDialogSelectableButton(title, icon, null,
+        .addOpenDialogSelectableButton(title, icon,
           (context, params) ->
             fireCreateTemplateWidget(entity, widgetDefinition, widgetBuilder, context, params))
         .editDialog(dialogBuilder -> {

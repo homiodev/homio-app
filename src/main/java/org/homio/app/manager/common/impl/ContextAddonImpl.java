@@ -1,6 +1,5 @@
 package org.homio.app.manager.common.impl;
 
-import jakarta.persistence.EntityManagerFactory;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
