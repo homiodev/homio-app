@@ -52,6 +52,11 @@ public class ContextNetworkImpl implements ContextNetwork {
   }
 
   @Override
+  public @NotNull String getOuterIpAddress() {
+    return networkHardwareRepository.getOuterIpAddress();
+  }
+
+  @Override
   public @NotNull List<ServiceInfo> scanMDNS(@NotNull String serviceType) {
     return mdnsClient.list(serviceType, Duration.ofSeconds(6));
   }

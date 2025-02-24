@@ -812,7 +812,7 @@ public class ContextUIImpl implements ContextUI {
     public @NotNull NotificationBlockBuilder addEntityInfo(@NotNull BaseEntity entity) {
       Icon icon = entity.getEntityIcon();
       if (icon == null && entity instanceof BaseFileSystemEntity fs) {
-        icon = fs.getFileSystemIcon();
+        icon = new Icon(fs.getFileSystemIcon(), fs.getFileSystemIconColor());
       }
       Info info = notificationBlock.addInfoLine(entity.getEntityID(), entity.getTitle(), icon);
       info.setAsLink(entity);

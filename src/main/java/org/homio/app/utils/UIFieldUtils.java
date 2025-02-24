@@ -291,7 +291,8 @@ public class UIFieldUtils {
 
     // make sense keep defaultValue(for revert) only if able to edit value
     boolean noReadDefaultValue = fieldContext.isAnnotationPresent(UIFieldNoReadDefaultValue.class);
-    if (!noReadDefaultValue && !fullDisableEdit && !field.disableEdit()) {
+    if (!noReadDefaultValue && !fullDisableEdit && !field.disableEdit()
+        && !type.isAssignableFrom(SecureString.class)) {
       entityUIMetaData.setDefaultValue(fieldContext.getDefaultValue(instance));
     }
 

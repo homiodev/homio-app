@@ -13,7 +13,6 @@ import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.MenuBlock;
 import org.homio.api.workspace.scratch.Scratch3Block;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;
@@ -31,14 +30,11 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
   private final MenuBlock.ServerMenuBlock settingsMenu;
   private final MenuBlock.ServerMenuBlock hardwareEventsMenu;
 
-  private final NetworkHardwareRepository networkHardwareRepository;
-
   private final Scratch3Block ipGeoLocationReporter;
   private final Scratch3Block cityGeoLocationReporter;
 
-  public Scratch3HardwareBlocks(Context context, NetworkHardwareRepository networkHardwareRepository) {
+  public Scratch3HardwareBlocks(Context context) {
     super("#51633C", context, null, "hardware");
-    this.networkHardwareRepository = networkHardwareRepository;
 
     // Menu
     this.settingsMenu = menuServer("settingsMenu", "rest/setting/name", "Settings");
@@ -46,9 +42,8 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
 
     // Blocks
     blockReporter(50, "my_ip", "my ip", this::fireGetByIP);
-    blockReporter(60, "server_time", "time | format [FORMAT]", this::fireGetServerTimeReporter, block -> {
-      block.addArgument("FORMAT");
-    });
+    blockReporter(60, "server_time", "time | format [FORMAT]", this::fireGetServerTimeReporter, block ->
+      block.addArgument("FORMAT"));
 
     this.cityGeoLocationReporter =
       blockReporter(100, "city_geo_location", "City geo [VALUE]", this::fireGetCityGeoLocationReporter,
@@ -68,7 +63,7 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
       block -> block.addArgument(EVENT, this.hardwareEventsMenu));
 
     context.event().runOnceOnInternetUp("scratch3-hardware", () -> {
-      String ipAddress = networkHardwareRepository.getOuterIpAddress();
+      String ipAddress = context.network().getOuterIpAddress();
       this.ipGeoLocationReporter.addArgument(VALUE, ipAddress);
       IpGeolocation location = context.network().getIpGeoLocation(ipAddress);
       this.cityGeoLocationReporter.addArgument(VALUE, location.getCity());
@@ -101,7 +96,7 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
   }
 
   private State fireGetByIP(WorkspaceBlock workspaceBlock) {
-    return new StringType(this.networkHardwareRepository.getOuterIpAddress());
+    return new StringType(context.network().getOuterIpAddress());
   }
 
   private State fireGetIPGeoLocation(WorkspaceBlock workspaceBlock) {

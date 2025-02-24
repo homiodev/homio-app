@@ -250,7 +250,8 @@ public class ContextAddonImpl {
    */
   private void setupAddonContext(AddonContext addonContext) {
     if (!addonContext.isLoaded() && !addonContext.isInternal()) {
-      log.info("Try load addon context <{}>.", addonContext.getPomFile().getArtifactId());
+      log.info("Try load addon context <{}:>.",
+        addonContext.getPomFile().getArtifactId(), addonContext.getVersion());
       try {
         if (loadContext(addonContext)) {
           context.getAllApplicationContexts().add(addonContext.getApplicationContext());

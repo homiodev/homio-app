@@ -64,7 +64,7 @@ public class WidgetSimpleToggleEntity extends WidgetEntity<WidgetSimpleToggleEnt
   }
 
   @UIField(order = 1)
-  @UIFieldIconPicker(allowThreshold = true, allowBackground = true)
+  @UIFieldIconPicker(allowThreshold = true, allowBackground = true, simple = false)
   @UIFieldGroup(value = "ICON", order = 20, borderColor = "#009688")
   @UIFieldShowOnCondition("return context.get('displayType') == 'OnOff'")
   public String getIcon() {

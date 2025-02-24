@@ -49,7 +49,7 @@ import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 @Entity
 @Log4j2
 @CreateSingleEntity
-@UISidebarChildren(icon = "fas fa-microchip", color = "#9C3866", allowCreateItem = false)
+@UISidebarChildren(icon = "fas fa-computer", color = "#9C3866", allowCreateItem = false)
 public class LocalBoardEntity extends MicroControllerBaseEntity
   implements EntityService<LocalBoardService>,
   BaseFileSystemEntity<LocalFileSystemProvider> {
@@ -90,11 +90,6 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
   @Override
   public boolean isShowInFileManager() {
     return true;
-  }
-
-  @Override
-  public @NotNull Icon getFileSystemIcon() {
-    return new Icon("fas fa-computer", "#23819E");
   }
 
   @Override

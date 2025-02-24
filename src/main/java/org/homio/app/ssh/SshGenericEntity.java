@@ -373,11 +373,6 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
   }
 
   @Override
-  public @NotNull Icon getFileSystemIcon() {
-    return new Icon("fas fa-road-spikes", "#37A987");
-  }
-
-  @Override
   public boolean requireConfigure() {
     return isEmpty(getHost());
   }

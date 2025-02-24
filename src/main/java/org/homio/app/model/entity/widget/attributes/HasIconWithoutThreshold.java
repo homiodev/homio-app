@@ -17,7 +17,7 @@ public interface HasIconWithoutThreshold extends HasJsonData {
   }
 
   @UIField(order = 1)
-  @UIFieldIconPicker(allowEmptyIcon = true)
+  @UIFieldIconPicker(allowEmptyIcon = true, simple = false)
   @UIFieldGroup(value = "ICON", order = 20, borderColor = "#009688")
   default String getWidgetIcon() {
     return getJsonData("icon", "fas fa-adjust");
