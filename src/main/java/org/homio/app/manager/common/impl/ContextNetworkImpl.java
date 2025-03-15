@@ -8,7 +8,6 @@ import org.homio.api.ContextBGP;
 import org.homio.api.ContextNetwork;
 import org.homio.api.model.Icon;
 import org.homio.api.util.CommonUtils;
-import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.hquery.Curl;
@@ -162,7 +161,7 @@ public class ContextNetworkImpl implements ContextNetwork {
         scheduleFuture.setDescription("Listen udp: " + hostPortKey);
       } catch (Exception ex) {
         context.ui().notification().addOrUpdateBlock("UPD", "UDP", new Icon("fas fa-kip-sign", "#482594"), blockBuilder -> {
-          String info = Lang.getServerMessage("UDP_ERROR", FlowMap.of("key", hostPortKey, "msg", ex.getMessage()));
+          String info = Lang.getServerMessage("UDP_ERROR", Map.of("key", hostPortKey, "msg", ex.getMessage()));
           blockBuilder.addInfo(info, new Icon("fas fa-triangle-exclamation"));
         });
         log.error("Unable to listen udp host:port: <{}>", hostPortKey);

@@ -92,27 +92,31 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
   private static final BlockingQueue<LogEvent> eventQueue = new LinkedBlockingQueue<>();
 
   static {
-    Log.setDefaultContext(new DefaultLoggerContext() {
+    try {
+      Log.setDefaultContext(new DefaultLoggerContext() {
 
-      @Override
-      public synchronized boolean isLogging(Log.Level level) {
-        return true;
-      }
+        @Override
+        public synchronized boolean isLogging(Log.Level level) {
+          return true;
+        }
 
-      @Override
-      public synchronized void log(Log.Level level, String msg, Throwable e, Object... args) {
-        maverickLogger.log(getLogLevel(level), DefaultLoggerContext.prepareLog(level, msg, e, args));
-      }
+        @Override
+        public synchronized void log(Log.Level level, String msg, Throwable e, Object... args) {
+          maverickLogger.log(getLogLevel(level), DefaultLoggerContext.prepareLog(level, msg, e, args));
+        }
 
-      private Level getLogLevel(Log.Level level) {
-        return switch (level) {
-          case ERROR -> Level.ERROR;
-          case WARN -> Level.WARN;
-          case TRACE -> Level.TRACE;
-          default -> Level.DEBUG;
-        };
-      }
-    });
+        private Level getLogLevel(Log.Level level) {
+          return switch (level) {
+            case ERROR -> Level.ERROR;
+            case WARN -> Level.WARN;
+            case TRACE -> Level.TRACE;
+            default -> Level.DEBUG;
+          };
+        }
+      });
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
 
     new Thread(() -> {
       while (true) {

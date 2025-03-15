@@ -7,13 +7,13 @@ import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.service.discovery.ItemDiscoverySupport.DeviceScannerResult;
 import org.homio.api.ui.UIActionHandler;
 import org.homio.api.util.CommonUtils;
-import org.homio.api.util.FlowMap;
 import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -43,7 +43,7 @@ public abstract class BaseItemsDiscovery implements UIActionHandler {
               try {
                 return scanner.handler.handle(context, progressBar);
               } catch (Exception ex) {
-                log.error("Error while execute task: " + scanner.name, ex);
+                log.error("Error while execute task: {}", scanner.name, ex);
                 return new DeviceScannerResult();
               }
             },
@@ -51,7 +51,7 @@ public abstract class BaseItemsDiscovery implements UIActionHandler {
               log.info("Done scan for <{}>", scanner.name);
               status.set(0);
               if (ex != null) {
-                context.ui().toastr().error("SCAN.ERROR", FlowMap.of("MSG", CommonUtils.getErrorMessage(ex)), ex);
+                context.ui().toastr().error("SCAN.ERROR", Map.of("MSG", CommonUtils.getErrorMessage(ex)), ex);
               }
             });
         } else {
@@ -69,7 +69,7 @@ public abstract class BaseItemsDiscovery implements UIActionHandler {
           }
         }
         if (foundNewCount > 0 || foundOldCount > 0) {
-          context.ui().toastr().info("SCAN.RESULT", FlowMap.of("OLD", foundOldCount, "NEW", foundNewCount));
+          context.ui().toastr().info("SCAN.RESULT", Map.of("OLD", foundOldCount, "NEW", foundNewCount));
           log.info("Done batch scanning for <{}>", getBatchName());
         }
       });

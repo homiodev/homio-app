@@ -47,7 +47,7 @@ public class NetworkDriveEntity extends StorageEntity implements BaseFileSystemE
     return getJsonData("fs_root", "/");
   }
 
-  @UIField(order = 1, required = true, inlineEditWhenEmpty = true)
+  @UIField(order = 1, required = true, inlineEditWhenEmpty = true, copyButton = true)
   @UIFieldGroup(value = "CONNECT", order = 10, borderColor = "#2782B0")
   public String getUrl() {
     return getJsonData("url");
@@ -207,11 +207,6 @@ public class NetworkDriveEntity extends StorageEntity implements BaseFileSystemE
   }
 
   @Override
-  public @Nullable FileSystemSize requestDbSize() {
-    return null;
-  }
-
-  @Override
   public String getDefaultName() {
     if (StringUtils.isNotEmpty(getUrl())) {
       String name = getUrl();
@@ -303,30 +298,16 @@ public class NetworkDriveEntity extends StorageEntity implements BaseFileSystemE
 
   }
 
-  public static class NetworkDriveService extends ServiceInstance<NetworkDriveEntity> {
+  @RequiredArgsConstructor
+  public enum NetworkDriveType {
+    Auto(arg -> {
+      throw new IllegalArgumentException("Unable to detect protocol for url: " + arg.getUrl());
+    }),
+    Ftp(FtpSocketClient::new),
+    Webdav(WebdavSocketClient::new),
+    Samba(SmbSocketClient::new);
 
-    public NetworkDriveService(Context context, NetworkDriveEntity entity) {
-      super(context, entity, true, "NetworkDrive");
-    }
-
-    @Override
-    protected void initialize() {
-      testServiceWithSetStatus();
-    }
-
-    @Override
-    public void testService() {
-      try (var client = entity.createNetworkClient()) {
-        client.connect(false);
-      } catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    @Override
-    public void destroy(boolean forRestart, Exception ex) {
-
-    }
+    private final ThrowingFunction<NetworkDriveEntity, NetworkClient, Exception> createNetworkClient;
   }
 
   public interface NetworkFile {
@@ -369,15 +350,29 @@ public class NetworkDriveEntity extends StorageEntity implements BaseFileSystemE
     boolean deleteFile(@NotNull String id) throws IOException;
   }
 
-  @RequiredArgsConstructor
-  public enum NetworkDriveType {
-    Auto(arg -> {
-      throw new IllegalArgumentException("Unable to detect protocol for url: " + arg.getUrl());
-    }),
-    Ftp(FtpSocketClient::new),
-    Webdav(WebdavSocketClient::new),
-    Samba(SmbSocketClient::new);
+  public static class NetworkDriveService extends ServiceInstance<NetworkDriveEntity> {
 
-    private final ThrowingFunction<NetworkDriveEntity, NetworkClient, Exception> createNetworkClient;
+    public NetworkDriveService(Context context, NetworkDriveEntity entity) {
+      super(context, entity, true, "NetworkDrive");
+    }
+
+    @Override
+    protected void initialize() {
+      testServiceWithSetStatus();
+    }
+
+    @Override
+    public void testService() {
+      try (var client = entity.createNetworkClient()) {
+        client.connect(false);
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    @Override
+    public void destroy(boolean forRestart, Exception ex) {
+
+    }
   }
 }

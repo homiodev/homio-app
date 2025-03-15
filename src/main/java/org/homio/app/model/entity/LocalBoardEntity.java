@@ -164,13 +164,6 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
     return Stream.of(ArchiveUtil.ArchiveFormat.values()).map(ArchiveFormat::getName).collect(Collectors.toSet());
   }
 
-  @SneakyThrows
-  @Override
-  public @Nullable FileSystemSize requestDbSize() {
-    FileStore fileStore = Files.getFileStore(Path.of(getFileSystemRoot()));
-    return new FileSystemSize(fileStore.getTotalSpace(), fileStore.getUsableSpace());
-  }
-
   @Override
   public @NotNull List<TreeConfiguration> buildFileSystemConfiguration() {
     List<TreeConfiguration> configurations = BaseFileSystemEntity.super.buildFileSystemConfiguration();

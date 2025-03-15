@@ -41,7 +41,6 @@ import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
 import org.homio.api.util.CommonUtils;
-import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
 import org.homio.api.util.NotificationLevel;
 import org.homio.api.widget.HasCustomWidget;
@@ -233,8 +232,9 @@ public class ContextUIImpl implements ContextUI {
   }
 
   public void unRegisterForUpdates(String entityID) {
-    dynamicUpdateRegisters.keySet().removeIf(request ->
-      request.getDynamicUpdateId().startsWith(entityID));
+    dynamicUpdateRegisters.keySet().removeIf(request -> {
+      return request.getDynamicUpdateId().startsWith(entityID);
+    });
   }
 
   public void unRegisterForUpdates(DynamicUpdateRequest request) {
@@ -501,7 +501,7 @@ public class ContextUIImpl implements ContextUI {
 
   @Override
   public void sendJsonMessage(
-    @Nullable String title, @NotNull Object json, @Nullable FlowMap messageParam) {
+    @Nullable String title, @NotNull Object json, @Nullable Map<String, Object> messageParam) {
     title = title == null ? null : Lang.getServerMessage(title, messageParam);
     sendGlobal(GlobalSendType.json, null, json, title, null);
   }
@@ -585,7 +585,11 @@ public class ContextUIImpl implements ContextUI {
       objectNode.put("title", title);
     }
 
-    sendRawData("-global", objectNode);
+    try {
+      sendRawData("-global", objectNode);
+    } catch (Exception e) {
+      log.error("Unable to send global message: {}", e.getMessage(), e);
+    }
   }
 
   private void sendHeaderButtonToUI(HeaderButtonNotification notification, Consumer<ObjectNode> additionalSupplier) {

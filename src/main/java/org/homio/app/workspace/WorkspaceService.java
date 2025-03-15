@@ -12,6 +12,7 @@ import org.homio.addon.hardware.Scratch3HardwareBlocks;
 import org.homio.addon.http.Scratch3NetworkBlocks;
 import org.homio.addon.media.Scratch3ImageEditBlocks;
 import org.homio.addon.media.Scratch3MediaBlocks;
+import org.homio.addon.media.Scratch3TextToSpeachBlocks;
 import org.homio.addon.ui.Scratch3UIBlocks;
 import org.homio.addon.weather.Scratch3WeatherBlocks;
 import org.homio.api.AddonEntrypoint;
@@ -75,7 +76,8 @@ public class WorkspaceService implements ContextRefreshed {
       Scratch3WeatherBlocks.class,
       Scratch3UIBlocks.class,
       Scratch3FSBlocks.class,
-      Scratch3ImageEditBlocks.class);
+      Scratch3ImageEditBlocks.class,
+      Scratch3TextToSpeachBlocks.class);
 
   private final Duration TIME_WAIT_OLD_WORKSPACE = Duration.ofSeconds(3);
   private final Set<String> ONCE_EXECUTION_BLOCKS =

@@ -5,7 +5,9 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.Context;
+import org.homio.api.ContextUI;
 import org.homio.api.ContextUI.NotificationBlockBuilder;
+import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
@@ -17,8 +19,8 @@ import org.homio.api.setting.SettingPluginPackageInstall.PackageRequest;
 import org.homio.api.ui.UI.Color;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.Constants;
-import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
+import org.homio.api.widget.HasCustomWidget;
 import org.homio.app.HomioClassLoader;
 import org.homio.app.config.ExtRequestMappingHandlerMapping;
 import org.homio.app.config.TransactionManagerContext;
@@ -27,6 +29,7 @@ import org.homio.app.extloader.AddonContext;
 import org.homio.app.manager.AddonService;
 import org.homio.app.manager.CacheService;
 import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.model.entity.widget.impl.extra.WidgetCustomEntity;
 import org.homio.app.setting.system.SystemAddonLibraryManagerSetting;
 import org.homio.app.utils.HardwareUtils;
 import org.homio.hquery.Curl;
@@ -111,6 +114,13 @@ public class ContextAddonImpl {
     }
   }
 
+  private void fireUpdateWidgetCode(WidgetCustomEntity widget, HasCustomWidget loadedEntity) {
+    widget.setJsonData("code_hash", loadedEntity.getWidgetHashCode());
+    widget.setCode(String.join(System.lineSeparator(), loadedEntity.getCode()));
+    widget.setCss(String.join(System.lineSeparator(), loadedEntity.getStyle()));
+    context.db().save(widget);
+  }
+
   // initialize all installed addons as bunch
   public void initializeAddons(Map<String, AddonContext> artifactIdContextMap) {
     List<AddonContext> loadedAddons = artifactIdContextMap.values().stream().filter(context ->
@@ -143,7 +153,49 @@ public class ContextAddonImpl {
       }
     }
 
+    for (AddonContext loadedAddon : loadedAddons) {
+      this.updateAddonWidget(loadedAddon);
+    }
+
     ADDON_UPDATE_COUNT++;
+  }
+
+  private void updateAddonWidget(AddonContext entrypoint) {
+    // check if loaded addon has diff widget code/style
+    String addonID = entrypoint.getAddonID().substring("addon-".length());
+    for (WidgetCustomEntity widget : context.db().findAll(WidgetCustomEntity.class)) {
+      BaseEntity parameterEntity = context.db().get(widget.getParameterEntity());
+      if (parameterEntity instanceof HasCustomWidget && parameterEntity.getClass().getName().startsWith("org.homio.addon." + addonID + ".")) {
+        int initialCodeHash = widget.getJsonData("code_hash", -1);
+        int widgetCodeHash = widget.getCode().hashCode() + widget.getCss().hashCode();
+        HasCustomWidget loadedEntity = (HasCustomWidget) CommonUtils.newInstance(parameterEntity.getClass());
+        int loadedEntityCodeHash = loadedEntity.getWidgetHashCode();
+
+        if (initialCodeHash == widgetCodeHash) { // widget wasn't modified
+          if (loadedEntityCodeHash != widgetCodeHash) { // code was modified. we able directly to update widget
+            fireUpdateWidgetCode(widget, loadedEntity);
+          }
+        } else {
+          // user modified widget code. but maybe code was changed in new addon?
+          if (loadedEntityCodeHash != widgetCodeHash) {
+            context.ui().dialog().sendConfirmation("upd_w_" + widget.getEntityPrefix(), "TITLE.UPDATE_WIDGET",
+              responseType -> {
+                if (responseType == ContextUI.DialogResponseType.Accepted) {
+                  fireUpdateWidgetCode(widget, loadedEntity);
+                } else {
+                  widget.setJsonData("code_hash", loadedEntityCodeHash);
+                  context.db().save(widget);
+                }
+              }, List.of("Addon '" + entrypoint.getAddonID() + "' has been updated.",
+                "You contains widget with outdated content, but it was modified by user",
+                "Do you want to force update widget '" + widget.getTitle() + "' to latest content?"), 0, null);
+          } else {
+            widget.setJsonData("code_hash", loadedEntityCodeHash);
+            context.db().save(widget);
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -250,7 +302,7 @@ public class ContextAddonImpl {
    */
   private void setupAddonContext(AddonContext addonContext) {
     if (!addonContext.isLoaded() && !addonContext.isInternal()) {
-      log.info("Try load addon context <{}:>.",
+      log.info("Try load addon context <{}:{}>",
         addonContext.getPomFile().getArtifactId(), addonContext.getVersion());
       try {
         if (loadContext(addonContext)) {
@@ -372,7 +424,7 @@ public class ContextAddonImpl {
     String newVersion = params.getString("value");
     if (OptionModel.getByKey(versions, newVersion) != null) {
       String question = Lang.getServerMessage("PACKAGE_UPDATE_QUESTION",
-        FlowMap.of("NAME", addonContext.getPomFile().getName(), "VERSION", newVersion));
+        Map.of("NAME", addonContext.getPomFile().getName(), "VERSION", newVersion));
       context.ui().dialog().sendConfirmation("update-" + key, "DIALOG.TITLE.UPDATE_PACKAGE", () ->
         context.getBean(AddonService.class).installPackage(
           new SystemAddonLibraryManagerSetting(),

@@ -6,7 +6,6 @@ import org.homio.api.model.Icon;
 import org.homio.api.repository.GitHubProject;
 import org.homio.api.ui.UI;
 import org.homio.api.util.CommonUtils;
-import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.setting.system.SystemLogoutButtonSetting;
@@ -18,6 +17,7 @@ import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.Date;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -86,7 +86,7 @@ public final class NotificationUtils {
           runDuration = TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - START_TIME);
           time = runDuration + "m";
         }
-        String serverMsg = Lang.getServerMessage("SERVER_STARTED", FlowMap.of("VALUE",
+        String serverMsg = Lang.getServerMessage("SERVER_STARTED", Map.of("VALUE",
           new SimpleDateFormat("MM/dd HH:mm").format(new Date(START_TIME)),
           "TIME", time));
         builder.addInfo("time", new Icon("fas fa-clock"), serverMsg);

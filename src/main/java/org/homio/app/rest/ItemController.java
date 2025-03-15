@@ -1,6 +1,8 @@
 package org.homio.app.rest;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import jakarta.annotation.Nullable;
@@ -8,6 +10,8 @@ import jakarta.annotation.PostConstruct;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.Part;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -26,6 +30,7 @@ import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.log.HasEntitySourceLog;
+import org.homio.api.entity.media.HasTextToSpeech;
 import org.homio.api.entity.version.HasFirmwareVersion;
 import org.homio.api.entity.zigbee.ZigBeeDeviceBaseEntity;
 import org.homio.api.exception.NotFoundException;
@@ -55,6 +60,7 @@ import org.homio.api.ui.field.selection.dynamic.DynamicParameterFields;
 import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
 import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields.RequestDynamicParameter;
 import org.homio.api.util.CommonUtils;
+import org.homio.api.widget.HasCustomWidget;
 import org.homio.app.LogService;
 import org.homio.app.config.cacheControl.CacheControl;
 import org.homio.app.config.cacheControl.CachePolicy;
@@ -66,6 +72,7 @@ import org.homio.app.model.UIHideEntityIfFieldNotNull;
 import org.homio.app.model.entity.DeviceFallbackEntity;
 import org.homio.app.model.entity.user.UserGuestEntity;
 import org.homio.app.model.entity.widget.impl.WidgetFallbackEntity;
+import org.homio.app.model.entity.widget.impl.extra.WidgetCustomEntity;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.model.var.WorkspaceGroup;
 import org.homio.app.repository.AbstractRepository;
@@ -91,6 +98,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -98,8 +106,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.AnnotatedType;
@@ -136,6 +146,7 @@ import java.util.stream.Stream;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 @Log4j2
 @RestController
@@ -145,6 +156,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
   private static final Map<String, List<Class<?>>> typeToEntityClassNames =
     new ConcurrentHashMap<>();
+  private static final Map<String, Class<?>> BASE_ENTITY_INTERFACES =
+    Map.of(HasTextToSpeech.class.getSimpleName(), HasTextToSpeech.class);
   public static Map<String, Class<?>> className2Class = new ConcurrentHashMap<>();
   public static Map<String, Class<?>> baseEntitySimpleClasses = new HashMap<>();
   private final Map<String, List<ItemContextResponse>> itemsBootstrapContextMap =
@@ -598,6 +611,76 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     return items;
   }
 
+  @SneakyThrows
+  @PostMapping(value = "/{entityID}/call/{methodName}")
+  public JsonNode callService(@PathVariable("entityID") String entityID,
+                              @PathVariable("methodName") String methodName,
+                              @RequestHeader("Content-Type") String contentType,
+                              @RequestBody(required = false) String json,
+                              HttpServletRequest request) {
+    WidgetCustomEntity widgetEntity = context.db().getRequire(entityID);
+    context.user().getLoggedInUserRequire().assertViewAccess(widgetEntity);
+
+    BaseEntity entity = context.db().getRequire(widgetEntity.getParameterEntity());
+    context.user().getLoggedInUserRequire().assertViewAccess(entity);
+
+    if (entity instanceof HasCustomWidget customWidget) {
+      ObjectNode params = readParameters(request, contentType, json);
+      var callServices = customWidget.getCallServices();
+      if (callServices == null) {
+        throw new IllegalArgumentException("Can't find call services for entity: " + entity.getTitle());
+      }
+      var serviceMethod = callServices.get(methodName);
+      if (serviceMethod == null) {
+        throw new IllegalArgumentException("Can't find service method: " + methodName);
+      }
+      try {
+        return serviceMethod.callService(context, params);
+      } catch (Exception ex) {
+        log.error("Error while call service: {}", CommonUtils.getErrorMessage(ex));
+        context.ui().toastr().error(ex.getMessage());
+        throw new ServerException(ex.getMessage());
+      }
+    }
+    throw new IllegalArgumentException("Service not found for entity: " + entity.getTitle());
+  }
+
+  @SneakyThrows
+  private ObjectNode readParameters(HttpServletRequest request, String contentType, String json) {
+    if (json != null && !json.isEmpty()) {
+      return (ObjectNode) objectMapper.readValue(json, JsonNode.class);
+    }
+    ObjectNode responseObject = OBJECT_MAPPER.createObjectNode();
+    if (contentType != null && contentType.startsWith("multipart/form-data")) {
+      var filesArray = OBJECT_MAPPER.createArrayNode();
+      for (Part part : request.getParts()) {
+        String partName = part.getName();
+        if (part.getSubmittedFileName() != null) {
+          InputStream fileContent = part.getInputStream();
+          byte[] fileBytes = fileContent.readAllBytes();
+          String fileName = part.getSubmittedFileName();
+          ObjectNode fileNode = OBJECT_MAPPER.createObjectNode();
+          fileNode.put("name", fileName);
+          fileNode.put("content", fileBytes);
+          filesArray.add(fileNode);
+        } else {
+          StringBuilder partContent = new StringBuilder();
+          try (BufferedReader reader = new BufferedReader(new InputStreamReader(part.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+              partContent.append(line);
+            }
+          }
+          responseObject.put(partName, partContent.toString());
+        }
+      }
+      if (!filesArray.isEmpty()) {
+        responseObject.set("files", filesArray);
+      }
+    }
+    return responseObject;
+  }
+
   /**
    * Fetch dynamic data for every entity on UI. Calls every on every refresh page
    *
@@ -655,6 +738,11 @@ public class ItemController implements ContextCreated, ContextRefreshed {
       .collect(Collectors.toList());
   }
 
+    /*@PostMapping("/{entityID}/image")
+    public DeviceBaseEntity updateItemImage(@PathVariable("entityID") String entityID, @RequestBody ImageEntity imageEntity) {
+        return updateItem(entityID, true, baseEntity -> baseEntity.setImageEntity(imageEntity));
+    }*/
+
   @GetMapping("/type/{type}")
   public List<BaseEntity> getItemsByType(@PathVariable("type") String type) {
     putTypeToEntityIfNotExists(type);
@@ -668,11 +756,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     return list;
   }
-
-    /*@PostMapping("/{entityID}/image")
-    public DeviceBaseEntity updateItemImage(@PathVariable("entityID") String entityID, @RequestBody ImageEntity imageEntity) {
-        return updateItem(entityID, true, baseEntity -> baseEntity.setImageEntity(imageEntity));
-    }*/
 
   @SneakyThrows
   @PutMapping("/{entityID}/mappedBy/{mappedBy}")
@@ -701,14 +784,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
   }
 
-  @GetMapping("/{entityID}")
-  public BaseEntity getItem(@PathVariable("entityID") String entityID) {
-    BaseEntity entity = entityManager.getEntityWithFetchLazy(entityID);
-    context.user().getLoggedInUserRequire().assertViewAccess(entity);
-
-    return entity;
-  }
-
     /*@PostMapping("/{entityID}/uploadImageBase64")
     public ImageEntity uploadImageBase64(@PathVariable("entityID") String entityID, @RequestBody BufferedImage bufferedImage) {
         try {
@@ -719,6 +794,14 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             throw new ServerException(e);
         }
     }*/
+
+  @GetMapping("/{entityID}")
+  public BaseEntity getItem(@PathVariable("entityID") String entityID) {
+    BaseEntity entity = entityManager.getEntityWithFetchLazy(entityID);
+    context.user().getLoggedInUserRequire().assertViewAccess(entity);
+
+    return entity;
+  }
 
   @SneakyThrows
   @DeleteMapping("/{entityID}/series/{entityToRemove}")
@@ -977,6 +1060,15 @@ public class ItemController implements ContextCreated, ContextRefreshed {
       Class<?> baseEntityByName = baseEntitySimpleClasses.get(type);
       if (baseEntityByName != null) {
         putTypeToEntityByClass(type, baseEntityByName);
+      } else {
+        Class<?> baseEntityInterface = BASE_ENTITY_INTERFACES.get(type);
+        if (baseEntityInterface != null) {
+          for (Class<?> baseEntity : baseEntitySimpleClasses.values()) {
+            if (baseEntityInterface.isAssignableFrom(baseEntity)) {
+              putTypeToEntityByClass(type, baseEntity);
+            }
+          }
+        }
       }
     }
   }

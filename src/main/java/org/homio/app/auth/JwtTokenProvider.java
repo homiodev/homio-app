@@ -4,7 +4,7 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -27,8 +27,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -140,7 +140,7 @@ public class JwtTokenProvider implements ContextCreated {
   }
 
   public boolean validateToken(String token) {
-    // in case if postConstruct not yet fired but ui send request to backend
+    // in case if postConstruct not yet fired but ui sent request to backend
     if (this.jwtParser == null) {
       return false;
     }
@@ -157,26 +157,6 @@ public class JwtTokenProvider implements ContextCreated {
     return null;
   }
 
-    /*public String generateUserId(String accessID, String password) {
-        AccessUrlRequest request = accessUrlRequests
-            .values()
-            .stream()
-            .filter(f -> f.accessID.equals(accessID))
-            .findAny().orElse(null);
-        if (request != null) {
-            if (!request.password.equals(password)) {
-                throw new IllegalArgumentException("Wrong password");
-            }
-            accessUrlRequests.remove(request.userName);
-            context.ui().removeHeaderButton("access-" + request.accessID);
-            Collection<? extends GrantedAuthority> authentication = null;
-            String userToken = createToken(request.userName, authentication, TimeUnit.DAYS.toMillis(365));
-            // we should save it to database
-            return userToken;
-        }
-        return null;
-    }*/
-
   public String createToken(String username, Authentication authentication) {
     long validMillis = TimeUnit.MINUTES.toMillis(jwtValidityTimeout);
     String token = createToken(username, authentication.getAuthorities(), validMillis);
@@ -188,20 +168,22 @@ public class JwtTokenProvider implements ContextCreated {
   private String createToken(String username, Collection<? extends GrantedAuthority> auth, long validMillis) {
     Date now = new Date();
     Date validity = new Date(now.getTime() + validMillis);
+    SecretKey secretKey = Keys.hmacShaKeyFor(securityId);
     return Jwts.builder()
-      .setId(UUID.randomUUID().toString())
-      .setAudience(username)
+      .id(UUID.randomUUID().toString())
+      .audience().add(username).and()
       .claim("auth", auth)
-      .setIssuedAt(now)
-      .setIssuer("homio_app")
-      .setExpiration(validity)
-      .signWith(SignatureAlgorithm.HS256, securityId)
+      .issuedAt(now)
+      .issuer("homio_app")
+      .expiration(validity)
+      .signWith(secretKey)
       .compact();
   }
 
   private void regenerateSecurityID(ContextImpl context) {
     this.securityId = buildSecurityId();
-    this.jwtParser = Jwts.parser().setSigningKey(securityId).requireIssuer("homio_app");
+    var key = Keys.hmacShaKeyFor(securityId);
+    this.jwtParser = Jwts.parser().verifyWith(key).requireIssuer("homio_app").build();
     context.ui().dialog().reloadWindow("sys.auth_changed");
   }
 
@@ -211,7 +193,7 @@ public class JwtTokenProvider implements ContextCreated {
 
   private boolean isTokenValid(String token) {
     try {
-      this.jwtParser.parseClaimsJws(token);
+      this.jwtParser.parseSignedClaims(token);
       return true;
     } catch (JwtException | IllegalArgumentException e) {
       return false;
@@ -219,7 +201,7 @@ public class JwtTokenProvider implements ContextCreated {
   }
 
   private String getUsername(String token) {
-    return this.jwtParser.parseClaimsJws(token).getBody().getAudience();
+    return this.jwtParser.parseSignedClaims(token).getPayload().getAudience().iterator().next();
   }
 
   private byte[] buildSecurityId() {
@@ -228,6 +210,6 @@ public class JwtTokenProvider implements ContextCreated {
     if (regenerateSecurityIdOnRestart) {
       securityId += "_" + HardwareUtils.RUN_COUNT;
     }
-    return Base64.getEncoder().encode(securityId.getBytes());
+    return securityId.getBytes();
   }
 }

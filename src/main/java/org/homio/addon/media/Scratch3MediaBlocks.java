@@ -6,9 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
-import org.homio.api.service.TextToSpeechEntityService;
 import org.homio.api.state.DecimalType;
-import org.homio.api.state.RawType;
 import org.homio.api.state.State;
 import org.homio.api.stream.ContentStream;
 import org.homio.api.stream.StreamFormat;
@@ -45,7 +43,6 @@ import java.util.function.Consumer;
 public class Scratch3MediaBlocks extends Scratch3ExtensionBlocks {
 
   private final MenuBlock.ServerMenuBlock mediaMenu;
-  private final MenuBlock.ServerMenuBlock ttsMenu;
   // private final MenuBlock.ServerMenuBlock audioSourceMenu;
   private final MenuBlock.ServerMenuBlock audioOutputMenu;
   // private final Scratch3Block playSourceCommand;
@@ -54,11 +51,10 @@ public class Scratch3MediaBlocks extends Scratch3ExtensionBlocks {
   private final MenuBlock.ServerMenuBlock streamMenu;
 
   public Scratch3MediaBlocks(Context context) {
-    super("#87B023", context, null, "media");
+    super("#B02391", context, null, "media");
     setParent(ScratchParent.media);
 
     // menu
-    this.ttsMenu = menuServerServiceItems("tts", TextToSpeechEntityService.class, "Select TTS");
     this.mediaMenu = menuServerFiles(".(mp3|wav|ogg|aac|webrtc|webm|ogv|flv|avi|mp4|ts|m3u8|mjpeg)");
 
     this.audioOutputMenu = menuServer("aoMenu", "rest/media/stream?filter=audio", "Audio speaker");
@@ -119,16 +115,6 @@ public class Scratch3MediaBlocks extends Scratch3ExtensionBlocks {
         block.addArgument("FILE", this.mediaMenu);
         block.addArgument(VALUE, this.infoMenu);
       });
-
-    blockReporter(
-      130,
-      "tts",
-      "text [VALUE] to audio [TTS]",
-      this::getTextToAudioReporter,
-      block -> {
-        block.addArgument(VALUE, "Hello world");
-        block.addArgument("TTS", this.ttsMenu);
-      });
   }
 
   private static float getAudioLength(AudioHeader audioHeader) {
@@ -138,17 +124,6 @@ public class Scratch3MediaBlocks extends Scratch3ExtensionBlocks {
       return (float) ((MP3AudioHeader) audioHeader).getPreciseTrackLength();
     }
     throw new IllegalArgumentException("Unable to get length from audio length");
-  }
-
-  private RawType getTextToAudioReporter(WorkspaceBlock workspaceBlock) {
-    String text = workspaceBlock.getInputString(VALUE);
-    if (!text.isEmpty()) {
-      TextToSpeechEntityService ttsService =
-        workspaceBlock.getEntityService(
-          "TTS", this.ttsMenu, TextToSpeechEntityService.class);
-      return new RawType(ttsService.synthesizeSpeech(text, true), "audio/mp3");
-    }
-    return null;
   }
 
   private State getInfoReporter(WorkspaceBlock workspaceBlock) throws Exception {

@@ -4,8 +4,7 @@ import com.pivovarit.function.ThrowingRunnable;
 import com.sshtools.client.SshClient;
 import com.sshtools.client.sftp.SftpClientTask;
 import com.sshtools.client.sftp.SftpFile;
-import com.sshtools.common.sftp.SftpStatusException;
-import com.sshtools.common.ssh.SshException;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.homio.api.Context;
@@ -33,12 +32,7 @@ public class SshGenericFileSystem extends BaseCachedFileSystemProvider<SshGeneri
   }
 
   @Override
-  public int getFileSystemAlias() {
-    return 0;
-  }
-
-  @Override
-  public String getFileSystemId() {
+  public @NotNull String getFileSystemId() {
     return entity.getEntityID();
   }
 
@@ -57,29 +51,25 @@ public class SshGenericFileSystem extends BaseCachedFileSystemProvider<SshGeneri
     }
   }
 
+  @Getter
   @RequiredArgsConstructor
   public class SshFile implements FsFileEntity<SshFile> {
 
     private final SftpFile file;
+    private final boolean isDirectory;
+    private final Long size;
+    private final Long modifiedDateTime;
+
+    public SshFile(SftpFile file) {
+      this.file = file;
+      this.isDirectory = file.attributes().isDirectory();
+      this.size = file.attributes().size().longValue();
+      this.modifiedDateTime = file.attributes().lastModifiedTime().toMillis();
+    }
 
     @Override
     public @NotNull String getAbsolutePath() {
       return file.getAbsolutePath();
-    }
-
-    @Override
-    public boolean isDirectory() throws SftpStatusException, SshException {
-      return file.isDirectory();
-    }
-
-    @Override
-    public Long getSize() throws SftpStatusException, SshException {
-      return isDirectory() ? null : file.getAttributes().getSize().longValue();
-    }
-
-    @Override
-    public Long getModifiedDateTime() throws SftpStatusException, SshException {
-      return file.getAttributes().getModifiedDateTime().getTime();
     }
 
     @Override
@@ -96,17 +86,7 @@ public class SshGenericFileSystem extends BaseCachedFileSystemProvider<SshGeneri
       if (isPathEmpty(parentPath)) {
         return null;
       }
-      return new SshFile(new SftpFile(parentPath.toString(), null) {
-        @Override
-        public boolean isDirectory() {
-          return true;
-        }
-      }) {
-        @Override
-        public Long getModifiedDateTime() {
-          return null;
-        }
-      };
+      return new SshFile(null, true, null, null);
     }
 
     @Override
@@ -156,14 +136,14 @@ public class SshGenericFileSystem extends BaseCachedFileSystemProvider<SshGeneri
 
     @Override
     public SshFile getFile(@NotNull String id) throws Exception {
-      return new SshFile(getSftpService().openFile(id));
+      return new SshFile(getSftpService().openFile(id).getFile());
     }
 
     @Override
     @SneakyThrows
     public List<SshFile> readChildren(@NotNull String parentId) {
       SftpClientTask service = getSftpService();
-      SftpFile parent = service.openDirectory(parentId);
+      var parent = service.openDirectory(parentId);
       return service.readDirectory(parent).stream().filter(sftpFile -> {
         String filename = sftpFile.getFilename();
         return !filename.equals(".") && !filename.equals("..");

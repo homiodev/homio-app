@@ -428,8 +428,7 @@ public class UIFieldUtils {
       JsonNode colorChange = OBJECT_MAPPER.valueToTree(Arrays.stream(fieldProgress.colorChange()).collect(
         Collectors.toMap(UIFieldProgressColorChange::color, UIFieldProgressColorChange::whenMoreThan)));
       entityUIMetaData.setType("Progress");
-      jsonTypeMetadata.put("color", fieldProgress.color());
-      jsonTypeMetadata.put("bgColor", fieldProgress.fillColor());
+      jsonTypeMetadata.put("pgColor", fieldProgress.fillColor());
       jsonTypeMetadata.set("colorChange", colorChange);
     }
 

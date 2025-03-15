@@ -466,7 +466,7 @@ public class MediaController implements ContextCreated {
       .status(statusCode)
       .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
       .header(ACCEPT_RANGES, "bytes")
-      .contentType((MediaType) mimeType)
+      .contentType(MediaType.asMediaType(mimeType))
       .contentLength(contentLength)
       .body(region);
   }

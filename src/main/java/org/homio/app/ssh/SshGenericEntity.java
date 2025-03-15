@@ -18,7 +18,6 @@ import org.homio.api.entity.types.IdentityEntity;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.FileContentType;
 import org.homio.api.model.FileModel;
-import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.service.EntityService;
 import org.homio.api.service.ssh.SshBaseEntity;
@@ -241,11 +240,6 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
 
   public void setShowHiddenFiles(boolean value) {
     setJsonData("shf", value);
-  }
-
-  @Override
-  public @Nullable FileSystemSize requestDbSize() {
-    return null;
   }
 
   @JsonIgnore

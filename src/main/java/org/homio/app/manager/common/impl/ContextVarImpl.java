@@ -420,6 +420,7 @@ public class ContextVarImpl implements ContextVar {
     @NotNull VariableType variableType,
     @Nullable Consumer<VariableMetaBuilder> builder) {
     WorkspaceVariable entity = getOrCreateVariable(groupId, variableId);
+    VariableType oldRestriction = entity.getRestriction();
     if (entity.tryUpdateVariable(variableId, variableName, (variable) -> {
       if (builder != null) {
         builder.accept(new VariableMetaBuilderImpl(variable));
@@ -427,6 +428,10 @@ public class ContextVarImpl implements ContextVar {
     }, variableType)) {
       entity.getWorkspaceGroup().getWorkspaceVariables().add(entity);
       entity = context.db().save(entity);
+      if (oldRestriction != variableType) {
+        globalVarStorageMap.remove(entity.getEntityID());
+        variableBackupRepository.delete(entity);
+      }
     }
     return entity;
   }

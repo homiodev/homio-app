@@ -28,11 +28,6 @@ public class NetworkDriveFileSystem extends BaseCachedFileSystemProvider<Network
   }
 
   @Override
-  public int getFileSystemAlias() {
-    return 0;
-  }
-
-  @Override
   public @NotNull String getFileSystemId() {
     return entity.getEntityID();
   }
@@ -100,7 +95,7 @@ public class NetworkDriveFileSystem extends BaseCachedFileSystemProvider<Network
     public @NotNull InputStream getInputStream(@NotNull String id) throws Exception {
       return entity.execute(client -> {
         InputStream inputStream = client.getInputStream(id);
-        if(!(inputStream instanceof ByteArrayInputStream)) {
+        if (!(inputStream instanceof ByteArrayInputStream)) {
           return new ByteArrayInputStream(inputStream.readAllBytes());
         }
         return inputStream;
@@ -127,7 +122,7 @@ public class NetworkDriveFileSystem extends BaseCachedFileSystemProvider<Network
 
     @Override
     public NetworkDriveFile getFile(@NotNull String id) throws Exception {
-      if(!id.startsWith(entity.getFileSystemRoot())) {
+      if (!id.startsWith(entity.getFileSystemRoot())) {
         id = fixPath(Paths.get(entity.getFileSystemRoot()).resolve(id));
       }
       var finalId = id;

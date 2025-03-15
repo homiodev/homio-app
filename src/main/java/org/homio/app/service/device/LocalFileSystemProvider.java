@@ -188,12 +188,12 @@ public class LocalFileSystemProvider implements FileSystemProvider {
   }
 
   @Override
-  public long getTotalSpace() {
+  public Long getTotalSpace() {
     return new File(basePath).getTotalSpace();
   }
 
   @Override
-  public long getUsedSpace() {
+  public Long getUsedSpace() {
     File file = new File(basePath);
     return file.getTotalSpace() - file.getUsableSpace();
   }
