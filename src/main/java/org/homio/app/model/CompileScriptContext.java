@@ -11,11 +11,11 @@ import javax.script.ScriptEngine;
 @RequiredArgsConstructor
 public class CompileScriptContext {
 
-    private final CompiledScript compiledScript;
-    private final String formattedJavaScript;
-    private final JsonNode jsonParams;
+  private final CompiledScript compiledScript;
+  private final String formattedJavaScript;
+  private final JsonNode jsonParams;
 
-    public ScriptEngine getEngine() {
-        return compiledScript.getEngine();
-    }
+  public ScriptEngine getEngine() {
+    return compiledScript.getEngine();
+  }
 }

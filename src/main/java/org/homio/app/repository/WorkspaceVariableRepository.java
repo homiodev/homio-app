@@ -10,24 +10,24 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class WorkspaceVariableRepository extends AbstractRepository<WorkspaceVariable> {
 
-    public WorkspaceVariableRepository() {
-        super(WorkspaceVariable.class);
-    }
+  public WorkspaceVariableRepository() {
+    super(WorkspaceVariable.class);
+  }
 
-    public void deleteAll() {
-        for (WorkspaceVariable workspaceVariable : listAll()) {
-            deleteByEntityID(workspaceVariable.getEntityID());
-        }
+  public void deleteAll() {
+    for (WorkspaceVariable workspaceVariable : listAll()) {
+      deleteByEntityID(workspaceVariable.getEntityID());
     }
+  }
 
-    public Integer unlockVariablesByGroup(WorkspaceGroup group) {
-        return tmc.executeInTransaction(em -> {
-            CriteriaBuilder criteriaBuilder = em.getCriteriaBuilder();
-            CriteriaUpdate<WorkspaceVariable> updateCriteria = criteriaBuilder.createCriteriaUpdate(WorkspaceVariable.class);
-            Root<WorkspaceVariable> entityRoot = updateCriteria.from(WorkspaceVariable.class);
-            updateCriteria.set(entityRoot.get("locked"), false);
-            updateCriteria.where(criteriaBuilder.equal(entityRoot.get("workspaceGroup"), group));
-            return em.createQuery(updateCriteria).executeUpdate();
-        });
-    }
+  public Integer unlockVariablesByGroup(WorkspaceGroup group) {
+    return tmc.executeInTransaction(em -> {
+      CriteriaBuilder criteriaBuilder = em.getCriteriaBuilder();
+      CriteriaUpdate<WorkspaceVariable> updateCriteria = criteriaBuilder.createCriteriaUpdate(WorkspaceVariable.class);
+      Root<WorkspaceVariable> entityRoot = updateCriteria.from(WorkspaceVariable.class);
+      updateCriteria.set(entityRoot.get("locked"), false);
+      updateCriteria.where(criteriaBuilder.equal(entityRoot.get("workspaceGroup"), group));
+      return em.createQuery(updateCriteria).executeUpdate();
+    });
+  }
 }

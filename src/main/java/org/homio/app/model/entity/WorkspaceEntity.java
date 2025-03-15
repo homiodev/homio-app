@@ -3,6 +3,7 @@ package org.homio.app.model.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -16,74 +17,68 @@ import org.homio.api.ui.field.selection.SelectionConfiguration;
 import org.homio.app.workspace.WorkspaceService;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Set;
-
 @Getter
 @Setter
 @Entity
 @Accessors(chain = true)
 @NoArgsConstructor
-public final class WorkspaceEntity extends BaseEntity implements
-    HasJsonData,
-    SelectionConfiguration {
+@Table(name = "workspaces")
+public class WorkspaceEntity extends BaseEntity implements
+  HasJsonData,
+  SelectionConfiguration {
 
-    public static final String PREFIX = "space_";
+  public static final String PREFIX = "space_";
 
-    @Column(length = 10_485_760)
-    private String content;
+  @Column(length = 10_485_760)
+  private String content;
 
-    @Getter
-    @Setter
-    @Column(length = 10_000)
-    @Convert(converter = JSONConverter.class)
-    @NotNull
-    private JSON jsonData = new JSON();
+  @Getter
+  @Setter
+  @Column(length = 10_000)
+  @Convert(converter = JSONConverter.class)
+  @NotNull
+  private JSON jsonData = new JSON();
 
-    private String icon;
-    private String iconColor;
-    private boolean locked;
+  private String icon;
+  private String iconColor;
+  private boolean locked;
 
-    public WorkspaceEntity(String entityID, String name) {
-        setEntityID(entityID);
-        setName(name);
+  public WorkspaceEntity(String entityID, String name) {
+    setEntityID(entityID);
+    setName(name);
+  }
+
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
+
+  @Override
+  public void validate() {
+    if (getName() == null || getName().length() < 2 || getName().length() > 10) {
+      throw new IllegalStateException("Workspace tab name must be between 2..10 characters");
     }
+  }
 
-    @Override
-    public String getDefaultName() {
-        return null;
-    }
+  @Override
+  public @NotNull Icon getSelectionIcon() {
+    return new Icon(icon, iconColor);
+  }
 
-    @Override
-    public void validate() {
-        if (getName() == null || getName().length() < 2 || getName().length() > 10) {
-            throw new IllegalStateException("Workspace tab name must be between 2..10 characters");
-        }
-    }
+  @Override
+  protected long getChildEntityHashCode() {
+    int result = content != null ? content.hashCode() : 0;
+    result = 31 * result + jsonData.toString().hashCode();
+    return result;
+  }
 
-    @Override
-    public @NotNull Icon getSelectionIcon() {
-        return new Icon(icon, iconColor);
-    }
+  @Override
+  public boolean isDisableDelete() {
+    return super.isDisableDelete() || isLocked() || !context().getBean(WorkspaceService.class).isEmpty(content);
+  }
 
-    @Override
-    protected long getChildEntityHashCode() {
-        int result = content != null ? content.hashCode() : 0;
-        result = 31 * result + jsonData.toString().hashCode();
-        return result;
-    }
-
-    @Override
-    protected void assembleMissingMandatoryFields(@NotNull Set<String> fields) {
-
-    }
-
-    @Override
-    public boolean isDisableDelete() {
-        return super.isDisableDelete() || isLocked() || !context().getBean(WorkspaceService.class).isEmpty(content);
-    }
-
-    @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
-    }
+  @Override
+  public @NotNull String getEntityPrefix() {
+    return PREFIX;
+  }
 }

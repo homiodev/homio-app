@@ -1,6 +1,7 @@
 package org.homio.app.rest;
 
 import jakarta.annotation.PostConstruct;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -9,6 +10,7 @@ import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -38,195 +40,194 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 
-
 @RestController
 @RequestMapping("/rest")
 @RequiredArgsConstructor
 public class MainController {
 
-    private static Properties homioProperties;
-    private static Path rootPath;
-    private static Path propertiesLocation;
+  private static Properties homioProperties;
+  private static Path rootPath;
+  private static Path propertiesLocation;
 
-    private final BluetoothBundleService bluetoothBundleService;
-    private final SimpMessagingTemplate messagingTemplate;
-    private final ApplicationContext applicationContext;
-    private final MachineHardwareRepository repository;
-    private boolean installing;
+  private final BluetoothBundleService bluetoothBundleService;
+  private final SimpMessagingTemplate messagingTemplate;
+  private final ApplicationContext applicationContext;
+  private final MachineHardwareRepository repository;
+  private boolean installing;
 
-    @PostConstruct
-    public void test() {
-        repository.getDiscCapacity();
-        Timer timer = new Timer();
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                System.out.println("################################################################");
-                System.out.println("#   Please, go to https://homio.org and proceed installation   #");
-                System.out.println("################################################################");
-            }
-        }, 5000);
+  public static String getErrorMessage(Throwable ex) {
+    if (ex == null) {
+      return null;
+    }
+    Throwable cause = ex;
+    while (cause.getCause() != null) {
+      cause = cause.getCause();
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorHolderModel> handleException(Exception ex, WebRequest request) {
-        String msg = getErrorMessage(ex);
-        if (ex instanceof NullPointerException) {
-            msg += ". src: " + ex.getStackTrace()[0].toString();
+    if (cause instanceof NullPointerException) {
+      return "Unexpected NullPointerException at line: " + ex.getStackTrace()[0].toString();
+    }
+
+    return Objects.toString(cause.getMessage(), cause.toString());
+  }
+
+  public static Path createDirectoriesIfNotExists(Path path) {
+    if (Files.notExists(path)) {
+      try {
+        Files.createDirectories(path);
+      } catch (Exception ex) {
+        System.err.printf("Unable to create path: '%s'%n", path.toAbsolutePath());
+      }
+    }
+    return path;
+  }
+
+  @SneakyThrows
+  public static String getHomioProperty(String key, String defaultValue) {
+    Properties properties = getHomioProperties();
+    if (properties.containsKey(key)) {
+      return properties.getProperty(key);
+    }
+    properties.setProperty(key, defaultValue);
+    properties.store(Files.newOutputStream(propertiesLocation), null);
+    return defaultValue;
+  }
+
+  @SneakyThrows
+  private static Properties getHomioProperties() {
+    if (homioProperties == null) {
+      propertiesLocation = getHomioPropertiesLocation();
+      System.out.printf("Uses configuration file: %s%n".formatted(propertiesLocation.toString()));
+      homioProperties = new Properties();
+      try {
+        homioProperties.load(Files.newInputStream(propertiesLocation));
+        rootPath = Paths.get(homioProperties.getProperty("rootPath"));
+        Files.createDirectories(rootPath);
+      } catch (Exception ignore) {
+        rootPath = propertiesLocation.getParent();
+        homioProperties.setProperty("rootPath", rootPath.toString());
+        homioProperties.store(Files.newOutputStream(propertiesLocation), null);
+      }
+    }
+    return homioProperties;
+  }
+
+  @SneakyThrows
+  private static Path getHomioPropertiesLocation() {
+    Path propertiesFile = (SystemUtils.IS_OS_WINDOWS ? SystemUtils.getUserHome().toPath().resolve("homio") :
+      createDirectoriesIfNotExists(Paths.get("/opt/homio"))).resolve("homio.properties");
+    if (!Files.exists(propertiesFile)) {
+      ApplicationHome applicationHome = new ApplicationHome();
+      Path jarLocation = applicationHome.getDir().toPath();
+      return jarLocation.resolve("homio.properties");
+    }
+    return propertiesFile;
+  }
+
+  @PostConstruct
+  public void test() {
+    repository.getDiscCapacity();
+    Timer timer = new Timer();
+    timer.schedule(new TimerTask() {
+      @Override
+      public void run() {
+        System.out.println("################################################################");
+        System.out.println("#   Please, go to https://homio.org and proceed installation   #");
+        System.out.println("################################################################");
+      }
+    }, 5000);
+  }
+
+  @ExceptionHandler(Exception.class)
+  public ResponseEntity<ErrorHolderModel> handleException(Exception ex, WebRequest request) {
+    String msg = getErrorMessage(ex);
+    if (ex instanceof NullPointerException) {
+      msg += ". src: " + ex.getStackTrace()[0].toString();
+    }
+    System.err.printf("Error '%s'%n", msg);
+    Objects.requireNonNull(((ServletWebRequest) request).getResponse())
+      .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+      .body(new ErrorHolderModel("ERROR", msg, ex));
+  }
+
+  @GetMapping("/auth/status")
+  public StatusResponse getStatus() {
+    return new StatusResponse(407, installing ? "1" : "0", SystemUtils.IS_OS_LINUX);
+  }
+
+  @GetMapping("/device/characteristic/{uuid}")
+  public OptionModel getDeviceCharacteristic(@PathVariable("uuid") String uuid) {
+    return OptionModel.key(bluetoothBundleService.getDeviceCharacteristic(uuid));
+  }
+
+  @PutMapping("/device/characteristic/{uuid}")
+  public void setDeviceCharacteristic(@PathVariable("uuid") String uuid, @RequestBody byte[] value) {
+    bluetoothBundleService.setDeviceCharacteristic(uuid, value);
+  }
+
+  @SneakyThrows
+  @PostMapping("/app/config/install")
+  public void downloadApp() {
+    if (installing) {
+      throw new IllegalStateException("App already installing...");
+    }
+    installing = true;
+    new Thread(() -> {
+      ProgressBar progressBar = (progress, message, error) ->
+        messagingTemplate.convertAndSend(WebSocketConfig.DESTINATION_PREFIX + "-global",
+          new Progress(progress, message));
+      if (Files.exists(rootPath.resolve("homio-app.jar"))) {
+        System.err.println("homio-app.jar already downloaded. Made restart...");
+        finishInstallApp(progressBar);
+        return;
+      }
+      try {
+        try {
+          repository.update((int) TimeUnit.MINUTES.toMillis(10), progressBar);
+        } catch (Exception ex) {
+          System.err.println("Error while made device update: " + ex.getMessage());
         }
-        System.err.printf("Error '%s'%n", msg);
-        Objects.requireNonNull(((ServletWebRequest) request).getResponse())
-                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorHolderModel("ERROR", msg, ex));
-    }
+        InstallUtils.downloadApp(progressBar, rootPath, repository);
 
-    @GetMapping("/auth/status")
-    public StatusResponse getStatus() {
-        return new StatusResponse(407, installing ? "1" : "0", SystemUtils.IS_OS_LINUX);
-    }
+        finishInstallApp(progressBar);
+      } catch (Exception ex) {
+        System.err.printf("Error while downloading app: %s%n", ex.getMessage());
+        progressBar.accept(-1D, ex.getMessage());
+      } finally {
+        installing = false;
+      }
+    }).start();
+  }
 
-    @GetMapping("/device/characteristic/{uuid}")
-    public OptionModel getDeviceCharacteristic(@PathVariable("uuid") String uuid) {
-        return OptionModel.key(bluetoothBundleService.getDeviceCharacteristic(uuid));
-    }
+  private void finishInstallApp(ProgressBar progressBar) {
+    // this command send 100 to ui that fires 'reload-page'
+    progressBar.accept(100D, "Restarting application...");
+    System.out.println("App installation finished. Restarting...");
+    exitApplication();
+  }
 
-    @PutMapping("/device/characteristic/{uuid}")
-    public void setDeviceCharacteristic(@PathVariable("uuid") String uuid, @RequestBody byte[] value) {
-        bluetoothBundleService.setDeviceCharacteristic(uuid, value);
-    }
+  @SneakyThrows
+  private void exitApplication() {
+    System.out.println("Exit app to restart it after update");
+    SpringApplication.exit(applicationContext, () -> 4);
+    System.exit(4);
+    // sleep to allow program exist
+    Thread.sleep(30000);
+    System.out.println("Unable to stop app in 30sec. Force stop it...");
+    // force exit
+    Runtime.getRuntime().halt(4);
+  }
 
-    @SneakyThrows
-    @PostMapping("/app/config/install")
-    public void downloadApp() {
-        if (installing) {
-            throw new IllegalStateException("App already installing...");
-        }
-        installing = true;
-        new Thread(() -> {
-            ProgressBar progressBar = (progress, message, error) ->
-                    messagingTemplate.convertAndSend(WebSocketConfig.DESTINATION_PREFIX + "-global",
-                            new Progress(progress, message));
-            if (Files.exists(rootPath.resolve("homio-app.jar"))) {
-                System.err.println("homio-app.jar already downloaded. Made restart...");
-                finishInstallApp(progressBar);
-                return;
-            }
-            try {
-                try {
-                    repository.update((int) TimeUnit.MINUTES.toMillis(10), progressBar);
-                } catch (Exception ex) {
-                    System.err.println("Error while made device update: " + ex.getMessage());
-                }
-                InstallUtils.downloadApp(progressBar, rootPath, repository);
+  @Getter
+  @AllArgsConstructor
+  private static class Progress {
 
-                finishInstallApp(progressBar);
-            } catch (Exception ex) {
-                System.err.printf("Error while downloading app: %s%n", ex.getMessage());
-                progressBar.accept(-1D, ex.getMessage());
-            } finally {
-                installing = false;
-            }
-        }).start();
-    }
+    private double value;
+    private String title;
+  }
 
-    private void finishInstallApp(ProgressBar progressBar) {
-        // this command send 100 to ui that fires 'reload-page'
-        progressBar.accept(100D, "Restarting application...");
-        System.out.println("App installation finished. Restarting...");
-        exitApplication();
-    }
+  public record StatusResponse(int status, String version, boolean isLinux) {
 
-    @SneakyThrows
-    private void exitApplication() {
-        System.out.println("Exit app to restart it after update");
-        SpringApplication.exit(applicationContext, () -> 4);
-        System.exit(4);
-        // sleep to allow program exist
-        Thread.sleep(30000);
-        System.out.println("Unable to stop app in 30sec. Force stop it...");
-        // force exit
-        Runtime.getRuntime().halt(4);
-    }
-
-    public static String getErrorMessage(Throwable ex) {
-        if (ex == null) {
-            return null;
-        }
-        Throwable cause = ex;
-        while (cause.getCause() != null) {
-            cause = cause.getCause();
-        }
-
-        if (cause instanceof NullPointerException) {
-            return "Unexpected NullPointerException at line: " + ex.getStackTrace()[0].toString();
-        }
-
-        return StringUtils.defaultString(cause.getMessage(), cause.toString());
-    }
-
-    @Getter
-    @AllArgsConstructor
-    private static class Progress {
-
-        private double value;
-        private String title;
-    }
-
-    public static Path createDirectoriesIfNotExists(Path path) {
-        if (Files.notExists(path)) {
-            try {
-                Files.createDirectories(path);
-            } catch (Exception ex) {
-                System.err.printf("Unable to create path: '%s'%n", path.toAbsolutePath());
-            }
-        }
-        return path;
-    }
-
-    public record StatusResponse(int status, String version, boolean isLinux) {
-
-    }
-
-    @SneakyThrows
-    public static String getHomioProperty(String key, String defaultValue) {
-        Properties properties = getHomioProperties();
-        if (properties.containsKey(key)) {
-            return properties.getProperty(key);
-        }
-        properties.setProperty(key, defaultValue);
-        properties.store(Files.newOutputStream(propertiesLocation), null);
-        return defaultValue;
-    }
-
-    @SneakyThrows
-    private static Properties getHomioProperties() {
-        if (homioProperties == null) {
-            propertiesLocation = getHomioPropertiesLocation();
-            System.out.printf("Uses configuration file: %s%n".formatted(propertiesLocation.toString()));
-            homioProperties = new Properties();
-            try {
-                homioProperties.load(Files.newInputStream(propertiesLocation));
-                rootPath = Paths.get(homioProperties.getProperty("rootPath"));
-                Files.createDirectories(rootPath);
-            } catch (Exception ignore) {
-                rootPath = propertiesLocation.getParent();
-                homioProperties.setProperty("rootPath", rootPath.toString());
-                homioProperties.store(Files.newOutputStream(propertiesLocation), null);
-            }
-        }
-        return homioProperties;
-    }
-
-    @SneakyThrows
-    private static Path getHomioPropertiesLocation() {
-        Path propertiesFile = (SystemUtils.IS_OS_WINDOWS ? SystemUtils.getUserHome().toPath().resolve("homio") :
-                createDirectoriesIfNotExists(Paths.get("/opt/homio"))).resolve("homio.properties");
-        if (!Files.exists(propertiesFile)) {
-            ApplicationHome applicationHome = new ApplicationHome();
-            Path jarLocation = applicationHome.getDir().toPath();
-            return jarLocation.resolve("homio.properties");
-        }
-        return propertiesFile;
-    }
+  }
 }

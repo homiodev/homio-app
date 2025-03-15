@@ -6,23 +6,23 @@ import org.jetbrains.annotations.NotNull;
 
 public class WidgetShowBorderSetting implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
 
-    @Override
-    public @NotNull GroupKey getGroupKey() {
-        return GroupKey.dashboard;
-    }
+  @Override
+  public @NotNull GroupKey getGroupKey() {
+    return GroupKey.dashboard;
+  }
 
-    @Override
-    public @NotNull String getSubGroupKey() {
-        return "WIDGET";
-    }
+  @Override
+  public @NotNull String getSubGroupKey() {
+    return "WIDGET";
+  }
 
-    @Override
-    public boolean defaultValue() {
-        return true;
-    }
+  @Override
+  public boolean defaultValue() {
+    return true;
+  }
 
-    @Override
-    public int order() {
-        return 400;
-    }
+  @Override
+  public int order() {
+    return 400;
+  }
 }

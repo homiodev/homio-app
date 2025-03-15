@@ -7,7 +7,7 @@ import org.homio.api.model.Icon;
 @Getter
 @RequiredArgsConstructor
 public class HeaderButtonSelection {
-    private final String name;
-    private final Icon icon;
-    private final String page;
+  private final String name;
+  private final Icon icon;
+  private final String page;
 }

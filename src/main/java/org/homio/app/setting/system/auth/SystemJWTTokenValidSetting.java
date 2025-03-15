@@ -6,38 +6,38 @@ import org.jetbrains.annotations.NotNull;
 
 public class SystemJWTTokenValidSetting implements CoreSettingPlugin<Integer>, SettingPluginSlider {
 
-    @Override
-    public @NotNull GroupKey getGroupKey() {
-        return GroupKey.system;
-    }
+  @Override
+  public @NotNull GroupKey getGroupKey() {
+    return GroupKey.system;
+  }
 
-    @Override
-    public @NotNull String getSubGroupKey() {
-        return "AUTH";
-    }
+  @Override
+  public @NotNull String getSubGroupKey() {
+    return "AUTH";
+  }
 
-    @Override
-    public int defaultValue() {
-        return 480;
-    }
+  @Override
+  public int defaultValue() {
+    return 480;
+  }
 
-    @Override
-    public int getMin() {
-        return 30;
-    }
+  @Override
+  public int getMin() {
+    return 30;
+  }
 
-    @Override
-    public int getMax() {
-        return 1440;
-    }
+  @Override
+  public int getMax() {
+    return 1440;
+  }
 
-    @Override
-    public String getHeader() {
-        return "min";
-    }
+  @Override
+  public String getHeader() {
+    return "min";
+  }
 
-    @Override
-    public int order() {
-        return 400;
-    }
+  @Override
+  public int order() {
+    return 400;
+  }
 }

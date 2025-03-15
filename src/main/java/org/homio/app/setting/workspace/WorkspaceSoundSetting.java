@@ -6,18 +6,18 @@ import org.jetbrains.annotations.NotNull;
 
 public class WorkspaceSoundSetting implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
 
-    @Override
-    public @NotNull GroupKey getGroupKey() {
-        return GroupKey.workspace;
-    }
+  @Override
+  public @NotNull GroupKey getGroupKey() {
+    return GroupKey.workspace;
+  }
 
-    @Override
-    public boolean defaultValue() {
-        return true;
-    }
+  @Override
+  public boolean defaultValue() {
+    return true;
+  }
 
-    @Override
-    public int order() {
-        return 400;
-    }
+  @Override
+  public int order() {
+    return 400;
+  }
 }

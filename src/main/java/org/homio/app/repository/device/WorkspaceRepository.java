@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class WorkspaceRepository extends AbstractRepository<WorkspaceEntity> {
 
-    public WorkspaceRepository() {
-        super(WorkspaceEntity.class);
-    }
+  public WorkspaceRepository() {
+    super(WorkspaceEntity.class);
+  }
 }

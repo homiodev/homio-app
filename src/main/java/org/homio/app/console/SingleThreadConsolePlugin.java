@@ -6,17 +6,17 @@ import org.springframework.stereotype.Component;
 @Component
 public class SingleThreadConsolePlugin extends BaseProcessesConsolePlugin {
 
-    public SingleThreadConsolePlugin(ContextImpl contextImpl) {
-        super(contextImpl);
-    }
+  public SingleThreadConsolePlugin(ContextImpl contextImpl) {
+    super(contextImpl);
+  }
 
-    @Override
-    public String getName() {
-        return "thread";
-    }
+  @Override
+  public String getName() {
+    return "thread";
+  }
 
-    @Override
-    protected boolean handleThreads() {
-        return true;
-    }
+  @Override
+  protected boolean handleThreads() {
+    return true;
+  }
 }

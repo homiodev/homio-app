@@ -8,20 +8,20 @@ import org.jetbrains.annotations.NotNull;
  * Show BaseEntity CRUD
  */
 public class SystemShowEntityStateSetting
-        implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
+  implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
 
-    @Override
-    public @NotNull GroupKey getGroupKey() {
-        return GroupKey.system;
-    }
+  @Override
+  public @NotNull GroupKey getGroupKey() {
+    return GroupKey.system;
+  }
 
-    @Override
-    public @NotNull String getSubGroupKey() {
-        return "EVENTS";
-    }
+  @Override
+  public @NotNull String getSubGroupKey() {
+    return "EVENTS";
+  }
 
-    @Override
-    public int order() {
-        return 500;
-    }
+  @Override
+  public int order() {
+    return 500;
+  }
 }

@@ -2,81 +2,184 @@ package org.homio.app.model.entity.widget.impl.toggle;
 
 import jakarta.persistence.Entity;
 import org.homio.api.ContextWidget.ToggleType;
+import org.homio.api.ui.UI;
 import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldLayout;
-import org.homio.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
-import org.homio.app.model.entity.widget.attributes.HasBackground;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
+import org.homio.app.model.entity.widget.attributes.HasMargin;
 import org.homio.app.model.entity.widget.attributes.HasName;
-import org.homio.app.model.entity.widget.attributes.HasPadding;
-import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetToggleEntity
-        extends WidgetEntityAndSeries<WidgetToggleEntity, WidgetToggleSeriesEntity>
-        implements HasBackground, HasLayout, HasPadding, HasSourceServerUpdates, HasName {
+  extends WidgetEntityAndSeries<WidgetToggleEntity, WidgetToggleSeriesEntity>
+  implements HasLayout, HasMargin, HasName {
 
-    @UIField(order = 1)
-    @UIFieldGroup(order = 3, value = "NAME")
-    @UIFieldOptionFontSize
-    public String getName() {
-        return super.getName();
-    }
+  @UIFieldShowOnCondition("return context.get('displayType') == 'OnOff' || context.get('displayType') == 'Slide'")
+  public String getName() {
+    return super.getName();
+  }
 
-    @Override
-    @UIField(order = 50)
-    @UIFieldLayout(options = {"name", "value", "icon", "button"})
-    @UIFieldReadDefaultValue
-    public String getLayout() {
-        return getJsonData("layout", getDefaultLayout());
-    }
+  @UIFieldColorPicker
+  @UIFieldShowOnCondition("return context.get('displayType') == 'OnOff' || context.get('displayType') == 'Slide'")
+  public String getNameColor() {
+    return getJsonData("nc", UI.Color.WHITE);
+  }
 
-    @UIField(order = 1)
-    @UIFieldGroup(value = "HEADER", order = 5)
-    public Boolean getShowAllButton() {
-        return getJsonData("all", Boolean.FALSE);
-    }
+  @Override
+  @UIField(order = 50)
+  @UIFieldLayout(options = {"name", "value", "icon", "button"})
+  @UIFieldShowOnCondition("return context.get('displayType') == 'OnOff' || context.get('displayType') == 'Slide'")
+  public String getLayout() {
+    return getJsonData("layout", getDefaultLayout());
+  }
 
-    public void setShowAllButton(Boolean value) {
-        setJsonData("all", value);
-    }
+  @UIField(order = 1)
+  @UIFieldGroup(value = "HEADER", order = 5)
+  @UIFieldShowOnCondition("return context.get('displayType') == 'OnOff' || context.get('displayType') == 'Slide'")
+  public boolean getShowAllButton() {
+    return getJsonData("all", Boolean.FALSE);
+  }
 
-    @UIField(order = 32)
-    public ToggleType getDisplayType() {
-        return getJsonDataEnum("displayType", ToggleType.Slide);
-    }
+  public void setShowAllButton(boolean value) {
+    setJsonData("all", value);
+  }
 
-    public WidgetToggleEntity setDisplayType(ToggleType value) {
-        setJsonData("displayType", value);
-        return this;
-    }
+  @UIField(order = 32)
+  public ToggleType getDisplayType() {
+    return getJsonDataEnum("displayType", ToggleType.Slide);
+  }
 
-    @Override
-    public @NotNull String getImage() {
-        return "fas fa-toggle-on";
-    }
+  public WidgetToggleEntity setDisplayType(ToggleType value) {
+    setJsonData("displayType", value);
+    return this;
+  }
 
-    @Override
-    protected @NotNull String getWidgetPrefix() {
-        return "toggle";
-    }
+  @UIField(order = 17)
+  @UIFieldGroup("UI")
+  @UIFieldColorPicker
+  @UIFieldShowOnCondition("return context.get('displayType') == 'SwitchGroup'")
+  public String getGroupForeground() {
+    return getJsonData("ac", UI.Color.PRIMARY_COLOR);
+  }
 
-    @Override
-    public String getDefaultName() {
-        return null;
-    }
+  public void setGroupForeground(String value) {
+    setJsonData("ac", value);
+  }
 
-    private String getDefaultLayout() {
-        return UIFieldLayout.LayoutBuilder
-                .builder(10, 60, 30)
-                .addRow(rb ->
-                        rb.addCol("icon", UIFieldLayout.HorizontalAlign.right)
-                                .addCol("name", UIFieldLayout.HorizontalAlign.left)
-                                .addCol("button", UIFieldLayout.HorizontalAlign.center))
-                .build();
-    }
+  @UIField(order = 50)
+  @UIFieldShowOnCondition("return context.get('displayType') == 'SwitchGroup'")
+  public Boolean getAllowActiveClick() {
+    return getJsonData("aac", Boolean.FALSE);
+  }
+
+  public void setAllowActiveClick(Boolean value) {
+    setJsonData("aac", value);
+  }
+
+  @UIField(order = 1)
+  @UIFieldGroup(value = "LAYOUT", order = 10, borderColor = "#4B8494")
+  @UIFieldShowOnCondition("return context.get('displayType') == 'SwitchGroup'")
+  public Boolean getButtonFullWidth() {
+    return getJsonData("bfw", Boolean.FALSE);
+  }
+
+  public void setButtonFullWidth(Boolean value) {
+    setJsonData("bfw", value);
+  }
+
+  @UIField(order = 2)
+  @UIFieldGroup("LAYOUT")
+  @UIFieldSlider(min = 24, max = 100)
+  @UIFieldShowOnCondition("return context.get('displayType') == 'SwitchGroup' && !context.get('buttonFullWidth')")
+  public int getButtonMinWidth() {
+    return getJsonData("bmw", 32);
+  }
+
+  public void setButtonMinWidth(int value) {
+    setJsonData("bmw", value);
+  }
+
+  @UIField(order = 3)
+  @UIFieldGroup("LAYOUT")
+  @UIFieldSlider(min = 0, max = 20)
+  @UIFieldShowOnCondition("return context.get('displayType') == 'SwitchGroup' && context.get('buttonFullWidth')")
+  public int getBetweenGap() {
+    return getJsonData("gap", 0);
+  }
+
+  public void setBetweenGap(int value) {
+    setJsonData("gap", value);
+  }
+
+  @UIField(order = 1)
+  @UIFieldGroup(value = "BUTTON_BORDER", order = 12, borderColor = "#4B9461")
+  @UIFieldSlider(min = 0, max = 4)
+  @UIFieldShowOnCondition("return context.get('displayType') == 'SwitchGroup'")
+  public int getButtonBorderWidth() {
+    return getJsonData("bbw", 0);
+  }
+
+  public void setButtonBorderWidth(int value) {
+    setJsonData("bbw", value);
+  }
+
+  @UIField(order = 2)
+  @UIFieldGroup("BUTTON_BORDER")
+  @UIFieldColorPicker
+  @UIFieldShowOnCondition("return context.get('displayType') == 'SwitchGroup'")
+  public String getButtonBorderColor() {
+    return getJsonData("bbc", UI.Color.WARNING);
+  }
+
+  public void setButtonBorderColor(String value) {
+    setJsonData("bbc", value);
+  }
+
+  @UIField(order = 3)
+  @UIFieldGroup("BUTTON_BORDER")
+  @UIFieldSlider(min = 0, max = 30)
+  @UIFieldShowOnCondition("return context.get('displayType') == 'SwitchGroup'")
+  public int getButtonBorderRadius() {
+    return getJsonData("bbr", 10);
+  }
+
+  public void setButtonBorderRadius(int value) {
+    setJsonData("bbr", value);
+  }
+
+  @Override
+  public @NotNull String getImage() {
+    return "fas fa-toggle-on";
+  }
+
+  @Override
+  protected @NotNull String getWidgetPrefix() {
+    return "toggle";
+  }
+
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
+
+  private String getDefaultLayout() {
+    return UIFieldLayout.LayoutBuilder
+      .builder(10, 60, 30)
+      .addRow(rb ->
+        rb.addCol("icon", UIFieldLayout.HorizontalAlign.right)
+          .addCol("name", UIFieldLayout.HorizontalAlign.left)
+          .addCol("button", UIFieldLayout.HorizontalAlign.center))
+      .build();
+  }
+
+  @Override
+  public void beforePersist() {
+    setOverflow(Overflow.hidden);
+  }
 }

@@ -10,20 +10,20 @@ import org.freedesktop.dbus.exceptions.DBusException;
 
 public class BluetoothApplication {
 
-    @Getter
-    private final BleApplication bleApplication;
+  @Getter
+  private final BleApplication bleApplication;
 
-    public BluetoothApplication(String name, String serviceUUID, BleApplicationListener bleApplicationListener) {
-        bleApplication = new BleApplication("/" + name, serviceUUID, bleApplicationListener);
-    }
+  public BluetoothApplication(String name, String serviceUUID, BleApplicationListener bleApplicationListener) {
+    bleApplication = new BleApplication("/" + name, serviceUUID, bleApplicationListener);
+  }
 
-    public ValueConsumer newReadWriteCharacteristic(String name, String uuid, Consumer<byte[]> writeValueListener, Supplier<byte[]> readValueListener) {
-        BleCharacteristic characteristic = new BleCharacteristic(uuid, bleApplication.path + "/" + name, bleApplication.bleService, C_READ_WRITE);
-        characteristic.setWriteListener(writeValueListener);
-        characteristic.setReadListener(readValueListener);
-        bleApplication.bleService.getCharacteristics().add(characteristic);
-        return value -> characteristic.setValue(value.getBytes());
-    }
+  public ValueConsumer newReadWriteCharacteristic(String name, String uuid, Consumer<byte[]> writeValueListener, Supplier<byte[]> readValueListener) {
+    BleCharacteristic characteristic = new BleCharacteristic(uuid, bleApplication.path + "/" + name, bleApplication.bleService, C_READ_WRITE);
+    characteristic.setWriteListener(writeValueListener);
+    characteristic.setReadListener(readValueListener);
+    bleApplication.bleService.getCharacteristics().add(characteristic);
+    return value -> characteristic.setValue(value.getBytes());
+  }
 
     /*public ValueConsumer newReadCharacteristic(String name, String uuid, Supplier<byte[]> readValueListener) {
         BleCharacteristic characteristic = new BleCharacteristic(uuid, bleApplication.path + "/" + name, bleApplication.bleService, C_READ);
@@ -54,17 +54,17 @@ public class BluetoothApplication {
         };
     }*/
 
-    public void start() throws DBusException {
-        this.bleApplication.start();
-    }
+  public void start() throws DBusException {
+    this.bleApplication.start();
+  }
 
-    public interface ValueConsumer {
-        void setValue(String value);
-    }
+  public interface ValueConsumer {
+    void setValue(String value);
+  }
 
-    public interface ValueNotifyConsumer {
-        void setValue(String value);
+  public interface ValueNotifyConsumer {
+    void setValue(String value);
 
-        void setValueAndNotify(String value);
-    }
+    void setValueAndNotify(String value);
+  }
 }

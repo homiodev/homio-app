@@ -1,7 +1,5 @@
 package org.homio.app.rest;
 
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.app.json.BgpProcessResponse;
@@ -13,28 +11,29 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
+
 @Log4j2
 @RestController
-@RequestMapping("/rest/bgp")
+@RequestMapping(value = "/rest/bgp", produces = "application/json")
 @RequiredArgsConstructor
 public class BackgroundProcessController {
 
-    private final ContextImpl context;
+  private final ContextImpl context;
 
-    @DeleteMapping("/{name}")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public void cancelProcess(@PathVariable("name") String name) {
-        context.bgp().cancelThread(name);
-        context.ui().progress().cancel(name);
-    }
+  @DeleteMapping("/{name}")
+  @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
+  public void cancelProcess(@PathVariable("name") String name) {
+    context.bgp().cancelThread(name);
+    context.ui().progress().cancel(name);
+  }
 
-    @GetMapping
-    public BgpProcessResponse getProcesses() {
-        return context.bgp().getProcesses();
-    }
+  @GetMapping
+  public BgpProcessResponse getProcesses() {
+    return context.bgp().getProcesses();
+  }
 
     /* @GetMapping("/dynamic/stop/{url}")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void stopScriptByName(@PathVariable String url) {
         ScriptEntity scriptEntity = scriptRepository.getByURL(url);
         if (scriptEntity != null) {
@@ -44,7 +43,6 @@ public class BackgroundProcessController {
     }*/
 
     /* @GetMapping("/dynamic/{url}")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void dynamicCall(@PathVariable String url, @RequestParam(value = "json", required = false) String json) throws
     Exception {
         ScriptEntity scriptEntity = scriptRepository.getByURL(url);
@@ -69,12 +67,11 @@ public class BackgroundProcessController {
             String entityID = entityIDAndKey.substring(0, i);
             String scriptDescriptor = entityIDAndKey.substring(i + 1);
 
-            BaseEntity baseEntity = context.db().getEntity(entityID);
+            BaseEntity baseEntity = context.db().get(entityID);
             if (baseEntity instanceof HasBackgroundProcesses) {
                 ScriptEntity scriptEntity = ((HasBackgroundProcesses) baseEntity).getBackgroundProcessScript(scriptDescriptor);
                 if (scriptEntity != null) {
                     String backgroundProcessServiceID = scriptEntity.getBackgroundProcessServiceID();
-
 
                     BackgroundProcessService bgp = backgroundProcessManager.getBackgroundProcessByDescriptorID
                     (backgroundProcessServiceID);

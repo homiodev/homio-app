@@ -1,42 +1,46 @@
 package org.homio.app.model.entity.widget.impl.video.sourceResolver;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.regex.Pattern;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang3.StringUtils;
+import org.homio.api.Context;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.regex.Pattern;
+
 public interface WidgetVideoSourceResolver {
 
-    Pattern VIDEO_FORMATS = Pattern.compile("webrtc|webm|ogv|flv|avi|mp4|ts|m3u8|mjpeg");
-    Pattern IMAGE_FORMATS = Pattern.compile("jpg|png|gif");
+  Pattern VIDEO_FORMATS = Pattern.compile("webrtc|webm|ogv|flv|avi|mp4|ts|m3u8|mjpeg");
+  Pattern IMAGE_FORMATS = Pattern.compile("jpg|png|gif");
 
-    default VideoEntityResponse resolveDataSource(WidgetVideoSeriesEntity item) {
-        return resolveDataSource(item.getValueDataSource());
-    }
+  default VideoEntityResponse resolveDataSource(WidgetVideoSeriesEntity item) {
+    return resolveDataSource(item.getValueDataSource(), item.context());
+  }
 
-    VideoEntityResponse resolveDataSource(String valueDataSource);
+  VideoEntityResponse resolveDataSource(String valueDataSource, Context context);
 
-    @Getter
-    @RequiredArgsConstructor
-    class VideoEntityResponse {
+  @Getter
+  @RequiredArgsConstructor
+  class VideoEntityResponse {
 
-        private final @NotNull String valueDataSource;
-        private final @NotNull String dataSource;
-        private final @NotNull String source;
-        private final @NotNull String type;
-        private @Nullable @Setter @Accessors(chain = true) String error;
-        private final @NotNull List<String> resolutions = new ArrayList<>();
-        private @Nullable @Setter Collection<UIInputEntity> actions;
-        private @Nullable @Setter String poster;
-    }
+    private final @NotNull String valueDataSource;
+    private final @NotNull String dataSource;
+    private final @NotNull String source;
+    private final @NotNull String type;
+    private final @NotNull List<String> resolutions = new ArrayList<>();
+    private @Nullable
+    @Setter
+    @Accessors(chain = true) String error;
+    private @Nullable
+    @Setter Collection<UIInputEntity> actions;
+    private @Nullable
+    @Setter String poster;
+  }
 }

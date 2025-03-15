@@ -14,6 +14,7 @@ to: ExecStart=/usr/lib/bluetooth/bluetoothd -C
 
 # Tips:
 
+mvn versions:use-latest-releases
 To debug code on rpi: Install plugin 'Embedded Linux
 JVM' (https://medium.com/@menchukanton/setup-intellij-idea-for-remote-debugging-java-code-on-a-raspberry-pi-6e9df09dfb95)
 

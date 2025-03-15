@@ -12,17 +12,17 @@ import java.util.List;
 @Repository
 public class WidgetRepository extends AbstractRepository<WidgetEntity> {
 
-    public WidgetRepository() {
-        super(WidgetEntity.class, "widget_");
-    }
+  public WidgetRepository() {
+    super(WidgetEntity.class, "widget_");
+  }
 
-    @Override
-    public WidgetEntity getByEntityID(String entityID) {
-        return super.getByEntityID(entityID);
-    }
+  @Override
+  public WidgetEntity getByEntityID(String entityID) {
+    return super.getByEntityID(entityID);
+  }
 
-    @Override
-    public @NotNull List listAll() {
-        return super.listAll();
-    }
+  @Override
+  public @NotNull List listAll() {
+    return super.listAll();
+  }
 }

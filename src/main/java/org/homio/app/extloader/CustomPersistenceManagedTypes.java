@@ -16,33 +16,32 @@ import java.util.List;
 @Component
 public class CustomPersistenceManagedTypes implements PersistenceManagedTypes {
 
-    private final ResourceLoader resourceLoader;
-    private List<String> managedClassNames;
-    private List<String> managedPackages;
-    private URL persistenceUnitRootUrl;
+  private final ResourceLoader resourceLoader;
+  private List<String> managedClassNames;
+  private List<String> managedPackages;
+  private URL persistenceUnitRootUrl;
 
+  public CustomPersistenceManagedTypes(ResourceLoader resourceLoader) {
+    this.resourceLoader = resourceLoader;
+    this.scan();
+  }
 
-    public CustomPersistenceManagedTypes(ResourceLoader resourceLoader) {
-        this.resourceLoader = resourceLoader;
-        this.scan();
+  /**
+   * Scan for new entities.
+   *
+   * @return true if found new entities
+   */
+  public boolean scan() {
+    PersistenceManagedTypes persistenceManagedTypes = new PersistenceManagedTypesScanner(resourceLoader).scan("org.homio");
+    this.managedPackages = persistenceManagedTypes.getManagedPackages();
+    this.persistenceUnitRootUrl = persistenceManagedTypes.getPersistenceUnitRootUrl();
+    List<String> scannedManagedClassNames = persistenceManagedTypes.getManagedClassNames();
+    if (managedClassNames == null
+        || this.managedClassNames.size() != scannedManagedClassNames.size()
+        || !new HashSet<>(this.managedClassNames).containsAll(scannedManagedClassNames)) {
+      this.managedClassNames = scannedManagedClassNames;
+      return true;
     }
-
-    /**
-     * Scan for new entities.
-     *
-     * @return true if found new entities
-     */
-    public boolean scan() {
-        PersistenceManagedTypes persistenceManagedTypes = new PersistenceManagedTypesScanner(resourceLoader).scan("org.homio");
-        this.managedPackages = persistenceManagedTypes.getManagedPackages();
-        this.persistenceUnitRootUrl = persistenceManagedTypes.getPersistenceUnitRootUrl();
-        List<String> scannedManagedClassNames = persistenceManagedTypes.getManagedClassNames();
-        if (managedClassNames == null
-                || this.managedClassNames.size() != scannedManagedClassNames.size()
-                || !new HashSet<>(this.managedClassNames).containsAll(scannedManagedClassNames)) {
-            this.managedClassNames = scannedManagedClassNames;
-            return true;
-        }
-        return false;
-    }
+    return false;
+  }
 }

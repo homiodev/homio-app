@@ -8,28 +8,28 @@ import org.jetbrains.annotations.NotNull;
 
 public class SystemFramesSetting implements CoreSettingPlugin<ObjectNode> {
 
-    @Override
-    public @NotNull GroupKey getGroupKey() {
-        return GroupKey.system;
-    }
+  @Override
+  public @NotNull GroupKey getGroupKey() {
+    return GroupKey.system;
+  }
 
-    @Override
-    public @NotNull Class<ObjectNode> getType() {
-        return ObjectNode.class;
-    }
+  @Override
+  public @NotNull Class<ObjectNode> getType() {
+    return ObjectNode.class;
+  }
 
-    @Override
-    public @NotNull SettingType getSettingType() {
-        return SettingType.TextInput;
-    }
+  @Override
+  public @NotNull SettingType getSettingType() {
+    return SettingType.TextInput;
+  }
 
-    @Override
-    public int order() {
-        return -1;
-    }
+  @Override
+  public int order() {
+    return -1;
+  }
 
-    @Override
-    public boolean isVisible(Context context) {
-        return false;
-    }
+  @Override
+  public boolean isVisible(Context context) {
+    return false;
+  }
 }

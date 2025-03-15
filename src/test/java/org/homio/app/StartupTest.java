@@ -15,11 +15,11 @@ import org.springframework.test.context.junit4.SpringRunner;
 @ActiveProfiles(profiles = {"test"})
 public class StartupTest {
 
-    @Autowired
-    private Context context;
+  @Autowired
+  private Context context;
 
-    @Test
-    public void testStartup() {
-        assertNotNull(context);
-    }
+  @Test
+  public void testStartup() {
+    assertNotNull(context);
+  }
 }

@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class WorkspaceGroupRepository extends AbstractRepository<WorkspaceGroup> {
 
-    public WorkspaceGroupRepository() {
-        super(WorkspaceGroup.class);
-    }
+  public WorkspaceGroupRepository() {
+    super(WorkspaceGroup.class);
+  }
 }

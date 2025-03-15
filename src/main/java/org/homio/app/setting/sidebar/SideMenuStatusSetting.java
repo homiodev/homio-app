@@ -4,8 +4,8 @@ import org.homio.api.setting.SettingPluginBoolean;
 
 public class SideMenuStatusSetting implements SettingPluginBoolean {
 
-    @Override
-    public int order() {
-        return 2;
-    }
+  @Override
+  public int order() {
+    return 2;
+  }
 }

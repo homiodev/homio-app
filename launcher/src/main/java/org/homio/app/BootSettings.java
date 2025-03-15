@@ -8,6 +8,6 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class BootSettings {
-    private String user;
-    private String password;
+  private String user;
+  private String password;
 }

@@ -1,29 +1,11 @@
 package org.homio.app.rest;
 
-import static jakarta.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
-import static java.lang.String.format;
-import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import jakarta.validation.Valid;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
-import java.nio.channels.WritableByteChannel;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.util.List;
-import java.util.Set;
-import java.util.Stack;
-import java.util.concurrent.TimeUnit;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -46,14 +28,16 @@ import org.homio.app.js.assistant.model.CompletionRequest;
 import org.homio.app.manager.ScriptService;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.ScriptEntity;
-import org.homio.app.model.entity.widget.impl.js.WidgetFrameEntity;
-import org.homio.app.model.rest.DynamicUpdateRequest;
+import org.homio.app.model.entity.user.UserGuestEntity;
+import org.homio.app.model.entity.widget.impl.extra.WidgetFrameEntity;
 import org.homio.hquery.Curl;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -65,6 +49,28 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
+
+import static jakarta.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
+import static java.lang.String.format;
+import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+
 @Log4j2
 @RestController
 @RequestMapping("/rest")
@@ -72,175 +78,199 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 @Validated
 public class UtilsController {
 
-    private final ContextImpl context;
-    private final ScriptService scriptService;
-    private final CodeParser codeParser;
+  private static final LoadingCache<String, GitHubReadme> readmeCache =
+    CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
+      public @NotNull GitHubReadme load(@NotNull String url) {
+        return new GitHubReadme(url, Curl.get(url + "/raw/master/README.md", String.class));
+      }
+    });
+  private final ContextImpl context;
+  private final ScriptService scriptService;
+  private final CodeParser codeParser;
+  private final Map<String, OneTimeRequest> requests = new ConcurrentHashMap<>();
 
-    private static final LoadingCache<String, GitHubReadme> readmeCache =
-            CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
-                public @NotNull GitHubReadme load(@NotNull String url) {
-                    return new GitHubReadme(url, Curl.get(url + "/raw/master/README.md", String.class));
-                }
-            });
+  @SneakyThrows
+  @GetMapping("/access/get/{requestId}")
+  public void getOneTimeAccessUrl(@PathVariable("requestId") String requestId,
+                                  HttpServletRequest request,
+                                  HttpServletResponse response) {
+    OneTimeRequest oneTimeRequest = requests.remove(requestId);
+    if (oneTimeRequest != null) {
+      SecurityContextHolder.getContext().setAuthentication(oneTimeRequest.authentication);
+      request.getRequestDispatcher("/" + oneTimeRequest.url).forward(request, response);
+    } else {
+      response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+    }
+  }
 
-    @PutMapping("/multiDynamicUpdates")
-    public void multiDynamicUpdates(@Valid @RequestBody List<DynamicRequestItem> request) {
-        for (DynamicRequestItem requestItem : request) {
-            context.ui().registerForUpdates(new DynamicUpdateRequest(requestItem.did, requestItem.eid));
+  @PutMapping("/access")
+  public OneTimeUrlResponse createOneTimeAccessLink(@RequestBody OneTimeUrlRequest request) {
+    String requestId = CommonUtils.generateUUID();
+    requests.put(requestId, new OneTimeRequest(request.url,
+      SecurityContextHolder.getContext().getAuthentication()));
+    return new OneTimeUrlResponse(requestId);
+  }
+
+  @GetMapping("/frame/{entityID}")
+  public String getFrame(@PathVariable("entityID") String entityID) {
+    WidgetFrameEntity widgetFrameEntity = context.db().getRequire(entityID);
+    return widgetFrameEntity.getFrame();
+  }
+
+  @PostMapping("/github/readme")
+  public GitHubReadme getUrlContent(@RequestBody String url) {
+    try {
+      return readmeCache.get(url.endsWith("/wiki") ? url.substring(0, url.length() - "/wiki".length()) : url);
+    } catch (Exception ex) {
+      throw new ServerException("No readme found");
+    }
+  }
+
+  @PostMapping("/getCompletions")
+  public Set<Completion> getCompletions(@RequestBody CompletionRequest completionRequest)
+    throws NoSuchMethodException {
+    ParserContext context = ParserContext.noneContext();
+    return codeParser.addCompetitionFromManagerOrClass(
+      CodeParser.removeAllComments(completionRequest.getLine()),
+      new Stack<>(),
+      context,
+      completionRequest.getAllScript());
+  }
+
+  @GetMapping(value = "/download/tmp/{fileName:.+}", produces = APPLICATION_OCTET_STREAM)
+  public ResponseEntity<StreamingResponseBody> downloadFile(
+    @PathVariable("fileName") String fileName) {
+    UserGuestEntity.assertAction(context, new Predicate<UserGuestEntity>() {
+      @Override
+      public boolean test(UserGuestEntity guest) {
+        return guest.getDeleteWidget();
+      }
+    }, "User is not allowed to access to FileManager");
+    Path outputPath = CommonUtils.getTmpPath().resolve(fileName);
+    if (!Files.exists(outputPath)) {
+      throw NotFoundException.fileNotFound(outputPath);
+    }
+    HttpHeaders headers = new HttpHeaders();
+    headers.add(
+      HttpHeaders.CONTENT_DISPOSITION,
+      format("attachment; filename=\"%s\"", outputPath.getFileName()));
+    headers.add(HttpHeaders.CONTENT_TYPE, APPLICATION_OCTET_STREAM);
+
+    return new ResponseEntity<>(
+      outputStream -> {
+        try (FileChannel inChannel = FileChannel.open(outputPath, StandardOpenOption.READ)) {
+          long size = inChannel.size();
+          WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
+          inChannel.transferTo(0, size, writableByteChannel);
         }
+      },
+      headers,
+      HttpStatus.OK);
+  }
+
+  @PostMapping("/code/run")
+  @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
+  public RunScriptResponse runScriptOnce(@RequestBody RunScriptRequest request)
+    throws IOException {
+    RunScriptResponse runScriptResponse = new RunScriptResponse();
+    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+    PrintStream logOutputStream = new PrintStream(outputStream);
+    ScriptEntity scriptEntity = new ScriptEntity();
+    scriptEntity.setEntityID(request.entityID);
+    scriptEntity.setJavaScript(request.javaScript);
+    scriptEntity.setJavaScriptParameters(request.javaScriptParameters);
+
+    try {
+      runScriptResponse.result =
+        scriptService.executeJavaScriptOnce(
+          scriptEntity,
+          logOutputStream,
+          false,
+          State.of(request.contextParameters)).stringValue();
+    } catch (Exception ex) {
+      runScriptResponse.error = ExceptionUtils.getStackTrace(ex);
+    }
+    int size = outputStream.size();
+    if (size > 50000) {
+      String name = scriptEntity.getEntityID() + "_size_" + outputStream.size() + "___.log";
+      Path tempFile = CommonUtils.getTmpPath().resolve(name);
+      Files.copy(tempFile, outputStream);
+      runScriptResponse.logUrl =
+        "rest/download/tmp/" + CommonUtils.getTmpPath().relativize(tempFile);
+    } else {
+      runScriptResponse.log = outputStream.toString(StandardCharsets.UTF_8);
     }
 
-    @DeleteMapping("/dynamicUpdates")
-    public void unregisterForUpdates(@Valid @RequestBody DynamicUpdateRequest request) {
-        context.ui().unRegisterForUpdates(request);
-    }
+    return runScriptResponse;
+  }
 
-    @GetMapping("/frame/{entityID}")
-    public String getFrame(@PathVariable("entityID") String entityID) {
-        WidgetFrameEntity widgetFrameEntity = context.db().getEntityRequire(entityID);
-        return widgetFrameEntity.getFrame();
-    }
+  @GetMapping("/i18n/{lang}.json")
+  @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
+  public ObjectNode getI18NLangNodes(@PathVariable("lang") String lang) {
+    return Lang.getLangJson(lang);
+  }
 
-    @PostMapping("/github/readme")
-    public GitHubReadme getUrlContent(@RequestBody String url) {
-        try {
-            return readmeCache.get(url.endsWith("/wiki") ? url.substring(0, url.length() - "/wiki".length()) : url);
-        } catch (Exception ex) {
-            throw new ServerException("No readme found");
-        }
-    }
+  @SneakyThrows
+  @PostMapping("/header/dialog/{entityID}")
+  public void acceptDialog(@PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
+    context.ui().handleDialog(entityID, ContextUI.DialogResponseType.Accepted, dialogRequest.pressedButton,
+      OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
+  }
 
-    @PostMapping("/getCompletions")
-    public Set<Completion> getCompletions(@RequestBody CompletionRequest completionRequest)
-            throws NoSuchMethodException {
-        ParserContext context = ParserContext.noneContext();
-        return codeParser.addCompetitionFromManagerOrClass(
-                CodeParser.removeAllComments(completionRequest.getLine()),
-                new Stack<>(),
-                context,
-                completionRequest.getAllScript());
-    }
+  @DeleteMapping("/header/dialog/{entityID}")
+  @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
+  public void discardDialog(@PathVariable("entityID") String entityID) {
+    context.ui().handleDialog(entityID, ContextUI.DialogResponseType.Cancelled, null, null);
+  }
 
-    @GetMapping(value = "/download/tmp/{fileName:.+}", produces = APPLICATION_OCTET_STREAM)
-    public ResponseEntity<StreamingResponseBody> downloadFile(
-            @PathVariable("fileName") String fileName) {
-        Path outputPath = CommonUtils.getTmpPath().resolve(fileName);
-        if (!Files.exists(outputPath)) {
-            throw NotFoundException.fileNotFound(outputPath);
-        }
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(
-                HttpHeaders.CONTENT_DISPOSITION,
-                format("attachment; filename=\"%s\"", outputPath.getFileName()));
-        headers.add(HttpHeaders.CONTENT_TYPE, APPLICATION_OCTET_STREAM);
+  @Getter
+  @Setter
+  public static class DialogRequest {
 
-        return new ResponseEntity<>(
-                outputStream -> {
-                    try (FileChannel inChannel = FileChannel.open(outputPath, StandardOpenOption.READ)) {
-                        long size = inChannel.size();
-                        WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
-                        inChannel.transferTo(0, size, writableByteChannel);
-                    }
-                },
-                headers,
-                HttpStatus.OK);
-    }
+    private String pressedButton;
+    private String params;
+  }
 
-    @PostMapping("/code/run")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public RunScriptResponse runScriptOnce(@RequestBody RunScriptRequest request)
-            throws IOException {
-        RunScriptResponse runScriptResponse = new RunScriptResponse();
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        PrintStream logOutputStream = new PrintStream(outputStream);
-        ScriptEntity scriptEntity = new ScriptEntity();
-        scriptEntity.setEntityID(request.entityID);
-        scriptEntity.setJavaScript(request.javaScript);
-        scriptEntity.setJavaScriptParameters(request.javaScriptParameters);
+  @Getter
+  @AllArgsConstructor
+  public static class GitHubReadme {
 
-        try {
-            runScriptResponse.result =
-                    scriptService.executeJavaScriptOnce(
-                            scriptEntity,
-                            logOutputStream,
-                            false,
-                            State.of(request.contextParameters)).stringValue();
-        } catch (Exception ex) {
-            runScriptResponse.error = ExceptionUtils.getStackTrace(ex);
-        }
-        int size = outputStream.size();
-        if (size > 50000) {
-            String name = scriptEntity.getEntityID() + "_size_" + outputStream.size() + "___.log";
-            Path tempFile = CommonUtils.getTmpPath().resolve(name);
-            Files.copy(tempFile, outputStream);
-            runScriptResponse.logUrl =
-                    "rest/download/tmp/" + CommonUtils.getTmpPath().relativize(tempFile);
-        } else {
-            runScriptResponse.log = outputStream.toString(StandardCharsets.UTF_8);
-        }
+    private String url;
+    private String content;
+  }
 
-        return runScriptResponse;
-    }
+  @Setter
+  public static class RunScriptRequest {
 
-    @GetMapping("/i18n/{lang}.json")
-    @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-    public ObjectNode getI18NLangNodes(@PathVariable("lang") String lang) {
-        return Lang.getLangJson(lang);
-    }
+    private String javaScriptParameters;
+    private String contextParameters;
+    private String entityID;
+    private String javaScript;
+  }
 
-    @SneakyThrows
-    @PostMapping("/header/dialog/{entityID}")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public void acceptDialog(@PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
-        context.ui().handleDialog(entityID, ContextUI.DialogResponseType.Accepted, dialogRequest.pressedButton,
-                OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
-    }
+  @Getter
+  public static class RunScriptResponse {
 
-    @DeleteMapping("/header/dialog/{entityID}")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public void discardDialog(@PathVariable("entityID") String entityID) {
-        context.ui().handleDialog(entityID, ContextUI.DialogResponseType.Cancelled, null, null);
-    }
+    private Object result;
+    private String log;
+    private String error;
+    private String logUrl;
+  }
 
-    @Getter
-    @Setter
-    public static class DynamicRequestItem {
+  @Getter
+  public static class OneTimeUrlRequest {
+    private String url;
+  }
 
-        private String eid;
-        private String did;
-    }
+  @Getter
+  @AllArgsConstructor
+  public static class OneTimeUrlResponse {
+    private final String id;
+  }
 
-    @Getter
-    @Setter
-    public static class DialogRequest {
-
-        private String pressedButton;
-        private String params;
-    }
-
-    @Getter
-    @AllArgsConstructor
-    public static class GitHubReadme {
-
-        private String url;
-        private String content;
-    }
-
-    @Setter
-    public static class RunScriptRequest {
-
-        private String javaScriptParameters;
-        private String contextParameters;
-        private String entityID;
-        private String javaScript;
-    }
-
-    @Getter
-    public static class RunScriptResponse {
-
-        private Object result;
-        private String log;
-        private String error;
-        private String logUrl;
-    }
+  @RequiredArgsConstructor
+  private static class OneTimeRequest {
+    private final String url;
+    private final Authentication authentication;
+  }
 }
