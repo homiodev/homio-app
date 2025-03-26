@@ -13,19 +13,18 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.ContextService.MQTTEntityService;
 import org.homio.api.ContextVar;
+import org.homio.api.entity.HasJsonData;
 import org.homio.api.entity.widget.AggregationType;
 import org.homio.api.entity.widget.PeriodRequest;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
-import org.homio.api.model.OptionModel;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.State;
 import org.homio.api.storage.DataStorageService;
 import org.homio.api.storage.SourceHistory;
 import org.homio.api.storage.SourceHistoryItem;
-import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.app.manager.common.ContextImpl;
@@ -43,6 +42,11 @@ import org.homio.app.repository.WorkspaceVariableRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -56,6 +60,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -89,11 +94,36 @@ public class ContextVarImpl implements ContextVar {
     return String.join("-->", items);
   }
 
+  public static void executeAsAdmin(Runnable runnable) {
+    Authentication backupAuth = SecurityContextHolder.getContext().getAuthentication();
+    User user = new User("admin", "admin", List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+    var admin = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+    try {
+      SecurityContextHolder.getContext().setAuthentication(admin);
+      runnable.run();
+    } finally {
+      SecurityContextHolder.getContext().setAuthentication(backupAuth);
+    }
+  }
+
+  private static @Nullable String getCallService() {
+    StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+    for (int i = 2; i < Math.min(stackTrace.length, 7); i++) { // Start from 2 to skip getStackTrace()
+      // and getCallService()
+      String className = stackTrace[i].getClassName();
+      if (className.startsWith("org.homio.addon.")) {
+        className = className.substring(className.lastIndexOf('.') + 1);
+        return className.split("\\$")[0]; // Remove anonymous class suffix
+      }
+    }
+    return null;
+  }
+
   public void onContextCreated() {
     context.var().createGroup(GROUP_HARDWARE, "Hardware", group ->
       group.setIcon(new Icon("fas fa-server", "#2662a3")).setLocked(true));
 
-    String broadcastsId = context.var().createGroup(GROUP_BROADCAST, "Broadcasts", group ->
+    context.var().createGroup(GROUP_BROADCAST, "Broadcasts", group ->
       group.setIcon(new Icon("fas fa-tower-broadcast", "#A32677")).setLocked(true));
 
     context.var().createGroup(GROUP_MISC, "Misc", group ->
@@ -153,7 +183,7 @@ public class ContextVarImpl implements ContextVar {
   private void onVariableRemoved(WorkspaceVariable workspaceVariable) {
     VariableContext context = globalVarStorageMap.remove(workspaceVariable.getEntityID());
     context.storageService.deleteAll();
-        /* Should be removed by hibernate
+        /* Should be removed by hibernating
         if (context.variable.isBackup()) {
             variableBackupRepository.delete(context.variable);
         }*/
@@ -263,7 +293,7 @@ public class ContextVarImpl implements ContextVar {
         || !Objects.equals(workspaceGroup.getDescription(), description)) {
       workspaceGroup.setName(name);
       workspaceGroup.setDescription(description);
-      context.db().save(workspaceGroup);
+      executeAsAdmin(() -> context.db().save(workspaceGroup));
       return true;
     }
     return false;
@@ -277,7 +307,7 @@ public class ContextVarImpl implements ContextVar {
             || !Objects.equals(workspaceVariable.getDescription(), description))) {
       workspaceVariable.setName(name);
       workspaceVariable.setDescription(description);
-      context.db().save(workspaceVariable);
+      executeAsAdmin(() -> context.db().save(workspaceVariable));
       return true;
     }
     return false;
@@ -292,7 +322,7 @@ public class ContextVarImpl implements ContextVar {
     if (workspaceVariable != null
         && (!Objects.equals(workspaceVariable.getIcon(), icon.getIcon())
             || !Objects.equals(workspaceVariable.getIconColor(), icon.getColor()))) {
-      context.db().save(workspaceVariable.setIcon(icon.getIcon()).setIconColor(icon.getColor()));
+      executeAsAdmin(() -> context.db().save(workspaceVariable.setIcon(icon.getIcon()).setIconColor(icon.getColor())));
       return true;
     }
     return false;
@@ -301,6 +331,26 @@ public class ContextVarImpl implements ContextVar {
   @Override
   public boolean removeGroup(@NotNull String groupId) {
     return context.db().delete(groupId) != null;
+  }
+
+  @Override
+  public void removeVariable(@NotNull String variableId) {
+    String callService = getCallService();
+    WorkspaceVariable variable = context.db().getRequire(variableId);
+    if (isLinked(variableId)) {
+      throw new IllegalStateException("Unable to remove linked variable: " + variableId);
+    }
+    if (context.user().isAdminLoggedUser() || isServiceOwnerOfVariable(variable, callService)) {
+      variableBackupRepository.delete(variable);
+      executeAsAdmin(() -> context.db().delete(variableId));
+    }
+  }
+
+  private boolean isServiceOwnerOfVariable(@NotNull HasJsonData variable, @Nullable String callService) {
+    if (callService == null) {
+      return false;
+    }
+    return callService.equals(variable.getJsonData("owner"));
   }
 
   @Override
@@ -357,13 +407,13 @@ public class ContextVarImpl implements ContextVar {
         if (group.isDisableDelete()) {
           group.setLocked(false);
           group.setJsonData("dis_del", false);
-          context.db().save(group);
+          executeAsAdmin(() -> context.db().save(group));
           Integer unlockedVariables = context.getBean(WorkspaceVariableRepository.class).unlockVariablesByGroup(group);
           if (unlockedVariables > 0) {
             log.info("Unlocked {} variables of group {} for deletion", unlockedVariables, entityID);
           }
         }
-        context.db().delete(group);
+        executeAsAdmin(() -> context.db().delete(group));
       }
     }
   }
@@ -419,21 +469,26 @@ public class ContextVarImpl implements ContextVar {
     @NotNull String variableName,
     @NotNull VariableType variableType,
     @Nullable Consumer<VariableMetaBuilder> builder) {
-    WorkspaceVariable entity = getOrCreateVariable(groupId, variableId);
-    VariableType oldRestriction = entity.getRestriction();
+    final var entity = getOrCreateVariable(groupId, variableId);
+    AtomicReference<WorkspaceVariable> ref = new AtomicReference<>(entity);
     if (entity.tryUpdateVariable(variableId, variableName, (variable) -> {
       if (builder != null) {
         builder.accept(new VariableMetaBuilderImpl(variable));
       }
     }, variableType)) {
-      entity.getWorkspaceGroup().getWorkspaceVariables().add(entity);
-      entity = context.db().save(entity);
-      if (oldRestriction != variableType) {
-        globalVarStorageMap.remove(entity.getEntityID());
-        variableBackupRepository.delete(entity);
-      }
+      String callService = getCallService();
+      executeAsAdmin(() -> {
+        VariableType oldRestriction = entity.getRestriction();
+        entity.setJsonData("owner", callService);
+        entity.getWorkspaceGroup().getWorkspaceVariables().add(entity);
+        ref.set(context.db().save(entity));
+        if (oldRestriction != variableType) {
+          globalVarStorageMap.remove(entity.getEntityID());
+          variableBackupRepository.delete(entity);
+        }
+      });
     }
-    return entity;
+    return ref.get();
   }
 
   @Override
@@ -591,10 +646,12 @@ public class ContextVarImpl implements ContextVar {
                                    @NotNull Consumer<GroupMetaBuilder> groupBuilder,
                                    @NotNull Consumer<WorkspaceGroup> additionalHandler) {
     WorkspaceGroup entity = context.db().get(WorkspaceGroup.class, groupId);
+    String callService = getCallService();
     if (entity == null) {
       entity = new WorkspaceGroup();
       entity.setEntityID(groupId);
       entity.setName(groupName);
+      entity.setJsonData("owner", callService);
       configureGroup(groupBuilder, entity);
       additionalHandler.accept(entity);
       entity = context.db().save(entity);
@@ -603,7 +660,12 @@ public class ContextVarImpl implements ContextVar {
       configureGroup(groupBuilder, entity);
       additionalHandler.accept(entity);
       if (entityHashCode != entity.getEntityHashCode()) {
-        context.db().save(entity);
+        WorkspaceGroup finalEntity = entity;
+        if (isServiceOwnerOfVariable(entity, callService)) {
+          executeAsAdmin(() -> context.db().save(finalEntity));
+        } else {
+          context.db().save(finalEntity);
+        }
       }
     }
     return entity.getEntityID();
@@ -815,15 +877,6 @@ public class ContextVarImpl implements ContextVar {
 
       @Nullable
       Number getValue();
-    }
-  }
-
-  public static class FetchBroadcastSubGroups implements DynamicOptionLoader {
-
-    @Override
-    public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
-      WorkspaceGroup entity = parameters.context().db().getRequire(WorkspaceGroup.PREFIX + GROUP_BROADCAST);
-      return OptionModel.entityList(entity.getChildrenGroups(), parameters.context());
     }
   }
 

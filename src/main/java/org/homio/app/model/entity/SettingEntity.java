@@ -70,9 +70,6 @@ public class SettingEntity extends BaseEntity implements HasJsonData {
   private boolean advanced;
 
   @Transient
-  private boolean lazyLoad;
-
-  @Transient
   private boolean storable;
 
   @Transient

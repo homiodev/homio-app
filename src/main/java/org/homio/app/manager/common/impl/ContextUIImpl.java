@@ -2,6 +2,7 @@ package org.homio.app.manager.common.impl;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pivovarit.function.ThrowingBiFunction;
+import com.pivovarit.function.ThrowingSupplier;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -9,12 +10,14 @@ import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
+import org.apache.commons.io.output.TeeOutputStream;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.homio.api.ContextUI;
 import org.homio.api.console.ConsolePlugin;
+import org.homio.api.console.ConsolePluginComplexLines;
 import org.homio.api.console.ConsolePluginTable;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.BaseEntityIdentifier;
@@ -33,6 +36,7 @@ import org.homio.api.service.EntityService;
 import org.homio.api.setting.SettingPluginButton;
 import org.homio.api.state.ObjectType;
 import org.homio.api.stream.ContentStream;
+import org.homio.api.ui.UI;
 import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.dialog.DialogModel;
@@ -63,6 +67,8 @@ import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -149,9 +155,8 @@ public class ContextUIImpl implements ContextUI {
 
   public void onContextCreated() {
     // run hourly script to drop not used dynamicUpdateRegisters
-    context.bgp().addLowPriorityRequest("drop-outdated-dynamicContext", () -> {
-      this.dynamicUpdateRegisters.values().removeIf(v -> TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - v.timeout) > 5);
-    });
+    context.bgp().addLowPriorityRequest("drop-outdated-dynamicContext", () ->
+      this.dynamicUpdateRegisters.values().removeIf(v -> TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - v.timeout) > 5));
 
     context.bgp().builder("send-ui-updates").interval(Duration.ofSeconds(1)).execute(() -> {
       for (Iterator<SendUpdateContext> iterator = sendToUIMap.values().iterator(); iterator.hasNext(); ) {
@@ -232,9 +237,8 @@ public class ContextUIImpl implements ContextUI {
   }
 
   public void unRegisterForUpdates(String entityID) {
-    dynamicUpdateRegisters.keySet().removeIf(request -> {
-      return request.getDynamicUpdateId().startsWith(entityID);
-    });
+    dynamicUpdateRegisters.keySet().removeIf(request ->
+      request.getDynamicUpdateId().startsWith(entityID));
   }
 
   public void unRegisterForUpdates(DynamicUpdateRequest request) {
@@ -932,9 +936,38 @@ public class ContextUIImpl implements ContextUI {
 
   public class ContextUIConsoleImpl implements ContextUIConsole {
 
+    private final Map<String, List<ConsolePluginComplexLines.ComplexString>> inlineConsoleLogCache = new ConcurrentHashMap<>();
+
     @Override
     public void registerPluginName(@NotNull String name) {
       customConsolePluginNames.add(name);
+    }
+
+    @SneakyThrows
+    @Override
+    public <T> T streamInlineConsole(String name, ThrowingSupplier<T, Exception> throwingRunnable, Runnable finallyBlock) {
+      if (inlineConsoleLogCache.containsKey(name)) {
+        inlineConsoleLogCache.get(name).clear();
+        var clearAction = OBJECT_MAPPER.createObjectNode().put("name", name).put("action", "clear");
+        context.ui().sendRawData("-lines-icl", clearAction);
+      } else {
+        inlineConsoleLogCache.put(name, new ArrayList<>());
+      }
+      PrintStream savedOutStream = System.out;
+      PrintStream savedErrStream = System.out;
+
+      TeeOutputStream outOutputStream = new TeeOutputStream(savedOutStream, new StdoutOutputStream(name, false));
+      TeeOutputStream errorOutputStream = new TeeOutputStream(savedErrStream, new StdoutOutputStream(name, true));
+
+      try {
+        System.setOut(new PrintStream(outOutputStream, true));
+        System.setErr(new PrintStream(errorOutputStream, true));
+        return throwingRunnable.get();
+      } finally {
+        System.setOut(savedOutStream);
+        System.setErr(savedErrStream);
+        finallyBlock.run();
+      }
     }
 
     @Override
@@ -973,7 +1006,7 @@ public class ContextUIImpl implements ContextUI {
 
     @Override
     public <T extends ConsolePlugin<?>> void openConsole(@NotNull String name) {
-      if (consolePluginsMap.containsKey(name)) {
+      if (!consolePluginsMap.containsKey(name)) {
         throw new ServerException("Console plugin: " + name + " not registered");
       }
       sendGlobal(GlobalSendType.openConsole, name, null, null, null);
@@ -987,6 +1020,42 @@ public class ContextUIImpl implements ContextUI {
     @Override
     public void refreshPluginContent(@NotNull String name, Object value) {
       refreshConsolePlugin.put(name, value);
+    }
+
+    @RequiredArgsConstructor
+    private class StdoutOutputStream extends ByteArrayOutputStream {
+
+      private final String name;
+      private final boolean stdErr;
+
+      String value = "";
+
+      @Override
+      public synchronized void write(int b) {
+        super.write(b);
+        if (b == '\n') {
+          add(value, stdErr);
+          value = "";
+        } else {
+          value += b;
+        }
+      }
+
+      public void add(String value, boolean error) {
+        var complexString = ConsolePluginComplexLines.ComplexString.of(value, System.currentTimeMillis(), error ? UI.Color.PRIMARY_COLOR : null, null);
+        inlineConsoleLogCache.get(name).add(complexString);
+        var addAction = OBJECT_MAPPER.createObjectNode()
+          .put("name", name)
+          .put("action", "add")
+          .putPOJO("value", complexString);
+        context.ui().sendRawData("-lines-icl", addAction);
+      }
+
+      @Override
+      public synchronized void write(byte[] b, int off, int len) {
+        super.write(b, off, len);
+        add(new String(b, off, len), stdErr);
+      }
     }
   }
 
@@ -1072,11 +1141,14 @@ public class ContextUIImpl implements ContextUI {
     private final Map<String, Pair<ProgressBar, Runnable>> simpleProgressBars = new ConcurrentHashMap<>();
 
     @Override
-    public ProgressBar createProgressBar(@NotNull String key, boolean dummy, @Nullable Runnable cancelHandler) {
+    public ProgressBar createProgressBar(@NotNull String key, boolean dummy, @Nullable Runnable cancelHandler, boolean logToConsole) {
       ProgressBar progressBar = new ProgressBar() {
         @Override
         public void progress(double progress, @Nullable String message, boolean error) {
           context().ui().progress().update(key, progress, message, cancelHandler != null);
+          if (logToConsole) {
+            log.info("{}[{}/100]: {}", key, progress, message);
+          }
         }
 
         @Override

@@ -135,7 +135,7 @@ public class ContextEventImpl implements ContextEvent {
         // Update entity into service
         if (serviceOptional.isPresent()) {
           try {
-            EntityService.ServiceInstance service = (ServiceInstance) serviceOptional.get();
+            var service = (ServiceInstance) serviceOptional.get();
             service.entityUpdated((EntityService) entity);
           } catch (Exception ex) {
             ((EntityService<?>) entity).setStatusError(ex);
@@ -420,12 +420,12 @@ public class ContextEventImpl implements ContextEvent {
         baseEntity.setContext(context);
 
         UserEntity user = context.user().getLoggedInUser();
-        if (user != null && !user.isAdmin()) {
+        if (user != null && !context.user().isAdminLoggedUser()) {
           UserGuestEntity guest = (UserGuestEntity) user;
           guest.assertDeleteAccess(baseEntity);
         }
 
-        if (baseEntity.isDisableDelete()) {
+        if (baseEntity.isDisableDelete() && !context.user().isSuperAdmin()) {
           context.ui().toastr().error("User is not allowed to delete entity");
           throw new IllegalStateException("Unable to delete entity");
         }

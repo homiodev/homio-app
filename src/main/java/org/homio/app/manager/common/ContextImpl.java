@@ -9,7 +9,6 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
 import org.homio.api.ContextHardware;
 import org.homio.api.ContextNetwork;
-import org.homio.api.ContextUser;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.entity.EntityFieldMetadata;
@@ -363,7 +362,7 @@ public class ContextImpl implements Context {
   }
 
   @Override
-  public @NotNull ContextUser user() {
+  public @NotNull ContextUserImpl user() {
     return contextUser;
   }
 

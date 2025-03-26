@@ -30,6 +30,7 @@ import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.workspace.block.Scratch3Space;
 import org.homio.app.workspace.block.core.Scratch3ControlBlocks;
 import org.homio.app.workspace.block.core.Scratch3DataBlocks;
+import org.homio.app.workspace.block.core.Scratch3DeviceBlocks;
 import org.homio.app.workspace.block.core.Scratch3EventsBlocks;
 import org.homio.app.workspace.block.core.Scratch3MiscBlocks;
 import org.homio.app.workspace.block.core.Scratch3MutatorBlocks;
@@ -66,6 +67,7 @@ public class WorkspaceService implements ContextRefreshed {
       Scratch3DataBlocks.class,
       Scratch3EventsBlocks.class,
       Scratch3OperatorBlocks.class,
+      Scratch3DeviceBlocks.class,
       Scratch3MutatorBlocks.class);
 
   private static final List<Class<?>> inlineScratches =

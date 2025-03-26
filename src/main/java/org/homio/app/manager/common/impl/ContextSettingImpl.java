@@ -27,6 +27,8 @@ import org.homio.app.setting.system.SystemPlaceSetting;
 import org.homio.app.setting.system.proxy.SystemProxyAddressSetting;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.core.env.ConfigurableEnvironment;
 
 import java.io.BufferedReader;
@@ -62,7 +64,6 @@ import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin
 public class ContextSettingImpl implements ContextSetting {
 
   public static final Map<String, SettingPlugin> settingPluginsByPluginKey = new HashMap<>();
-  public static final Map<Class<? extends DynamicConsoleHeaderContainerSettingPlugin>, List<SettingEntity>> dynamicHeaderSettings = new HashMap<>();
   public static final Map<String, UserSettings> settings = new HashMap<>();
   private static final Map<SettingPlugin, String> settingTransientState = new HashMap<>();
   private static final Map<String, Function<String, String>> settingValuePostProcessors = new HashMap<>();
@@ -128,14 +129,14 @@ public class ContextSettingImpl implements ContextSetting {
    * Reload updated settings to UI
    */
   @Override
-  public void reloadSettings(@NotNull Class<? extends DynamicConsoleHeaderContainerSettingPlugin> dynamicSettingPluginClass,
-                             List<? extends DynamicConsoleHeaderSettingPlugin> dynamicSettings) {
-    List<SettingEntity> dynamicEntities = dynamicSettings
-      .stream()
-      .map(this::createSettingEntityFromPlugin)
-      .collect(Collectors.toList());
-    dynamicHeaderSettings.put(dynamicSettingPluginClass, dynamicEntities);
-
+  public void reloadDynamicSettings(@NotNull Class<? extends DynamicConsoleHeaderContainerSettingPlugin> dynamicSettingPluginClass) {
+    String entityID = SettingEntity.getKey(dynamicSettingPluginClass);
+    var pluginOptions = (DynamicConsoleHeaderContainerSettingPlugin) ContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+    JSONObject parameters = pluginOptions.getParameters(context, null);
+    var dynamicEntities = (JSONArray) parameters.opt("dynamicOptions");
+    if (dynamicEntities == null) {
+      dynamicEntities = new JSONArray();
+    }
     context.ui().sendGlobal(setting, SettingEntity.PREFIX + dynamicSettingPluginClass.getSimpleName(),
       dynamicEntities, null, OBJECT_MAPPER.createObjectNode().put("subType", "dynamic"));
   }
@@ -182,6 +183,15 @@ public class ContextSettingImpl implements ContextSetting {
     }
 
     return value;
+  }
+
+  @Override
+  public <T> BaseEntity createDynamicSetting(@NotNull DynamicConsoleHeaderSettingPlugin<T> dynamicSetting) {
+    SettingEntity entity = new SettingEntity();
+    entity.setContext(context);
+    entity.setEntityID(getKey(dynamicSetting));
+    fulfillEntityFromPlugin(entity, context, dynamicSetting);
+    return entity;
   }
 
   @Override
@@ -280,14 +290,15 @@ public class ContextSettingImpl implements ContextSetting {
    */
   public <T> void notifyValueStateChanged(Class<? extends SettingPlugin<T>> settingPluginClazz) {
     SettingPlugin<T> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
-    SettingEntity settingEntity = context.db().getRequire(SettingEntity.getKey(pluginFor));
-    T value = pluginFor.deserializeValue(context, settingEntity.getValue());
-    fireNotifyHandlers(settingPluginClazz, value, pluginFor, settingEntity.getValue(), true);
+    SettingEntity settingEntity = context.db().get(SettingEntity.getKey(pluginFor));
+    String strValue = settingEntity == null ? settingTransientState.get(pluginFor) : settingEntity.getValue();
+    T value = pluginFor.deserializeValue(context, strValue);
+    fireNotifyHandlers(settingPluginClazz, value, pluginFor, strValue, true);
   }
 
   @Override
   public <T> void setValue(Class<? extends SettingPlugin<T>> settingPluginClazz, @Nullable T value) {
-    SettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
+    SettingPlugin<?> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
     String strValue = setValueSilence(settingPluginClazz, value);
     fireNotifyHandlers(settingPluginClazz, value, pluginFor, strValue, true);
   }
@@ -316,7 +327,7 @@ public class ContextSettingImpl implements ContextSetting {
     addSettingsFromSystem(settingClasses);
     addonContext.onDestroy(() -> {
       for (Class<? extends SettingPlugin> settingPluginClass : settingClasses) {
-        SettingPlugin settingPlugin = CommonUtils.newInstance(settingPluginClass);
+        SettingPlugin<?> settingPlugin = CommonUtils.newInstance(settingPluginClass);
         String key = SettingEntity.getKey(settingPlugin);
         settingPluginsByPluginKey.remove(key);
         settingPluginsByPluginClass.remove(settingPluginClass.getName());
@@ -329,19 +340,12 @@ public class ContextSettingImpl implements ContextSetting {
   private void addSettingsFromSystem(List<Class<? extends SettingPlugin>> settingClasses) {
     for (Class<? extends SettingPlugin> settingPluginClass : settingClasses) {
       if (Modifier.isPublic(settingPluginClass.getModifiers())) {
-        SettingPlugin settingPlugin = CommonUtils.newInstance(settingPluginClass);
+        SettingPlugin<?> settingPlugin = CommonUtils.newInstance(settingPluginClass);
         String key = SettingEntity.getKey(settingPlugin);
         settingPluginsByPluginKey.put(key, settingPlugin);
         settingPluginsByPluginClass.put(settingPluginClass.getName(), settingPlugin);
       }
     }
-  }
-
-  private SettingEntity createSettingEntityFromPlugin(SettingPlugin<?> settingPlugin) {
-    SettingEntity entity = new SettingEntity();
-    entity.setEntityID(getKey(settingPlugin));
-    fulfillEntityFromPlugin(entity, context, settingPlugin);
-    return entity;
   }
 
   @Nullable
@@ -355,7 +359,7 @@ public class ContextSettingImpl implements ContextSetting {
   }
 
   private <T> void fireNotifyHandlers(Class<? extends SettingPlugin<T>> settingPluginClazz, T value,
-                                      SettingPlugin pluginFor, String strValue, boolean fireUpdatesToUI) {
+                                      SettingPlugin<?> pluginFor, String strValue, boolean fireUpdatesToUI) {
     if (settingListeners.containsKey(settingPluginClazz.getName())) {
       context.bgp().builder("update-setting-" + settingPluginClazz.getSimpleName()).auth().execute(() -> {
         for (ThrowingConsumer consumer : settingListeners.get(settingPluginClazz.getName()).values()) {

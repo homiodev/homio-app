@@ -104,6 +104,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.jcraft</groupId>
+            <artifactId>jsch</artifactId>
+            <version>0.1.55</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-jul</artifactId>
         </dependency>
@@ -244,7 +249,7 @@
         </dependency>
 
         <dependency>
-            <artifactId>addon-gcloud_tts</artifactId>
+            <artifactId>addon-firmata</artifactId>
             <groupId>org.homio.addon</groupId>
             <version>1.0.2</version>
         </dependency>

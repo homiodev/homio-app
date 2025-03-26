@@ -14,6 +14,7 @@ import org.homio.api.setting.SettingPluginPackageInstall;
 import org.homio.api.setting.SettingType;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
 import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
+import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.AddonService;
 import org.homio.app.manager.common.ContextImpl;
@@ -22,6 +23,7 @@ import org.homio.app.manager.common.impl.ContextUIImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.spring.ContextRefreshed;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -42,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
@@ -146,6 +149,26 @@ public class SettingController implements ContextRefreshed {
     if (settingPlugin != null) {
       settingPlugin.assertUserAccess(context, context.user().getLoggedInUser());
       context.setting().setValueRaw((Class<? extends SettingPlugin<T>>) settingPlugin.getClass(), value, false);
+    } else {
+      for (SettingPlugin<?> plugin : ContextSettingImpl.settingPluginsByPluginKey.values()) {
+        if (plugin instanceof DynamicConsoleHeaderContainerSettingPlugin dynamicPlugin) {
+          AtomicBoolean found = new AtomicBoolean();
+          var consumer = new DynamicConsoleHeaderContainerSettingPlugin.DynamicSettingConsumer() {
+            @Override
+            public <T> void addDynamicSetting(@NotNull DynamicConsoleHeaderSettingPlugin<T> dynamicSetting) {
+              if (getKey(dynamicSetting).equals(entityID)) {
+                found.set(true);
+                dynamicPlugin.setValue(context, dynamicSetting, value);
+              }
+            }
+          };
+          dynamicPlugin.assembleDynamicSettings(context, consumer);
+          if (found.get()) {
+            return;
+          }
+        }
+      }
+      throw new ServerException("Setting plugin not found for entityID: " + entityID);
     }
   }
 
@@ -162,7 +185,7 @@ public class SettingController implements ContextRefreshed {
     return context.toOptionModels(context.db().findAll(SettingEntity.class));
   }
 
-  public List<SettingEntity> getSettings() {
+  public Set<SettingEntity> getSettings() {
     List<SettingEntity> settings = context.db().findAll(SettingEntity.class);
     assembleTransientSettings(settings);
     for (SettingEntity setting : settings) {
@@ -204,7 +227,7 @@ public class SettingController implements ContextRefreshed {
 
     settings.addAll(descriptionSettings);
     Collections.sort(settings);
-    return settings;
+    return new HashSet<>(settings);
   }
 
   private void assembleTransientSettings(List<SettingEntity> settings) {
@@ -213,21 +236,6 @@ public class SettingController implements ContextRefreshed {
       SettingEntity settingEntity = entry.getValue();
       settingEntity.setContext(context);
       settingEntity.setValue(context.setting().getRawValue((Class) entry.getKey()));
-      if (DynamicConsoleHeaderContainerSettingPlugin.class.isAssignableFrom(entry.getKey())) {
-        settingEntity.setSettingTypeRaw("Container");
-        settingEntity.setLazyLoad(true);
-        List<SettingEntity> options = ContextSettingImpl.dynamicHeaderSettings.get(entry.getKey());
-        if (settingEntity.getParameters() == null) {
-          settingEntity.setParameters(new JSONObject());
-        }
-        settingEntity.getParameters().put("dynamicOptions", options);
-      } else if (SettingPluginPackageInstall.class.isAssignableFrom(entry.getKey())) {
-        settingEntity.setSettingTypeRaw("AddonInstaller");
-      }
-      for (String key : settingEntity.getJsonData().keySet()) {
-        settingEntity.getParameters().put(key, settingEntity.getJsonData().get(key));
-      }
-
       settings.add(settingEntity);
     }
   }

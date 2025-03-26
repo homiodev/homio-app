@@ -3,7 +3,6 @@ package org.homio.app.rest;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.bluetooth.BluetoothCharacteristicService;
 import org.homio.api.Context;
 import org.homio.api.entity.UserEntity;
@@ -26,12 +25,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
 
 @Log4j2
@@ -71,7 +72,7 @@ public class DeviceController {
   public @NotNull Collection<OptionModel> getDevices(
     @RequestParam(value = "access", defaultValue = "any") @NotNull String access,
     @RequestParam(value = "type", defaultValue = "any") @NotNull String type,
-    @RequestParam("prefix") @NotNull String prefix) {
+    @RequestParam(value = "prefix", required = false) @Nullable String prefix) {
     return getDevices(prefix, buildDeviceAccessFilter(access, type));
   }
 
@@ -92,12 +93,13 @@ public class DeviceController {
       entity.getDeviceEndpoints().values().stream()
         .filter(buildEndpointAccessFilter(access))
         .filter(buildFilterByType(type))
+        .sorted(Comparator.naturalOrder())
         .map(this::createOptionModel)
         .collect(Collectors.toList());
   }
 
   private @Nullable DeviceEndpointsBehaviourContract getDevice(String ieeeAddress) {
-    if (StringUtils.isEmpty(ieeeAddress)) {
+    if (isEmpty(ieeeAddress)) {
       return null;
     }
     return (DeviceEndpointsBehaviourContract)
@@ -144,13 +146,13 @@ public class DeviceController {
   }
 
   private @NotNull Collection<OptionModel> getDevices(
-    @NotNull String prefix,
+    @Nullable String prefix,
     @NotNull Predicate<DeviceEndpointsBehaviourContract> deviceFilter) {
 
     Collection<OptionModel> list = new ArrayList<>();
     for (DeviceBaseEntity deviceEntity : context.db().findAll(DeviceBaseEntity.class)) {
       if (deviceEntity instanceof DeviceEndpointsBehaviourContract deviceContract) {
-        if (deviceEntity.getEntityID().startsWith("dvc_" + prefix) && deviceFilter.test(deviceContract)) {
+        if ((isEmpty(prefix) || deviceEntity.getEntityID().startsWith("dvc_" + prefix)) && deviceFilter.test(deviceContract)) {
           Icon icon = deviceEntity.getEntityIcon();
           list.add(OptionModel.of(Objects.requireNonNull(deviceEntity.getIeeeAddress()), deviceContract.getDeviceFullName())
             .setDescription(deviceContract.getDescription())

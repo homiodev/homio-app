@@ -11,8 +11,10 @@ import org.homio.api.setting.SettingPluginButton;
 import org.homio.api.setting.SettingPluginOptions;
 import org.homio.api.setting.SettingPluginOptionsEnumMulti;
 import org.homio.api.setting.SettingPluginOptionsRemovable;
+import org.homio.api.setting.SettingPluginPackageInstall;
 import org.homio.api.setting.SettingPluginToggle;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
+import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
 import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.app.manager.common.impl.ContextSettingImpl;
@@ -80,16 +82,20 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
       entity.setParameters(plugin.getParameters(context, entity.getValue()));
       entity.setDisabled(plugin.isDisabled(context) ? true : null);
       entity.setRequired(plugin.isRequired());
-      if (plugin instanceof SettingPluginOptions) {
-        entity.setLazyLoad(((SettingPluginOptions<?>) plugin).lazyLoad());
-      }
       if (plugin instanceof SettingPluginOptionsEnumMulti<?>) {
         entity.setMultiSelect(true);
+      }
+      if (plugin instanceof DynamicConsoleHeaderContainerSettingPlugin) {
+        entity.setSettingTypeRaw("Container");
+        entity.getParameters().put("lazyLoad", true);
+      }
+      if (plugin instanceof SettingPluginPackageInstall) {
+        entity.setSettingTypeRaw("AddonInstaller");
       }
       if (entity.isStorable()) {
         boolean isSelectBox = entity.getSettingType().equals(UIFieldType.SelectBoxButton.name())
                               || entity.getSettingType().equals(UIFieldType.SelectBox.name());
-        if (isSelectBox && !entity.isLazyLoad()) {
+        if (isSelectBox && !entity.getParameters().optBoolean("lazyLoad")) {
           entity.setAvailableValues(SettingRepository.getOptions((SettingPluginOptions<?>) plugin, context, null));
         }
       }

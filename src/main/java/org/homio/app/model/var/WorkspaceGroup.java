@@ -139,7 +139,7 @@ public class WorkspaceGroup extends BaseEntity
     return context().setting().getValue(WorkspaceGroupEntityCompactModeSetting.class);
   }
 
-  @UIField(order = 1, fullWidth = true, color = "#89AA50", type = HTML, style = "height: 32px;")
+  @UIField(order = 1, fullWidth = true, color = "#89AA50", type = HTML, style = "height: 32px;", hideInEdit = true)
   @UIFieldShowOnCondition("return context.get('compactMode')")
   public String getCompactDescription() {
     if (!isCompactMode()) {

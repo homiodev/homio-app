@@ -182,6 +182,11 @@ public class WorkspaceVariable extends BaseEntity
   }
 
   @Override
+  public boolean isDisableEdit() {
+    return locked || getJsonData("dis_edit", false);
+  }
+
+  @Override
   public boolean isDisableDelete() {
     return locked || getJsonData("dis_del", false) || context().event().getEventCount(getEntityID()) > 0;
   }

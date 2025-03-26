@@ -312,7 +312,7 @@ public class RouteController {
     public List<RouteDTO> routes;
     public Map<String, List<SidebarMenuItem>> menu;
     public List<AddonJson> addons;
-    public List<SettingEntity> settings;
+    public Set<SettingEntity> settings;
     public ContextUIImpl.NotificationResponse notifications;
     public Set<ConsoleTab> consoleTabs;
     public Map<String, String> customImages;

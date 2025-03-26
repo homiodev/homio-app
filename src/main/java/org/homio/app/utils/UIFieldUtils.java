@@ -291,15 +291,29 @@ public class UIFieldUtils {
 
     // make sense keep defaultValue(for revert) only if able to edit value
     boolean noReadDefaultValue = fieldContext.isAnnotationPresent(UIFieldNoReadDefaultValue.class);
-    if (!noReadDefaultValue && !fullDisableEdit && !field.disableEdit()
+    if (!noReadDefaultValue
+        && !fullDisableEdit && !field.disableEdit()
+        && field.type() != UIFieldType.Duration
+        && field.type() != UIFieldType.DurationDowntime
+        && field.type() != UIFieldType.Password
+        && field.type() != UIFieldType.HTML
+        && field.type() != UIFieldType.Text
         && !type.isAssignableFrom(SecureString.class)) {
-      entityUIMetaData.setDefaultValue(fieldContext.getDefaultValue(instance));
+      try {
+        entityUIMetaData.setDefaultValue(fieldContext.getDefaultValue(instance));
+      } catch (Exception ex) {
+        log.error("Unable to get default value for field: {}", fieldContext.getName(), ex);
+      }
     }
 
     ObjectNode jsonTypeMetadata = OBJECT_MAPPER.createObjectNode();
 
     if (type.isEnum() && !noReadDefaultValue) {
-      entityUIMetaData.setDefaultValue(fieldContext.getDefaultValue(instance));
+      try {
+        entityUIMetaData.setDefaultValue(fieldContext.getDefaultValue(instance));
+      } catch (Exception ex) {
+        log.error("Unable to get default value for field: {}", fieldContext.getName(), ex);
+      }
     }
 
     detectFieldType(instance, fieldContext, entityUIMetaData, genericType, type, field, jsonTypeMetadata);
@@ -428,7 +442,7 @@ public class UIFieldUtils {
       JsonNode colorChange = OBJECT_MAPPER.valueToTree(Arrays.stream(fieldProgress.colorChange()).collect(
         Collectors.toMap(UIFieldProgressColorChange::color, UIFieldProgressColorChange::whenMoreThan)));
       entityUIMetaData.setType("Progress");
-      jsonTypeMetadata.put("pgColor", fieldProgress.fillColor());
+      jsonTypeMetadata.put("pgColor", fieldProgress.color());
       jsonTypeMetadata.set("colorChange", colorChange);
     }
 
