@@ -618,6 +618,15 @@
             <id>github-homio-api</id>
             <url>https://maven.pkg.github.com/homiodev/homio-api</url>
         </repository>
+        <repository>
+            <id>repo.jenkins-ci.org</id>
+            <url>https://repo.jenkins-ci.org/releases/</url>
+        </repository>
+        <repository>
+            <id>maven_central</id>
+            <name>Maven Central</name>
+            <url>https://repo.maven.apache.org/maven2/</url>
+        </repository>
     </repositories>
 
 </project>
