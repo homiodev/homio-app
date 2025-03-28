@@ -20,6 +20,7 @@ import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
+import org.homio.api.model.endpoint.BaseDeviceEndpoint;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.State;
 import org.homio.api.storage.DataStorageService;
@@ -71,6 +72,8 @@ import java.util.stream.Collectors;
 import static java.lang.String.format;
 import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
+import static org.homio.api.util.Constants.ADMIN_ROLE;
+import static org.homio.app.manager.common.impl.ContextUserImpl.GENERATED_SUPER_ADMIN;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -94,9 +97,9 @@ public class ContextVarImpl implements ContextVar {
     return String.join("-->", items);
   }
 
-  public static void executeAsAdmin(Runnable runnable) {
+  private static void executeAsSuperAdmin(Runnable runnable) {
     Authentication backupAuth = SecurityContextHolder.getContext().getAuthentication();
-    User user = new User("admin", "admin", List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+    User user = new User(GENERATED_SUPER_ADMIN, "", List.of(new SimpleGrantedAuthority(ADMIN_ROLE)));
     var admin = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
     try {
       SecurityContextHolder.getContext().setAuthentication(admin);
@@ -109,7 +112,6 @@ public class ContextVarImpl implements ContextVar {
   private static @Nullable String getCallService() {
     StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
     for (int i = 2; i < Math.min(stackTrace.length, 7); i++) { // Start from 2 to skip getStackTrace()
-      // and getCallService()
       String className = stackTrace[i].getClassName();
       if (className.startsWith("org.homio.addon.")) {
         className = className.substring(className.lastIndexOf('.') + 1);
@@ -117,6 +119,13 @@ public class ContextVarImpl implements ContextVar {
       }
     }
     return null;
+  }
+
+  private static @NotNull String fixVariableEntityID(@NotNull String variableId) {
+    if (!variableId.startsWith(WorkspaceVariable.PREFIX)) {
+      variableId = WorkspaceVariable.PREFIX + variableId;
+    }
+    return variableId;
   }
 
   public void onContextCreated() {
@@ -278,7 +287,7 @@ public class ContextVarImpl implements ContextVar {
 
   @Override
   public boolean exists(@NotNull String variableId) {
-    return globalVarStorageMap.containsKey(variableId);
+    return globalVarStorageMap.containsKey(fixVariableEntityID(variableId));
   }
 
   @Override
@@ -293,7 +302,7 @@ public class ContextVarImpl implements ContextVar {
         || !Objects.equals(workspaceGroup.getDescription(), description)) {
       workspaceGroup.setName(name);
       workspaceGroup.setDescription(description);
-      executeAsAdmin(() -> context.db().save(workspaceGroup));
+      executeAsSuperAdmin(() -> context.db().save(workspaceGroup));
       return true;
     }
     return false;
@@ -307,7 +316,7 @@ public class ContextVarImpl implements ContextVar {
             || !Objects.equals(workspaceVariable.getDescription(), description))) {
       workspaceVariable.setName(name);
       workspaceVariable.setDescription(description);
-      executeAsAdmin(() -> context.db().save(workspaceVariable));
+      executeAsSuperAdmin(() -> context.db().save(workspaceVariable));
       return true;
     }
     return false;
@@ -322,7 +331,7 @@ public class ContextVarImpl implements ContextVar {
     if (workspaceVariable != null
         && (!Objects.equals(workspaceVariable.getIcon(), icon.getIcon())
             || !Objects.equals(workspaceVariable.getIconColor(), icon.getColor()))) {
-      executeAsAdmin(() -> context.db().save(workspaceVariable.setIcon(icon.getIcon()).setIconColor(icon.getColor())));
+      executeAsSuperAdmin(() -> context.db().save(workspaceVariable.setIcon(icon.getIcon()).setIconColor(icon.getColor())));
       return true;
     }
     return false;
@@ -334,15 +343,26 @@ public class ContextVarImpl implements ContextVar {
   }
 
   @Override
-  public void removeVariable(@NotNull String variableId) {
-    String callService = getCallService();
+  public <T extends BaseDeviceEndpoint<?>> void removeVariable(@NotNull String vid, @Nullable T owner) {
+    String variableId = fixVariableEntityID(vid);
+    if (!exists(variableId)) {
+      return;
+    }
+    String callService = owner == null ? getCallService() : owner.getClass().getSimpleName();
     WorkspaceVariable variable = context.db().getRequire(variableId);
     if (isLinked(variableId)) {
-      throw new IllegalStateException("Unable to remove linked variable: " + variableId);
+      throw new IllegalStateException("Unable to remove linked variable: " + vid);
     }
     if (context.user().isAdminLoggedUser() || isServiceOwnerOfVariable(variable, callService)) {
-      variableBackupRepository.delete(variable);
-      executeAsAdmin(() -> context.db().delete(variableId));
+      // execute remove from external thread if removeVariable calls from within another transaction
+      new Thread(() -> {
+        if (variable.isBackup()) {
+          variableBackupRepository.delete(variable);
+        }
+        executeAsSuperAdmin(() -> context.db().delete(variableId));
+      }).start();
+    } else {
+      log.error("Unable to remove variable: {}. User: {} is not owner of variable: {}", variableId, owner, variable);
     }
   }
 
@@ -407,13 +427,13 @@ public class ContextVarImpl implements ContextVar {
         if (group.isDisableDelete()) {
           group.setLocked(false);
           group.setJsonData("dis_del", false);
-          executeAsAdmin(() -> context.db().save(group));
+          executeAsSuperAdmin(() -> context.db().save(group));
           Integer unlockedVariables = context.getBean(WorkspaceVariableRepository.class).unlockVariablesByGroup(group);
           if (unlockedVariables > 0) {
             log.info("Unlocked {} variables of group {} for deletion", unlockedVariables, entityID);
           }
         }
-        executeAsAdmin(() -> context.db().delete(group));
+        executeAsSuperAdmin(() -> context.db().delete(group));
       }
     }
   }
@@ -477,7 +497,7 @@ public class ContextVarImpl implements ContextVar {
       }
     }, variableType)) {
       String callService = getCallService();
-      executeAsAdmin(() -> {
+      executeAsSuperAdmin(() -> {
         VariableType oldRestriction = entity.getRestriction();
         entity.setJsonData("owner", callService);
         entity.getWorkspaceGroup().getWorkspaceVariables().add(entity);
@@ -662,7 +682,7 @@ public class ContextVarImpl implements ContextVar {
       if (entityHashCode != entity.getEntityHashCode()) {
         WorkspaceGroup finalEntity = entity;
         if (isServiceOwnerOfVariable(entity, callService)) {
-          executeAsAdmin(() -> context.db().save(finalEntity));
+          executeAsSuperAdmin(() -> context.db().save(finalEntity));
         } else {
           context.db().save(finalEntity);
         }

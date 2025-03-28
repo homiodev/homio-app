@@ -36,13 +36,13 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
 
   public UIButtonItemBuilder addReferenceAction(String name, String reference, int order) {
     return addEntity(
-      new UIButtonItemBuilderImpl(UIItemType.Button, name, null, order, null)
+      new UIButtonItemBuilderImpl(UIItemType.Button, name, null, order)
         .setActionReference(reference));
   }
 
   public UIButtonItemBuilderImpl addFireActionBeforeChange(
     String name, String[] actions, String reference, int order) {
-    return addEntity(new UIButtonItemBuilderImpl(UIItemType.Button, name, null, order, null)
+    return addEntity(new UIButtonItemBuilderImpl(UIItemType.Button, name, null, order)
       .setActionReference(reference))
       .setFireActionsBeforeChange(actions);
   }
@@ -92,13 +92,13 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
 
   @Override
   public @NotNull UIButtonItemBuilder addSelectableButton(@NotNull String name, Icon icon, @Nullable UIActionHandler action, int order) {
-    return addEntity(new UIButtonItemBuilderImpl(UIItemType.SelectableButton, name, icon, order, action));
+    return addEntity(new UIButtonItemBuilderImpl(UIItemType.SelectableButton, name, icon, order).setActionHandler(action));
   }
 
   @Override
-  public UIInputBuilder.DialogEntity<UIButtonItemBuilder> addOpenDialogSelectableButton(@NotNull String name, Icon icon,
-                                                                                        @NotNull UIActionHandler action,
-                                                                                        int order) {
+  public UIInputBuilder.@NotNull DialogEntity<UIButtonItemBuilder> addOpenDialogSelectableButton(@NotNull String name, Icon icon,
+                                                                                                 @NotNull UIActionHandler action,
+                                                                                                 int order) {
     return addOpenDialogSelectableButtonInternal(name, icon, action);
   }
 

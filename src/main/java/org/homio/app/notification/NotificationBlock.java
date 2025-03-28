@@ -147,7 +147,8 @@ public class NotificationBlock {
     @Override
     public @NotNull NotificationButtonBuilder setRightButton(@Nullable Icon buttonIcon, @Nullable String buttonText,
                                                              @Nullable UIActionHandler handler) {
-      UIButtonItemBuilderImpl builder = new UIButtonItemBuilderImpl(UIItemType.Button, this.key, buttonIcon, 0, handler);
+      UIButtonItemBuilderImpl builder = new UIButtonItemBuilderImpl(UIItemType.Button, this.key, buttonIcon, 0);
+      builder.setActionHandler(handler);
       builder.setText(Objects.toString(buttonText, ""));
       builder.setHeight(20);
       this.rightAction = builder.buildEntity();
@@ -180,7 +181,8 @@ public class NotificationBlock {
 
     @Override
     public @NotNull NotificationInfoLineBuilder setRightToggleButton(boolean value, @Nullable UIActionHandler handler) {
-      UICheckboxItemBuilderImpl builder = new UICheckboxItemBuilderImpl(this.key, 0, handler, value);
+      UICheckboxItemBuilderImpl builder = new UICheckboxItemBuilderImpl(this.key, 0, value);
+      builder.setActionHandler(handler);
       this.rightAction = builder.buildEntity();
       return this;
     }

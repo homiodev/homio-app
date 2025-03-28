@@ -1,0 +1,75 @@
+name: Build homio-app
+
+on:
+  push:
+    branches:
+      - master
+  repository_dispatch:
+    types: [ trigger-build ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          server-username: ${{ github.actor }}
+          server-password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up settings.xml
+        run: |
+          mkdir -p ~/.m2
+          echo '<settings>
+            <servers>
+               <server>
+                <id>github</id>
+                <username>${{ secrets.MAVEN_USERNAME }}</username>
+                <password>${{ secrets.GITHUB_TOKEN }}</password>
+              </server>
+              <server>
+                <id>github-homio-primary-addons</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.GITHUB_TOKEN }}</password>
+              </server>
+              <server>
+                <id>github-homio-dependency</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.GITHUB_TOKEN }}</password>
+              </server>
+              <server>
+                <id>github-homio-hquery</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.GITHUB_TOKEN }}</password>
+              </server>
+              <server>
+                <id>github-homio-api</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.GITHUB_TOKEN }}</password>
+              </server>
+            </servers>
+            <mirrors>
+              <mirror>
+                <id>github-mirror</id>
+                <mirrorOf>github-homio-dependency, github-homio-hquery, github-homio-api, github-homio-primary-addons</mirrorOf>
+                <url>https://maven.pkg.github.com/homiodev/</url>
+                <layout>default</layout>
+              </mirror>
+            </mirrors>
+          </settings>' > ~/.m2/settings.xml 
+
+      - name: Import GPG Key
+        run: |
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          gpgconf --reload gpg-agent
+        env:
+          GPG_TTY: /dev/tty
+
+      - name: Build & Sign with Maven
+        run: mvn clean install -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }}

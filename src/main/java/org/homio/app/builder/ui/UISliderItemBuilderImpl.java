@@ -3,7 +3,6 @@ package org.homio.app.builder.ui;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.item.UISliderItemBuilder;
 
 @Getter
@@ -20,8 +19,8 @@ public class UISliderItemBuilderImpl extends UIBaseEntityItemBuilderImpl<UISlide
   private @Setter String thumbLabel;
   private @Setter Float defaultValue;
 
-  public UISliderItemBuilderImpl(String entityID, int order, UIActionHandler actionHandler, float value, Float min, Float max) {
-    super(UIItemType.Slider, entityID, order, actionHandler);
+  public UISliderItemBuilderImpl(String entityID, int order, float value, Float min, Float max) {
+    super(UIItemType.Slider, entityID, order);
     this.min = min;
     this.max = max;
     setValue(value);

@@ -8,13 +8,13 @@
     <parent>
         <artifactId>homio-dependency</artifactId>
         <groupId>org.homio</groupId>
-        <version>2.5.0</version>
+        <version>2.6.0-SNAPSHOT</version>
     </parent>
 
     <properties>
         <graalvm.version>24.0.1</graalvm.version>
-        <homio-api.version>1.3.2</homio-api.version>
-        <homio-primary-addons.version>1.3.2</homio-primary-addons.version>
+        <homio-api.version>1.3.3-SNAPSHOT</homio-api.version>
+        <homio-primary-addons.version>1.3.3-SNAPSHOT</homio-primary-addons.version>
         <start-class>org.homio.app.HomioApplication</start-class>
         <!-- Do not use 5.2  reports wire version 6, but this version of the driver requires at least 7 (MongoDB 3.6)-->
         <mongodb.version>5.1.3</mongodb.version>
@@ -594,15 +594,30 @@
         </dependency>
     </dependencies>
 
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/homiodev/homio-app</url>
+        </repository>
+    </distributionManagement>
+
     <repositories>
         <repository>
-            <id>repo.jenkins-ci.org</id>
-            <url>https://repo.jenkins-ci.org/releases/</url>
+            <id>github-homio-primary-addons</id>
+            <url>https://maven.pkg.github.com/homiodev/homio-primary-addons</url>
         </repository>
         <repository>
-            <id>maven_central</id>
-            <name>Maven Central</name>
-            <url>https://repo.maven.apache.org/maven2/</url>
+            <id>github-homio-dependency</id>
+            <url>https://maven.pkg.github.com/homiodev/homio-dependency</url>
+        </repository>
+        <repository>
+            <id>github-homio-hquery</id>
+            <url>https://maven.pkg.github.com/homiodev/homio-hquery</url>
+        </repository>
+        <repository>
+            <id>github-homio-api</id>
+            <url>https://maven.pkg.github.com/homiodev/homio-api</url>
         </repository>
     </repositories>
+
 </project>

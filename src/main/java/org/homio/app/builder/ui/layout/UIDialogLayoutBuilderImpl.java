@@ -125,7 +125,7 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
   public void addInput(UIActionInput input) {
     switch (input.type()) {
       case select -> {
-        UISelectBoxItemBuilderImpl selectBox = new UISelectBoxItemBuilderImpl(input.name(), nextOrder(), null)
+        UISelectBoxItemBuilderImpl selectBox = new UISelectBoxItemBuilderImpl(input.name(), nextOrder())
           .setOptions(OptionModel.list(input.values()));
         addEntity(input.name(), selectBox.setValue(input.value()));
       }
@@ -136,14 +136,14 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
       case password ->
         addInput(input.name(), input.value(), UITextInputItemBuilder.InputType.Password, input.required());
       case number -> addEntity(input.name(),
-        new UISliderItemBuilderImpl(input.name(), nextOrder(), null, Float.parseFloat(input.value()), (float) input.min(), (float) input.max()))
+        new UISliderItemBuilderImpl(input.name(), nextOrder(), Float.parseFloat(input.value()), (float) input.min(), (float) input.max()))
         .edit(sliderBuilder -> sliderBuilder
           .setSliderType(UISliderItemBuilder.SliderType.Input)
           .setRequired(input.required()));
       case info ->
         addEntity(input.value(), new UIInfoItemBuilderImpl("txt_" + Math.abs(input.value().hashCode()), nextOrder(), input.value(), InfoType.Text));
       case bool ->
-        addEntity(input.name(), new UICheckboxItemBuilderImpl(input.name(), nextOrder(), null, Boolean.parseBoolean(input.value())));
+        addEntity(input.name(), new UICheckboxItemBuilderImpl(input.name(), nextOrder(), Boolean.parseBoolean(input.value())));
     }
   }
 

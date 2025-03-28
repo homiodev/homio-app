@@ -3,7 +3,6 @@ package org.homio.app.builder.ui;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.homio.api.model.Icon;
-import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.item.UIMultiButtonItemBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -19,8 +18,8 @@ public class UIMultiButtonItemBuilderImpl
 
   private final List<ExtraButton> buttons = new ArrayList<>();
 
-  public UIMultiButtonItemBuilderImpl(String entityID, int order, UIActionHandler actionHandler) {
-    super(UIItemType.MultiButton, entityID, order, actionHandler);
+  public UIMultiButtonItemBuilderImpl(String entityID, int order) {
+    super(UIItemType.MultiButton, entityID, order);
   }
 
   @Override

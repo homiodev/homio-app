@@ -15,7 +15,6 @@ import org.homio.api.ui.field.action.v1.item.UIMultiButtonItemBuilder;
 import org.homio.api.ui.field.action.v1.item.UISelectBoxItemBuilder;
 import org.homio.api.ui.field.action.v1.item.UISliderItemBuilder;
 import org.homio.api.ui.field.action.v1.item.UITextInputItemBuilder;
-import org.homio.api.ui.field.action.v1.item.UITextInputItemBuilder.InputType;
 import org.homio.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
 import org.homio.api.ui.field.action.v1.layout.UILayoutBuilder;
 import org.homio.api.ui.field.action.v1.layout.dialog.UIDialogLayoutBuilder;
@@ -96,7 +95,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
   }
 
   @Override
-  public void addRawUIEntityBuilder(@NotNull String name, UIEntityBuilder source) {
+  public void addRawUIEntityBuilder(@NotNull String name, @NotNull UIEntityBuilder source) {
     inputBuilders.put(name, source);
   }
 
@@ -149,70 +148,72 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
   }
 
   @Override
-  public UITextInputItemBuilder addInput(@NotNull String name, String defaultValue, InputType inputType, boolean required) {
-    return addEntity(new UITextInputItemBuilderImpl(name, getNextOrder(), defaultValue, inputType)
-      .setRequired(required));
-  }
-
-  @Override
   public UIFlexLayoutBuilder addFlex(@NotNull String name, int order) {
     return addEntity(new UIFlexLayoutBuilderImpl(name, order));
   }
 
   @Override
-  public UIInfoItemBuilder addInfo(@NotNull String name, UIInfoItemBuilder.InfoType infoType, int order) {
+  public UIInfoItemBuilder addInfo(@NotNull String name, UIInfoItemBuilder.@NotNull InfoType infoType, int order) {
     return addEntity(new UIInfoItemBuilderImpl(generateShortUUID(8), order, name, infoType));
   }
 
   @Override
   public UISelectBoxItemBuilder addSelectBox(@NotNull String name, UIActionHandler action, int order) {
-    return addEntity(new UISelectBoxItemBuilderImpl(name, order, action));
+    return addEntity(new UISelectBoxItemBuilderImpl(name, order).setActionHandler(action));
   }
 
   @Override
   public UICheckboxItemBuilder addCheckbox(@NotNull String name, boolean value, UIActionHandler action, int order) {
-    return addEntity(new UICheckboxItemBuilderImpl(name, order, action, value));
+    return addEntity(new UICheckboxItemBuilderImpl(name, order, value).setActionHandler(action));
   }
 
   @Override
   public UIMultiButtonItemBuilder addMultiButton(@Nullable String text, UIActionHandler action, int order) {
-    return addEntity(new UIMultiButtonItemBuilderImpl(getText(text), order, action));
+    return addEntity(new UIMultiButtonItemBuilderImpl(getText(text), order).setActionHandler(action));
   }
 
   @Override
   public UISliderItemBuilder addSlider(@NotNull String name, Float value, Float min, Float max, UIActionHandler action,
                                        UISliderItemBuilder.SliderType sliderType, int order) {
     return addEntity(
-      new UISliderItemBuilderImpl(name, order, action, value, min, max)
+      new UISliderItemBuilderImpl(name, order, value, min, max)
+        .setActionHandler(action)
         .setSliderType(sliderType));
   }
 
   @Override
   public UIButtonItemBuilder addButton(@NotNull String name, Icon icon, UIActionHandler action, int order) {
-    return addEntity(new UIButtonItemBuilderImpl(UIItemType.Button, name, icon, order, action));
+    return addEntity(new UIButtonItemBuilderImpl(UIItemType.Button, name, icon, order)).setActionHandler(action);
   }
 
   @Override
   public UIButtonItemBuilder addTableLayoutButton(@NotNull String name, int maxRows, int maxColumns, String value, @Nullable Icon icon,
                                                   UIActionHandler action, int order) {
-    return addEntity(new UIButtonItemBuilderImpl(UIItemType.TableLayout, name, icon == null ? new Icon("fas fa-table") : icon, order, action)
-      .setMetadata(new JSONObject().put("maxRows", maxRows).put("maxColumns", maxColumns).put("value", value)));
+    return addEntity(new UIButtonItemBuilderImpl(UIItemType.TableLayout, name, icon == null ? new Icon("fas fa-table") : icon, order)
+      .setMetadata(new JSONObject().put("maxRows", maxRows).put("maxColumns", maxColumns).put("value", value)))
+      .setActionHandler(action);
   }
 
   @Override
   public UIButtonItemBuilder addSimpleUploadButton(@NotNull String name, @Nullable Icon icon, String[] supportedFormats,
                                                    UIActionHandler action, int order) {
-    return addEntity(new UIButtonItemBuilderImpl(UIItemType.SimpleUploadButton, name, icon, order, action)
-      .setMetadata(new JSONObject().put("supportedFormats", supportedFormats)));
+    return addEntity(new UIButtonItemBuilderImpl(UIItemType.SimpleUploadButton, name, icon, order)
+      .setMetadata(new JSONObject().put("supportedFormats", supportedFormats)))
+      .setActionHandler(action);
   }
 
   @Override
-  public UIColorPickerItemBuilder addColorPicker(@NotNull String name, @NotNull String color, @Nullable UIActionHandler action) {
-    return addEntity(new UIColorPickerBuilderImpl(name, getNextOrder(), color, action));
+  public UIColorPickerItemBuilder addColorPicker(@NotNull String name, @Nullable String color) {
+    return addEntity(new UIColorPickerBuilderImpl(name, getNextOrder(), color));
   }
 
   @Override
-  public UIIconPickerItemBuilder addIconPicker(@NotNull String name, String icon) {
+  public UITextInputItemBuilder addInput(@NotNull String name, @Nullable String defaultValue, UITextInputItemBuilder.@NotNull InputType inputType) {
+    return addEntity(new UITextInputItemBuilderImpl(name, getNextOrder(), defaultValue, inputType));
+  }
+
+  @Override
+  public UIIconPickerItemBuilder addIconPicker(@NotNull String name, @Nullable String icon) {
     return addEntity(new UIIconPickerBuilderImpl(name, getNextOrder(), icon));
   }
 

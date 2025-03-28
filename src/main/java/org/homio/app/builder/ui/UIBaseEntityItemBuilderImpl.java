@@ -20,9 +20,9 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
   implements UIEntityItemBuilder<Owner, Value>, UIInputEntity, UIInputEntityActionHandler {
 
   private final String itemType;
-  private final UIActionHandler actionHandler;
   private final String entityID;
   private final List<String> validators = new ArrayList<>();
+  private UIActionHandler actionHandler;
   private String title;
   private int order;
   private Boolean disabled;
@@ -38,15 +38,16 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
   private String separatedText;
   private @Nullable Value value;
 
-  public UIBaseEntityItemBuilderImpl(
-    @NotNull UIItemType uiItemType,
-    @NotNull String entityID,
-    int order,
-    UIActionHandler actionHandler) {
+  public UIBaseEntityItemBuilderImpl(@NotNull UIItemType uiItemType, @NotNull String entityID, int order) {
     this.itemType = uiItemType.name();
     this.entityID = entityID;
-    this.actionHandler = actionHandler;
     this.order = order;
+  }
+
+  @Override
+  public @NotNull Owner setActionHandler(@Nullable UIActionHandler action) {
+    this.actionHandler = action;
+    return (Owner) this;
   }
 
   @Override

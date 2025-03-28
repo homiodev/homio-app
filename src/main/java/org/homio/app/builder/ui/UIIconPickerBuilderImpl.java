@@ -11,7 +11,7 @@ public class UIIconPickerBuilderImpl
   implements UIIconPickerItemBuilder {
 
   public UIIconPickerBuilderImpl(String entityID, int order, String icon) {
-    super(UIItemType.IconPicker, entityID, order, null);
+    super(UIItemType.IconPicker, entityID, order);
     setValue(icon);
   }
 }

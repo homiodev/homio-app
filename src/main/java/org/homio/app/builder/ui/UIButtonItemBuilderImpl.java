@@ -5,7 +5,6 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.model.Icon;
-import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.ui.field.action.v1.item.UIButtonItemBuilder;
 import org.homio.api.ui.field.action.v1.layout.dialog.UIDialogLayoutBuilder;
@@ -36,8 +35,8 @@ public class UIButtonItemBuilderImpl
   private boolean primary = true;
   private int height = 32;
 
-  public UIButtonItemBuilderImpl(@NotNull UIItemType uiItemType, @NotNull String entityID, @Nullable Icon icon, int order, @Nullable UIActionHandler actionHandler) {
-    super(uiItemType, entityID, order, actionHandler);
+  public UIButtonItemBuilderImpl(@NotNull UIItemType uiItemType, @NotNull String entityID, @Nullable Icon icon, int order) {
+    super(uiItemType, entityID, order);
     if (icon == null || StringUtils.isEmpty(icon.getIcon())) {
       setValue(entityID);
     }

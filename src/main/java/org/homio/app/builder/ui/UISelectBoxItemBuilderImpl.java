@@ -7,7 +7,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
-import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.item.UIButtonItemBuilder;
 import org.homio.api.ui.field.action.v1.item.UISelectBoxItemBuilder;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
@@ -43,8 +42,8 @@ public class UISelectBoxItemBuilderImpl
   @Getter
   private boolean multiSelect;
 
-  public UISelectBoxItemBuilderImpl(String entityID, int order, UIActionHandler actionHandler) {
-    super(UIItemType.SelectBox, entityID, order, actionHandler);
+  public UISelectBoxItemBuilderImpl(String entityID, int order) {
+    super(UIItemType.SelectBox, entityID, order);
   }
 
   @Override
@@ -66,7 +65,7 @@ public class UISelectBoxItemBuilderImpl
     this.setIcon(icon);
     this.text = text;
     this.asButton = true;
-    return new UIButtonItemBuilderImpl(UIItemType.Button, "", null, 0, null) {
+    return new UIButtonItemBuilderImpl(UIItemType.Button, "", null, 0) {
       @Override
       public UIButtonItemBuilderImpl setPrimary(boolean value) {
         primary = value;

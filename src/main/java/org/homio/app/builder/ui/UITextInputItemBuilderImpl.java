@@ -16,7 +16,7 @@ public class UITextInputItemBuilderImpl
   private boolean requireApply;
 
   public UITextInputItemBuilderImpl(String entityID, int order, String defaultValue, InputType inputType) {
-    super(UIItemType.Input, entityID, order, null);
+    super(UIItemType.Input, entityID, order);
     setValue(defaultValue);
     this.inputType = inputType;
   }

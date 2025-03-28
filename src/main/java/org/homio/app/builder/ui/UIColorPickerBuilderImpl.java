@@ -3,7 +3,6 @@ package org.homio.app.builder.ui;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.homio.api.ui.UIActionHandler;
 import org.homio.api.ui.field.action.v1.item.UIColorPickerItemBuilder;
 
 @Getter
@@ -15,8 +14,8 @@ public class UIColorPickerBuilderImpl
   @Setter
   private ColorType colorType;
 
-  public UIColorPickerBuilderImpl(String entityID, int order, String value, UIActionHandler actionHandler) {
-    super(UIItemType.ColorPicker, entityID, order, actionHandler);
+  public UIColorPickerBuilderImpl(String entityID, int order, String value) {
+    super(UIItemType.ColorPicker, entityID, order);
     setValue(value);
   }
 }

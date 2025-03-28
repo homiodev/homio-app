@@ -7,8 +7,8 @@ import org.homio.api.ui.field.action.v1.item.UIInfoItemBuilder;
 public class UIDurationBuilderImpl extends UIBaseEntityItemBuilderImpl<UIInfoItemBuilder, Long> {
 
   public UIDurationBuilderImpl(String entityID, int order, long value, String color) {
-    super(UIItemType.Duration, entityID, order, null);
+    super(UIItemType.Duration, entityID, order);
     setValue(value);
-    this.setColor(color);
+    setColor(color);
   }
 }

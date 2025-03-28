@@ -148,6 +148,8 @@ public class HomioApplication implements WebMvcConfigurer {
       if (!url.startsWith("jdbc:sqlite")) {
         url = "";
       }
+      // for sqlite enable only 1 thread
+      System.setProperty("spring.datasource.hikari.maximum-pool-size", "1");
     }
 
     log.info("Use database of type '{}'. Url: {}. Auth: '{}'/'{}'", type,

@@ -20,7 +20,7 @@ public class UIInfoItemBuilderImpl extends UIBaseEntityItemBuilderImpl<UIInfoIte
   private int height;
 
   public UIInfoItemBuilderImpl(String entityID, int order, String value, UIInfoItemBuilder.InfoType infoType) {
-    super(UIItemType.Text, entityID, order, null);
+    super(UIItemType.Text, entityID, order);
     this.infoType = infoType;
     setValue(value);
   }
