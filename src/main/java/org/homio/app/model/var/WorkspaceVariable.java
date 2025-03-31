@@ -387,14 +387,14 @@ public class WorkspaceVariable extends BaseEntity
     @NotNull String variableName,
     @NotNull Consumer<WorkspaceVariable> builder,
     @NotNull VariableType variableType) {
-    long entityHashCode = getEntityHashCode();
-    this.setName(variableName);
-    this.restriction = variableType;
-    if (variableId != null) {
-      this.setEntityID(variableId);
-    }
-    builder.accept(this);
-    return entityHashCode != getEntityHashCode();
+    return tryUpdateEntity(() -> {
+      this.setName(variableName);
+      this.restriction = variableType;
+      if (variableId != null) {
+        this.setEntityID(variableId);
+      }
+      builder.accept(this);
+    });
   }
 
   @Override

@@ -27,7 +27,7 @@ public class EntityManager {
   @Cacheable(ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI)
   public <T extends BaseEntity> T getEntityWithFetchLazy(String entityID) {
     AbstractRepository repository = ContextImpl.getRepository(entityID);
-    return (T) repository.getByEntityIDWithFetchLazy(entityID, false);
+    return (T) repository.getByEntityIDWithFetchLazy(entityID);
   }
 
   @Cacheable(CACHE_CLASS_BY_TYPE)
@@ -61,6 +61,6 @@ public class EntityManager {
   }
 
   public <T extends BaseEntity> @Nullable T getEntityNoCache(String entityID) {
-    return (T) ContextImpl.getRepository(entityID).getByEntityID(entityID);
+    return (T) ContextImpl.getRepository(entityID).getByEntityIDWithFetchLazy(entityID);
   }
 }

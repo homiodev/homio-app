@@ -14,7 +14,6 @@ import org.apache.commons.io.output.TeeOutputStream;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.homio.api.ContextUI;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.console.ConsolePluginComplexLines;
@@ -1138,16 +1137,32 @@ public class ContextUIImpl implements ContextUI {
 
   public class ContextUIProgressImpl implements ContextUIProgress {
 
-    private final Map<String, Pair<ProgressBar, Runnable>> simpleProgressBars = new ConcurrentHashMap<>();
+    private final Map<String, Runnable> simpleProgressBars = new ConcurrentHashMap<>();
 
     @Override
-    public ProgressBar createProgressBar(@NotNull String key, boolean dummy, @Nullable Runnable cancelHandler, boolean logToConsole) {
-      ProgressBar progressBar = new ProgressBar() {
+    public ProgressBar progressBar(@NotNull String key) {
+      return new ProgressBar() {
+        boolean logToConsole = true;
+        private Runnable cancelHandler;
+
         @Override
-        public void progress(double progress, @Nullable String message, boolean error) {
-          context().ui().progress().update(key, progress, message, cancelHandler != null);
+        public void progress(double progress1, @Nullable String message, boolean error) {
+          context().ui().progress().update(key, progress1, message, cancelHandler != null);
           if (logToConsole) {
-            log.info("{}[{}/100]: {}", key, progress, message);
+            log.info("{}[{}/100]: {}", key, progress1, message);
+          }
+        }
+
+        @Override
+        public void logToConsole(boolean value) {
+          logToConsole = value;
+        }
+
+        @Override
+        public void onCancel(Runnable handler) {
+          this.cancelHandler = handler;
+          if (handler != null) {
+            simpleProgressBars.put(key, cancelHandler);
           }
         }
 
@@ -1156,10 +1171,11 @@ public class ContextUIImpl implements ContextUI {
           return cancelHandler != null && !simpleProgressBars.containsKey(key);
         }
       };
-      if (cancelHandler != null) {
-        simpleProgressBars.put(key, Pair.of(progressBar, cancelHandler));
-      }
-      return progressBar;
+    }
+
+    @Override
+    public ProgressBar progressBarDummy(@NotNull String key) {
+      return (progress, message, error) -> log.info("{}[{}/100]: {}", key, progress, message);
     }
 
     @Override
@@ -1175,9 +1191,9 @@ public class ContextUIImpl implements ContextUI {
     }
 
     public void cancel(String name) {
-      Pair<ProgressBar, Runnable> removed = simpleProgressBars.remove(name);
-      if (removed != null) {
-        removed.getValue().run();
+      var cancelHandler = simpleProgressBars.remove(name);
+      if (cancelHandler != null) {
+        cancelHandler.run();
       }
     }
   }

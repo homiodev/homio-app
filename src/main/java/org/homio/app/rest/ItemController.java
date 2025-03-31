@@ -1090,7 +1090,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
   private Collection<BaseEntity> getUsages(
     String entityID, AbstractRepository<BaseEntity> repository) {
-    Object baseEntity = repository.getByEntityIDWithFetchLazy(entityID, false);
+    Object baseEntity = repository.getByEntityIDWithFetchLazy(entityID);
     Map<String, BaseEntity> usages = new HashMap<>();
     fillEntityRelationships(baseEntity, usages);
     return usages.values();

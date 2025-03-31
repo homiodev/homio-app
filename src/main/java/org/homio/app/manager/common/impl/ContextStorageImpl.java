@@ -219,6 +219,8 @@ public class ContextStorageImpl implements ContextStorage {
     T oldEntity = entityID == null ? null : get(entityID, false);
 
     T updatedEntity = transactionManagerContext.executeInTransaction(entityManager -> (T) repository.save(entity));
+    // we need re-fetch entity to initialize all lazy fields
+    updatedEntity = get(updatedEntity.getEntityID(), false);
 
     if (fireNotifyListeners) {
       if (oldEntity == null) {

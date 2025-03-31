@@ -27,7 +27,7 @@ public class SystemClearCacheButtonSetting
 
   @Override
   public @NotNull Icon getIcon() {
-    return new Icon("fas fa-trash");
+    return new Icon("fas fa-brush");
   }
 
   @Override

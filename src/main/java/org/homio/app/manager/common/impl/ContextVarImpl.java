@@ -48,6 +48,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -101,6 +102,15 @@ public class ContextVarImpl implements ContextVar {
     Authentication backupAuth = SecurityContextHolder.getContext().getAuthentication();
     User user = new User(GENERATED_SUPER_ADMIN, "", List.of(new SimpleGrantedAuthority(ADMIN_ROLE)));
     var admin = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+    if (TransactionSynchronizationManager.isActualTransactionActive()) {
+      new Thread(() -> {
+        executeAsSuperAdmin(runnable, admin, backupAuth);
+      }).start();
+    }
+    executeAsSuperAdmin(runnable, admin, backupAuth);
+  }
+
+  private static void executeAsSuperAdmin(Runnable runnable, UsernamePasswordAuthenticationToken admin, Authentication backupAuth) {
     try {
       SecurityContextHolder.getContext().setAuthentication(admin);
       runnable.run();
@@ -584,7 +594,7 @@ public class ContextVarImpl implements ContextVar {
         log.error("Unable to handle variable {} link handler. {}", varContext.variable.getTitle(), getErrorMessage(ex));
       }
     } else if (logIfNoLinked) {
-      log.warn("Updated variable: {} has no linked handler", varContext.variable.getTitle());
+      log.warn("Variable: '{}' has no linked handler", varContext.variable.getTitle());
     }
     return value;
   }

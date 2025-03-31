@@ -9,8 +9,8 @@ import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.hibernate.Hibernate;
+import org.hibernate.proxy.HibernateProxy;
 import org.homio.api.entity.BaseEntity;
-import org.homio.api.ui.field.UIField;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.config.TransactionManagerContext;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
@@ -92,31 +92,32 @@ public class AbstractRepository<T extends BaseEntity> {
       findByField(entityManager, fieldName, value).stream().findFirst().orElse(null));
   }
 
-  public @Nullable T getByEntityIDWithFetchLazy(@NotNull String entityID, boolean ignoreNotUILazy) {
+  public @Nullable T getByEntityIDWithFetchLazy(@NotNull String entityID) {
     return tmc.executeInTransactionReadOnly(em -> {
       T entity = getEntity(entityID, em);
       if (entity != null) {
-        fetchLazy(entity, new HashSet<>(), ignoreNotUILazy);
+        fetchLazy(entity, new HashSet<>());
       }
       return entity;
     });
   }
 
-  private void fetchLazy(@NotNull Object entity, @NotNull Set<Object> visitedEntities, boolean ignoreNotUI) {
+  private void fetchLazy(@NotNull Object entity, @NotNull Set<Object> visitedEntities) {
     FieldUtils.getAllFieldsList(entity.getClass()).forEach(field -> {
       try {
-        if (ignoreNotUI && field.getAnnotation(UIField.class) == null) {
-          return;
-        }
         if (field.isAnnotationPresent(OneToMany.class) || field.isAnnotationPresent(OneToOne.class) ||
             field.isAnnotationPresent(ManyToOne.class) || field.isAnnotationPresent(ManyToMany.class)) {
           Object proxy = FieldUtils.readField(field, entity, true);
           Hibernate.initialize(proxy);
+          if (proxy instanceof HibernateProxy) {
+            proxy = Hibernate.unproxy(proxy);
+            FieldUtils.writeField(field, entity, proxy, true);
+          }
           if (proxy != null && visitedEntities.add(proxy)) {
             if (proxy instanceof Collection) {
-              ((Collection<?>) proxy).forEach(o -> fetchLazy(o, visitedEntities, ignoreNotUI));
+              ((Collection<?>) proxy).forEach(o -> fetchLazy(o, visitedEntities));
             } else {
-              fetchLazy(proxy, visitedEntities, ignoreNotUI);
+              fetchLazy(proxy, visitedEntities);
             }
           }
         }
@@ -131,16 +132,18 @@ public class AbstractRepository<T extends BaseEntity> {
       T entity = getEntity(entityID, em);
       if (entity != null) {
         // TODO: issue: https://hibernate.atlassian.net/browse/HHH-17036
-        fetchLazy(entity, new HashSet<>(), false);
+        fetchLazy(entity, new HashSet<>());
         em.remove(entity);
         // somehow cascade = CascadeType.ALL now works
-        if (entity instanceof WidgetSeriesEntity<?> wse) {
-          wse.getWidgetEntity().getSeries().remove(entity);
-        } else if (entity instanceof WorkspaceVariable wv) {
-          wv.getWorkspaceGroup().getWorkspaceVariables().remove(entity);
-        } else if (entity instanceof WorkspaceGroup wg) {
-          if (wg.getParent() != null) {
-            wg.getParent().getChildrenGroups().remove(wg);
+        switch (entity) {
+          case WidgetSeriesEntity<?> wse -> wse.getWidgetEntity().getSeries().remove(entity);
+          case WorkspaceVariable wv -> wv.getWorkspaceGroup().getWorkspaceVariables().remove(entity);
+          case WorkspaceGroup wg -> {
+            if (wg.getParent() != null) {
+              wg.getParent().getChildrenGroups().remove(wg);
+            }
+          }
+          default -> {
           }
         }
         log.warn("Entity <{}> was removed", entity);

@@ -46,7 +46,7 @@ public class SystemHardRestartButtonSetting
 
   @Override
   public int order() {
-    return 210;
+    return 201;
   }
 
   @Override

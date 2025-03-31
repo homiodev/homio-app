@@ -52,7 +52,7 @@ public class Z2MDeviceRepository extends AbstractRepository<Z2MDeviceEntity> {
   }
 
   @Override
-  public Z2MDeviceEntity getByEntityIDWithFetchLazy(@NotNull String entityID, boolean ignoreNotUILazy) {
+  public Z2MDeviceEntity getByEntityIDWithFetchLazy(@NotNull String entityID) {
     return getByEntityID(entityID);
   }
 

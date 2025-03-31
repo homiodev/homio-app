@@ -251,7 +251,7 @@
         <dependency>
             <artifactId>addon-firmata</artifactId>
             <groupId>org.homio.addon</groupId>
-            <version>1.0.2</version>
+            <version>1.0.2-win</version>
         </dependency>
 
         <dependency>
@@ -591,6 +591,11 @@
             <groupId>org.jvnet.winp</groupId>
             <artifactId>winp</artifactId>
             <version>1.31</version>
+        </dependency>
+        <dependency>
+            <groupId>org.homio</groupId>
+            <artifactId>onvif</artifactId>
+            <version>1.1.1</version>
         </dependency>
     </dependencies>
 

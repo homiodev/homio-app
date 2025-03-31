@@ -117,12 +117,14 @@ public class ContextSettingImpl implements ContextSetting {
   }
 
   @Override
-  public void reloadSettings(@NotNull Class<? extends SettingPluginOptions> settingPlugin) {
-    String entityID = SettingEntity.getKey(settingPlugin);
-    SettingPluginOptions<?> pluginOptions = (SettingPluginOptions<?>) ContextSettingImpl.settingPluginsByPluginKey.get(entityID);
-
+  public void reloadSettings(@NotNull Class<? extends SettingPluginOptions> settingPluginClass) {
+    String entityID = SettingEntity.getKey(settingPluginClass);
+    SettingPlugin<?> settingPlugin = ContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+    SettingPluginOptions<?> pluginOptions = (SettingPluginOptions<?>) settingPlugin;
+    String value = (String) getObjectValue(settingPluginClass);
     Collection<OptionModel> options = SettingRepository.getOptions(pluginOptions, context, null);
-    context.ui().sendGlobal(setting, entityID, options, null, OBJECT_MAPPER.createObjectNode().put("subType", "list"));
+    context.ui().sendGlobal(setting, entityID, options, null, OBJECT_MAPPER.createObjectNode()
+      .put("current", value).put("subType", "list"));
   }
 
   /**
