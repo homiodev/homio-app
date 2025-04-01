@@ -133,6 +133,7 @@ public class ContextImpl implements Context {
     BEAN_CONTEXT_REFRESH.add(WorkspaceService.class);
     BEAN_CONTEXT_REFRESH.add(ItemController.class);
     BEAN_CONTEXT_REFRESH.add(PortService.class);
+    BEAN_CONTEXT_REFRESH.add(ConsoleController.class);
   }
 
   private final ContextUIImpl contextUI;

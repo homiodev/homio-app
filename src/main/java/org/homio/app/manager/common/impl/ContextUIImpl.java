@@ -541,7 +541,7 @@ public class ContextUIImpl implements ContextUI {
   public void handleDialog(String entityID, DialogResponseType dialogResponseType, String pressedButton, ObjectNode params) {
     DialogModel model = dialogRequest.remove(entityID);
     if (model != null) {
-      model.getActionHandler().handle(dialogResponseType, pressedButton, params);
+      new Thread(() -> model.getActionHandler().handle(dialogResponseType, pressedButton, params)).start();
       if (dialogResponseType != DialogResponseType.Timeout && model.getMaxTimeoutInSec() > 0) {
         context.bgp().cancelThread(entityID + "dialog-timeout");
       }
@@ -1182,7 +1182,7 @@ public class ContextUIImpl implements ContextUI {
     public void update(@NotNull String key, double progress, @Nullable String message, boolean cancellable) {
       if (progress >= 100) {
         progressMap.remove(key);
-        cancel(key);
+        simpleProgressBars.remove(key);
       } else {
         progressMap.put(key, new ProgressNotification(key, progress, message, cancellable));
       }

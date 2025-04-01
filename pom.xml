@@ -249,12 +249,6 @@
         </dependency>
 
         <dependency>
-            <artifactId>addon-firmata</artifactId>
-            <groupId>org.homio.addon</groupId>
-            <version>1.0.2-win</version>
-        </dependency>
-
-        <dependency>
             <artifactId>addon-camera</artifactId>
             <groupId>org.homio.addon</groupId>
             <version>${homio-primary-addons.version}</version>

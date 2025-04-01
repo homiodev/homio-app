@@ -39,6 +39,7 @@ import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.rest.ItemController.ActionModelRequest;
 import org.homio.app.setting.system.SystemFramesSetting;
 import org.homio.app.spring.ContextCreated;
+import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.utils.OptionUtil;
 import org.homio.app.utils.UIFieldUtils;
 import org.jetbrains.annotations.NotNull;
@@ -71,7 +72,7 @@ import static org.homio.app.model.entity.user.UserBaseEntity.log;
 @RestController
 @RequestMapping(value = "/rest/console", produces = "application/json")
 @RequiredArgsConstructor
-public class ConsoleController implements ContextCreated {
+public class ConsoleController implements ContextCreated, ContextRefreshed {
 
   @Getter
   private static final Map<String, SshSession<?>> sessions = new HashMap<>();
@@ -137,16 +138,19 @@ public class ConsoleController implements ContextCreated {
   }
 
   @Override
-  public void onContextCreated(ContextImpl context) throws Exception {
-    for (String tab : logService.getTabs()) {
-      logs.add(new ConsoleTab(tab, ConsolePlugin.RenderType.lines, null));
-      logsConsolePluginsMap.put(tab, new LogsConsolePlugin(this.context, logService, tab));
-    }
-
+  public void onContextRefresh(Context context) throws Exception {
     List<ConsolePlugin> consolePlugins = new ArrayList<>(this.context.getBeansOfType(ConsolePlugin.class));
     Collections.sort(consolePlugins);
     for (ConsolePlugin<?> consolePlugin : consolePlugins) {
       ContextUIImpl.consolePluginsMap.put(consolePlugin.getName(), consolePlugin);
+    }
+  }
+
+  @Override
+  public void onContextCreated(ContextImpl context) throws Exception {
+    for (String tab : logService.getTabs()) {
+      logs.add(new ConsoleTab(tab, ConsolePlugin.RenderType.lines, null));
+      logsConsolePluginsMap.put(tab, new LogsConsolePlugin(this.context, logService, tab));
     }
 
     ObjectNode nodes = context.setting().getValue(SystemFramesSetting.class);

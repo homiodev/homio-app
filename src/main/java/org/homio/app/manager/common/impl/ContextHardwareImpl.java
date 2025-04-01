@@ -33,8 +33,6 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
-import static org.apache.commons.lang3.SystemUtils.IS_OS_MAC;
 import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.service.device.LocalBoardService.TOTAL_MEMORY;
@@ -67,7 +65,7 @@ public class ContextHardwareImpl implements ContextHardware {
       .orElse(null);
   }
 
-  private static @NotNull Architecture getArchitecture(@NotNull Context context) {
+  public static @NotNull Architecture getArchitecture(@NotNull Context context) {
     if (SystemUtils.IS_OS_WINDOWS) {
       return Architecture.win64;
     }
@@ -213,7 +211,7 @@ public class ContextHardwareImpl implements ContextHardware {
       assetNames.put(assetName, asset);
     }
     List<Entry<String, JsonNode>> sortedAssets = assetNames.entrySet().stream()
-      .filter(s -> architecture.matchName.test(s.getKey()))
+      .filter(s -> architecture.isMatch(s.getKey()))
       .sorted(Comparator.comparingLong(o -> o.getValue().get("size").asLong()))
       .toList();
 
@@ -259,14 +257,18 @@ public class ContextHardwareImpl implements ContextHardware {
     arm32v7(s -> s.contains("arm32v7") || s.contains("arm7")),
     arm32v8(s -> s.contains("arm32v8") || s.contains("arm8")),
     arm64v8(s -> s.contains("arm64v8")),
-    aarch64(s -> IS_OS_LINUX && s.contains("linux_arm64v8") || IS_OS_MAC && s.contains("darwin_arm64")),
-    amd64(s -> s.contains("amd64") || s.contains("linux64")),
+    aarch64(s -> (s.contains("linux_arm64v8") || s.contains("linux-aarch64"))),
+    amd64(s -> (s.contains("amd64") || s.contains("linux64") || s.contains("linux-64"))),
     i386(s -> s.contains("i386")),
     win32(s -> s.contains("win32")),
-    win64(s -> s.contains("win64") || s.contains("windows")),
-    winArm64(s -> s.contains("win_arm64"));
+    winArm64(s -> s.contains("win_arm64")),
+    win64(s -> s.contains("win"));
 
     public final Predicate<String> matchName;
+
+    public boolean isMatch(String platform) {
+      return matchName.test(platform);
+    }
   }
 
   @Getter

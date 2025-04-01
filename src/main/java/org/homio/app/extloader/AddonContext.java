@@ -7,15 +7,12 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.maven.model.Dependency;
-import org.apache.maven.model.Model;
-import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
-import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.homio.api.AddonConfiguration;
 import org.homio.api.exception.ServerException;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.SpringUtils;
 import org.homio.app.HomioClassLoader;
+import org.jetbrains.annotations.Nullable;
 import org.reflections.Reflections;
 import org.reflections.util.ConfigurationBuilder;
 import org.springframework.context.ApplicationContext;
@@ -25,11 +22,9 @@ import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -38,7 +33,6 @@ import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 @Log4j2
@@ -46,11 +40,10 @@ import java.util.zip.ZipFile;
 @Setter
 public class AddonContext {
 
-  private static MavenXpp3Reader pomReader = new MavenXpp3Reader();
   private final List<ThrowingRunnable<Exception>> destryListeners = new ArrayList<>();
   private final Path contextFile; // batch context file associated with this context
-  private final Model pomFile;
-  private final Manifest manifest;
+  private final @Nullable Manifest manifest;
+  private final @Nullable String version;
   private String addonID;
 
   private boolean internal;
@@ -64,7 +57,7 @@ public class AddonContext {
     ZipFile zipFile = new ZipFile(contextFile.toString());
     JarInputStream jarStream = new JarInputStream(new FileInputStream(contextFile.toString()));
     this.manifest = jarStream.getManifest();
-    this.pomFile = readPomFile(zipFile);
+    this.version = manifest.getMainAttributes().getValue("Implementation-Version");
     jarStream.close();
     zipFile.close();
   }
@@ -72,7 +65,7 @@ public class AddonContext {
   public AddonContext(String addonID) {
     this.addonID = addonID;
     this.contextFile = null;
-    this.pomFile = null;
+    this.version = null;
     this.manifest = null;
     this.internal = true;
   }
@@ -104,20 +97,14 @@ public class AddonContext {
     if ((contextFile != null && that.contextFile == null) || (contextFile == null && that.contextFile != null)) {
       return false;
     }
-    if ((pomFile != null && that.pomFile == null) || (pomFile == null && that.pomFile != null)) {
-      return false;
-    }
 
-    if (contextFile != null && !contextFile.equals(that.contextFile)) {
-      return false;
-    }
-    return pomFile == null || pomFile.getVersion().equals(that.pomFile.getVersion());
+    return version == null || version.equals(that.version);
   }
 
   @Override
   public int hashCode() {
     int result = contextFile != null ? contextFile.hashCode() : 0;
-    result = 31 * result + (pomFile != null ? pomFile.getVersion().hashCode() : 0);
+    result = 31 * result + (version != null ? version.hashCode() : 0);
     result = 31 * result + addonID.hashCode();
     return result;
   }
@@ -126,29 +113,16 @@ public class AddonContext {
     return config != null && loadError == null;
   }
 
-  public Set<String> getDependencies() {
-    return this.pomFile.getDependencies().stream()
-      .filter(d -> d.getGroupId().equals("org.homio") && d.getArtifactId().contains("addon"))
-      .map(Dependency::getArtifactId).collect(Collectors.toSet());
-  }
-
   public String getAddonFriendlyName() {
-    return Objects.toString(this.pomFile.getName(), addonID);
+    String title = manifest == null ? null : manifest.getMainAttributes().getValue("Implementation-Title");
+    return Objects.toString(title, addonID);
   }
 
   public AnnotationConfigApplicationContext getApplicationContext() {
     return config.ctx;
   }
 
-  public String getBasePackage() {
-    return this.config.configClass.getPackage().getName();
-  }
-
   public String getVersion() {
-    String version = this.pomFile.getVersion();
-    if (version == null && this.pomFile.getParent() != null) {
-      version = this.pomFile.getParent().getVersion();
-    }
     if (version == null) {
       throw new ServerException("ERROR.ADDON_NO_VERSION" + addonID);
     }
@@ -170,7 +144,10 @@ public class AddonContext {
     Reflections reflections = new Reflections(configurationBuilder.setUrls(addonUrl));
 
     config = new AddonSpringContext(env);
-    addonID = pomFile.getArtifactId();
+    if (manifest == null) {
+      throw new ServerException("ERROR.ADDON_NO_MANIFEST");
+    }
+    addonID = getArtifactId();
     try {
       HomioClassLoader.addClassLoaders(addonID, classLoader);
       config.configureSpringContext(reflections, parentContext, addonID, classLoader);
@@ -191,14 +168,11 @@ public class AddonContext {
     }
   }
 
-  private Model readPomFile(ZipFile file) throws IOException, XmlPullParserException {
-    String artifactId = this.manifest.getMainAttributes().getValue("artifactId");
-    for (ZipEntry e : Collections.list(file.entries())) {
-      if (e.getName().endsWith(artifactId + "/pom.xml")) {
-        return pomReader.read(file.getInputStream(e));
-      }
+  public String getArtifactId() {
+    if (manifest == null) {
+      throw new ServerException("ERROR.ADDON_NO_MANIFEST");
     }
-    throw new ServerException("Unable to find pom.xml in jar");
+    return manifest.getMainAttributes().getValue("Implementation-ArtifactId");
   }
 
   @RequiredArgsConstructor
@@ -206,10 +180,9 @@ public class AddonContext {
 
     private final Environment env;
     private AnnotationConfigApplicationContext ctx;
-    private Class<?> configClass;
 
     void configureSpringContext(Reflections reflections, ApplicationContext parentContext, String addonID, ClassLoader classLoader) {
-      configClass = findBatchConfigurationClass(reflections);
+      var configClass = findBatchConfigurationClass(reflections);
       AddonConfiguration addonConfiguration = configClass.getDeclaredAnnotation(AddonConfiguration.class);
 
       // create spring context

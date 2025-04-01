@@ -213,7 +213,7 @@ public class ContextAddonImpl {
         if (appVersion != 0 && !AddonContext.validVersion(addonContext.getVersion(), appVersion)) {
           log.error("Unable to launch addon {}. Incompatible version", addonContext.getVersion());
         } else {
-          addonContextMap.put(addonContext.getPomFile().getArtifactId(), addonContext);
+          addonContextMap.put(addonContext.getArtifactId(), addonContext);
         }
       } catch (Exception ex) {
         log.error("\n#{}\nUnable to parse addon: {}\n#{}",
@@ -250,6 +250,7 @@ public class ContextAddonImpl {
     progressBar.progress(50, "Installing addon...");
     try {
       addAddonFromPath(new AddonContext(addonPath));
+      this.context.ui().dialog().reloadWindow("Refresh page after isntall addon");
     } catch (Exception ex) {
       deleteFileWithRetry(addonPath);
       throw ex;
@@ -292,7 +293,7 @@ public class ContextAddonImpl {
   }
 
   private void addAddonFromPath(AddonContext addonContext) {
-    addonContextMap.put(addonContext.getPomFile().getArtifactId(), addonContext);
+    addonContextMap.put(addonContext.getArtifactId(), addonContext);
     setupAddonContext(addonContext);
     context.getAddon().initializeAddons(addonContextMap);
   }
@@ -303,7 +304,7 @@ public class ContextAddonImpl {
   private void setupAddonContext(AddonContext addonContext) {
     if (!addonContext.isLoaded() && !addonContext.isInternal()) {
       log.info("Try load addon context <{}:{}>",
-        addonContext.getPomFile().getArtifactId(), addonContext.getVersion());
+        addonContext.getArtifactId(), addonContext.getVersion());
       try {
         if (loadContext(addonContext)) {
           context.getAllApplicationContexts().add(addonContext.getApplicationContext());
@@ -316,16 +317,16 @@ public class ContextAddonImpl {
           context.ui().notification().updateBlock("addons",
             builder -> addAddonNotificationRow(addonContext, builder, false));
 
-          log.info("Addon context <{}> registered successfully.", addonContext.getPomFile().getArtifactId());
+          log.info("Addon context <{}> registered successfully.", addonContext.getArtifactId());
           addonContextMap.put(addonContext.getAddonID(), addonContext);
         } else {
-          log.info("Addon context <{}> already registered before.", addonContext.getPomFile().getArtifactId());
+          log.info("Addon context <{}> already registered before.", addonContext.getArtifactId());
         }
       } catch (Exception ex) {
         context.ui().notification().updateBlock("addons",
           builder -> addAddonNotificationRow(addonContext, builder, true));
         addonContextMap.remove(addonContext.getAddonID());
-        log.error("Unable to load addon context <{}>.", addonContext.getPomFile().getArtifactId(), ex);
+        log.error("Unable to load addon context <{}>.", addonContext.getArtifactId(), ex);
       }
     }
   }
@@ -424,7 +425,7 @@ public class ContextAddonImpl {
     String newVersion = params.getString("value");
     if (OptionModel.getByKey(versions, newVersion) != null) {
       String question = Lang.getServerMessage("PACKAGE_UPDATE_QUESTION",
-        Map.of("NAME", addonContext.getPomFile().getName(), "VERSION", newVersion));
+        Map.of("NAME", addonContext.getAddonFriendlyName(), "VERSION", newVersion));
       context.ui().dialog().sendConfirmation("update-" + key, "DIALOG.TITLE.UPDATE_PACKAGE", () ->
         context.getBean(AddonService.class).installPackage(
           new SystemAddonLibraryManagerSetting(),

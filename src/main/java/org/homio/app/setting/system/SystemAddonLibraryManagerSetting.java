@@ -15,6 +15,7 @@ import org.homio.api.setting.SettingPluginPackageInstall;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.extloader.AddonContext;
 import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.manager.common.impl.ContextHardwareImpl;
 import org.homio.app.setting.CoreSettingPlugin;
 import org.homio.hquery.Curl;
 import org.homio.hquery.ProgressBar;
@@ -55,7 +56,7 @@ public class SystemAddonLibraryManagerSetting
     urls.addAll(context.setting().getValue(SystemAddonRepositoriesSetting.class));
     urls.stream().filter(url -> !StringUtils.isEmpty(url)).forEach(url -> {
       try {
-        addons.addAll(getAddons(url));
+        addons.addAll(getAddons(url, context));
       } catch (Exception ex) {
         log.warn("Unable to fetch addons from repository: {}. Msg: {}", url, CommonUtils.getErrorMessage(ex));
       }
@@ -65,7 +66,7 @@ public class SystemAddonLibraryManagerSetting
   }
 
   @SneakyThrows
-  private static Collection<PackageModel> getAddons(String repoURL) {
+  private static Collection<PackageModel> getAddons(String repoURL, Context context) {
     log.info("Fetch addons for repo: {}", repoURL);
     try {
       GitHubProject addonsRepo = GitHubProject.of(repoURL);
@@ -83,9 +84,10 @@ public class SystemAddonLibraryManagerSetting
         }
       }
 
+      var arch = ContextHardwareImpl.getArchitecture(context);
       Map<String, Map<String, Object>> addons = addonsRepo.getFile("addons.yml", Map.class);
       return addons.entrySet().stream()
-        .map(entry -> readAddon(entry.getKey(), entry.getValue(), iconsPath))
+        .map(entry -> readAddon(entry.getKey(), entry.getValue(), iconsPath, arch))
         .filter(Objects::nonNull)
         .collect(Collectors.toList());
     } catch (Exception ex) {
@@ -107,7 +109,7 @@ public class SystemAddonLibraryManagerSetting
     return false;
   }
 
-  private static PackageModel readAddon(String name, Map<String, Object> addonConfig, Path iconsPath) {
+  private static PackageModel readAddon(String name, Map<String, Object> addonConfig, Path iconsPath, ContextHardwareImpl.Architecture arch) {
     String repository = (String) addonConfig.get("repository");
     try {
       log.debug("Read addon: {}", repository);
@@ -115,13 +117,14 @@ public class SystemAddonLibraryManagerSetting
       List<Object> versions = (List<Object>) addonConfig.get("versions");
       if (versions != null) {
         List<String> strVersions = versions.stream().map(Object::toString).collect(Collectors.toList());
-        String lastReleaseVersion = strVersions.get(strVersions.size() - 1);
+        String lastReleaseVersion = strVersions.getLast();
         String key = name.startsWith("addon-") ? name : "addon-" + name;
         PackageModel entity = new PackageModel()
           .setName(key)
           .setTitle((String) addonConfig.get("name"))
           .setDescription((String) addonConfig.get("description"));
-        entity.setJarUrl(format("https://github.com/%s/releases/download/%s/%s.jar", repository, "%s", addonRepo.getRepo()));
+        var platformAppender = findValidPlatformAppender(arch, entity, addonConfig);
+        entity.setJarUrl(format("https://github.com/%s/releases/download/%s/%s%s.jar", repository, "%s", addonRepo.getRepo(), platformAppender));
         entity.setWebsite("https://github.com/" + repository);
         entity.setCategory((String) addonConfig.get("category"));
         entity.setVersion(lastReleaseVersion);
@@ -135,6 +138,20 @@ public class SystemAddonLibraryManagerSetting
       log.error("Unable to fetch addon for repo: {}", repository, ae);
     }
     return null;
+  }
+
+  private static String findValidPlatformAppender(ContextHardwareImpl.Architecture arch, PackageModel entity, Map<String, Object> addonConfig) {
+    var platforms = (List<Object>) addonConfig.get("platform");
+    if (platforms != null && !platforms.contains("all")) {
+      entity.setDisabled(true);
+      for (Object platform : platforms) {
+        if (arch.isMatch(platform.toString())) {
+          entity.setDisabled(false);
+          return "-" + platform;
+        }
+      }
+    }
+    return "";
   }
 
   private static byte[] getIcon(Path icon) throws IOException {
@@ -164,7 +181,7 @@ public class SystemAddonLibraryManagerSetting
   }
 
   @Override
-  public PackageContext allPackages(Context context) {
+  public PackageContext allPackages(@NotNull Context context) {
     PackageContext packageContext = new PackageContext();
     try {
       Collection<PackageModel> allPackageModels = new ArrayList<>(addons.getValue(context));
@@ -187,7 +204,7 @@ public class SystemAddonLibraryManagerSetting
   }
 
   @Override
-  public PackageContext installedPackages(Context context) {
+  public PackageContext installedPackages(@NotNull Context context) {
     return new PackageContext(
       null,
       ((ContextImpl) context).getAddon().getInstalledAddons()
@@ -197,41 +214,41 @@ public class SystemAddonLibraryManagerSetting
   }
 
   @Override
-  public void installPackage(Context context, PackageRequest request, ProgressBar progressBar) {
+  public void installPackage(@NotNull Context context, PackageRequest request, @NotNull ProgressBar progressBar) {
     ((ContextImpl) context).getAddon().installAddon(request.getName(), request.getUrl(),
       request.getVersion(), progressBar);
   }
 
   @Override
   public void unInstallPackage(
-    Context context, PackageRequest packageRequest, ProgressBar progressBar) {
+    @NotNull Context context, PackageRequest packageRequest, @NotNull ProgressBar progressBar) {
     ((ContextImpl) context).getAddon().uninstallAddon(packageRequest.getName(), true);
   }
 
   /**
-   * Remove packages if no versions available. Also remove versions that not match app major version
+   * Remove packages if no versions available. Also remove versions that do not match an app major version
    */
   private void filterMatchPackages(Context context, Collection<PackageModel> allPackageModels) {
     int appVersion = context.setting().getApplicationMajorVersion();
     if (appVersion == 0) {
       return;
     }
-    allPackageModels.removeIf(packageModel -> {
-      if (packageModel.getVersions() == null) {
-        return true;
+    for (PackageModel model : allPackageModels) {
+      if (model.getVersions() == null) {
+        model.setDisabled(true);
       } else {
-        packageModel.getVersions().removeIf(packageVersion -> !AddonContext.validVersion(packageVersion, appVersion));
-        return packageModel.getVersions().isEmpty();
+        model.getVersions().removeIf(packageVersion -> !AddonContext.validVersion(packageVersion, appVersion));
+        if (model.getVersions().isEmpty()) {
+          model.setDisabled(true);
+        }
       }
-    });
+    }
   }
 
   private PackageModel build(AddonContext addonContext) {
     return new PackageModel()
       .setName(addonContext.getAddonID())
-      .setTitle(addonContext.getPomFile().getName())
-      .setDescription(addonContext.getPomFile().getDescription())
-      .setVersion(addonContext.getVersion())
-      .setReadme(addonContext.getPomFile().getDescription());
+      .setTitle(addonContext.getAddonFriendlyName())
+      .setVersion(addonContext.getVersion());
   }
 }

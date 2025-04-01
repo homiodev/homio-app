@@ -66,6 +66,7 @@ public class SettingController implements ContextRefreshed {
   @Override
   public void onContextRefresh(Context context) {
     this.transientSettings = new HashMap<>();
+    this.settingToPages = null;
     for (SettingPlugin<?> settingPlugin : ContextSettingImpl.settingPluginsByPluginKey.values()) {
       if (settingPlugin.transientState()) {
         SettingEntity entity = new SettingEntity();
@@ -196,7 +197,7 @@ public class SettingController implements ContextRefreshed {
 
     if (settingToPages == null) {
       settingToPages = new HashMap<>();
-      this.updateSettingToPages(settings);
+      updateSettingToPages(settings);
     }
 
     for (Iterator<SettingEntity> iterator = settings.iterator(); iterator.hasNext(); ) {
