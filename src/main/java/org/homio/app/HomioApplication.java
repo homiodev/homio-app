@@ -69,7 +69,6 @@ public class HomioApplication implements WebMvcConfigurer {
             }
         } catch (Exception ex) {
             Throwable cause = NestedExceptionUtils.getRootCause(ex);
-            cause = cause == null ? ex : cause;
             log.error("Unable to start Homio application: {}", getErrorMessage(cause));
             System.exit(1);
             throw ex;

@@ -268,6 +268,7 @@ public class ContextImpl implements Context {
                             ui().dialog().sendConfirmation("change-db", "TITLE.CHANGE_DB", () -> {
                                 // here we need migrate all data from an existed database to a new one
                                 HardwareUtils.migrateDatabase(this, databaseURL);
+                                setting().setEnv("db-url", databaseURL);
                             }, List.of("TITLE.CHANGE_DB_DESC"), null);
                         }
                     } catch (Exception e) {

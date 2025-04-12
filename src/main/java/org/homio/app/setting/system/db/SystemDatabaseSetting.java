@@ -25,6 +25,11 @@ public class SystemDatabaseSetting
     }
 
     @Override
+    public String getInputParametersDialogTitle() {
+        return "NEW_DATABASE";
+    }
+
+    @Override
     public @Nullable String getConfirmMsg() {
         return "";
     }
