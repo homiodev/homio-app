@@ -297,6 +297,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
       });
   }
 
+  @Override
   public void setActiveWorkspace() {
     getNearestLiveThread().setMetadata("activeWorkspaceId", id);
   }
