@@ -162,10 +162,10 @@ public class UtilsController {
     otaRequests.put(
         requestId,
         new OtaLink(
-            request.url,
             request.sourceFs,
             request.id,
             request.alias,
+            request.url,
             request.maxRequests,
             request.expireTimeout,
             SecurityContextHolder.getContext().getAuthentication()));
