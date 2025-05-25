@@ -37,3 +37,8 @@ VM options:
 [releases-shield]: https://img.shields.io/github/v/release/homiodev/homio-app.svg
 
 [releases]: https://github.com/homiodev/homio-app/releases
+
+### Docker run:
+
+docker run -d -p 9111:9111 -p 9911:9911 -v "C:/Users/masiuk/homio_app:/opt/homio" -v homio_pgdata:
+/var/lib/postgresql/data docker.io/homiodev/homio-app:latest

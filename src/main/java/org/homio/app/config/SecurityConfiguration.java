@@ -1,6 +1,11 @@
 package org.homio.app.config;
 
+import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
+import static org.homio.app.config.WebSocketConfig.WEB_SOCKET_ENDPOINT;
+
 import jakarta.servlet.DispatcherType;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.val;
 import org.apache.catalina.filters.RequestFilter;
@@ -26,12 +31,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.validation.beanvalidation.MethodValidationPostProcessor;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
-import static org.homio.app.config.WebSocketConfig.WEB_SOCKET_ENDPOINT;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -55,46 +57,61 @@ public class SecurityConfiguration {
     // http.csrf().csrfTokenRepository(csrfTokenRepository()).;
 
     // No session will be created or used by spring security
-    http.sessionManagement(session ->
-      session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+    http.sessionManagement(
+        session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
     // Entry points
     if (env.getProperty("security-disable", Boolean.class, false)) {
-      log.warn("""
+      log.warn(
+          """
         -----------------------------------
         !!! HOMIO security disabled !!!
         -----------------------------------
         """);
-      http.authorizeHttpRequests(authorize ->
-        authorize.requestMatchers(WEB_SOCKET_ENDPOINT, CUSTOM_WEB_SOCKET_ENDPOINT + "/**", "/rest/**").permitAll());
+      http.authorizeHttpRequests(
+          authorize ->
+              authorize
+                  .requestMatchers(
+                      WEB_SOCKET_ENDPOINT, CUSTOM_WEB_SOCKET_ENDPOINT + "/**", "/rest/**")
+                  .permitAll());
     } else {
-      http.authorizeHttpRequests(authorize -> {
-        List<String> paths = new ArrayList<>(List.of(
-          WEB_SOCKET_ENDPOINT,
-          CUSTOM_WEB_SOCKET_ENDPOINT + "/**",
-          "/swagger-ui/**",
-          "/v3/api-docs/**",
-          "/rest/i18n/**",
-          "/rest/auth/status",
-          "/rest/auth/login",
-          "/rest/auth/register",
-          "/rest/frame/**",
-          "/rest/access/get/**",
-          "rest/resource/**",
-          "/rest/media/stream/**",
-          "/rest/media/image/**",
-          "/rest/media/video/**",
-          "/rest/media/video/playback/**",
-          "/rest/route/proxy/**",
-          "/rest/device/**"
-        ));
-        // to avoid issue with ResponseEntity<StreamingResponseBody>
-        authorize.dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD, DispatcherType.ASYNC).permitAll();
-        authorize.requestMatchers(paths.toArray(new String[0])).permitAll();
-        // allow preflight requests
-        authorize.requestMatchers(HttpMethod.OPTIONS).permitAll();
-        authorize.requestMatchers("/rest/**").authenticated();
-      });
+      http.authorizeHttpRequests(
+          authorize -> {
+            List<String> paths =
+                new ArrayList<>(
+                    List.of(
+                        WEB_SOCKET_ENDPOINT,
+                        CUSTOM_WEB_SOCKET_ENDPOINT + "/**",
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/rest/i18n/**",
+                        "/rest/auth/status",
+                        "/rest/auth/login",
+                        "/rest/auth/register",
+                        "/rest/frame/**",
+                        "rest/resource/**",
+                        // "/rest/media/stream/**",
+                        // "/rest/media/image/**",
+                        // "/rest/media/video/**",
+                        "/rest/media/video/playback/**",
+                        "/rest/route/proxy/**",
+                        "/rest/device/characteristic/**"));
+            // to avoid issue with ResponseEntity<StreamingResponseBody>
+            authorize
+                .dispatcherTypeMatchers(
+                    DispatcherType.ERROR, DispatcherType.FORWARD, DispatcherType.ASYNC)
+                .permitAll();
+            authorize
+                .requestMatchers(HttpMethod.GET, "/rest/ota")
+                .permitAll()
+                .requestMatchers(HttpMethod.OPTIONS)
+                .permitAll()
+                .requestMatchers(paths.toArray(new String[0]))
+                .permitAll()
+                .requestMatchers("/rest/**")
+                .authenticated();
+          });
+      http.cors(cors -> cors.configurationSource(corsConfigurationSource()));
       http.csrf(AbstractHttpConfigurer::disable);
       http.headers(headers -> headers.frameOptions(FrameOptionsConfig::disable));
     }
@@ -107,6 +124,18 @@ public class SecurityConfiguration {
 
     http.addFilterBefore(customFilter, UsernamePasswordAuthenticationFilter.class);
     return http.build();
+  }
+
+  @Bean
+  CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration configuration = new CorsConfiguration();
+    configuration.setAllowedOriginPatterns(List.of("http://localhost:*", "https://homio.org"));
+    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
+    configuration.setAllowedHeaders(List.of("*"));
+    configuration.setAllowCredentials(true);
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", configuration);
+    return source;
   }
 
   @Bean

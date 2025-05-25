@@ -1,10 +1,39 @@
 package org.homio.app.rest;
 
+import static java.lang.String.format;
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
+import static org.homio.api.util.CommonUtils.getErrorMessage;
+import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION;
+import static org.springframework.http.HttpHeaders.ACCEPT_RANGES;
+import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
+import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
+import static org.springframework.http.HttpHeaders.CONTENT_RANGE;
+import static org.springframework.http.HttpHeaders.ETAG;
+import static org.springframework.http.HttpHeaders.LAST_MODIFIED;
+import static org.springframework.http.HttpStatus.OK;
+import static org.springframework.http.HttpStatus.PARTIAL_CONTENT;
+
 import dev.failsafe.ExecutionContext;
 import dev.failsafe.Failsafe;
 import dev.failsafe.Fallback;
 import dev.failsafe.RetryPolicy;
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -65,44 +94,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.WebRequest;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static java.lang.String.format;
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
-import static org.homio.api.util.CommonUtils.getErrorMessage;
-import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION;
-import static org.springframework.http.HttpHeaders.ACCEPT_RANGES;
-import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
-import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
-import static org.springframework.http.HttpHeaders.CONTENT_RANGE;
-import static org.springframework.http.HttpHeaders.ETAG;
-import static org.springframework.http.HttpHeaders.LAST_MODIFIED;
-import static org.springframework.http.HttpStatus.OK;
-import static org.springframework.http.HttpStatus.PARTIAL_CONTENT;
 
 @Log4j2
 @RestController
@@ -339,15 +330,17 @@ public class MediaController implements ContextCreated {
   public ResponseEntity<InputStreamResource> getImage(
     WebRequest webRequest,
     @PathVariable String entityID,
-    @RequestParam(value = "fs", required = false) String fs) {
-    String eTag = String.valueOf((entityID + StringUtils.trimToEmpty(fs)).hashCode());
+    @RequestParam(value = "fs", required = false) String fs,
+    @RequestParam(value = "ai", required = false) String addonId,
+    @RequestParam(value = "ii", required = false) String imageIdentifier) {
+    String eTag = String.valueOf(Objects.hash(entityID, fs, addonId, imageIdentifier));
     if (webRequest.checkNotModified(eTag)) {
       return null;
     }
     if (StringUtils.isNotEmpty(fs)) {
       return fileSystemController.download(fs, new NodeRequest(entityID));
     }
-    return toResponse(imageService.getImage(entityID), eTag, entityID);
+    return toResponse(imageService.getImage(entityID, addonId, imageIdentifier), eTag, entityID);
   }
 
   @GetMapping("/workspace/extension/{addonID}.png")
@@ -365,19 +358,6 @@ public class MediaController implements ContextCreated {
       throw new NotFoundException("Unable to find workspace extension addon image for addon: " + addonID);
     }
     return toResponse(new ImageResponse(stream, MediaType.IMAGE_PNG), eTag, addonID);
-  }
-
-  @SneakyThrows
-  @GetMapping("/image/{addonID}/{imageID:.+}")
-  public ResponseEntity<InputStreamResource> getAddonImage(
-    WebRequest webRequest,
-    @PathVariable("addonID") String addonID,
-    @PathVariable String imageID) {
-    String eTag = String.valueOf((addonID + imageID).hashCode());
-    if (webRequest.checkNotModified(eTag)) {
-      return null;
-    }
-    return toResponse(imageService.getAddonImage(addonID, imageID), eTag, addonID);
   }
 
     /* TODO: @GetMapping("/audio")
@@ -473,6 +453,9 @@ public class MediaController implements ContextCreated {
 
   @SneakyThrows
   private ResponseEntity<InputStreamResource> toResponse(ImageResponse response, String eTag, String fileName) {
+    if(response == null) {
+      throw new NotFoundException("Unable to find image for entity: " + fileName);
+    }
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(new MediaType("image", "jpeg"));
     headers.add(CACHE_CONTROL, "max-age=31536000, public");

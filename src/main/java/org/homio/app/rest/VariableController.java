@@ -1,9 +1,22 @@
 package org.homio.app.rest;
 
+import static org.homio.api.ContextVar.GROUP_BROADCAST;
+import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
+import static org.homio.app.rest.widget.EvaluateDatesAndValues.convertValuesToFloat;
+
 import com.fathzer.soft.javaluator.Constant;
 import com.fathzer.soft.javaluator.DoubleEvaluator;
 import com.fathzer.soft.javaluator.Operator;
 import com.fathzer.soft.javaluator.Parameters;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -39,20 +52,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import static org.homio.api.ContextVar.GROUP_BROADCAST;
-import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
-import static org.homio.app.rest.widget.EvaluateDatesAndValues.convertValuesToFloat;
-
 @Log4j2
 @RestController
 @RequestMapping(value = "/rest/var", produces = "application/json")
@@ -67,10 +66,19 @@ public class VariableController {
     Parameters defaultParameters = DoubleEvaluator.getDefaultParameters();
     for (com.fathzer.soft.javaluator.Function function : defaultParameters.getFunctions()) {
       if (function.getMinimumArgumentCount() != function.getMaximumArgumentCount()) {
-        functions.add(OptionModel.of(function.getName(),
-          function.getName() + "(%s..%s)".formatted(function.getMinimumArgumentCount(), function.getMaximumArgumentCount())));
+        functions.add(
+            OptionModel.of(
+                function.getName(),
+                function.getName()
+                    + "(%s..%s)"
+                        .formatted(
+                            function.getMinimumArgumentCount(),
+                            function.getMaximumArgumentCount())));
       } else {
-        functions.add(OptionModel.of(function.getName(), function.getName() + "(%s)".formatted(function.getMaximumArgumentCount())));
+        functions.add(
+            OptionModel.of(
+                function.getName(),
+                function.getName() + "(%s)".formatted(function.getMaximumArgumentCount())));
       }
     }
     List<OptionModel> constants = new ArrayList<>();
@@ -97,16 +105,24 @@ public class VariableController {
 
   @PostMapping("/{group}/transform")
   @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
-  public void createTransformVariable(@PathVariable("group") String group, @RequestBody TransformVarRequest request) {
-    context.var().createTransformVariable(group, null, request.name, VariableType.Float,
-      builder -> builder
-        .setTransformCode(request.getCode())
-        .setSourceVariables(request.getSources() == null ? List.of() : request.getSources())
-        .setIcon(new Icon(request.getIcon(), request.getIconColor()))
-        .setDescription(request.getDescription())
-        .setPersistent(request.getBackupDays())
-        .setQuota(request.getQuota())
-    );
+  public void createTransformVariable(
+      @PathVariable("group") String group, @RequestBody TransformVarRequest request) {
+    context
+        .var()
+        .createTransformVariable(
+            group,
+            null,
+            request.name,
+            VariableType.Float,
+            builder ->
+                builder
+                    .setTransformCode(request.getCode())
+                    .setSourceVariables(
+                        request.getSources() == null ? List.of() : request.getSources())
+                    .setIcon(new Icon(request.getIcon(), request.getIconColor()))
+                    .setDescription(request.getDescription())
+                    .setPersistent(request.getBackupDays())
+                    .setQuota(request.getQuota()));
   }
 
   @PostMapping("/evaluate")
@@ -117,14 +133,14 @@ public class VariableController {
   // show all read/write variables
   @GetMapping("/options")
   public List<OptionModel> getWorkspaceVariableValues() {
-    return context.toOptionModels(getAllVariables(s ->
-      !s.startsWith(WorkspaceGroup.PREFIX + GROUP_BROADCAST)));
+    return context.toOptionModels(
+        getAllVariables(s -> !s.startsWith(WorkspaceGroup.PREFIX + GROUP_BROADCAST)));
   }
 
   @GetMapping("/broadcasts")
   public List<OptionModel> getWorkspaceVariableBroadcastsValues() {
-    return context.toOptionModels(getAllVariables(s ->
-      s.startsWith(WorkspaceGroup.PREFIX + GROUP_BROADCAST)));
+    return context.toOptionModels(
+        getAllVariables(s -> s.startsWith(WorkspaceGroup.PREFIX + GROUP_BROADCAST)));
   }
 
   @GetMapping("/{type}")
@@ -141,14 +157,16 @@ public class VariableController {
   }
 
   @PostMapping("/source/chart")
-  public WidgetChartsController.TimeSeriesChartData<ChartDataset> getSourceChart(@RequestBody SourceHistoryChartRequest request) {
+  public WidgetChartsController.TimeSeriesChartData<ChartDataset> getSourceChart(
+      @RequestBody SourceHistoryChartRequest request) {
     SelectionSource selection = DataSourceUtil.getSelection(request.dataSource);
     HasTimeValueSeries source = selection.getValue(context);
     if (request.minutes == -1) {
       return getSourceChartSnapshot(source, request);
     }
 
-    WidgetChartsController.TimeSeriesChartData<ChartDataset> chartData = new TimeSeriesChartData<>();
+    WidgetChartsController.TimeSeriesChartData<ChartDataset> chartData =
+        new TimeSeriesChartData<>();
     Date from = null, to = null;
     boolean sortAsc = true;
     if (request.minutes > 0) {
@@ -164,7 +182,8 @@ public class VariableController {
         sortAsc = false;
       }
     }
-    PeriodRequest periodRequest = new PeriodRequest(context, from, to).setParameters(request.getDynamicParameters());
+    PeriodRequest periodRequest =
+        new PeriodRequest(context, from, to).setParameters(request.getDynamicParameters());
     periodRequest.setMinItemsCount(request.minItems);
     periodRequest.setForward(request.forward);
     periodRequest.setSortAsc(sortAsc);
@@ -174,7 +193,8 @@ public class VariableController {
 
     if (!timeSeries.isEmpty()) {
       ChartDataset dataset = new ChartDataset(null, null);
-      chartData.setTimestamp(rawValues.stream().map(objects -> (long) objects[0]).collect(Collectors.toList()));
+      chartData.setTimestamp(
+          rawValues.stream().map(objects -> (long) objects[0]).collect(Collectors.toList()));
       dataset.setData(rawValues.stream().map(objects -> (float) objects[1]).toList());
       chartData.getDatasets().add(dataset);
     }
@@ -190,24 +210,29 @@ public class VariableController {
     return source.getSourceHistoryItems(historyRequest, request.getFrom(), request.getCount());
   }
 
-  private TimeSeriesChartData<ChartDataset> getSourceChartSnapshot(HasTimeValueSeries source, SourceHistoryChartRequest request) {
-    WidgetChartsController.TimeSeriesChartData<ChartDataset> chartData = new TimeSeriesChartData<>();
-    PeriodRequest periodRequest = new PeriodRequest(context, null, null).setParameters(request.getDynamicParameters());
+  private TimeSeriesChartData<ChartDataset> getSourceChartSnapshot(
+      HasTimeValueSeries source, SourceHistoryChartRequest request) {
+    WidgetChartsController.TimeSeriesChartData<ChartDataset> chartData =
+        new TimeSeriesChartData<>();
+    PeriodRequest periodRequest =
+        new PeriodRequest(context, null, null).setParameters(request.getDynamicParameters());
 
     val timeSeries = source.getMultipleTimeValueSeries(periodRequest);
     List<Object[]> rawValues = timeSeries.values().iterator().next();
 
     if (!timeSeries.isEmpty()) {
       ChartDataset dataset = new ChartDataset(null, null);
-      chartData.setTimestamp(rawValues.stream().map(objects -> (long) objects[0]).collect(Collectors.toList()));
+      chartData.setTimestamp(
+          rawValues.stream().map(objects -> (long) objects[0]).collect(Collectors.toList()));
       dataset.setData(rawValues.stream().map(objects -> (float) objects[1]).toList());
 
       Pair<Long, Long> minMax = this.findMinAndMax(rawValues);
       long min = minMax.getLeft(), max = minMax.getRight();
       long delta = (max - min) / request.splitCount;
-      List<Date> dates = IntStream.range(0, request.splitCount)
-        .mapToObj(value -> new Date(min + delta * value))
-        .collect(Collectors.toList());
+      List<Date> dates =
+          IntStream.range(0, request.splitCount)
+              .mapToObj(value -> new Date(min + delta * value))
+              .collect(Collectors.toList());
       List<List<Float>> values = convertValuesToFloat(dates, rawValues);
       chartData.setTimestamp(dates.stream().map(Date::getTime).collect(Collectors.toList()));
       dataset.setData(EvaluateDatesAndValues.aggregate(values, AggregationType.Average));
@@ -217,13 +242,10 @@ public class VariableController {
   }
 
   private List<WorkspaceVariable> getAllVariables(Predicate<String> filter) {
-    return context
-      .db()
-      .findAll(WorkspaceVariable.class)
-      .stream()
-      // filter broadcasts variables for 'real' variables
-      .filter(s -> filter.test(s.getWorkspaceGroup().getEntityID()))
-      .collect(Collectors.toList());
+    return context.db().findAll(WorkspaceVariable.class).stream()
+        // filter broadcasts variables for 'real' variables
+        .filter(s -> filter.test(s.getWorkspaceGroup().getEntityID()))
+        .collect(Collectors.toList());
   }
 
   private Pair<Long, Long> findMinAndMax(List<Object[]> rawValues) {

@@ -1,6 +1,12 @@
 package org.homio.app.model.entity.user;
 
+import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
+import static org.springframework.http.HttpHeaders.ORIGIN;
+
 import jakarta.persistence.Entity;
+import java.util.Base64;
+import java.util.Set;
+import java.util.function.Predicate;
 import lombok.SneakyThrows;
 import org.homio.api.Context;
 import org.homio.api.console.ConsolePlugin;
@@ -21,18 +27,13 @@ import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.WidgetTabEntity;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Base64;
-import java.util.Set;
-import java.util.function.Predicate;
-
-import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
-
 @Entity
 @UISidebarChildren(icon = "fas fa-person-walking-luggage", color = "#B5B812")
 public final class UserGuestEntity extends UserBaseEntity {
 
   @SneakyThrows
-  public static void assertAction(Context context, Predicate<UserGuestEntity> predicate, String message) {
+  public static void assertAction(
+      Context context, Predicate<UserGuestEntity> predicate, String message) {
     if (isDisabled(context, predicate)) {
       throw new IllegalAccessException("User is not allowed to access " + message);
     }
@@ -56,11 +57,13 @@ public final class UserGuestEntity extends UserBaseEntity {
   }
 
   public static void assertFileManagerReadAccess(Context context) {
-    UserGuestEntity.assertAction(context, UserGuestEntity::getFileMangerReadAccess, "read FileManager");
+    UserGuestEntity.assertAction(
+        context, UserGuestEntity::getFileMangerReadAccess, "read FileManager");
   }
 
   public static void assertFileManagerWriteAccess(Context context) {
-    UserGuestEntity.assertAction(context, UserGuestEntity::getFileMangerWriteAccess, "write FileManager");
+    UserGuestEntity.assertAction(
+        context, UserGuestEntity::getFileMangerWriteAccess, "write FileManager");
   }
 
   @SneakyThrows
@@ -71,8 +74,10 @@ public final class UserGuestEntity extends UserBaseEntity {
   }
 
   public static String getAccessURL(UserGuestEntity entity) {
-    String remoteHost = ContextImpl.REQUEST.get().getHeader("origin");
-    String encodedText = Base64.getEncoder().encodeToString((MACHINE_IP_ADDRESS + "~~~" + entity.getName()).getBytes());
+    String remoteHost = ContextImpl.REQUEST.get().get(ORIGIN);
+    String encodedText =
+        Base64.getEncoder()
+            .encodeToString((MACHINE_IP_ADDRESS + "~~~" + entity.getName()).getBytes());
     return remoteHost + "?aid=" + encodedText;
   }
 
@@ -325,7 +330,8 @@ public final class UserGuestEntity extends UserBaseEntity {
       }
     }
     if (getDisableFullEditAccess()) {
-      throw new IllegalAccessException("User is not allowed to " + action + " " + entity.getTitle());
+      throw new IllegalAccessException(
+          "User is not allowed to " + action + " " + entity.getTitle());
     }
   }
 

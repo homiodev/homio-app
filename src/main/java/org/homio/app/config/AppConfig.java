@@ -18,6 +18,17 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.TreeMap;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 import lombok.extern.log4j.Log4j2;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
@@ -79,27 +90,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.client.DefaultResponseErrorHandler;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.config.annotation.AsyncSupportConfigurer;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Optional;
-import java.util.TreeMap;
-import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 @Log4j2
 @Configuration
@@ -110,8 +105,7 @@ import java.util.stream.StreamSupport;
 @EnableConfigurationProperties({JpaProperties.class, HibernateProperties.class})
 public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, ApplicationListener {
 
-  @Autowired
-  private ApplicationContext applicationContext;
+  @Autowired private ApplicationContext applicationContext;
 
   private boolean applicationReady;
 
@@ -132,12 +126,15 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
 
   @Bean
   public EntityManagerFactoryBuilder entityManagerFactoryBuilder(
-    JpaProperties jpaProperties,
-    ObjectProvider<PersistenceUnitManager> persistenceUnitManager,
-    ObjectProvider<EntityManagerFactoryBuilderCustomizer> customizers) {
+      JpaProperties jpaProperties,
+      ObjectProvider<PersistenceUnitManager> persistenceUnitManager,
+      ObjectProvider<EntityManagerFactoryBuilderCustomizer> customizers) {
     HibernateJpaVendorAdapter jpaVendorAdapter = new HibernateJpaVendorAdapter();
-    EntityManagerFactoryBuilder builder = new EntityManagerFactoryBuilder(jpaVendorAdapter,
-      jpaProperties.getProperties(), persistenceUnitManager.getIfAvailable());
+    EntityManagerFactoryBuilder builder =
+        new EntityManagerFactoryBuilder(
+            jpaVendorAdapter,
+            jpaProperties.getProperties(),
+            persistenceUnitManager.getIfAvailable());
     customizers.orderedStream().forEach((customizer) -> customizer.customize(builder));
     return builder;
   }
@@ -158,31 +155,14 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
   @Bean
   public WebMvcRegistrations mvcRegistrations() {
     return new WebMvcRegistrations() {
-      private final ExtRequestMappingHandlerMapping handlerMapping = new ExtRequestMappingHandlerMapping();
+      private final ExtRequestMappingHandlerMapping handlerMapping =
+          new ExtRequestMappingHandlerMapping();
 
       @Override
       public RequestMappingHandlerMapping getRequestMappingHandlerMapping() {
         return handlerMapping;
       }
     };
-  }
-
-  @Override
-  public void addCorsMappings(CorsRegistry registry) {
-    registry.addMapping("/**");
-  }
-
-  // not too safe for now
-  @Bean
-  public CorsFilter corsFilter() {
-    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-    CorsConfiguration config = new CorsConfiguration();
-    config.setAllowCredentials(false);
-    config.addAllowedOrigin("*");
-    config.addAllowedHeader("*");
-    config.addAllowedMethod("*");
-    source.registerCorsConfiguration("/**", config);
-    return new CorsFilter(source);
   }
 
   @Bean
@@ -212,56 +192,71 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
 
     SimpleModule simpleModule = new SimpleModule();
     simpleModule.addSerializer(String.class, new StringComplexSerializer());
-    simpleModule.addSerializer(SecureString.class, new JsonSerializer<>() {
-      @Override
-      public void serialize(SecureString secureString, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
-        throws IOException {
-        jsonGenerator.writeString(secureString.toString());
-      }
-    });
+    simpleModule.addSerializer(
+        SecureString.class,
+        new JsonSerializer<>() {
+          @Override
+          public void serialize(
+              SecureString secureString,
+              JsonGenerator jsonGenerator,
+              SerializerProvider serializerProvider)
+              throws IOException {
+            jsonGenerator.writeString(secureString.toString());
+          }
+        });
 
-    simpleModule.addSerializer(Scratch3ExtensionBlocks.class, new JsonSerializer<>() {
-      @Override
-      public void serialize(Scratch3ExtensionBlocks block, JsonGenerator gen, SerializerProvider serializers)
-        throws IOException {
-        gen.writeStartObject();
-        gen.writeStringField("id", block.getId());
-        if (block.getName() != null) {
-          gen.writeStringField("name", block.getName());
-        }
-        gen.writeStringField("blockIconURI", block.getBlockIconURI());
-        gen.writeStringField("color1", block.getScratch3Color().getColor1());
-        gen.writeStringField("color2", block.getScratch3Color().getColor2());
-        gen.writeStringField("color3", block.getScratch3Color().getColor3());
-        gen.writeObjectField("blocks", block.getBlocks());
-        gen.writeObjectField("menus", block.getMenus());
-        gen.writeEndObject();
-      }
-    });
+    simpleModule.addSerializer(
+        Scratch3ExtensionBlocks.class,
+        new JsonSerializer<>() {
+          @Override
+          public void serialize(
+              Scratch3ExtensionBlocks block, JsonGenerator gen, SerializerProvider serializers)
+              throws IOException {
+            gen.writeStartObject();
+            gen.writeStringField("id", block.getId());
+            if (block.getName() != null) {
+              gen.writeStringField("name", block.getName());
+            }
+            gen.writeStringField("blockIconURI", block.getBlockIconURI());
+            gen.writeStringField("color1", block.getScratch3Color().getColor1());
+            gen.writeStringField("color2", block.getScratch3Color().getColor2());
+            gen.writeStringField("color3", block.getScratch3Color().getColor3());
+            gen.writeObjectField("blocks", block.getBlocks());
+            gen.writeObjectField("menus", block.getMenus());
+            gen.writeEndObject();
+          }
+        });
 
-    simpleModule.addSerializer(Scratch3Space.class, new JsonSerializer<>() {
-      @Override
-      public void serialize(Scratch3Space extension, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-        gen.writeString("---");
-      }
-    });
+    simpleModule.addSerializer(
+        Scratch3Space.class,
+        new JsonSerializer<>() {
+          @Override
+          public void serialize(
+              Scratch3Space extension, JsonGenerator gen, SerializerProvider serializers)
+              throws IOException {
+            gen.writeString("---");
+          }
+        });
 
-    simpleModule.addDeserializer(DeviceBaseEntity.class, new JsonDeserializer<>() {
-      @Override
-      public DeviceBaseEntity deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-        return applicationContext.getBean(ContextImpl.class).db().get(p.getText());
-      }
-    });
+    simpleModule.addDeserializer(
+        DeviceBaseEntity.class,
+        new JsonDeserializer<>() {
+          @Override
+          public DeviceBaseEntity deserialize(JsonParser p, DeserializationContext ctxt)
+              throws IOException {
+            return applicationContext.getBean(ContextImpl.class).db().get(p.getText());
+          }
+        });
 
     ObjectMapper objectMapper = new ObjectMapper();
     objectMapper
-      .disable(DeserializationFeature.FAIL_ON_UNRESOLVED_OBJECT_IDS)
-      .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-      .registerModule(hibernate5Module)
-      .registerModule(new JsonOrgModule())
-      .registerModule(simpleModule)
-      .setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
-      .addMixIn(BaseEntity.class, Bean2MixIn.class);
+        .disable(DeserializationFeature.FAIL_ON_UNRESOLVED_OBJECT_IDS)
+        .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+        .registerModule(hibernate5Module)
+        .registerModule(new JsonOrgModule())
+        .registerModule(simpleModule)
+        .setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
+        .addMixIn(BaseEntity.class, Bean2MixIn.class);
 
     return objectMapper;
   }
@@ -269,8 +264,10 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
   // Add converters for convert String to desired class in rest controllers
   @Override
   public void addFormatters(final FormatterRegistry registry) {
-    registry.addConverter(String.class, DeviceBaseEntity.class, source ->
-      applicationContext.getBean(Context.class).db().get(source));
+    registry.addConverter(
+        String.class,
+        DeviceBaseEntity.class,
+        source -> applicationContext.getBean(Context.class).db().get(source));
   }
 
   @Bean
@@ -282,9 +279,7 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
     return converter;
   }
 
-  /**
-   * After spring context initialization
-   */
+  /** After spring context initialization */
   @Override
   public void onApplicationEvent(@NotNull ApplicationEvent event) {
     if (event instanceof ContextRefreshedEvent cre && !this.applicationReady) {
@@ -300,19 +295,28 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
     final MutablePropertySources sources = ((AbstractEnvironment) env).getPropertySources();
     StringBuilder props = new StringBuilder();
     props.append("\n\tActive profiles: %s\n".formatted(Arrays.toString(env.getActiveProfiles())));
-    Map<String, String> variables = StreamSupport
-      .stream(sources.spliterator(), false)
-      .filter(ps -> ps instanceof EnumerablePropertySource)
-      .map(ps -> ((EnumerablePropertySource) ps).getPropertyNames())
-      .flatMap(Arrays::stream)
-      .distinct()
-      .filter(prop -> !(prop.contains("java.class.path") || prop.contains("Path") || prop.contains("java.library.path") || prop.contains("credentials")
+    Map<String, String> variables =
+        StreamSupport.stream(sources.spliterator(), false)
+            .filter(ps -> ps instanceof EnumerablePropertySource)
+            .map(ps -> ((EnumerablePropertySource) ps).getPropertyNames())
+            .flatMap(Arrays::stream)
+            .distinct()
+            .filter(
+                prop ->
+                    !(prop.contains("java.class.path")
+                        || prop.contains("Path")
+                        || prop.contains("java.library.path")
+                        || prop.contains("credentials")
                         || prop.contains("password")))
-      .collect(Collectors.toMap(prop -> prop, key -> env.getProperty(key, "---"),
-        (v1, v2) -> {
-          throw new RuntimeException(String.format("Duplicate key for values %s and %s", v1, v2));
-        },
-        TreeMap::new));
+            .collect(
+                Collectors.toMap(
+                    prop -> prop,
+                    key -> env.getProperty(key, "---"),
+                    (v1, v2) -> {
+                      throw new RuntimeException(
+                          String.format("Duplicate key for values %s and %s", v1, v2));
+                    },
+                    TreeMap::new));
     for (Entry<String, String> entry : variables.entrySet()) {
       props.append("\t\t%s: %s\n".formatted(entry.getKey(), entry.getValue()));
     }
@@ -320,21 +324,24 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
     log.info("\n====== Environment and configuration ======{}", props.toString());
   }
 
-  /**
-   * Force flush cache on request
-   */
+  /** Force flush cache on request */
   @Bean
   public FilterRegistrationBean<Filter> saveDelayFilter() {
     FilterRegistrationBean<Filter> registrationBean = new FilterRegistrationBean<>();
-    registrationBean.setFilter(new OncePerRequestFilter() {
-      @Override
-      protected void doFilterInternal(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain filterChain)
-        throws IOException, ServletException {
-        applicationContext.getBean(CacheService.class).flushDelayedUpdates();
-        filterChain.doFilter(request, response);
-      }
-    });
-    registrationBean.addUrlPatterns("/map", "/dashboard", "/items/*", "/media/*", "/hardware*/", "/devices/*");
+    registrationBean.setFilter(
+        new OncePerRequestFilter() {
+          @Override
+          protected void doFilterInternal(
+              @NotNull HttpServletRequest request,
+              @NotNull HttpServletResponse response,
+              @NotNull FilterChain filterChain)
+              throws IOException, ServletException {
+            applicationContext.getBean(CacheService.class).flushDelayedUpdates();
+            filterChain.doFilter(request, response);
+          }
+        });
+    registrationBean.addUrlPatterns(
+        "/map", "/dashboard", "/items/*", "/media/*", "/hardware*/", "/devices/*");
 
     return registrationBean;
   }
@@ -345,31 +352,33 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
   }
 
   @Bean
-  public ProxyExchangeArgumentResolver proxyExchangeArgumentResolver(Optional<RestTemplateBuilder> optional,
-                                                                     ProxyProperties proxy) {
+  public ProxyExchangeArgumentResolver proxyExchangeArgumentResolver(
+      Optional<RestTemplateBuilder> optional, ProxyProperties proxy) {
     RestTemplateBuilder builder = optional.orElse(new RestTemplateBuilder());
     CloseableHttpClient httpClient = HttpClientBuilder.create().disableRedirectHandling().build();
     var requestFactory = new HttpComponentsClientHttpRequestFactory(httpClient);
-    RestTemplate template = builder
-      .requestFactory(() -> requestFactory)
-      .build();
-    template.setErrorHandler(new DefaultResponseErrorHandler() {
-      @Override
-      public void handleError(ClientHttpResponse response) throws IOException {
-      }
-    });
-    template.getMessageConverters().add(new ByteArrayHttpMessageConverter() {
-      @Override
-      public boolean supports(Class<?> clazz) {
-        return true;
-      }
+    RestTemplate template = builder.requestFactory(() -> requestFactory).build();
+    template.setErrorHandler(
+        new DefaultResponseErrorHandler() {
+          @Override
+          public void handleError(ClientHttpResponse response) throws IOException {}
+        });
+    template
+        .getMessageConverters()
+        .add(
+            new ByteArrayHttpMessageConverter() {
+              @Override
+              public boolean supports(Class<?> clazz) {
+                return true;
+              }
 
-      @Override
-      public byte[] readInternal(Class<? extends byte[]> clazz, HttpInputMessage message) throws IOException {
-        // avoid read content-length. sometimes it's not match!
-        return message.getBody().readAllBytes();
-      }
-    });
+              @Override
+              public byte[] readInternal(Class<? extends byte[]> clazz, HttpInputMessage message)
+                  throws IOException {
+                // avoid read content-length. sometimes it's not match!
+                return message.getBody().readAllBytes();
+              }
+            });
     ProxyExchangeArgumentResolver resolver = new ProxyExchangeArgumentResolver(template);
     resolver.setHeaders(proxy.convertHeaders());
     resolver.setAutoForwardedHeaders(proxy.getAutoForward());
@@ -377,8 +386,9 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
     return resolver;
   }
 
-  @JsonIdentityInfo(generator = JSOGGenerator.class, property = "entityID", resolver = JSOGResolver.class)
-  interface Bean2MixIn {
-
-  }
+  @JsonIdentityInfo(
+      generator = JSOGGenerator.class,
+      property = "entityID",
+      resolver = JSOGResolver.class)
+  interface Bean2MixIn {}
 }

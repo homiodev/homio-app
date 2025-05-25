@@ -1,15 +1,28 @@
 package org.homio.app.manager.common.impl;
 
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pivovarit.function.ThrowingBiFunction;
 import com.pivovarit.function.ThrowingSupplier;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.lang.reflect.Method;
+import java.time.Duration;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import lombok.*;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
-import lombok.val;
 import org.apache.commons.io.output.TeeOutputStream;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
@@ -65,74 +78,56 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-import java.lang.reflect.Method;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Log4j2
 @RequiredArgsConstructor
 public class ContextUIImpl implements ContextUI {
 
-  public static final @NotNull Map<String, ConsolePlugin<?>> consolePluginsMap = new ConcurrentHashMap<>();
-  public static final @NotNull Map<String, ConsolePlugin<?>> consoleRemovablePluginsMap = new ConcurrentHashMap<>();
+  public static final @NotNull Map<String, ConsolePlugin<?>> consolePluginsMap =
+      new ConcurrentHashMap<>();
+  public static final @NotNull Map<String, ConsolePlugin<?>> consoleRemovablePluginsMap =
+      new ConcurrentHashMap<>();
   public static final @NotNull Map<String, String> customImages = new ConcurrentHashMap<>();
 
   public static final @NotNull Set<String> customConsolePluginNames = new ConcurrentSkipListSet<>();
   private static final @NotNull Object EMPTY = new Object();
-  private final @NotNull Map<DynamicUpdateRequest, DynamicUpdateContext> dynamicUpdateRegisters = new ConcurrentHashMap<>();
+  private final @NotNull Map<DynamicUpdateRequest, DynamicUpdateContext> dynamicUpdateRegisters =
+      new ConcurrentHashMap<>();
   private final @NotNull Map<String, DialogModel> dialogRequest = new ConcurrentHashMap<>();
-  private final @NotNull Map<String, NotificationBlock> blockNotifications = new ConcurrentHashMap<>();
-  private final @NotNull Map<String, HeaderButtonNotification> headerButtonNotifications = new ConcurrentHashMap<>();
-  private final @NotNull Map<String, HeaderButtonSelection> headerMenuButtons = new ConcurrentHashMap<>();
+  private final @NotNull Map<String, NotificationBlock> blockNotifications =
+      new ConcurrentHashMap<>();
+  private final @NotNull Map<String, HeaderButtonNotification> headerButtonNotifications =
+      new ConcurrentHashMap<>();
+  private final @NotNull Map<String, HeaderButtonSelection> headerMenuButtons =
+      new ConcurrentHashMap<>();
 
   // constructor parameters
-  private final @Getter
-  @Accessors(fluent = true) ContextImpl context;
+  private final @Getter @Accessors(fluent = true) ContextImpl context;
   private final @NotNull Map<String, ProgressNotification> progressMap = new ConcurrentHashMap<>();
   private final @NotNull SimpMessagingTemplate messagingTemplate;
   private final @NotNull Map<String, SendUpdateContext> sendToUIMap = new ConcurrentHashMap<>();
   private final @NotNull ReentrantLock treeNodeLock = new ReentrantLock();
   private final @NotNull Map<String, TreeNode> treeNodesSendToUIMap = new ConcurrentHashMap<>();
 
-  private final @Getter
-  @Accessors(fluent = true) ContextUIToastrImpl toastr = new ContextUIToastrImpl();
-  private final @Getter
-  @Accessors(fluent = true) ContextUINotificationImpl notification = new ContextUINotificationImpl();
-  private final @Getter
-  @Accessors(fluent = true) ContextUIConsoleImpl console = new ContextUIConsoleImpl();
-  private final @Getter
-  @Accessors(fluent = true) ContextUIDialogImpl dialog = new ContextUIDialogImpl();
-  private final @Getter
-  @Accessors(fluent = true) ContextUIProgressImpl progress = new ContextUIProgressImpl();
-  private final @Getter
-  @Accessors(fluent = true) ContextUIMediaImpl media = new ContextUIMediaImpl();
+  private final @Getter @Accessors(fluent = true) ContextUIToastrImpl toastr =
+      new ContextUIToastrImpl();
+  private final @Getter @Accessors(fluent = true) ContextUINotificationImpl notification =
+      new ContextUINotificationImpl();
+  private final @Getter @Accessors(fluent = true) ContextUIConsoleImpl console =
+      new ContextUIConsoleImpl();
+  private final @Getter @Accessors(fluent = true) ContextUIDialogImpl dialog =
+      new ContextUIDialogImpl();
+  private final @Getter @Accessors(fluent = true) ContextUIProgressImpl progress =
+      new ContextUIProgressImpl();
+  private final @Getter @Accessors(fluent = true) ContextUIMediaImpl media =
+      new ContextUIMediaImpl();
 
-  private final @Getter
-  @NotNull Map<String, Map<String, ItemsContextMenuAction>> itemsContextMenuActions = new ConcurrentHashMap<>();
+  private final @Getter @NotNull Map<String, Map<String, ItemsContextMenuAction>>
+      itemsContextMenuActions = new ConcurrentHashMap<>();
   private final @NotNull Map<String, Object> refreshConsolePlugin = new ConcurrentHashMap<>();
-  private final Map<String, UiUpdateListener> updateListenerRefreshHandler = new ConcurrentHashMap<>();
+  private final Map<String, UiUpdateListener> updateListenerRefreshHandler =
+      new ConcurrentHashMap<>();
 
   public static ConsolePlugin<?> getPlugin(String tab) {
     ConsolePlugin<?> consolePlugin = consolePluginsMap.get(tab);
@@ -144,66 +139,93 @@ public class ContextUIImpl implements ContextUI {
 
   private static String getPageName(@NotNull Class<? extends BaseEntity> page) {
     return defaultIfEmpty(
-      page.getDeclaredAnnotation(UISidebarMenu.class).overridePath(),
-      page.getSimpleName());
+        page.getDeclaredAnnotation(UISidebarMenu.class).overridePath(), page.getSimpleName());
   }
 
   private static String buildEntityDynamicUpdateId(@NotNull BaseEntityIdentifier parentEntity) {
-    return "entity-type-%s".formatted(parentEntity instanceof WidgetEntity ? "widget" : parentEntity.getType());
+    return "entity-type-%s"
+        .formatted(parentEntity instanceof WidgetEntity ? "widget" : parentEntity.getType());
   }
 
   public void onContextCreated() {
     // run hourly script to drop not used dynamicUpdateRegisters
-    context.bgp().addLowPriorityRequest("drop-outdated-dynamicContext", () ->
-      this.dynamicUpdateRegisters.values().removeIf(v -> TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - v.timeout) > 5));
+    context
+        .bgp()
+        .addLowPriorityRequest(
+            "drop-outdated-dynamicContext",
+            () ->
+                this.dynamicUpdateRegisters
+                    .values()
+                    .removeIf(
+                        v ->
+                            TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - v.timeout)
+                                > 5));
 
-    context.bgp().builder("send-ui-updates").interval(Duration.ofSeconds(1)).execute(() -> {
-      for (Iterator<SendUpdateContext> iterator = sendToUIMap.values().iterator(); iterator.hasNext(); ) {
-        SendUpdateContext context = iterator.next();
+    context
+        .bgp()
+        .builder("send-ui-updates")
+        .interval(Duration.ofSeconds(1))
+        .execute(
+            () -> {
+              for (Iterator<SendUpdateContext> iterator = sendToUIMap.values().iterator();
+                  iterator.hasNext(); ) {
+                SendUpdateContext context = iterator.next();
 
-        try {
-          sendDynamicUpdateSupplied(new DynamicUpdateRequest(context.dynamicUpdateID(), null), context.handler::get);
-        } catch (Exception ex) {
-          log.warn("Unable to send dynamic update for: {}. {}", context.dynamicUpdateID, CommonUtils.getErrorMessage(ex));
-        }
-        iterator.remove();
-      }
-      // update tree separately because mqtt updates much faster
-      try {
-        treeNodeLock.lock();
-        for (Entry<String, TreeNode> entry : treeNodesSendToUIMap.entrySet()) {
-          try {
-            sendDynamicUpdateSupplied(new DynamicUpdateRequest(entry.getKey(), null),
-              () -> OBJECT_MAPPER.createObjectNode().putPOJO("value", entry.getValue()));
-          } catch (Exception ex) {
-            log.warn("Unable to send dynamic update for: {}. {}", entry.getKey(), CommonUtils.getErrorMessage(ex));
-          }
-        }
-        treeNodesSendToUIMap.clear();
-      } finally {
-        treeNodeLock.unlock();
-      }
+                try {
+                  sendDynamicUpdateSupplied(
+                      new DynamicUpdateRequest(context.dynamicUpdateID(), null),
+                      context.handler::get);
+                } catch (Exception ex) {
+                  log.warn(
+                      "Unable to send dynamic update for: {}. {}",
+                      context.dynamicUpdateID,
+                      CommonUtils.getErrorMessage(ex));
+                }
+                iterator.remove();
+              }
+              // update tree separately because mqtt updates much faster
+              try {
+                treeNodeLock.lock();
+                for (Entry<String, TreeNode> entry : treeNodesSendToUIMap.entrySet()) {
+                  try {
+                    sendDynamicUpdateSupplied(
+                        new DynamicUpdateRequest(entry.getKey(), null),
+                        () -> OBJECT_MAPPER.createObjectNode().putPOJO("value", entry.getValue()));
+                  } catch (Exception ex) {
+                    log.warn(
+                        "Unable to send dynamic update for: {}. {}",
+                        entry.getKey(),
+                        CommonUtils.getErrorMessage(ex));
+                  }
+                }
+                treeNodesSendToUIMap.clear();
+              } finally {
+                treeNodeLock.unlock();
+              }
 
-      for (Iterator<Entry<String, Object>> iterator = refreshConsolePlugin.entrySet().iterator(); iterator.hasNext(); ) {
-        Entry<String, Object> entry = iterator.next();
-        ConsolePlugin<?> plugin = consolePluginsMap.get(entry.getKey());
-        if (plugin != null) {
-          Object value = entry.getValue() == EMPTY ? null : entry.getValue();
-          sendGlobal(GlobalSendType.redrawConsole, entry.getKey(), value, null, null);
-        }
-        iterator.remove();
-      }
+              for (Iterator<Entry<String, Object>> iterator =
+                      refreshConsolePlugin.entrySet().iterator();
+                  iterator.hasNext(); ) {
+                Entry<String, Object> entry = iterator.next();
+                ConsolePlugin<?> plugin = consolePluginsMap.get(entry.getKey());
+                if (plugin != null) {
+                  Object value = entry.getValue() == EMPTY ? null : entry.getValue();
+                  sendGlobal(GlobalSendType.redrawConsole, entry.getKey(), value, null, null);
+                }
+                iterator.remove();
+              }
 
-      ContextUIImpl.consolePluginsMap.forEach(this::updateConsoleUI);
-      ContextUIImpl.consoleRemovablePluginsMap.forEach(this::updateConsoleUI);
-    });
+              ContextUIImpl.consolePluginsMap.forEach(this::updateConsoleUI);
+              ContextUIImpl.consoleRemovablePluginsMap.forEach(this::updateConsoleUI);
+            });
   }
 
   private void updateConsoleUI(String key, ConsolePlugin<?> p) {
     if (isUpdateRegistered(key)) {
       if (p instanceof ConsolePluginTable<?> table) {
-        sendDynamicUpdateSupplied(new DynamicUpdateRequest(key, null),
-          () -> OBJECT_MAPPER.createObjectNode().putPOJO("value", table.getUpdatableValues()));
+        sendDynamicUpdateSupplied(
+            new DynamicUpdateRequest(key, null),
+            () -> OBJECT_MAPPER.createObjectNode().putPOJO("value", table.getUpdatableValues()));
       }
     }
   }
@@ -215,10 +237,12 @@ public class ContextUIImpl implements ContextUI {
       if (request.getEntityID() != null) {
         BaseEntity entity = context.db().get(request.getEntityID());
         if (entity instanceof HasCustomWidget cwce) {
-          WidgetCustomEntity widgetEntity = context.db().get(dud.substring(0, dud.length() - request.getEntityID().length() - 1));
-          cwce.setWidgetDataStore(data ->
-              context.event().fireEvent(dud, new ObjectType(data)),
-            widgetEntity.getEntityID(), widgetEntity.getJsonData());
+          WidgetCustomEntity widgetEntity =
+              context.db().get(dud.substring(0, dud.length() - request.getEntityID().length() - 1));
+          cwce.setWidgetDataStore(
+              data -> context.event().fireEvent(dud, new ObjectType(data)),
+              widgetEntity.getEntityID(),
+              widgetEntity.getJsonData());
         }
       }
       dynamicUpdateRegisters.put(request, new DynamicUpdateContext());
@@ -226,18 +250,25 @@ public class ContextUIImpl implements ContextUI {
       duc.timeout = System.currentTimeMillis(); // refresh timer
       duc.registerCounter.incrementAndGet();
     }
-    UiUpdateListener uiUpdateListener = updateListenerRefreshHandler.get(request.getEntityID() + "~~~" + dud);
+    UiUpdateListener uiUpdateListener =
+        updateListenerRefreshHandler.get(request.getEntityID() + "~~~" + dud);
     if (uiUpdateListener != null) {
       uiUpdateListener.listener.refresh();
     } else {
-      context.event().addEventBehaviourListener(dud, request.getEntityID(),
-        Duration.ofSeconds(60), value -> sendDynamicUpdateSupplied(request, () -> value));
+      context
+          .event()
+          .addEventBehaviourListener(
+              dud,
+              request.getEntityID(),
+              Duration.ofSeconds(60),
+              value -> sendDynamicUpdateSupplied(request, () -> value));
     }
   }
 
   public void unRegisterForUpdates(String entityID) {
-    dynamicUpdateRegisters.keySet().removeIf(request ->
-      request.getDynamicUpdateId().startsWith(entityID));
+    dynamicUpdateRegisters
+        .keySet()
+        .removeIf(request -> request.getDynamicUpdateId().startsWith(entityID));
   }
 
   public void unRegisterForUpdates(DynamicUpdateRequest request) {
@@ -247,13 +278,15 @@ public class ContextUIImpl implements ContextUI {
     }
   }
 
-  public void sendDynamicUpdateImpl(@NotNull String dynamicUpdateId, @Nullable String entityId, @Nullable Object value) {
+  public void sendDynamicUpdateImpl(
+      @NotNull String dynamicUpdateId, @Nullable String entityId, @Nullable Object value) {
     if (value != null) {
       sendDynamicUpdateSupplied(new DynamicUpdateRequest(dynamicUpdateId, entityId), () -> value);
     }
   }
 
-  public void sendDynamicUpdateSupplied(@NotNull DynamicUpdateRequest request, @NotNull Supplier<Object> supplier) {
+  public void sendDynamicUpdateSupplied(
+      @NotNull DynamicUpdateRequest request, @NotNull Supplier<Object> supplier) {
     DynamicUpdateContext context = dynamicUpdateRegisters.get(request);
     if (context != null) {
       Object value = supplier.get();
@@ -261,7 +294,12 @@ public class ContextUIImpl implements ContextUI {
         if (System.currentTimeMillis() - context.timeout > 60000) {
           dynamicUpdateRegisters.remove(request);
         } else {
-          sendGlobal(GlobalSendType.dynamicUpdate, null, value, null, OBJECT_MAPPER.createObjectNode().putPOJO("dynamicRequest", request));
+          sendGlobal(
+              GlobalSendType.dynamicUpdate,
+              null,
+              value,
+              null,
+              OBJECT_MAPPER.createObjectNode().putPOJO("dynamicRequest", request));
         }
       }
     }
@@ -279,12 +317,16 @@ public class ContextUIImpl implements ContextUI {
 
   @Override
   public void removeItem(@NotNull BaseEntity entity) {
-    this.sendToUIMap.put(entity.getEntityID(), new SendUpdateContext(
-      buildEntityDynamicUpdateId(entity), () ->
-      OBJECT_MAPPER.createObjectNode()
-        .put("type", "remove")
-        .put("entityID", entity.getEntityID())
-        .putPOJO("entity", entity)));
+    this.sendToUIMap.put(
+        entity.getEntityID(),
+        new SendUpdateContext(
+            buildEntityDynamicUpdateId(entity),
+            () ->
+                OBJECT_MAPPER
+                    .createObjectNode()
+                    .put("type", "remove")
+                    .put("entityID", entity.getEntityID())
+                    .putPOJO("entity", entity)));
   }
 
   @Override
@@ -294,41 +336,46 @@ public class ContextUIImpl implements ContextUI {
 
   @Override
   public void updateItem(
-    @NotNull BaseEntityIdentifier entity,
-    @NotNull String updateField,
-    @Nullable Object value) {
+      @NotNull BaseEntityIdentifier entity, @NotNull String updateField, @Nullable Object value) {
     if (isUpdateNotRegistered(entity)) {
       return;
     }
-    this.sendToUIMap.put(entity.getEntityID() + updateField, new SendUpdateContext(
-      buildEntityDynamicUpdateId(entity), () ->
-      OBJECT_MAPPER.createObjectNode()
-        .put("type", "add")
-        .put("entityID", entity.getEntityID())
-        .put("updateField", updateField)
-        .putPOJO("value", value)));
+    this.sendToUIMap.put(
+        entity.getEntityID() + updateField,
+        new SendUpdateContext(
+            buildEntityDynamicUpdateId(entity),
+            () ->
+                OBJECT_MAPPER
+                    .createObjectNode()
+                    .put("type", "add")
+                    .put("entityID", entity.getEntityID())
+                    .put("updateField", updateField)
+                    .putPOJO("value", value)));
   }
 
   @Override
   public void updateInnerSetItem(
-    @NotNull BaseEntityIdentifier parentEntity,
-    @NotNull String parentFieldName,
-    @NotNull String innerEntityID,
-    @NotNull String updateField,
-    @NotNull Object value) {
+      @NotNull BaseEntityIdentifier parentEntity,
+      @NotNull String parentFieldName,
+      @NotNull String innerEntityID,
+      @NotNull String updateField,
+      @NotNull Object value) {
 
     if (isUpdateNotRegistered(parentEntity)) {
       return;
     }
-    this.sendToUIMap.put(parentEntity.getEntityID() + parentFieldName + innerEntityID + updateField, new SendUpdateContext(
-      buildEntityDynamicUpdateId(parentEntity), () ->
-      OBJECT_MAPPER
-        .createObjectNode()
-        .put("type", "add")
-        .put("entityID", parentEntity.getEntityID())
-        .put("updateField", updateField)
-        .put("parentField", parentFieldName)
-        .putPOJO("value", value)));
+    this.sendToUIMap.put(
+        parentEntity.getEntityID() + parentFieldName + innerEntityID + updateField,
+        new SendUpdateContext(
+            buildEntityDynamicUpdateId(parentEntity),
+            () ->
+                OBJECT_MAPPER
+                    .createObjectNode()
+                    .put("type", "add")
+                    .put("entityID", parentEntity.getEntityID())
+                    .put("updateField", updateField)
+                    .put("parentField", parentFieldName)
+                    .putPOJO("value", value)));
   }
 
   @Override
@@ -348,20 +395,25 @@ public class ContextUIImpl implements ContextUI {
       }
       return;
     }
-    this.sendToUIMap.put(dynamicUpdateID, new SendUpdateContext(dynamicUpdateID, () ->
-      OBJECT_MAPPER.createObjectNode().putPOJO("value", value)));
+    this.sendToUIMap.put(
+        dynamicUpdateID,
+        new SendUpdateContext(
+            dynamicUpdateID, () -> OBJECT_MAPPER.createObjectNode().putPOJO("value", value)));
   }
 
   @Override
-  public void addItemContextMenu(@NotNull String entityID, @NotNull String key, @NotNull Consumer<UIInputBuilder> builder) {
+  public void addItemContextMenu(
+      @NotNull String entityID, @NotNull String key, @NotNull Consumer<UIInputBuilder> builder) {
     context.db().getRequire(entityID);
     UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
     builder.accept(uiInputBuilder);
-    itemsContextMenuActions.computeIfAbsent(entityID, s -> new HashMap<>())
-      .put(key, new ItemsContextMenuAction(uiInputBuilder, uiInputBuilder.buildAll()));
+    itemsContextMenuActions
+        .computeIfAbsent(entityID, s -> new HashMap<>())
+        .put(key, new ItemsContextMenuAction(uiInputBuilder, uiInputBuilder.buildAll()));
   }
 
-  public void addHeaderMenuButton(String name, Icon icon, @NotNull Class<? extends BaseEntity> page) {
+  public void addHeaderMenuButton(
+      String name, Icon icon, @NotNull Class<? extends BaseEntity> page) {
     headerMenuButtons.put(name, new HeaderButtonSelection(name, icon, getPageName(page)));
   }
 
@@ -377,23 +429,28 @@ public class ContextUIImpl implements ContextUI {
     if (isUpdateNotRegistered(entity)) {
       return;
     }
-    this.sendToUIMap.put(entity.getEntityID(), new SendUpdateContext(
-      buildEntityDynamicUpdateId(entity), () -> {
-      ObjectNode metadata = OBJECT_MAPPER.createObjectNode()
-        .put("type", "add")
-        .put("entityID", entity.getEntityID())
-        .putPOJO("entity", entity);
+    this.sendToUIMap.put(
+        entity.getEntityID(),
+        new SendUpdateContext(
+            buildEntityDynamicUpdateId(entity),
+            () -> {
+              ObjectNode metadata =
+                  OBJECT_MAPPER
+                      .createObjectNode()
+                      .put("type", "add")
+                      .put("entityID", entity.getEntityID())
+                      .putPOJO("entity", entity);
 
-      if (!ignoreExtra) {
-        // insert context actions. maybe it's changed
-        if (entity instanceof HasDynamicContextMenuActions da) {
-          UIInputBuilder uiInputBuilder = inputBuilder();
-          da.assembleActions(uiInputBuilder);
-          metadata.putPOJO("actions", uiInputBuilder.buildAll());
-        }
-      }
-      return metadata;
-    }));
+              if (!ignoreExtra) {
+                // insert context actions. maybe it's changed
+                if (entity instanceof HasDynamicContextMenuActions da) {
+                  UIInputBuilder uiInputBuilder = inputBuilder();
+                  da.assembleActions(uiInputBuilder);
+                  metadata.putPOJO("actions", uiInputBuilder.buildAll());
+                }
+              }
+              return metadata;
+            }));
   }
 
   @Override
@@ -437,27 +494,30 @@ public class ContextUIImpl implements ContextUI {
       }
 
       @Override
-      public @NotNull HeaderButtonBuilder availableForPage(@NotNull Class<? extends BaseEntity> page) {
+      public @NotNull HeaderButtonBuilder availableForPage(
+          @NotNull Class<? extends BaseEntity> page) {
         if (!page.isAnnotationPresent(UISidebarMenu.class)) {
           throw new IllegalArgumentException(
-            "Trying add header button to page without annotation UISidebarMenu");
+              "Trying add header button to page without annotation UISidebarMenu");
         }
         builder.setPage(getPageName(page));
         return this;
       }
 
       @Override
-      public @NotNull HeaderButtonBuilder clickAction(@NotNull Class<? extends SettingPluginButton> clickAction) {
+      public @NotNull HeaderButtonBuilder clickAction(
+          @NotNull Class<? extends SettingPluginButton> clickAction) {
         builder.setClickAction(
-          () -> {
-            context.setting().setValue(clickAction, null);
-            return null;
-          });
+            () -> {
+              context.setting().setValue(clickAction, null);
+              return null;
+            });
         return this;
       }
 
       @Override
-      public @NotNull HeaderButtonBuilder clickAction(@NotNull Supplier<ActionResponseModel> clickAction) {
+      public @NotNull HeaderButtonBuilder clickAction(
+          @NotNull Supplier<ActionResponseModel> clickAction) {
         builder.setClickAction(clickAction);
         return this;
       }
@@ -488,7 +548,7 @@ public class ContextUIImpl implements ContextUI {
 
   @Override
   public void removeHeaderButton(
-    @NotNull String entityID, @Nullable String icon, boolean forceRemove) {
+      @NotNull String entityID, @Nullable String icon, boolean forceRemove) {
     HeaderButtonNotification notification = headerButtonNotifications.get(entityID);
     if (notification != null) {
       if (notification.getDialogs().isEmpty()) {
@@ -497,25 +557,28 @@ public class ContextUIImpl implements ContextUI {
         notification.setIcon(icon == null ? notification.getIcon() : icon);
       }
       sendHeaderButtonToUI(
-        notification,
-        jsonObject -> jsonObject.put("action", forceRemove ? "forceRemove" : "remove"));
+          notification,
+          jsonObject -> jsonObject.put("action", forceRemove ? "forceRemove" : "remove"));
     }
   }
 
   @Override
   public void sendJsonMessage(
-    @Nullable String title, @NotNull Object json, @Nullable Map<String, Object> messageParam) {
+      @Nullable String title, @NotNull Object json, @Nullable Map<String, Object> messageParam) {
     title = title == null ? null : Lang.getServerMessage(title, messageParam);
     sendGlobal(GlobalSendType.json, null, json, title, null);
   }
 
   public NotificationResponse getNotifications() {
     long time = System.currentTimeMillis();
-    headerButtonNotifications.entrySet().removeIf(
-      item -> {
-        HeaderButtonNotification json = item.getValue();
-        return json.getDuration() != null && time - item.getValue().getCreationTime().getTime() > json.getDuration() * 1000;
-      });
+    headerButtonNotifications
+        .entrySet()
+        .removeIf(
+            item -> {
+              HeaderButtonNotification json = item.getValue();
+              return json.getDuration() != null
+                  && time - item.getValue().getCreationTime().getTime() > json.getDuration() * 1000;
+            });
 
     NotificationResponse notificationResponse = new NotificationResponse();
     notificationResponse.headerMenuButtons = headerMenuButtons.values();
@@ -529,8 +592,10 @@ public class ContextUIImpl implements ContextUI {
           notification.getFireOnFetchHandler().run();
         }
       }
-      notificationResponse.notifications = blockNotifications.values().stream().filter(block ->
-        block.getEmail() == null || block.getEmail().equals(user.getEmail())).collect(Collectors.toList());
+      notificationResponse.notifications =
+          blockNotifications.values().stream()
+              .filter(block -> block.getEmail() == null || block.getEmail().equals(user.getEmail()))
+              .collect(Collectors.toList());
     }
     notificationResponse.headerButtonNotifications = headerButtonNotifications.values();
     notificationResponse.progress = progressMap.values();
@@ -538,24 +603,43 @@ public class ContextUIImpl implements ContextUI {
     return notificationResponse;
   }
 
-  public void handleDialog(String entityID, DialogResponseType dialogResponseType, String pressedButton, ObjectNode params) {
+  public void handleDialog(
+      String entityID,
+      DialogResponseType dialogResponseType,
+      String pressedButton,
+      ObjectNode params) {
     DialogModel model = dialogRequest.remove(entityID);
     if (model != null) {
-      new Thread(() -> model.getActionHandler().handle(dialogResponseType, pressedButton, params)).start();
+      var authentication = SecurityContextHolder.getContext().getAuthentication();
+      var request = ContextImpl.REQUEST.get();
+      new Thread(
+              () -> {
+                try {
+                  ContextImpl.REQUEST.set(request);
+                  SecurityContextHolder.getContext().setAuthentication(authentication);
+                  model.getActionHandler().handle(dialogResponseType, pressedButton, params);
+                } catch (Exception ex) {
+                  context.ui().toastr().error("Error while run dialog", ex);
+                }
+              })
+          .start();
       if (dialogResponseType != DialogResponseType.Timeout && model.getMaxTimeoutInSec() > 0) {
         context.bgp().cancelThread(entityID + "dialog-timeout");
       }
 
       for (HeaderButtonNotification notificationModel : headerButtonNotifications.values()) {
-        if (notificationModel.getDialogs().remove(model) && notificationModel.getDialogs().isEmpty()) {
-          this.removeHeaderButton(notificationModel.getEntityID()); // request to remove header button if no
+        if (notificationModel.getDialogs().remove(model)
+            && notificationModel.getDialogs().isEmpty()) {
+          this.removeHeaderButton(
+              notificationModel.getEntityID()); // request to remove header button if no
           // confirmation exists
         }
       }
     }
   }
 
-  public ActionResponseModel handleNotificationAction(String entityID, String actionEntityID, JSONObject params) throws Exception {
+  public ActionResponseModel handleNotificationAction(
+      String entityID, String actionEntityID, JSONObject params) throws Exception {
     HeaderButtonNotification headerButtonNotification = headerButtonNotifications.get(entityID);
     if (headerButtonNotification != null) {
       return headerButtonNotification.getClickAction().get();
@@ -576,7 +660,12 @@ public class ContextUIImpl implements ContextUI {
     }
   }
 
-  public void sendGlobal(@NotNull GlobalSendType type, @Nullable String entityID, @Nullable Object value, @Nullable String title, @Nullable ObjectNode objectNode) {
+  public void sendGlobal(
+      @NotNull GlobalSendType type,
+      @Nullable String entityID,
+      @Nullable Object value,
+      @Nullable String title,
+      @Nullable ObjectNode objectNode) {
     if (objectNode == null) {
       objectNode = OBJECT_MAPPER.createObjectNode();
     }
@@ -595,24 +684,34 @@ public class ContextUIImpl implements ContextUI {
     }
   }
 
-  private void sendHeaderButtonToUI(HeaderButtonNotification notification, Consumer<ObjectNode> additionalSupplier) {
+  private void sendHeaderButtonToUI(
+      HeaderButtonNotification notification, Consumer<ObjectNode> additionalSupplier) {
     ObjectNode jsonNode = OBJECT_MAPPER.valueToTree(notification);
     if (additionalSupplier != null) {
       additionalSupplier.accept(jsonNode);
     }
-    sendGlobal(GlobalSendType.headerButton, notification.getEntityID(), null, notification.getTitle(), jsonNode);
+    sendGlobal(
+        GlobalSendType.headerButton,
+        notification.getEntityID(),
+        null,
+        notification.getTitle(),
+        jsonNode);
   }
 
-  private ActionResponseModel handleNotificationBlockAction(String entityID, String actionEntityID, JSONObject params) throws Exception {
+  private ActionResponseModel handleNotificationBlockAction(
+      String entityID, String actionEntityID, JSONObject params) throws Exception {
     NotificationBlock notificationBlock = blockNotifications.get(entityID);
     if (notificationBlock != null) {
       if ("UPDATE".equals(actionEntityID)) {
         return fireUpdatePackageAction(entityID, params, notificationBlock);
       }
-      Info info = actionEntityID == null ? null :
-        notificationBlock.getInfoItems().stream()
-          .filter(i -> Objects.equals(actionEntityID, i.getKey()))
-          .findAny().orElse(null);
+      Info info =
+          actionEntityID == null
+              ? null
+              : notificationBlock.getInfoItems().stream()
+                  .filter(i -> Objects.equals(actionEntityID, i.getKey()))
+                  .findAny()
+                  .orElse(null);
       if (info != null && info.getRightAction() != null) {
         UIActionHandler action = info.getRightAction().findAction(actionEntityID);
         if (action != null) {
@@ -627,40 +726,48 @@ public class ContextUIImpl implements ContextUI {
     throw new IllegalArgumentException("Unable to find header notification: <" + entityID + ">");
   }
 
-  private ActionResponseModel fireUpdatePackageAction(String entityID, JSONObject params, NotificationBlock notificationBlock) {
+  private ActionResponseModel fireUpdatePackageAction(
+      String entityID, JSONObject params, NotificationBlock notificationBlock) {
     if (!params.has("version")) {
       throw new IllegalArgumentException("Version must be specified for update: " + entityID);
     }
     notificationBlock.setUpdating(true);
-    context.bgp()
-      .runWithProgress("update-" + entityID)
-      .execute(progressBar -> {
-        val handler = notificationBlock.getUpdateHandler();
-        if (handler == null) {
-          throw new IllegalStateException("Unable to fire update action without handler");
-        }
-        try {
-          handleResponse(handler.apply(progressBar, params.getString("version")));
-        } finally {
-          if (notificationBlock.getRefreshBlockBuilder() != null) {
-            notificationBlock.getRefreshBlockBuilder().accept(
-              new NotificationBlockBuilderImpl(notificationBlock, context));
-            sendGlobal(GlobalSendType.notification, entityID, notificationBlock, null, null);
-          }
-        }
-      });
+    context
+        .bgp()
+        .runWithProgress("update-" + entityID)
+        .execute(
+            progressBar -> {
+              val handler = notificationBlock.getUpdateHandler();
+              if (handler == null) {
+                throw new IllegalStateException("Unable to fire update action without handler");
+              }
+              try {
+                handleResponse(handler.apply(progressBar, params.getString("version")));
+              } finally {
+                if (notificationBlock.getRefreshBlockBuilder() != null) {
+                  notificationBlock
+                      .getRefreshBlockBuilder()
+                      .accept(new NotificationBlockBuilderImpl(notificationBlock, context));
+                  sendGlobal(GlobalSendType.notification, entityID, notificationBlock, null, null);
+                }
+              }
+            });
     return ActionResponseModel.fired();
   }
 
-  private UIActionHandler findNotificationAction(String actionEntityID, NotificationBlock notificationBlock) {
+  private UIActionHandler findNotificationAction(
+      String actionEntityID, NotificationBlock notificationBlock) {
     UIActionHandler action = null;
     if (notificationBlock.getContextMenuActions() != null) {
-      action = notificationBlock.getContextMenuActions()
-        .stream()
-        .filter(ca -> ca.getEntityID().equals(actionEntityID) && ca instanceof UIInputEntityActionHandler)
-        .findAny()
-        .map(f -> ((UIInputEntityActionHandler) f).getActionHandler())
-        .orElse(null);
+      action =
+          notificationBlock.getContextMenuActions().stream()
+              .filter(
+                  ca ->
+                      ca.getEntityID().equals(actionEntityID)
+                          && ca instanceof UIInputEntityActionHandler)
+              .findAny()
+              .map(f -> ((UIInputEntityActionHandler) f).getActionHandler())
+              .orElse(null);
     }
     if (action == null && notificationBlock.getActions() != null) {
       for (UIInputEntity inputEntity : notificationBlock.getActions()) {
@@ -673,8 +780,13 @@ public class ContextUIImpl implements ContextUI {
     return action;
   }
 
-  public void setUpdateListenerRefreshHandler(String dataSourceEntityID, String discriminator, HasUpdateValueListener.UpdateValueListener listener) {
-    updateListenerRefreshHandler.put(discriminator + "~~~" + dataSourceEntityID, new UiUpdateListener(dataSourceEntityID, discriminator, listener));
+  public void setUpdateListenerRefreshHandler(
+      String dataSourceEntityID,
+      String discriminator,
+      HasUpdateValueListener.UpdateValueListener listener) {
+    updateListenerRefreshHandler.put(
+        discriminator + "~~~" + dataSourceEntityID,
+        new UiUpdateListener(dataSourceEntityID, discriminator, listener));
   }
 
   public enum GlobalSendType {
@@ -702,9 +814,10 @@ public class ContextUIImpl implements ContextUI {
     fmSearch
   }
 
-  private record UiUpdateListener(String dataSourceEntityID, String discriminator,
-                                  HasUpdateValueListener.UpdateValueListener listener) {
-  }
+  private record UiUpdateListener(
+      String dataSourceEntityID,
+      String discriminator,
+      HasUpdateValueListener.UpdateValueListener listener) {}
 
   @Getter
   public static class NotificationResponse {
@@ -722,13 +835,15 @@ public class ContextUIImpl implements ContextUI {
     private long timeout = System.currentTimeMillis();
   }
 
-  private record NotificationBlockBuilderImpl(NotificationBlock notificationBlock,
-                                              ContextImpl context) implements NotificationBlockBuilder {
+  private record NotificationBlockBuilderImpl(
+      NotificationBlock notificationBlock, ContextImpl context)
+      implements NotificationBlockBuilder {
 
     @Override
     public @NotNull NotificationBlockBuilder linkToEntity(@NotNull BaseEntity entity) {
       notificationBlock.setLink(entity.getEntityID());
-      notificationBlock.setLinkType(UIFieldUtils.getClassEntityNavLink(notificationBlock.getName(), entity.getClass()));
+      notificationBlock.setLinkType(
+          UIFieldUtils.getClassEntityNavLink(notificationBlock.getName(), entity.getClass()));
       return this;
     }
 
@@ -747,7 +862,8 @@ public class ContextUIImpl implements ContextUI {
     }
 
     @Override
-    public @NotNull NotificationBlockBuilder addFlexAction(@NotNull String name, @NotNull Consumer<UIFlexLayoutBuilder> builder) {
+    public @NotNull NotificationBlockBuilder addFlexAction(
+        @NotNull String name, @NotNull Consumer<UIFlexLayoutBuilder> builder) {
       UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
       uiInputBuilder.addFlex(name, builder);
       notificationBlock.getKeyValueActions().put(name, uiInputBuilder.buildAll());
@@ -755,7 +871,8 @@ public class ContextUIImpl implements ContextUI {
     }
 
     @Override
-    public @NotNull NotificationBlockBuilder contextMenuActionBuilder(Consumer<UIInputBuilder> builder) {
+    public @NotNull NotificationBlockBuilder contextMenuActionBuilder(
+        Consumer<UIInputBuilder> builder) {
       UIInputBuilder uiInputBuilder = context.ui().inputBuilder();
       builder.accept(uiInputBuilder);
       if (notificationBlock.getContextMenuActions() == null) {
@@ -804,14 +921,17 @@ public class ContextUIImpl implements ContextUI {
     }
 
     @Override
-    public @NotNull NotificationBlockBuilder setUpdatable(@NotNull ThrowingBiFunction<ProgressBar, String, ActionResponseModel, Exception> updateHandler,
-                                                          @NotNull List<OptionModel> versions) {
+    public @NotNull NotificationBlockBuilder setUpdatable(
+        @NotNull
+            ThrowingBiFunction<ProgressBar, String, ActionResponseModel, Exception> updateHandler,
+        @NotNull List<OptionModel> versions) {
       notificationBlock.setUpdatable(updateHandler, versions);
       return this;
     }
 
     @Override
-    public @NotNull NotificationInfoLineBuilder addInfo(@NotNull String key, @Nullable Icon icon, @NotNull String info) {
+    public @NotNull NotificationInfoLineBuilder addInfo(
+        @NotNull String key, @Nullable Icon icon, @NotNull String info) {
       return notificationBlock.addInfoLine(key, info, icon);
     }
 
@@ -833,13 +953,16 @@ public class ContextUIImpl implements ContextUI {
       }
       if (entity instanceof EntityService es && !es.isStart() && es.getStatus() == Status.OFFLINE) {
         try {
-          Method method = MethodUtils.getMatchingAccessibleMethod(entity.getClass(), "setStart", Boolean.class);
+          Method method =
+              MethodUtils.getMatchingAccessibleMethod(entity.getClass(), "setStart", Boolean.class);
           if (method != null) {
-            info.setRightToggleButton(false, (ec, params) -> {
-              method.invoke(entity, true);
-              ec.db().save(entity);
-              return ActionResponseModel.fired();
-            });
+            info.setRightToggleButton(
+                false,
+                (ec, params) -> {
+                  method.invoke(entity, true);
+                  ec.db().save(entity);
+                  return ActionResponseModel.fired();
+                });
           }
         } catch (Exception ignore) {
         }
@@ -860,9 +983,8 @@ public class ContextUIImpl implements ContextUI {
     }
   }
 
-  private record SendUpdateContext(@NotNull String dynamicUpdateID, @NotNull Supplier<ObjectNode> handler) {
-
-  }
+  private record SendUpdateContext(
+      @NotNull String dynamicUpdateID, @NotNull Supplier<ObjectNode> handler) {}
 
   @Getter
   @AllArgsConstructor
@@ -875,7 +997,11 @@ public class ContextUIImpl implements ContextUI {
   public class ContextUIToastrImpl implements ContextUIToastr {
 
     @Override
-    public void sendMessage(@Nullable String title, @Nullable String message, @Nullable NotificationLevel level, @Nullable Integer timeout) {
+    public void sendMessage(
+        @Nullable String title,
+        @Nullable String message,
+        @Nullable NotificationLevel level,
+        @Nullable Integer timeout) {
       ObjectNode param = OBJECT_MAPPER.createObjectNode();
       if (level != null) {
         param.put("level", level.name());
@@ -898,7 +1024,11 @@ public class ContextUIImpl implements ContextUI {
     }
 
     @Override
-    public void addBlock(@NotNull String entityID, @NotNull String name, @Nullable Icon icon, @Nullable Consumer<NotificationBlockBuilder> builder) {
+    public void addBlock(
+        @NotNull String entityID,
+        @NotNull String name,
+        @Nullable Icon icon,
+        @Nullable Consumer<NotificationBlockBuilder> builder) {
       val notificationBlock = new NotificationBlock(entityID, name, icon);
       if (builder != null) {
         builder.accept(new NotificationBlockBuilderImpl(notificationBlock, context));
@@ -911,7 +1041,8 @@ public class ContextUIImpl implements ContextUI {
     }
 
     @Override
-    public void updateBlock(@NotNull String entityID, @NotNull Consumer<NotificationBlockBuilder> builder) {
+    public void updateBlock(
+        @NotNull String entityID, @NotNull Consumer<NotificationBlockBuilder> builder) {
       NotificationBlock notificationBlock = blockNotifications.get(entityID);
       if (notificationBlock == null) {
         throw new IllegalArgumentException("Unable to find notification block: " + entityID);
@@ -928,14 +1059,20 @@ public class ContextUIImpl implements ContextUI {
     @Override
     public void removeBlock(@NotNull String entityID) {
       if (blockNotifications.remove(entityID) != null) {
-        sendGlobal(GlobalSendType.notification, entityID, null, null, OBJECT_MAPPER.createObjectNode().put("action", "remove"));
+        sendGlobal(
+            GlobalSendType.notification,
+            entityID,
+            null,
+            null,
+            OBJECT_MAPPER.createObjectNode().put("action", "remove"));
       }
     }
   }
 
   public class ContextUIConsoleImpl implements ContextUIConsole {
 
-    private final Map<String, List<ConsolePluginComplexLines.ComplexString>> inlineConsoleLogCache = new ConcurrentHashMap<>();
+    private final Map<String, List<ConsolePluginComplexLines.ComplexString>> inlineConsoleLogCache =
+        new ConcurrentHashMap<>();
 
     @Override
     public void registerPluginName(@NotNull String name) {
@@ -944,7 +1081,8 @@ public class ContextUIImpl implements ContextUI {
 
     @SneakyThrows
     @Override
-    public <T> T streamInlineConsole(String name, ThrowingSupplier<T, Exception> throwingRunnable, Runnable finallyBlock) {
+    public <T> T streamInlineConsole(
+        String name, ThrowingSupplier<T, Exception> throwingRunnable, Runnable finallyBlock) {
       if (inlineConsoleLogCache.containsKey(name)) {
         inlineConsoleLogCache.get(name).clear();
         var clearAction = OBJECT_MAPPER.createObjectNode().put("name", name).put("action", "clear");
@@ -955,8 +1093,10 @@ public class ContextUIImpl implements ContextUI {
       PrintStream savedOutStream = System.out;
       PrintStream savedErrStream = System.out;
 
-      TeeOutputStream outOutputStream = new TeeOutputStream(savedOutStream, new StdoutOutputStream(name, false));
-      TeeOutputStream errorOutputStream = new TeeOutputStream(savedErrStream, new StdoutOutputStream(name, true));
+      TeeOutputStream outOutputStream =
+          new TeeOutputStream(savedOutStream, new StdoutOutputStream(name, false));
+      TeeOutputStream errorOutputStream =
+          new TeeOutputStream(savedErrStream, new StdoutOutputStream(name, true));
 
       try {
         System.setOut(new PrintStream(outOutputStream, true));
@@ -974,7 +1114,8 @@ public class ContextUIImpl implements ContextUI {
       consolePluginsMap.put(name, plugin);
     }
 
-    public <T extends ConsolePlugin> void registerPlugin(@NotNull String name, @NotNull T plugin, boolean removable) {
+    public <T extends ConsolePlugin> void registerPlugin(
+        @NotNull String name, @NotNull T plugin, boolean removable) {
       if (removable) {
         consoleRemovablePluginsMap.put(name, plugin);
       } else {
@@ -1041,12 +1182,16 @@ public class ContextUIImpl implements ContextUI {
       }
 
       public void add(String value, boolean error) {
-        var complexString = ConsolePluginComplexLines.ComplexString.of(value, System.currentTimeMillis(), error ? UI.Color.PRIMARY_COLOR : null, null);
+        var complexString =
+            ConsolePluginComplexLines.ComplexString.of(
+                value, System.currentTimeMillis(), error ? UI.Color.PRIMARY_COLOR : null, null);
         inlineConsoleLogCache.get(name).add(complexString);
-        var addAction = OBJECT_MAPPER.createObjectNode()
-          .put("name", name)
-          .put("action", "add")
-          .putPOJO("value", complexString);
+        var addAction =
+            OBJECT_MAPPER
+                .createObjectNode()
+                .put("name", name)
+                .put("action", "add")
+                .putPOJO("value", complexString);
         context.ui().sendRawData("-lines-icl", addAction);
       }
 
@@ -1068,15 +1213,16 @@ public class ContextUIImpl implements ContextUI {
     }
 
     @Override
-    public MirrorImageDialog topImageDialog(@NotNull String title, @NotNull String icon, @NotNull String iconColor) {
+    public MirrorImageDialog topImageDialog(
+        @NotNull String title, @NotNull String icon, @NotNull String iconColor) {
       return buildMirrorDialog(title, icon, iconColor, null);
     }
 
     public @NotNull MirrorImageDialog buildMirrorDialog(
-      @NotNull String title,
-      @NotNull String icon,
-      @NotNull String iconColor,
-      @Nullable Consumer<ObjectNode> postProcessor) {
+        @NotNull String title,
+        @NotNull String icon,
+        @NotNull String iconColor,
+        @Nullable Consumer<ObjectNode> postProcessor) {
       ObjectNode content = OBJECT_MAPPER.createObjectNode();
       content.put("icon", icon);
       content.put("iconColor", iconColor);
@@ -1100,26 +1246,29 @@ public class ContextUIImpl implements ContextUI {
 
     @Override
     public void sendDialogRequest(@NotNull DialogModel dialogModel) {
-      dialogRequest.computeIfAbsent(dialogModel.getEntityID(), key -> {
-        if (StringUtils.isNotEmpty(dialogModel.getHeaderButtonAttachTo())) {
-          HeaderButtonNotification notificationModel = headerButtonNotifications.get(dialogModel.getHeaderButtonAttachTo());
-          if (notificationModel != null) {
-            notificationModel.getDialogs().add(dialogModel);
-          }
-        }
+      dialogRequest.computeIfAbsent(
+          dialogModel.getEntityID(),
+          key -> {
+            if (StringUtils.isNotEmpty(dialogModel.getHeaderButtonAttachTo())) {
+              HeaderButtonNotification notificationModel =
+                  headerButtonNotifications.get(dialogModel.getHeaderButtonAttachTo());
+              if (notificationModel != null) {
+                notificationModel.getDialogs().add(dialogModel);
+              }
+            }
 
-        if (dialogModel.getMaxTimeoutInSec() > 0) {
-          context
-            .bgp()
-            .builder(key + "-dialog-timeout")
-            .delay(Duration.ofSeconds(dialogModel.getMaxTimeoutInSec()))
-            .execute(() -> handleDialog(key, DialogResponseType.Timeout, null, null));
-        }
+            if (dialogModel.getMaxTimeoutInSec() > 0) {
+              context
+                  .bgp()
+                  .builder(key + "-dialog-timeout")
+                  .delay(Duration.ofSeconds(dialogModel.getMaxTimeoutInSec()))
+                  .execute(() -> handleDialog(key, DialogResponseType.Timeout, null, null));
+            }
 
-        sendGlobal(GlobalSendType.dialog, key, dialogModel, null, null);
+            sendGlobal(GlobalSendType.dialog, key, dialogModel, null, null);
 
-        return dialogModel;
-      });
+            return dialogModel;
+          });
       sendGlobal(GlobalSendType.dialog, dialogModel.getEntityID(), dialogModel, null, null);
     }
 
@@ -1179,15 +1328,20 @@ public class ContextUIImpl implements ContextUI {
     }
 
     @Override
-    public void update(@NotNull String key, double progress, @Nullable String message, boolean cancellable) {
+    public void update(
+        @NotNull String key, double progress, @Nullable String message, boolean cancellable) {
       if (progress >= 100) {
         progressMap.remove(key);
         simpleProgressBars.remove(key);
       } else {
         progressMap.put(key, new ProgressNotification(key, progress, message, cancellable));
       }
-      sendGlobal(GlobalSendType.progress, key, Math.round(progress), message,
-        cancellable ? OBJECT_MAPPER.createObjectNode().put("cancellable", true) : null);
+      sendGlobal(
+          GlobalSendType.progress,
+          key,
+          Math.round(progress),
+          message,
+          cancellable ? OBJECT_MAPPER.createObjectNode().put("cancellable", true) : null);
     }
 
     public void cancel(String name) {
@@ -1200,10 +1354,10 @@ public class ContextUIImpl implements ContextUI {
 
   public class ContextUIMediaImpl implements ContextUIMedia {
 
-
     @SneakyThrows
     @Override
-    public void playWebAudio(@NotNull ContentStream stream, @Nullable Integer from, @Nullable Integer to) {
+    public void playWebAudio(
+        @NotNull ContentStream stream, @Nullable Integer from, @Nullable Integer to) {
       context.media().getWebAudioPlayer().play(stream, from, to);
     }
   }

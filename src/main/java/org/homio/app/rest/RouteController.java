@@ -1,6 +1,23 @@
 package org.homio.app.rest;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
+
 import jakarta.servlet.http.HttpServletRequest;
+import java.lang.reflect.InvocationTargetException;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -34,24 +51,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.WebRequest;
 
-import java.lang.reflect.InvocationTargetException;
-import java.net.URI;
-import java.net.URLDecoder;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
-
 @RestController
 @RequestMapping(value = "/rest/route", produces = "application/json")
 public class RouteController {
@@ -76,8 +75,8 @@ public class RouteController {
   }
 
   private static @NotNull HttpHeaders buildResponseHeader(
-    ResponseEntity<byte[]> response,
-    Map<String, String> applyHeader) {
+          ResponseEntity<byte[]> response,
+          Map<String, String> applyHeader) {
     HttpHeaders responseHeaders = new HttpHeaders();
     for (Entry<String, List<String>> rh : response.getHeaders().entrySet()) {
       if (!rh.getKey().equalsIgnoreCase("X-Frame-Options")) {
@@ -99,7 +98,7 @@ public class RouteController {
   private static byte[] modifyResponseBody(byte[] body, String baseUrl, String redirectURI) {
     Document doc = Jsoup.parse(new String(body));
     doc.head().prependElement("base")
-      .attr("href", baseUrl + "/");
+            .attr("href", baseUrl + "/");
     String path = new URI(baseUrl).getPath();
     for (Element el : doc.head().children()) {
       switch (el.tagName()) {
@@ -122,28 +121,53 @@ public class RouteController {
       }
     }
     doc.head().appendElement("script")
-      .attr("type", "text/javascript")
-      .appendChild(new DataNode("""
-        $(document).ajaxSend(function(event, jqXHR, ajaxOptions) {
-           ajaxOptions.url = ajaxOptions.url.startsWith('/') ? ajaxOptions.url.substr(1) : ajaxOptions.url;
-        });
-        $.ajaxSetup({
-            beforeSend: function(xhr, settings) {
-                settings.url = settings.url.startsWith('/') ? settings.url.substr(1) : settings.url;
+            .attr("type", "text/javascript")
+            .appendChild(new DataNode("""
+        (function() {
+            // Patch XMLHttpRequest to modify URL before sending
+            const originalXHROpen = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function(method, url, ...args) {
+                let modifiedUrl = url;
+                if (typeof url === 'string' && url.startsWith('/')) {
+                    // If URL starts with '/', remove the leading slash.
+                    // This makes it relative to the <base> tag URI.
+                    modifiedUrl = url.substring(1);
+                }
+                // Call the original open method with potentially modified URL and all other arguments
+                return originalXHROpen.call(this, method, modifiedUrl, ...args);
+            };
+
+            // Patch fetch to modify URL before sending
+            const originalFetch = window.fetch;
+            if (originalFetch) { // Check if fetch API exists
+                window.fetch = function(input, init) {
+                    let modifiedInput = input;
+                    if (typeof input === 'string' && input.startsWith('/')) {
+                        // If input is a string URL starting with '/', remove the leading slash.
+                        // This makes it relative to the <base> tag URI.
+                        modifiedInput = input.substring(1);
+                    }
+                    // For Request objects as input, their URL is typically already resolved
+                    // by the browser considering the document's <base href> when the Request object was created.
+                    // Modifying it would require creating a new Request object, which adds complexity.
+                    // We keep it simple here, targeting explicit string URLs similar to the original jQuery behavior.
+                    return originalFetch.call(this, modifiedInput, init);
+                };
             }
-        });
-        
-        window.addEventListener('message', function(event) {
-          if (event.data === 'back') {
-            window.history.back();
-          }
-          if (event.data === 'forward') {
-            window.history.forward();
-          }
-          if (event.data === 'reload') {
-            window.location.reload();
-          }
-        });
+
+            // Event listener for parent window messages (e.g., for navigation)
+            window.addEventListener('message', function(event) {
+              if (event.data === 'back') {
+                window.history.back();
+              }
+              if (event.data === 'forward') {
+                window.history.forward();
+              }
+              if (event.data === 'reload') {
+                window.location.reload();
+              }
+            });
+        })();
         """));
     String txtBody = doc.toString();
     txtBody = txtBody.replaceAll("<img src=\"/", "<img src=\"" + path + "/");
@@ -151,7 +175,7 @@ public class RouteController {
   }
 
   private static void modifyRequestBody(@NotNull ProxyExchange<byte[]> proxy, @NotNull HttpServletRequest request)
-    throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+          throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
     String contentType = request.getHeader("Content-Type");
     // somehow if request url is i.e.: data=blabla=2 it converts second '=' to %3X
     if (contentType != null && contentType.startsWith("application/x-www-form-urlencoded")) {
@@ -207,10 +231,10 @@ public class RouteController {
 
   @SneakyThrows
   private ResponseEntity<?> proxyUrl(
-    @NotNull ProxyExchange<byte[]> proxy,
-    @NotNull HttpServletRequest request,
-    @NotNull String entityID,
-    @NotNull Function<ProxyExchange<byte[]>, ResponseEntity<byte[]>> handler) {
+          @NotNull ProxyExchange<byte[]> proxy,
+          @NotNull HttpServletRequest request,
+          @NotNull String entityID,
+          @NotNull Function<ProxyExchange<byte[]>, ResponseEntity<byte[]>> handler) {
     RouteProxyImpl routeProxy = ((ContextServiceImpl) context.service()).getProxy().get(entityID);
     if (routeProxy == null) {
       throw new ServerException("No proxy found for entity: " + entityID);
@@ -227,7 +251,7 @@ public class RouteController {
             proxyExchange.header("Authorization", "Bearer " + homioToken);
         }*/
 
-    proxyExchange.sensitive(""); // allow pass Cookie and Authentication headers
+    proxyExchange.excluded(""); // allow pass Cookie and Authentication headers
     modifyHeaders(request, proxyExchange, uri, routeProxy);
 
     ResponseEntity<byte[]> response = handler.apply(proxyExchange);
@@ -256,8 +280,8 @@ public class RouteController {
 
     responseHeaders.add(ACCESS_CONTROL_EXPOSE_HEADERS, "*");
     return ResponseEntity.status(response.getStatusCode())
-      .headers(responseHeaders)
-      .body(body);
+            .headers(responseHeaders)
+            .body(body);
   }
 
   private Map<String, List<SidebarMenuItem>> getMenu() {
@@ -275,9 +299,9 @@ public class RouteController {
   }
 
   private void getSubMenu(
-    Map<String, List<SidebarMenuItem>> sidebarMenus,
-    Class<?> item,
-    UISidebarMenu uiSidebarMenu) {
+          Map<String, List<SidebarMenuItem>> sidebarMenus,
+          Class<?> item,
+          UISidebarMenu uiSidebarMenu) {
     String parent = uiSidebarMenu.parent().name().toLowerCase();
     if (!sidebarMenus.containsKey(parent)) {
       sidebarMenus.put(parent, new ArrayList<>());
@@ -296,7 +320,7 @@ public class RouteController {
   }
 
   private void addRouteFromUISideBarMenu(
-    List<RouteDTO> routes, Class<?> aClass, UISidebarMenu uiSidebarMenu) {
+          List<RouteDTO> routes, Class<?> aClass, UISidebarMenu uiSidebarMenu) {
     String href = StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), aClass.getSimpleName());
     RouteDTO route = new RouteDTO(uiSidebarMenu.parent().name().toLowerCase() + "/" + href);
     route.type = aClass.getSimpleName();
@@ -322,11 +346,11 @@ public class RouteController {
 
     static SidebarMenuItem fromAnnotation(Class<?> clazz, UISidebarMenu uiSidebarMenu) {
       return new SidebarMenuItem(
-        StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), clazz.getSimpleName()),
-        uiSidebarMenu.icon(),
-        uiSidebarMenu.bg(),
-        clazz.getSimpleName(),
-        uiSidebarMenu.order());
+              StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), clazz.getSimpleName()),
+              uiSidebarMenu.icon(),
+              uiSidebarMenu.bg(),
+              clazz.getSimpleName(),
+              uiSidebarMenu.order());
     }
   }
 

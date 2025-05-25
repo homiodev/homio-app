@@ -1,11 +1,32 @@
 package org.homio.app.rest;
 
+import static jakarta.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
+import static java.lang.String.format;
+import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.springframework.http.HttpHeaders.ORIGIN;
+
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.*;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.Stack;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +53,7 @@ import org.homio.app.model.entity.user.UserGuestEntity;
 import org.homio.app.model.entity.widget.impl.extra.WidgetFrameEntity;
 import org.homio.hquery.Curl;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,37 +61,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
-import java.nio.channels.WritableByteChannel;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
-
-import static jakarta.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
-import static java.lang.String.format;
-import static org.homio.api.util.Constants.ROLE_ADMIN_AUTHORIZE;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 @Log4j2
 @RestController
@@ -78,36 +71,104 @@ import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 @Validated
 public class UtilsController {
 
+  public static final Map<String, OtaLink> otaRequests = new ConcurrentHashMap<>();
   private static final LoadingCache<String, GitHubReadme> readmeCache =
-    CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
-      public @NotNull GitHubReadme load(@NotNull String url) {
-        return new GitHubReadme(url, Curl.get(url + "/raw/master/README.md", String.class));
-      }
-    });
+      CacheBuilder.newBuilder()
+          .expireAfterWrite(1, TimeUnit.HOURS)
+          .build(
+              new CacheLoader<>() {
+                public @NotNull GitHubReadme load(@NotNull String url) {
+                  return new GitHubReadme(
+                      url, Curl.get(url + "/raw/master/README.md", String.class));
+                }
+              });
+  private final FileSystemController fileSystemController;
   private final ContextImpl context;
   private final ScriptService scriptService;
   private final CodeParser codeParser;
-  private final Map<String, OneTimeRequest> requests = new ConcurrentHashMap<>();
+
+  @PostConstruct
+  public void init() {
+    context
+        .bgp()
+        .addLowPriorityRequest(
+            "drop-expire-links", () -> otaRequests.values().removeIf(OtaLink::isLinkExpired));
+  }
 
   @SneakyThrows
-  @GetMapping("/access/get/{requestId}")
-  public void getOneTimeAccessUrl(@PathVariable("requestId") String requestId,
-                                  HttpServletRequest request,
-                                  HttpServletResponse response) {
-    OneTimeRequest oneTimeRequest = requests.remove(requestId);
-    if (oneTimeRequest != null) {
-      SecurityContextHolder.getContext().setAuthentication(oneTimeRequest.authentication);
-      request.getRequestDispatcher("/" + oneTimeRequest.url).forward(request, response);
-    } else {
+  @DeleteMapping("/ota")
+  public void deleteOneTimeAccessUrl(
+      @RequestParam("requestId") String requestId, HttpServletResponse response) {
+    var oneTimeRequest = otaRequests.remove(requestId);
+    if (oneTimeRequest == null) {
       response.setStatus(HttpServletResponse.SC_NOT_FOUND);
     }
   }
 
-  @PutMapping("/access")
-  public OneTimeUrlResponse createOneTimeAccessLink(@RequestBody OneTimeUrlRequest request) {
+  @SneakyThrows
+  @GetMapping("/ota")
+  public void getOneTimeAccessUrl(
+      @RequestParam("requestId") String requestId,
+      HttpServletRequest request,
+      HttpServletResponse response) {
+    var oneTimeRequest = otaRequests.get(requestId);
+    if (oneTimeRequest == null) {
+      response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+      return;
+    }
+    oneTimeRequest.requestedCount++;
+
+    if (oneTimeRequest.maxRequests <= oneTimeRequest.requestedCount) {
+      otaRequests.remove(requestId);
+    } else if (oneTimeRequest.isLinkExpired()) {
+      otaRequests.remove(requestId);
+      response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+      return;
+    }
+
+    if (oneTimeRequest.url != null) {
+      SecurityContextHolder.getContext().setAuthentication(oneTimeRequest.authentication);
+      request.getRequestDispatcher("/" + oneTimeRequest.url).forward(request, response);
+    } else {
+      var responseEntity =
+          fileSystemController.downloadGet(
+              oneTimeRequest.sourceFs, oneTimeRequest.id, oneTimeRequest.alias);
+      if (responseEntity != null) {
+        response.setStatus(responseEntity.getStatusCode().value());
+        responseEntity
+            .getHeaders()
+            .forEach((key, values) -> values.forEach(value -> response.addHeader(key, value)));
+        InputStreamResource body = responseEntity.getBody();
+
+        if (body != null) {
+          try (InputStream in = body.getInputStream();
+              OutputStream out = response.getOutputStream()) {
+            in.transferTo(out);
+          }
+        }
+      }
+    }
+  }
+
+  @PutMapping("/ota")
+  public OneTimeUrlResponse createOneTimeAccessLink(
+      HttpServletRequest httpRequest, @RequestBody OtaRequest request) {
     String requestId = CommonUtils.generateUUID();
-    requests.put(requestId, new OneTimeRequest(request.url,
-      SecurityContextHolder.getContext().getAuthentication()));
+    if ("https://homio.org".equals(httpRequest.getHeader(ORIGIN))) {
+      requestId = Objects.toString(httpRequest.getHeader("X-Ota-Id"), requestId);
+    }
+    // remove previous request with same fields if exists
+    otaRequests.values().removeIf(entry -> entry.sameRequest(request));
+    otaRequests.put(
+        requestId,
+        new OtaLink(
+            request.url,
+            request.sourceFs,
+            request.id,
+            request.alias,
+            request.maxRequests,
+            request.expireTimeout,
+            SecurityContextHolder.getContext().getAuthentication()));
     return new OneTimeUrlResponse(requestId);
   }
 
@@ -120,7 +181,8 @@ public class UtilsController {
   @PostMapping("/github/readme")
   public GitHubReadme getUrlContent(@RequestBody String url) {
     try {
-      return readmeCache.get(url.endsWith("/wiki") ? url.substring(0, url.length() - "/wiki".length()) : url);
+      return readmeCache.get(
+          url.endsWith("/wiki") ? url.substring(0, url.length() - "/wiki".length()) : url);
     } catch (Exception ex) {
       throw new ServerException("No readme found");
     }
@@ -128,50 +190,45 @@ public class UtilsController {
 
   @PostMapping("/getCompletions")
   public Set<Completion> getCompletions(@RequestBody CompletionRequest completionRequest)
-    throws NoSuchMethodException {
+      throws NoSuchMethodException {
     ParserContext context = ParserContext.noneContext();
     return codeParser.addCompetitionFromManagerOrClass(
-      CodeParser.removeAllComments(completionRequest.getLine()),
-      new Stack<>(),
-      context,
-      completionRequest.getAllScript());
+        CodeParser.removeAllComments(completionRequest.getLine()),
+        new Stack<>(),
+        context,
+        completionRequest.getAllScript());
   }
 
   @GetMapping(value = "/download/tmp/{fileName:.+}", produces = APPLICATION_OCTET_STREAM)
   public ResponseEntity<StreamingResponseBody> downloadFile(
-    @PathVariable("fileName") String fileName) {
-    UserGuestEntity.assertAction(context, new Predicate<UserGuestEntity>() {
-      @Override
-      public boolean test(UserGuestEntity guest) {
-        return guest.getDeleteWidget();
-      }
-    }, "User is not allowed to access to FileManager");
+      @PathVariable("fileName") String fileName) {
+    UserGuestEntity.assertAction(
+        context, UserGuestEntity::getDeleteWidget, "User is not allowed to access to FileManager");
     Path outputPath = CommonUtils.getTmpPath().resolve(fileName);
     if (!Files.exists(outputPath)) {
       throw NotFoundException.fileNotFound(outputPath);
     }
     HttpHeaders headers = new HttpHeaders();
     headers.add(
-      HttpHeaders.CONTENT_DISPOSITION,
-      format("attachment; filename=\"%s\"", outputPath.getFileName()));
+        HttpHeaders.CONTENT_DISPOSITION,
+        format("attachment; filename=\"%s\"", outputPath.getFileName()));
     headers.add(HttpHeaders.CONTENT_TYPE, APPLICATION_OCTET_STREAM);
 
     return new ResponseEntity<>(
-      outputStream -> {
-        try (FileChannel inChannel = FileChannel.open(outputPath, StandardOpenOption.READ)) {
-          long size = inChannel.size();
-          WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
-          inChannel.transferTo(0, size, writableByteChannel);
-        }
-      },
-      headers,
-      HttpStatus.OK);
+        outputStream -> {
+          try (FileChannel inChannel = FileChannel.open(outputPath, StandardOpenOption.READ)) {
+            long size = inChannel.size();
+            WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
+            inChannel.transferTo(0, size, writableByteChannel);
+          }
+        },
+        headers,
+        HttpStatus.OK);
   }
 
   @PostMapping("/code/run")
   @PreAuthorize(ROLE_ADMIN_AUTHORIZE)
-  public RunScriptResponse runScriptOnce(@RequestBody RunScriptRequest request)
-    throws IOException {
+  public RunScriptResponse runScriptOnce(@RequestBody RunScriptRequest request) throws IOException {
     RunScriptResponse runScriptResponse = new RunScriptResponse();
     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     PrintStream logOutputStream = new PrintStream(outputStream);
@@ -182,11 +239,10 @@ public class UtilsController {
 
     try {
       runScriptResponse.result =
-        scriptService.executeJavaScriptOnce(
-          scriptEntity,
-          logOutputStream,
-          false,
-          State.of(request.contextParameters)).stringValue();
+          scriptService
+              .executeJavaScriptOnce(
+                  scriptEntity, logOutputStream, false, State.of(request.contextParameters))
+              .stringValue();
     } catch (Exception ex) {
       runScriptResponse.error = ExceptionUtils.getStackTrace(ex);
     }
@@ -196,7 +252,7 @@ public class UtilsController {
       Path tempFile = CommonUtils.getTmpPath().resolve(name);
       Files.copy(tempFile, outputStream);
       runScriptResponse.logUrl =
-        "rest/download/tmp/" + CommonUtils.getTmpPath().relativize(tempFile);
+          "rest/download/tmp/" + CommonUtils.getTmpPath().relativize(tempFile);
     } else {
       runScriptResponse.log = outputStream.toString(StandardCharsets.UTF_8);
     }
@@ -212,9 +268,15 @@ public class UtilsController {
 
   @SneakyThrows
   @PostMapping("/header/dialog/{entityID}")
-  public void acceptDialog(@PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
-    context.ui().handleDialog(entityID, ContextUI.DialogResponseType.Accepted, dialogRequest.pressedButton,
-      OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
+  public void acceptDialog(
+      @PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
+    context
+        .ui()
+        .handleDialog(
+            entityID,
+            ContextUI.DialogResponseType.Accepted,
+            dialogRequest.pressedButton,
+            OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
   }
 
   @DeleteMapping("/header/dialog/{entityID}")
@@ -258,19 +320,41 @@ public class UtilsController {
   }
 
   @Getter
-  public static class OneTimeUrlRequest {
+  @Setter
+  public static class OtaRequest {
     private String url;
+    private String sourceFs;
+    private String id;
+    private int alias;
+    private int maxRequests;
+    private long expireTimeout;
   }
 
-  @Getter
-  @AllArgsConstructor
-  public static class OneTimeUrlResponse {
-    private final String id;
-  }
-
+  // expireTimeout(ms) = is time in future when this request has to be expired if no requests
+  // maxRequests = how much count this link may be valid before expiry
   @RequiredArgsConstructor
-  private static class OneTimeRequest {
+  public static final class OtaLink {
+    public final String sourceFs;
+    public final String id;
+    public final int alias;
+    private final long created = System.currentTimeMillis();
     private final String url;
+    private final int maxRequests;
+    private final long expireTimeout;
     private final Authentication authentication;
+    private int requestedCount;
+
+    public boolean isLinkExpired() {
+      return expireTimeout > 0 && System.currentTimeMillis() - created > expireTimeout;
+    }
+
+    public boolean sameRequest(OtaRequest r) {
+      return Objects.equals(r.url, url)
+          && Objects.equals(r.sourceFs, sourceFs)
+          && Objects.equals(r.id, id)
+          && Objects.equals(r.alias, alias);
+    }
   }
+
+  public record OneTimeUrlResponse(String id) {}
 }

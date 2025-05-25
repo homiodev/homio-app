@@ -3,6 +3,14 @@ package org.homio.app.model.entity;
 import com.pivovarit.function.ThrowingConsumer;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import jakarta.persistence.Entity;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
@@ -28,15 +36,6 @@ import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 @Log4j2
 @Entity
 @CreateSingleEntity
@@ -53,19 +52,19 @@ public class FirefoxWebDriverEntity extends MediaEntity implements HasFirmwareVe
     return FirefoxWebDriverService.version != null;
   }
 
-  public static void executeInWebDriver(@NotNull ThrowingConsumer<WebDriver, Exception> driverHandler) {
+  public static void executeInWebDriver(@NotNull ThrowingConsumer<WebDriver, Exception> driverHandler, Context context) {
     if (FirefoxWebDriverService.version == null) {
       throw new IllegalStateException("Firefox WebDriver not verified yet");
     }
-    executeInDriver(driverHandler);
+    executeInDriver(driverHandler, context);
   }
 
   @SneakyThrows
-  private static void executeInDriver(@NotNull ThrowingConsumer<WebDriver, Exception> driverHandler) {
+  private static void executeInDriver(@NotNull ThrowingConsumer<WebDriver, Exception> driverHandler, Context context) {
     if (Files.exists(Paths.get("/opt/homio/installs/geckodriver"))) {
       System.setProperty("webdriver.gecko.driver", "/opt/homio/installs/geckodriver");
     }
-    if (System.getProperty("spring.profiles.active").contains("offline")) {
+    if (context.setting().hasProfile("offline")) {
       throw new IllegalStateException("Unable to run driver in offline mode");
     }
 
@@ -159,6 +158,7 @@ public class FirefoxWebDriverEntity extends MediaEntity implements HasFirmwareVe
     options.addArguments("--headless");
     options.addArguments("--disable-gpu");
     options.addArguments("--disable-extensions");
+    options.addArguments("--ignore-certificate-errors");
     options.addPreference("plugin.scan.plid.all", false);
     options.addPreference("pdfjs.disabled", true);
     options.addPreference("datareporting.healthreport.uploadEnabled", false);
@@ -262,7 +262,11 @@ public class FirefoxWebDriverEntity extends MediaEntity implements HasFirmwareVe
           WebDriverManager.firefoxdriver().setup();
           if (isUnableToConnect()) {
             log.error("Error while connect to firefox driver after WebDriverManager install. Trying install firefox-esr");
-            context().hardware().installSoftware("firefox-esr", 600, progressBar);
+            try {
+              context().hardware().installSoftware("firefox-esr", 600, progressBar);
+            } catch (Exception ex) {
+              context().hardware().installSoftware("firefox", 600, progressBar);
+            }
             if (isUnableToConnect() && !Files.exists(Paths.get("/opt/homio/installs/geckodriver"))) {
               log.error("Error while connect to firefox driver after install firefox-esr. Trying build geckodriver manually");
               // consume huge amount of time
@@ -315,7 +319,7 @@ public class FirefoxWebDriverEntity extends MediaEntity implements HasFirmwareVe
     private boolean isUnableToConnect() {
       AtomicBoolean connected = new AtomicBoolean(false);
       log.info("Verify firefox driver installation");
-      executeInDriver(firefoxDriver -> connected.set(true));
+      executeInDriver(firefoxDriver -> connected.set(true), context);
       return !connected.get();
     }
   }

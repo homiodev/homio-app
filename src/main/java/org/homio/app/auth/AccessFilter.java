@@ -1,21 +1,25 @@
 package org.homio.app.auth;
 
+import static org.springframework.http.HttpHeaders.ORIGIN;
+import static org.springframework.http.HttpHeaders.REFERER;
+
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.app.manager.common.ContextImpl;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
-
-import java.io.IOException;
-import java.util.Objects;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -24,9 +28,10 @@ public class AccessFilter extends OncePerRequestFilter {
   private final JwtTokenProvider jwtTokenProvider;
 
   @Override
-  protected void doFilterInternal(HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain chain)
-    throws ServletException, IOException {
-    log.debug("Request: {}. Host: {}", request.getRequestURI(), request.getHeader("Host"));
+  protected void doFilterInternal(
+      HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain chain)
+      throws ServletException, IOException {
+    log.info("Request: {}. Host: {}", request.getRequestURI(), request.getHeader("Host"));
     if (request.getRequestURI().startsWith("/rest/route/proxy")
         || request.getRequestURI().endsWith(".css")
         || request.getRequestURI().endsWith(".js")
@@ -41,16 +46,23 @@ public class AccessFilter extends OncePerRequestFilter {
     }
     if (request.getRequestURI().equals("/")) {
       response.setContentType("text/html");
-      response.getOutputStream().write("""
+      response
+          .getOutputStream()
+          .write(
+              """
         <html>
         <body>
             Homio backend app. <div>Please, visit '<a href="https://homio.org">https://homio.org</a>' for usage</div>
         </body>
         </html>
-        """.getBytes());
+        """
+                  .getBytes());
       return;
     }
-    String token = jwtTokenProvider.resolveToken(Objects.toString(request.getHeader("Authorization"), request.getParameter("Authorization")));
+    String token =
+        jwtTokenProvider.resolveToken(
+            Objects.toString(
+                request.getHeader("Authorization"), request.getParameter("Authorization")));
     try {
       if (token != null) {
         if (jwtTokenProvider.validateToken(token)) {
@@ -64,7 +76,11 @@ public class AccessFilter extends OncePerRequestFilter {
           jwtTokenProvider.revokeToken(token);
         }
       }
-      ContextImpl.REQUEST.set(request);
+      String origin =
+          Objects.toString(
+              request.getHeader(ORIGIN),
+              Objects.toString(request.getHeader(REFERER), StringUtils.EMPTY));
+      ContextImpl.REQUEST.set(Map.of(ORIGIN, origin));
       chain.doFilter(request, response);
     } catch (ExpiredJwtException ex) {
       SecurityContextHolder.clearContext();

@@ -1,6 +1,32 @@
 package org.homio.app.manager.common.impl;
 
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.homio.app.manager.common.impl.ContextUIImpl.GlobalSendType.setting;
+import static org.homio.app.model.entity.SettingEntity.getKey;
+import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;
+
 import com.pivovarit.function.ThrowingConsumer;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Writer;
+import java.lang.reflect.Modifier;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Properties;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -30,33 +56,6 @@ import org.jetbrains.annotations.Nullable;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.core.env.ConfigurableEnvironment;
-
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Writer;
-import java.lang.reflect.Modifier;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Properties;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.homio.app.manager.common.impl.ContextUIImpl.GlobalSendType.setting;
-import static org.homio.app.model.entity.SettingEntity.getKey;
-import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;
 
 @SuppressWarnings("unused")
 @Log4j2
@@ -446,6 +445,11 @@ public class ContextSettingImpl implements ContextSetting {
 
     public void addComment(String key, String comment) {
       comments.put(key, comment);
+    }
+
+    @Override
+    public String getProperty(String key) {
+      return StringUtils.defaultIfEmpty(super.getProperty(key), System.getProperty(key));
     }
 
     @Override

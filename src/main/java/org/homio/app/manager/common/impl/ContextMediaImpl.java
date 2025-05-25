@@ -1,6 +1,16 @@
 package org.homio.app.manager.common.impl;
 
 import com.pivovarit.function.ThrowingConsumer;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Mixer;
+import javax.sound.sampled.Port;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -35,32 +45,19 @@ import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Mixer;
-import javax.sound.sampled.Port;
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
 @Log4j2
 @RequiredArgsConstructor
 public class ContextMediaImpl implements ContextMedia {
 
-  public static String FFMPEG_LOCATION = SystemUtils.IS_OS_LINUX ? "ffmpeg" :
-    CommonUtils.getInstallPath().resolve("ffmpeg").resolve("ffmpeg.exe").toString();
-  private final @Getter
-  @Accessors(fluent = true) ContextImpl context;
+  public static String FFMPEG_LOCATION =
+      SystemUtils.IS_OS_LINUX
+          ? "ffmpeg"
+          : CommonUtils.getInstallPath().resolve("ffmpeg").resolve("ffmpeg.exe").toString();
+  private final @Getter @Accessors(fluent = true) ContextImpl context;
   private final FfmpegHardwareRepository repo;
-  @Getter
-  private final Map<String, AudioPlayer> audioPlayers = new HashMap<>();
-  @Getter
-  private final Map<String, VideoPlayer> videoPlayers = new HashMap<>();
-  @Getter
-  private final Map<String, AudioInput> audioInputs = new HashMap<>();
+  @Getter private final Map<String, AudioPlayer> audioPlayers = new HashMap<>();
+  @Getter private final Map<String, VideoPlayer> videoPlayers = new HashMap<>();
+  @Getter private final Map<String, AudioInput> audioInputs = new HashMap<>();
 
   private final Map<String, WebDriverContext> webDriverInteracts = new HashMap<>();
 
@@ -78,54 +75,73 @@ public class ContextMediaImpl implements ContextMedia {
 
   @Override
   public void fireSelenium(@NotNull ThrowingConsumer<WebDriver, Exception> driverHandler) {
-    FirefoxWebDriverEntity.executeInWebDriver(driverHandler);
+    FirefoxWebDriverEntity.executeInWebDriver(driverHandler, context);
   }
 
   @Override
-  public void fireSelenium(@NotNull String title, @NotNull String icon, @NotNull String iconColor,
-                           @NotNull ThrowingConsumer<WebDriver, Exception> driverHandler) {
-    FirefoxWebDriverEntity.executeInWebDriver(driver -> {
-      String uuid = CommonUtils.generateShortUUID(8);
-      webDriverInteracts.put(uuid, new WebDriverContext(driver));
+  public void fireSelenium(
+      @NotNull String title,
+      @NotNull String icon,
+      @NotNull String iconColor,
+      @NotNull ThrowingConsumer<WebDriver, Exception> driverHandler) {
+    FirefoxWebDriverEntity.executeInWebDriver(
+        driver -> {
+          String uuid = CommonUtils.generateShortUUID(8);
+          webDriverInteracts.put(uuid, new WebDriverContext(driver));
 
-      AtomicReference<String> imageRef = new AtomicReference<>("");
-      ContextUI.ContextUIDialog.MirrorImageDialog imageDialog = context().ui().dialog().buildMirrorDialog(title, icon, iconColor, jsonNodes ->
-        jsonNodes.put("webdriver", uuid));
-      AtomicInteger passedSeconds = new AtomicInteger(0);
-      AtomicBoolean closed = new AtomicBoolean(false);
-      ContextBGP.ThreadContext<Void> screenShotFetcher = context().bgp().builder("run-driver-screenshot-fetcher")
-        .delay(Duration.ofSeconds(5))
-        .interval(Duration.ofSeconds(1))
-        .cancelOnError(false)
-        .execute(() -> {
-          if (!closed.get()) {
-            try {
-              String image = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BASE64);
-              if (!imageRef.get().equals(image) || passedSeconds.getAndIncrement() == 10) {
-                if (closed.get()) {
-                  return;
-                }
-                passedSeconds.set(0);
-                imageRef.set(image);
-                imageDialog.sendImage(image);
-              }
-            } catch (Exception ex) {
-              log.error("Error fetch firefox image driver: {}", ex.getMessage());
-            }
+          AtomicReference<String> imageRef = new AtomicReference<>("");
+          ContextUI.ContextUIDialog.MirrorImageDialog imageDialog =
+              context()
+                  .ui()
+                  .dialog()
+                  .buildMirrorDialog(
+                      title, icon, iconColor, jsonNodes -> jsonNodes.put("webdriver", uuid));
+          AtomicInteger passedSeconds = new AtomicInteger(0);
+          AtomicBoolean closed = new AtomicBoolean(false);
+          ContextBGP.ThreadContext<Void> screenShotFetcher =
+              context()
+                  .bgp()
+                  .builder("run-driver-screenshot-fetcher")
+                  .delay(Duration.ofSeconds(5))
+                  .interval(Duration.ofSeconds(1))
+                  .cancelOnError(false)
+                  .execute(
+                      () -> {
+                        if (!closed.get()) {
+                          try {
+                            String image =
+                                ((TakesScreenshot) driver).getScreenshotAs(OutputType.BASE64);
+                            if (!imageRef.get().equals(image)
+                                || passedSeconds.getAndIncrement() == 10) {
+                              if (closed.get()) {
+                                return;
+                              }
+                              passedSeconds.set(0);
+                              imageRef.set(image);
+                              imageDialog.sendImage(image);
+                            }
+                          } catch (Exception ex) {
+                            log.error("Error fetch firefox image driver: {}", ex.getMessage());
+                          }
+                        }
+                      });
+          try {
+            driverHandler.accept(driver);
+          } finally {
+            closed.set(true);
+            ContextBGP.cancel(screenShotFetcher);
+            imageDialog.sendImage(null);
           }
-        });
-      try {
-        driverHandler.accept(driver);
-      } finally {
-        closed.set(true);
-        ContextBGP.cancel(screenShotFetcher);
-        imageDialog.sendImage(null);
-      }
-    });
+        },
+        context);
   }
 
   @Override
-  public void fireFfmpeg(@NotNull String inputOptions, @NotNull String source, @NotNull String output, int maxWaitTimeout) {
+  public void fireFfmpeg(
+      @NotNull String inputOptions,
+      @NotNull String source,
+      @NotNull String output,
+      int maxWaitTimeout) {
     repo.fireFfmpeg(FFMPEG_LOCATION, inputOptions, source, output, maxWaitTimeout);
   }
 
@@ -165,8 +181,9 @@ public class ContextMediaImpl implements ContextMedia {
 
   @Override
   public @NotNull String createStreamUrl(@NotNull ContentStream stream, @Nullable Duration ttl) {
-    return context.getBean(MediaController.class).createStreamUrl(stream,
-      ttl == null ? Integer.MAX_VALUE : (int) ttl.getSeconds());
+    return context
+        .getBean(MediaController.class)
+        .createStreamUrl(stream, ttl == null ? Integer.MAX_VALUE : (int) ttl.getSeconds());
   }
 
   @Override
@@ -176,16 +193,28 @@ public class ContextMediaImpl implements ContextMedia {
 
   @Override
   public @NotNull FFMPEG buildFFMPEG(
-    @NotNull String entityID, @NotNull String description,
-    @NotNull FFMPEGHandler handler,
-    @NotNull FFMPEGFormat format,
-    @NotNull String inputArguments,
-    @NotNull String input,
-    @NotNull String outArguments,
-    @NotNull String output,
-    @NotNull String username,
-    @NotNull String password) {
-    return new FFMPEGImpl(entityID, description, handler, format, inputArguments, input, outArguments, output, username, password, context);
+      @NotNull String entityID,
+      @NotNull String description,
+      @NotNull FFMPEGHandler handler,
+      @NotNull FFMPEGFormat format,
+      @NotNull String inputArguments,
+      @NotNull String input,
+      @NotNull String outArguments,
+      @NotNull String output,
+      @NotNull String username,
+      @NotNull String password) {
+    return new FFMPEGImpl(
+        entityID,
+        description,
+        handler,
+        format,
+        inputArguments,
+        input,
+        outArguments,
+        output,
+        username,
+        password,
+        context);
   }
 
   public void onContextCreated() {
@@ -247,18 +276,21 @@ public class ContextMediaImpl implements ContextMedia {
         double relativeY = (y / height) * driverHeight;
 
         JavascriptExecutor js = (JavascriptExecutor) webDriverContext.driver;
-        webDriverContext.currentElement = (WebElement) js.executeScript(
-          "let el = document.elementFromPoint(arguments[0], arguments[1]);" +
-          "while (el && !el.matches('a, button, [role=\"button\"], input')) { el = el.parentElement; }" +
-          "return el;",
-          relativeX,
-          relativeY
-        );
+        webDriverContext.currentElement =
+            (WebElement)
+                js.executeScript(
+                    "let el = document.elementFromPoint(arguments[0], arguments[1]);"
+                        + "while (el && !el.matches('a, button, [role=\"button\"], input')) { el = el.parentElement; }"
+                        + "return el;",
+                    relativeX,
+                    relativeY);
         if (webDriverContext.currentElement == null) {
           log.warn("Unable to find any clickable element on WebDriver");
         } else {
-          log.info("Found element on WebDriver: {} - {}",
-            webDriverContext.currentElement.getTagName(), webDriverContext.currentElement.getText());
+          log.info(
+              "Found element on WebDriver: {} - {}",
+              webDriverContext.currentElement.getTagName(),
+              webDriverContext.currentElement.getText());
         }
       }
 

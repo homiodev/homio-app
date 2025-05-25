@@ -1,5 +1,14 @@
 package org.homio.app.utils;
 
+import static java.util.Objects.requireNonNull;
+
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.sql.*;
+import java.util.Collections;
+import java.util.Properties;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
@@ -10,16 +19,6 @@ import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.impl.ContextSettingImpl;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ApplicationContext;
-
-import java.io.InputStream;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
-import java.sql.*;
-import java.util.Collections;
-import java.util.Properties;
-
-import static java.util.Objects.requireNonNull;
 
 @Log4j2
 public final class HardwareUtils {
@@ -113,6 +112,7 @@ public final class HardwareUtils {
 
         System.setProperty("databaseType", databaseType);
         System.setProperty("hibernate.physical_naming_strategy", "org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl");
+        System.out.println("Use db url: " + dbUrl);
     }
 
     public static void migrateDatabase(ContextImpl context, String newDbUrl) {

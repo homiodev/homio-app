@@ -74,5 +74,10 @@
     "NAME": "Name   '{{VALUE}}'",
     "URL": "URL    '{{VALUE}}'"
   },
-  "TMATE_DESCRIPTION": "Tmate is <a href=\"https://tmate.io\" target=\"_blank\"></a> service that creates web-socket session with unique id to connect to device"
+  "TMATE_DESCRIPTION": "Tmate is <a href=\"https://tmate.io\" target=\"_blank\"></a> service that creates web-socket session with unique id to connect to device",
+  "CLOUD": {
+    "DURATION": "Session time {{VALUE}}",
+    "IN": "Income {{VALUE}}",
+    "OUT": "Outcome {{VALUE}}"
+  }
 }

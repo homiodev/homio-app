@@ -1,6 +1,16 @@
 package org.homio.app.manager.common.impl;
 
+import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
+
 import com.pivovarit.function.ThrowingSupplier;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiConsumer;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
@@ -12,17 +22,6 @@ import org.homio.app.manager.install.PythonInstaller;
 import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.BiConsumer;
-
-import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
 
 @Log4j2
 public class ContextInstallImpl implements ContextInstall {
@@ -113,7 +112,7 @@ public class ContextInstallImpl implements ContextInstall {
             finishHandler.accept(false, null);
             return;
           }
-          if (System.getProperty("spring.profiles.active").contains("offline")) {
+          if (context.setting().hasProfile("offline")) {
             return;
           }
           waiters.add(finishHandler);

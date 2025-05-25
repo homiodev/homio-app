@@ -12,6 +12,8 @@
     </parent>
 
     <properties>
+        <selenium.version>4.32.0</selenium.version>
+        <selenium-htmlunit.version>4.32.0</selenium-htmlunit.version>
         <graalvm.version>24.0.1</graalvm.version>
         <homio-api.version>1.3.3-SNAPSHOT</homio-api.version>
         <homio-primary-addons.version>1.3.3-SNAPSHOT</homio-primary-addons.version>
@@ -151,11 +153,6 @@
             <artifactId>maven-artifact</artifactId>
             <groupId>org.apache.maven</groupId>
             <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.jcraft</groupId>
-            <artifactId>jsch</artifactId>
-            <version>0.1.55</version>
         </dependency>
         <dependency>
             <groupId>com.github.zafarkhaja</groupId>
@@ -594,6 +591,10 @@
             <groupId>org.homio</groupId>
             <artifactId>onvif</artifactId>
             <version>1.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
         </dependency>
     </dependencies>
 
