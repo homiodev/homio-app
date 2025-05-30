@@ -47,11 +47,17 @@ public interface FfmpegHardwareRepository {
   Pair<List<String>, List<String>> getWindowsInputDevices(@HQueryParam("ffmpeg") String ffmpeg);
 
   default Set<String> getVideoDevices(String ffmpegPath) {
-    return getStrings("video", () -> getWindowsInputDevices(ffmpegPath).getKey());
+    return getStrings("video", () -> {
+      var devices = getWindowsInputDevices(ffmpegPath);
+      return devices == null ? null : devices.getKey();
+    });
   }
 
   default Set<String> getAudioDevices(String ffmpegPath) {
-    return getStrings("audio", () -> getWindowsInputDevices(ffmpegPath).getValue());
+    return getStrings("audio", () -> {
+      var devices = getWindowsInputDevices(ffmpegPath);
+      return devices == null ? null : devices.getValue();
+    });
   }
 
   default Set<String> getStrings(String prefix, Supplier<List<String>> windowDeviceFetcher) {

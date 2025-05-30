@@ -7,6 +7,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.homio.api.ContextBGP;
 import org.homio.api.fs.FileSystemProvider;
 import org.homio.api.fs.TreeNode;
+import org.homio.api.fs.archive.ApacheCompress;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.ui.UI.Color;
 import org.homio.api.util.CommonUtils;
@@ -484,7 +485,11 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     String contentType;
     boolean ade = false;
     try {
-      contentType = !isDirectory && exists ? Objects.toString(Files.probeContentType(path), TIKA.detect(path)) : null;
+      if(file instanceof ApacheCompress.ArchiveFile af) {
+        contentType = af.getContentType();
+      } else {
+        contentType = !isDirectory && exists ? Objects.toString(Files.probeContentType(path), TIKA.detect(path.toFile())) : null;
+      }
     } catch (AccessDeniedException e) {
       contentType = "";
       ade = true;

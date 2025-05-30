@@ -248,18 +248,18 @@ public class JwtTokenProvider implements ContextCreated {
   }
 
   private String getUsername(String token) {
-    return this.jwtParser.parseSignedClaims(token).getPayload().getAudience().iterator().next();
+    return jwtParser.parseSignedClaims(token).getPayload().getSubject();
   }
 
   private byte[] buildSecurityId() {
     userCache.clear();
-    String securityId = HardwareUtils.APP_ID + "_" + jwtValidityTimeout;
+    var securityId = new StringBuilder(HardwareUtils.APP_ID + "_" + jwtValidityTimeout);
     if (regenerateSecurityIdOnRestart) {
-      securityId += "_" + HardwareUtils.RUN_COUNT;
+      securityId.append("_").append(HardwareUtils.RUN_COUNT);
     }
     while (securityId.length() < 32) {
-      securityId += "0";
+      securityId.append("0");
     }
-    return securityId.getBytes(StandardCharsets.UTF_8);
+    return securityId.toString().getBytes(StandardCharsets.UTF_8);
   }
 }

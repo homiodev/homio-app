@@ -90,7 +90,7 @@ public class SecurityConfiguration {
                         "/rest/auth/register",
                         "/rest/frame/**",
                         "rest/resource/**",
-                        // "/rest/media/stream/**",
+                        "/rest/media/stream/**", // requires for video widget
                         // "/rest/media/image/**",
                         // "/rest/media/video/**",
                         "/rest/media/video/playback/**",

@@ -782,11 +782,8 @@ public class ContextBGPImpl implements ContextBGP {
 
     public void run(@NotNull String name, @NotNull String[] command) throws Exception {
       getLogger().info("[{}]: Starting process command: '{}'", name, command);
-      if (workingDir != null) {
-        process = Runtime.getRuntime().exec(command, null, workingDir.toFile());
-      } else {
-        process = Runtime.getRuntime().exec(command);
-      }
+      var processBuilder = new java.lang.ProcessBuilder(command);
+      process = processBuilder.start();
       executeOnExitImpl("Process: " + name, () -> cancelProcess(true, true));
       if (entity != null) {
         entity.setStatusOnline();

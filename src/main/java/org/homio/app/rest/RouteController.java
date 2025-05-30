@@ -43,12 +43,7 @@ import org.jsoup.nodes.Element;
 import org.springframework.cloud.gateway.mvc.ProxyExchange;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
 
 @RestController
@@ -104,18 +99,20 @@ public class RouteController {
       switch (el.tagName()) {
         case "link":
           String href = el.attr("href");
-          if (href.startsWith("/")) {
-            el.attr("href", path + href);
+          if(!href.startsWith("http") && !href.isEmpty()) {
+            if (href.startsWith("/")) {
+              el.attr("href", path + href);
+            }
           }
           break;
         case "script":
           String src = el.attr("src");
-          if (!src.isEmpty()) {
-            if (src.startsWith("/")) {
-              el.attr("src", path + src);
-            } else {
-              el.attr("src", path + redirectURI + "/" + src);
-            }
+            if(!src.startsWith("http") && !src.isEmpty()) {
+              if (src.startsWith("/")) {
+                el.attr("src", path + src);
+              } else {
+                el.attr("src", path + redirectURI + "/" + src);
+              }
           }
           break;
       }
@@ -224,6 +221,11 @@ public class RouteController {
     return proxyUrl(proxy, request, entityID, ProxyExchange::post);
   }
 
+  @PutMapping("/proxy/{entityID}/**")
+  public ResponseEntity<?> proxyPut(@PathVariable("entityID") String entityID, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
+    return proxyUrl(proxy, request, entityID, ProxyExchange::post);
+  }
+
   @DeleteMapping("/proxy/{entityID}/**")
   public ResponseEntity<?> proxyDelete(@PathVariable("entityID") String entityID, HttpServletRequest request, ProxyExchange<byte[]> proxy) {
     return proxyUrl(proxy, request, entityID, ProxyExchange::delete);
@@ -258,9 +260,12 @@ public class RouteController {
     String redirectURI = "";
     if (response.getStatusCode().is3xxRedirection()) {
       URI locationURI = response.getHeaders().getLocation();
-      uri = new URI(uri.getScheme(), uri.getAuthority(), locationURI.getPath(), locationURI.getQuery(), locationURI.getFragment());
+      String redirectPath  = locationURI == null || "./".equals(locationURI.getPath()) ? "" : locationURI.getPath();
+      String query = locationURI == null ? "" : locationURI.getQuery();
+      String fragment = locationURI == null ? "" : locationURI.getFragment();
+      uri = new URI(uri.getScheme(), uri.getAuthority(), redirectPath, query, fragment);
       proxyExchange = proxy.uri(uri);
-      proxyExchange.sensitive("");
+      proxyExchange.excluded("");
       modifyHeaders(request, proxyExchange, uri, routeProxy);
       response = handler.apply(proxyExchange);
       if (request.getRequestURI().endsWith("proxy_index.html")) {

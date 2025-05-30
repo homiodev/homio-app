@@ -42,6 +42,7 @@ import org.homio.api.util.CommonUtils;
 import org.homio.api.util.Lang;
 import org.homio.app.config.cacheControl.CacheControl;
 import org.homio.app.config.cacheControl.CachePolicy;
+import org.homio.app.console.FileManagerConsolePlugin;
 import org.homio.app.js.assistant.impl.CodeParser;
 import org.homio.app.js.assistant.impl.ParserContext;
 import org.homio.app.js.assistant.model.Completion;
@@ -120,8 +121,10 @@ public class UtilsController {
 
     if (oneTimeRequest.maxRequests <= oneTimeRequest.requestedCount) {
       otaRequests.remove(requestId);
+      context.ui().console().refreshPluginContent(FileManagerConsolePlugin.NAME);
     } else if (oneTimeRequest.isLinkExpired()) {
       otaRequests.remove(requestId);
+      context.ui().console().refreshPluginContent(FileManagerConsolePlugin.NAME);
       response.setStatus(HttpServletResponse.SC_NOT_FOUND);
       return;
     }
