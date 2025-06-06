@@ -14,9 +14,6 @@ import java.util.Optional;
 @Getter
 @RequiredArgsConstructor
 public enum HomekitCharacteristicType {
-    /*
-     * It is illegal to have a characteristic type also be a device type
-     */
     EMPTY("Empty"), // used in case only accessory type but no characteristic provided
 
     ACTIVE("Active"),
@@ -59,7 +56,7 @@ public enum HomekitCharacteristicType {
     FIRMWARE_REVISION("FirmwareRevision"),
     HARDWARE_REVISION("HardwareRevision"),
     HEATING_THRESHOLD_TEMPERATURE("HeatingThresholdTemperature"),
-    WINDOW_HOLD_POSITION("HoldPosition"),
+    HOLD_POSITION("HoldPosition"),
     HUE("Hue"),
     IDENTIFIER("Identifier"),
     IDENTIFY("Identify"),

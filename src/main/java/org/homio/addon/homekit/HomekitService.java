@@ -10,9 +10,7 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.Context;
-import org.homio.api.ContextVar;
 import org.homio.api.service.EntityService;
-import org.homio.api.ui.dialog.DialogModel;
 import org.homio.app.manager.common.impl.ContextNetworkImpl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -152,12 +150,8 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
 
     public void addEndpoint(HomekitEndpointEntity endpoint) {
         endpoints.put(endpoint.getName(), endpoint);
-        var accessory = endpoint.createAccessory(this);
-        if (accessory.isLinkedServiceOnly()) {
-            /*log.warn("Item '{}' is a '{}' which must be nested another another accessory.", taggedItem.getName(),
-                    endpoint.getType());*/
-            return;
-        }
+        endpoint.setService(this);
+        var accessory = HomekitAccessoryFactory.create(endpoint.getAccessoryType(), endpoint);
         createdAccessories.put(endpoint.getName(), accessory);
         bridge.addAccessory(accessory);
         // TODO: we need to call this if we changed endpoint configuration
@@ -245,10 +239,6 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
         @Override
         public boolean userIsAdmin(String username) {
             return true;
-        }
-
-        public void clear() {
-
         }
     }
 }

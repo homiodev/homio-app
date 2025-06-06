@@ -12,7 +12,6 @@ import java.util.Optional;
 public enum HomekitAccessoryType {
     ACCESSORY_GROUP("AccessoryGroup"),
     DUMMY("Dummy"),
-
     AIR_QUALITY_SENSOR("AirQualitySensor"),
     BASIC_FAN("BasicFan"),
     BATTERY("Battery"),

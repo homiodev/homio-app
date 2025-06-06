@@ -16,15 +16,16 @@ import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.entity.HasTabEntities;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContractStub;
 import org.homio.api.entity.types.MiscEntity;
-import org.homio.api.entity.validation.MaxItems;
 import org.homio.api.model.Icon;
 import org.homio.api.model.endpoint.BaseDeviceEndpoint;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.service.EntityService;
 import org.homio.api.ui.UISidebarChildren;
-import org.homio.api.ui.field.*;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldPort;
+import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.api.ui.field.inline.UIFieldInlineEditEntities;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -119,13 +120,13 @@ public class HomekitEntity extends MiscEntity implements EntityService<HomekitSe
 
     @SneakyThrows
     private void regenerateQrCode() {
-        if(!getPin().isEmpty() && !getSetupId().isEmpty()) {
+        if (!getPin().isEmpty() && !getSetupId().isEmpty()) {
             setQrCode(HAPSetupCodeUtils.getSetupURI(getPin().replaceAll("-", ""), getSetupId(), 1));
             BitMatrix matrix = new MultiFormatWriter().encode(getQrCode(), BarcodeFormat.QR_CODE, 200, 200);
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             MatrixToImageWriter.writeToStream(matrix, "PNG", out);
             String qrImage = Base64.getEncoder().encodeToString(out.toByteArray());
-            setQrImage(qrImage);
+            setQrImage("data:image/png;base64," + qrImage);
         }
     }
 

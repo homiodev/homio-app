@@ -5,14 +5,9 @@ import io.github.hapjava.characteristics.CharacteristicEnum;
 import io.github.hapjava.characteristics.ExceptionalConsumer;
 import io.github.hapjava.characteristics.HomekitCharacteristicChangeCallback;
 import io.github.hapjava.characteristics.impl.accessoryinformation.*;
-import io.github.hapjava.characteristics.impl.airquality.OzoneDensityCharacteristic;
-import io.github.hapjava.characteristics.impl.airquality.PM10DensityCharacteristic;
-import io.github.hapjava.characteristics.impl.airquality.PM25DensityCharacteristic;
-import io.github.hapjava.characteristics.impl.airquality.VOCDensityCharacteristic;
+import io.github.hapjava.characteristics.impl.airquality.*;
 import io.github.hapjava.characteristics.impl.audio.MuteCharacteristic;
 import io.github.hapjava.characteristics.impl.audio.VolumeCharacteristic;
-import io.github.hapjava.characteristics.impl.battery.StatusLowBatteryCharacteristic;
-import io.github.hapjava.characteristics.impl.battery.StatusLowBatteryEnum;
 import io.github.hapjava.characteristics.impl.carbondioxidesensor.CarbonDioxideLevelCharacteristic;
 import io.github.hapjava.characteristics.impl.carbondioxidesensor.CarbonDioxidePeakLevelCharacteristic;
 import io.github.hapjava.characteristics.impl.carbonmonoxidesensor.CarbonMonoxideLevelCharacteristic;
@@ -25,7 +20,6 @@ import io.github.hapjava.characteristics.impl.garagedoor.CurrentDoorStateCharact
 import io.github.hapjava.characteristics.impl.garagedoor.CurrentDoorStateEnum;
 import io.github.hapjava.characteristics.impl.garagedoor.TargetDoorStateCharacteristic;
 import io.github.hapjava.characteristics.impl.garagedoor.TargetDoorStateEnum;
-import io.github.hapjava.characteristics.impl.humiditysensor.CurrentRelativeHumidityCharacteristic;
 import io.github.hapjava.characteristics.impl.humiditysensor.TargetRelativeHumidityCharacteristic;
 import io.github.hapjava.characteristics.impl.inputsource.*;
 import io.github.hapjava.characteristics.impl.lightbulb.BrightnessCharacteristic;
@@ -36,6 +30,9 @@ import io.github.hapjava.characteristics.impl.lock.LockCurrentStateCharacteristi
 import io.github.hapjava.characteristics.impl.lock.LockCurrentStateEnum;
 import io.github.hapjava.characteristics.impl.lock.LockTargetStateCharacteristic;
 import io.github.hapjava.characteristics.impl.lock.LockTargetStateEnum;
+import io.github.hapjava.characteristics.impl.motionsensor.MotionDetectedCharacteristic;
+import io.github.hapjava.characteristics.impl.occupancysensor.OccupancyDetectedCharacteristic;
+import io.github.hapjava.characteristics.impl.occupancysensor.OccupancyDetectedEnum;
 import io.github.hapjava.characteristics.impl.slat.CurrentTiltAngleCharacteristic;
 import io.github.hapjava.characteristics.impl.slat.TargetTiltAngleCharacteristic;
 import io.github.hapjava.characteristics.impl.television.*;
@@ -45,1391 +42,943 @@ import io.github.hapjava.characteristics.impl.televisionspeaker.VolumeSelectorCh
 import io.github.hapjava.characteristics.impl.televisionspeaker.VolumeSelectorEnum;
 import io.github.hapjava.characteristics.impl.thermostat.*;
 import io.github.hapjava.characteristics.impl.valve.RemainingDurationCharacteristic;
-import io.github.hapjava.characteristics.impl.valve.SetDurationCharacteristic;
 import io.github.hapjava.characteristics.impl.windowcovering.*;
 import lombok.extern.log4j.Log4j2;
+import org.homio.addon.homekit.enums.HomekitAccessoryType;
 import org.homio.addon.homekit.enums.HomekitCharacteristicType;
 import org.homio.api.ContextVar;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
-import org.homio.api.state.State;
 import org.homio.api.state.StringType;
 import org.jetbrains.annotations.Nullable;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.homio.addon.homekit.enums.HomekitAccessoryType.*;
 import static org.homio.addon.homekit.enums.HomekitCharacteristicType.*;
 
-/**
- * Creates an optional characteristics .
- *
- * @author Eugen Freiter - Initial contribution
- */
 @Log4j2
 public class HomekitCharacteristicFactory {
-    // These values represent ranges that do not match the defaults that are part of
-    // the HAP specification/the defaults in HAP-Java, but nonetheless are commonly
-    // encountered in consumer-grade devices. So we define our own default min/max so
-    // that users don't have to override the default unnecessarily.
 
-    // HAP default is 50-400 mired/2500-20,000 K. These numbers represent
-    // the warmest and coolest bulbs I could reasonably find at general
-    // purpose retailers.
-    public static final int COLOR_TEMPERATURE_MIN_MIREDS = 107; // 9300 K
-    public static final int COLOR_TEMPERATURE_MAX_MIREDS = 556; // 1800 K
-    // HAP default is 0 °C, but it's very common for outdoor temperatures and/or
-    // refrigation devices to go below freezing.
-    // Lowest recorded temperature on Earth is -89.2 °C. This is just a nice round number.
+    public static final int COLOR_TEMPERATURE_MIN_MIREDS = 107; // ~9300 K
+    public static final int COLOR_TEMPERATURE_MAX_MIREDS = 556; // ~1800 K
     public static final int CURRENT_TEMPERATURE_MIN_CELSIUS = -100;
-    // HAP default is 0.0001 lx, but this is commonly rounded to 0 by many devices
-    public static final int CURRENT_AMBIENT_LIGHT_LEVEL_MIN_LUX = 0;
-    // HAP default is 100k
-    // https://en.wikipedia.org/wiki/Daylight#Intensity_in_different_conditions
-    public static final int CURRENT_AMBIENT_LIGHT_LEVEL_MAX_LUX = 120000;
 
-    // List of optional characteristics and corresponding method o create them.
-    private static final Map<HomekitCharacteristicType, Function<HomekitEndpointEntity, Characteristic>> OPTIONAL = new HashMap<>() {
+    public static final Map<HomekitAccessoryType, HomekitCharacteristicType[]> MANDATORY_CHARACTERISTICS = new HashMap<>() {
         {
-            //   put(ACTIVE, HomekitCharacteristicFactory::createActiveCharacteristic);
-            // put(ACTIVE_IDENTIFIER, HomekitCharacteristicFactory::createActiveIdentifierCharacteristic);
-            put(ACTIVE_STATUS, HomekitCharacteristicFactory::createStatusActiveCharacteristic);
-            put(BATTERY_LOW_STATUS, HomekitCharacteristicFactory::createStatusLowBatteryCharacteristic);
+            put(ACCESSORY_GROUP, new HomekitCharacteristicType[]{});
+            put(AIR_QUALITY_SENSOR, new HomekitCharacteristicType[]{AIR_QUALITY});
+            put(BASIC_FAN, new HomekitCharacteristicType[]{ON_STATE});
+            put(BATTERY, new HomekitCharacteristicType[]{BATTERY_LEVEL, BATTERY_LOW_STATUS});
+            put(CARBON_DIOXIDE_SENSOR, new HomekitCharacteristicType[]{CARBON_DIOXIDE_DETECTED_STATE});
+            put(CARBON_MONOXIDE_SENSOR, new HomekitCharacteristicType[]{CARBON_MONOXIDE_DETECTED_STATE});
+            put(CONTACT_SENSOR, new HomekitCharacteristicType[]{CONTACT_SENSOR_STATE});
+            put(DOOR, new HomekitCharacteristicType[]{CURRENT_POSITION, TARGET_POSITION, POSITION_STATE});
+            put(DOORBELL, new HomekitCharacteristicType[]{PROGRAMMABLE_SWITCH_EVENT});
+            put(FAN, new HomekitCharacteristicType[]{ACTIVE_STATUS});
+            put(FAUCET, new HomekitCharacteristicType[]{ACTIVE_STATUS});
+            put(FILTER_MAINTENANCE, new HomekitCharacteristicType[]{FILTER_CHANGE_INDICATION});
+            put(GARAGE_DOOR_OPENER, new HomekitCharacteristicType[]{CURRENT_DOOR_STATE, TARGET_DOOR_STATE});
+            put(HEATER_COOLER, new HomekitCharacteristicType[]{ACTIVE_STATUS, CURRENT_HEATER_COOLER_STATE,
+                    TARGET_HEATER_COOLER_STATE, CURRENT_TEMPERATURE});
+            put(HUMIDITY_SENSOR, new HomekitCharacteristicType[]{RELATIVE_HUMIDITY});
+            put(INPUT_SOURCE, new HomekitCharacteristicType[]{});
+            put(IRRIGATION_SYSTEM, new HomekitCharacteristicType[]{ACTIVE, INUSE_STATUS, PROGRAM_MODE});
+            put(LEAK_SENSOR, new HomekitCharacteristicType[]{LEAK_DETECTED_STATE});
+            put(LIGHT_SENSOR, new HomekitCharacteristicType[]{LIGHT_LEVEL});
+            put(LIGHTBULB, new HomekitCharacteristicType[]{ON_STATE});
+            put(LOCK, new HomekitCharacteristicType[]{LOCK_CURRENT_STATE, LOCK_TARGET_STATE});
+            put(MICROPHONE, new HomekitCharacteristicType[]{MUTE});
+            put(MOTION_SENSOR, new HomekitCharacteristicType[]{MOTION_DETECTED_STATE});
+            put(OCCUPANCY_SENSOR, new HomekitCharacteristicType[]{OCCUPANCY_DETECTED_STATE});
+            put(OUTLET, new HomekitCharacteristicType[]{ON_STATE, INUSE_STATUS});
+            put(SECURITY_SYSTEM,
+                    new HomekitCharacteristicType[]{SECURITY_SYSTEM_CURRENT_STATE, SECURITY_SYSTEM_TARGET_STATE});
+            put(SMART_SPEAKER, new HomekitCharacteristicType[]{CURRENT_MEDIA_STATE, TARGET_MEDIA_STATE});
+            put(SMOKE_SENSOR, new HomekitCharacteristicType[]{SMOKE_DETECTED_STATE});
+            put(SLAT, new HomekitCharacteristicType[]{CURRENT_SLAT_STATE});
+            put(SPEAKER, new HomekitCharacteristicType[]{MUTE});
+            put(STATELESS_PROGRAMMABLE_SWITCH, new HomekitCharacteristicType[]{PROGRAMMABLE_SWITCH_EVENT});
+            put(SWITCH, new HomekitCharacteristicType[]{ON_STATE});
+            put(TELEVISION, new HomekitCharacteristicType[]{ACTIVE});
+            put(TELEVISION_SPEAKER, new HomekitCharacteristicType[]{MUTE});
+            put(TEMPERATURE_SENSOR, new HomekitCharacteristicType[]{CURRENT_TEMPERATURE});
+            put(THERMOSTAT, new HomekitCharacteristicType[]{TARGET_HEATING_COOLING_STATE, CURRENT_TEMPERATURE});
+            put(VALVE, new HomekitCharacteristicType[]{ACTIVE_STATUS, INUSE_STATUS});
+            put(WINDOW, new HomekitCharacteristicType[]{CURRENT_POSITION, TARGET_POSITION, POSITION_STATE});
+            put(WINDOW_COVERING, new HomekitCharacteristicType[]{TARGET_POSITION, CURRENT_POSITION, POSITION_STATE});
+        }
+    };
+
+    private static final Map<HomekitCharacteristicType, Function<HomekitEndpointEntity, Characteristic>> OPTIONAL_CHARACTERISTICS = new HashMap<>() {
+        {
+            // Accessory Information Service
+            put(MANUFACTURER, HomekitCharacteristicFactory::createManufacturerCharacteristic);
+            put(MODEL, HomekitCharacteristicFactory::createModelCharacteristic);
+            put(SERIAL_NUMBER, HomekitCharacteristicFactory::createSerialNumberCharacteristic);
+            put(FIRMWARE_REVISION, HomekitCharacteristicFactory::createFirmwareRevisionCharacteristic);
+            put(HARDWARE_REVISION, HomekitCharacteristicFactory::createHardwareRevisionCharacteristic);
+            put(IDENTIFY, HomekitCharacteristicFactory::createIdentifyCharacteristic);
+            put(NAME, HomekitCharacteristicFactory::createNameCharacteristic);
+
+            // Common Binary States
+            put(ON_STATE, HomekitCharacteristicFactory::createOnStateCharacteristic);
+            put(ACTIVE, HomekitCharacteristicFactory::createActiveCharacteristic);
+            put(MUTE, HomekitCharacteristicFactory::createMuteCharacteristic);
+            put(OBSTRUCTION_STATUS, HomekitCharacteristicFactory::createObstructionDetectedCharacteristic);
+
+            // Common Sensor Detected States
+            put(MOTION_DETECTED_STATE, HomekitCharacteristicFactory::createMotionDetectedCharacteristic);
+            put(OCCUPANCY_DETECTED_STATE, HomekitCharacteristicFactory::createOccupancyDetectedCharacteristic);
+
+            // Lightbulb Specific
             put(BRIGHTNESS, HomekitCharacteristicFactory::createBrightnessCharacteristic);
+            put(HUE, HomekitCharacteristicFactory::createHueCharacteristic);
+            put(SATURATION, HomekitCharacteristicFactory::createSaturationCharacteristic);
+            put(COLOR_TEMPERATURE, HomekitCharacteristicFactory::createColorTemperatureCharacteristic);
+
+            // Temperature & Climate
+            put(CURRENT_TEMPERATURE, HomekitCharacteristicFactory::createCurrentTemperatureCharacteristic);
+            put(TARGET_TEMPERATURE, HomekitCharacteristicFactory::createTargetTemperatureCharacteristic);
+            put(CURRENT_HEATING_COOLING_STATE, HomekitCharacteristicFactory::createCurrentHeatingCoolingStateCharacteristic);
+            put(TARGET_HEATING_COOLING_STATE, HomekitCharacteristicFactory::createTargetHeatingCoolingStateCharacteristic);
+            put(COOLING_THRESHOLD_TEMPERATURE, HomekitCharacteristicFactory::createCoolingThresholdTemperatureCharacteristic);
+            put(HEATING_THRESHOLD_TEMPERATURE, HomekitCharacteristicFactory::createHeatingThresholdTemperatureCharacteristic);
+            put(TARGET_RELATIVE_HUMIDITY, HomekitCharacteristicFactory::createTargetRelativeHumidityCharacteristic);
+
+            // Lock
+            put(LOCK_CURRENT_STATE, HomekitCharacteristicFactory::createLockCurrentStateCharacteristic);
+            put(LOCK_TARGET_STATE, HomekitCharacteristicFactory::createLockTargetStateCharacteristic);
+
+            // Window Covering & Slats
+            put(HOLD_POSITION, HomekitCharacteristicFactory::createHoldPositionCharacteristic);
+            put(CURRENT_HORIZONTAL_TILT_ANGLE, HomekitCharacteristicFactory::createCurrentHorizontalTiltAngleCharacteristic);
+            put(TARGET_HORIZONTAL_TILT_ANGLE, HomekitCharacteristicFactory::createTargetHorizontalTiltAngleCharacteristic);
+            put(CURRENT_VERTICAL_TILT_ANGLE, HomekitCharacteristicFactory::createCurrentVerticalTiltAngleCharacteristic);
+            put(TARGET_VERTICAL_TILT_ANGLE, HomekitCharacteristicFactory::createTargetVerticalTiltAngleCharacteristic);
+            put(CURRENT_TILT_ANGLE, HomekitCharacteristicFactory::createCurrentTiltAngleCharacteristic);
+            put(TARGET_TILT_ANGLE, HomekitCharacteristicFactory::createTargetTiltAngleCharacteristic);
+
+            // Garage Door Opener
+            put(CURRENT_DOOR_STATE, HomekitCharacteristicFactory::createCurrentDoorStateCharacteristic);
+            put(TARGET_DOOR_STATE, HomekitCharacteristicFactory::createTargetDoorStateCharacteristic);
+
+            // Fan
+            put(CURRENT_FAN_STATE, HomekitCharacteristicFactory::createCurrentFanStateCharacteristic);
+            put(TARGET_FAN_STATE, HomekitCharacteristicFactory::createTargetFanStateCharacteristic);
+            put(ROTATION_DIRECTION, HomekitCharacteristicFactory::createRotationDirectionCharacteristic);
+            put(ROTATION_SPEED, HomekitCharacteristicFactory::createRotationSpeedCharacteristic);
+            put(SWING_MODE, HomekitCharacteristicFactory::createSwingModeCharacteristic);
+
+            // Air Quality Sensor
+            put(AIR_QUALITY, HomekitCharacteristicFactory::createAirQualityCharacteristic);
+            put(OZONE_DENSITY, HomekitCharacteristicFactory::createOzoneDensityCharacteristic);
+            put(NITROGEN_DIOXIDE_DENSITY, HomekitCharacteristicFactory::createNitrogenDioxideDensityCharacteristic);
+            put(SULPHUR_DIOXIDE_DENSITY, HomekitCharacteristicFactory::createSulphurDioxideDensityCharacteristic);
+            put(PM25_DENSITY, HomekitCharacteristicFactory::createPM25DensityCharacteristic);
+            put(PM10_DENSITY, HomekitCharacteristicFactory::createPM10DensityCharacteristic);
+            put(VOC_DENSITY, HomekitCharacteristicFactory::createVOCDensityCharacteristic);
+
+            // Carbon Dioxide / Monoxide Sensors
             put(CARBON_DIOXIDE_LEVEL, HomekitCharacteristicFactory::createCarbonDioxideLevelCharacteristic);
             put(CARBON_DIOXIDE_PEAK_LEVEL, HomekitCharacteristicFactory::createCarbonDioxidePeakLevelCharacteristic);
             put(CARBON_MONOXIDE_LEVEL, HomekitCharacteristicFactory::createCarbonMonoxideLevelCharacteristic);
             put(CARBON_MONOXIDE_PEAK_LEVEL, HomekitCharacteristicFactory::createCarbonMonoxidePeakLevelCharacteristic);
-            put(CLOSED_CAPTIONS, HomekitCharacteristicFactory::createClosedCaptionsCharacteristic);
-            put(COLOR_TEMPERATURE, HomekitCharacteristicFactory::createColorTemperatureCharacteristic);
-            put(CONFIGURED, HomekitCharacteristicFactory::createIsConfiguredCharacteristic);
-            //put(CONFIGURED_NAME, HomekitCharacteristicFactory::createConfiguredNameCharacteristic);
-            put(COOLING_THRESHOLD_TEMPERATURE, HomekitCharacteristicFactory::createCoolingThresholdCharacteristic);
-            put(CURRENT_DOOR_STATE, HomekitCharacteristicFactory::createCurrentDoorStateCharacteristic);
-            put(CURRENT_HEATING_COOLING_STATE,
-                    HomekitCharacteristicFactory::createCurrentHeatingCoolingStateCharacteristic);
-            put(CURRENT_FAN_STATE, HomekitCharacteristicFactory::createCurrentFanStateCharacteristic);
-            put(CURRENT_HORIZONTAL_TILT_ANGLE,
-                    HomekitCharacteristicFactory::createCurrentHorizontalTiltAngleCharacteristic);
-            put(CURRENT_MEDIA_STATE, HomekitCharacteristicFactory::createCurrentMediaStateCharacteristic);
-            put(CURRENT_TILT_ANGLE, HomekitCharacteristicFactory::createCurrentTiltAngleCharacteristic);
-            put(CURRENT_VERTICAL_TILT_ANGLE,
-                    HomekitCharacteristicFactory::createCurrentVerticalTiltAngleCharacteristic);
-            put(CURRENT_VISIBILITY, HomekitCharacteristicFactory::createCurrentVisibilityStateCharacteristic);
-            put(CURRENT_TEMPERATURE, HomekitCharacteristicFactory::createCurrentTemperatureCharacteristic);
-            put(DURATION, HomekitCharacteristicFactory::createDurationCharacteristic);
-            put(FAULT_STATUS, HomekitCharacteristicFactory::createStatusFaultCharacteristic);
-            put(FIRMWARE_REVISION, HomekitCharacteristicFactory::createFirmwareRevisionCharacteristic);
+
+            // Filter Maintenance
             put(FILTER_LIFE_LEVEL, HomekitCharacteristicFactory::createFilterLifeLevelCharacteristic);
-            put(FILTER_RESET_INDICATION, HomekitCharacteristicFactory::createFilterResetCharacteristic);
-            put(HARDWARE_REVISION, HomekitCharacteristicFactory::createHardwareRevisionCharacteristic);
-            put(HEATING_THRESHOLD_TEMPERATURE, HomekitCharacteristicFactory::createHeatingThresholdCharacteristic);
-            put(WINDOW_HOLD_POSITION, HomekitCharacteristicFactory::createWindowHoldPositionCharacteristic);
-            put(HUE, HomekitCharacteristicFactory::createHueCharacteristic);
-            put(IDENTIFIER, HomekitCharacteristicFactory::createIdentifierCharacteristic);
-            // put(IDENTIFY, HomekitCharacteristicFactory::createIdentifyCharacteristic);
-            put(INPUT_DEVICE_TYPE, HomekitCharacteristicFactory::createInputDeviceTypeCharacteristic);
-            put(INPUT_SOURCE_TYPE, HomekitCharacteristicFactory::createInputSourceTypeCharacteristic);
-            put(LOCK_CONTROL, HomekitCharacteristicFactory::createLockPhysicalControlsCharacteristic);
-            put(LOCK_CURRENT_STATE, HomekitCharacteristicFactory::createLockCurrentStateCharacteristic);
-            put(LOCK_TARGET_STATE, HomekitCharacteristicFactory::createLockTargetStateCharacteristic);
-            put(MANUFACTURER, HomekitCharacteristicFactory::createManufacturerCharacteristic);
-            put(MODEL, HomekitCharacteristicFactory::createModelCharacteristic);
-            put(MUTE, HomekitCharacteristicFactory::createMuteCharacteristic);
-            put(NAME, HomekitCharacteristicFactory::createNameCharacteristic);
-            // put(NITROGEN_DIOXIDE_DENSITY, HomekitCharacteristicFactory::createNitrogenDioxideDensityCharacteristic);
-            put(OBSTRUCTION_STATUS, HomekitCharacteristicFactory::createObstructionDetectedCharacteristic);
-            put(OZONE_DENSITY, HomekitCharacteristicFactory::createOzoneDensityCharacteristic);
-            put(PICTURE_MODE, HomekitCharacteristicFactory::createPictureModeCharacteristic);
-            put(PM10_DENSITY, HomekitCharacteristicFactory::createPM10DensityCharacteristic);
-            put(PM25_DENSITY, HomekitCharacteristicFactory::createPM25DensityCharacteristic);
-            put(POWER_MODE, HomekitCharacteristicFactory::createPowerModeCharacteristic);
-            put(PROGRAMMABLE_SWITCH_EVENT, HomekitCharacteristicFactory::createProgrammableSwitchEventCharacteristic);
+            put(FILTER_RESET_INDICATION, HomekitCharacteristicFactory::createFilterResetIndicationCharacteristic);
+
+            // Irrigation System / Valve
             put(REMAINING_DURATION, HomekitCharacteristicFactory::createRemainingDurationCharacteristic);
-            put(REMOTE_KEY, HomekitCharacteristicFactory::createRemoteKeyCharacteristic);
-            put(RELATIVE_HUMIDITY, HomekitCharacteristicFactory::createRelativeHumidityCharacteristic);
-            put(ROTATION_DIRECTION, HomekitCharacteristicFactory::createRotationDirectionCharacteristic);
-            put(ROTATION_SPEED, HomekitCharacteristicFactory::createRotationSpeedCharacteristic);
-            put(SATURATION, HomekitCharacteristicFactory::createSaturationCharacteristic);
-            put(SERIAL_NUMBER, HomekitCharacteristicFactory::createSerialNumberCharacteristic);
-            put(SLEEP_DISCOVERY_MODE, HomekitCharacteristicFactory::createSleepDiscoveryModeCharacteristic);
-            // put(SULPHUR_DIOXIDE_DENSITY, HomekitCharacteristicFactory::createSulphurDioxideDensityCharacteristic);
-            put(SWING_MODE, HomekitCharacteristicFactory::createSwingModeCharacteristic);
-            put(TAMPERED_STATUS, HomekitCharacteristicFactory::createStatusTamperedCharacteristic);
-            put(TARGET_DOOR_STATE, HomekitCharacteristicFactory::createTargetDoorStateCharacteristic);
-            put(TARGET_FAN_STATE, HomekitCharacteristicFactory::createTargetFanStateCharacteristic);
-            put(TARGET_HEATING_COOLING_STATE,
-                    HomekitCharacteristicFactory::createTargetHeatingCoolingStateCharacteristic);
-            put(TARGET_HORIZONTAL_TILT_ANGLE,
-                    HomekitCharacteristicFactory::createTargetHorizontalTiltAngleCharacteristic);
-            put(TARGET_MEDIA_STATE, HomekitCharacteristicFactory::createTargetMediaStateCharacteristic);
-            put(TARGET_RELATIVE_HUMIDITY, HomekitCharacteristicFactory::createTargetRelativeHumidityCharacteristic);
-            put(TARGET_TEMPERATURE, HomekitCharacteristicFactory::createTargetTemperatureCharacteristic);
-            put(TARGET_TILT_ANGLE, HomekitCharacteristicFactory::createTargetTiltAngleCharacteristic);
-            put(TARGET_VERTICAL_TILT_ANGLE, HomekitCharacteristicFactory::createTargetVerticalTiltAngleCharacteristic);
-            put(TARGET_VISIBILITY_STATE, HomekitCharacteristicFactory::createTargetVisibilityStateCharacteristic);
-            put(TEMPERATURE_UNIT, HomekitCharacteristicFactory::createTemperatureDisplayUnitCharacteristic);
-            put(VOC_DENSITY, HomekitCharacteristicFactory::createVOCDensityCharacteristic);
+
+            // Smart Speaker / Speaker / Television Speaker
             put(VOLUME, HomekitCharacteristicFactory::createVolumeCharacteristic);
+            put(CURRENT_MEDIA_STATE, HomekitCharacteristicFactory::createCurrentMediaStateCharacteristic);
+            put(TARGET_MEDIA_STATE, HomekitCharacteristicFactory::createTargetMediaStateCharacteristic);
             put(VOLUME_CONTROL_TYPE, HomekitCharacteristicFactory::createVolumeControlTypeCharacteristic);
             put(VOLUME_SELECTOR, HomekitCharacteristicFactory::createVolumeSelectorCharacteristic);
+
+            // Stateless Programmable Switch / Doorbell
+            put(PROGRAMMABLE_SWITCH_EVENT, HomekitCharacteristicFactory::createProgrammableSwitchEventCharacteristic);
+
+            // Television & Input Source
+            put(ACTIVE_IDENTIFIER, HomekitCharacteristicFactory::createActiveIdentifierCharacteristic);
+            put(CONFIGURED_NAME, HomekitCharacteristicFactory::createConfiguredNameCharacteristic);
+            put(INPUT_DEVICE_TYPE, HomekitCharacteristicFactory::createInputDeviceTypeCharacteristic);
+            put(INPUT_SOURCE_TYPE, HomekitCharacteristicFactory::createInputSourceTypeCharacteristic);
+            put(TARGET_VISIBILITY_STATE, HomekitCharacteristicFactory::createTargetVisibilityStateCharacteristic);
+            put(SLEEP_DISCOVERY_MODE, HomekitCharacteristicFactory::createSleepDiscoveryModeCharacteristic);
+            put(REMOTE_KEY, HomekitCharacteristicFactory::createRemoteKeyCharacteristic);
+            put(POWER_MODE, HomekitCharacteristicFactory::createPowerModeCharacteristic);
+            put(PICTURE_MODE, HomekitCharacteristicFactory::createPictureModeCharacteristic);
+            put(CLOSED_CAPTIONS, HomekitCharacteristicFactory::createClosedCaptionsCharacteristic);
         }
     };
 
-    /**
-     * Create an EnumMap for a particular CharacteristicEnum.
-     * <p>
-     * By default, the map will simply be from the Enum value to the string version of its value.
-     * If the item is a Number item, though, the values will the be underlying integer code
-     * for the item, as a String.
-     * Then the item's metadata will be inspected, applying any custom mappings.
-     * Finally, if customEnumList is supplied, it will be filled out with those mappings
-     * that are actually referenced in the metadata.
-     *
-     * @param klazz          The HAP-Java Enum for the characteristic.
-     * @param customEnumList Optional output list of which enums are explicitly mentioned.
-     * @param inverted       Default-invert the 0/1 values of the HAP enum when linked to a Switch or Contact item.
-     *                       This is set by the addon when creating mappings for specific characteristics where the 0 and 1
-     *                       values for the enum do not map naturally to 0/OFF/CLOSED and 1/ON/OPEN of openHAB items.
-     *                       Note that this is separate from the inverted item-level metadata configuration, which can be
-     *                       thought of independently as applying on top of this setting. It essentially "multiplies" out,
-     *                       but can also be thought of as simply swapping whichever value OFF/CLOSED and ON/OPEN are
-     *                       associated with, which has already been set.
-     */
-    public static <T extends Enum<T> & CharacteristicEnum> Map<T, Object> createMapping(
-            HomekitEndpointEntity item,
-            ContextVar.Variable variable,
-            Class<T> klazz,
-            @Nullable List<T> customEnumList,
-            boolean inverted) {
-        EnumMap<T, Object> map = new EnumMap<>(klazz);
-
-        // var dataTypes = item.getBaseItem().getAcceptedDataTypes();
-        boolean switchType = true; //dataTypes.contains(OnOffType.class);
-        boolean contactType = false; //dataTypes.contains(OpenClosedType.class);
-        boolean percentType = false; //dataTypes.contains(PercentType.class);
-        boolean numberType = false; //dataTypes.contains(DecimalType.class) || percentType || switchType || contactType;
-
-        //if (item.isInverted()) {
-        //   inverted = !inverted;
-        // }
-        String onValue = switchType ? OnOffType.ON.toString() : "OPEN";
-        String offValue = switchType ? OnOffType.OFF.toString() : "CLOSED";
-        @Nullable
-        T offEnumValue = null, onEnumValue = null;
-
-        //var configuration = item.getConfiguration();
-        boolean configurationDefinesEnumValues = false;
-        /*if (configuration != null && !configuration.isEmpty()) {
-            for (var k : klazz.getEnumConstants()) {
-                if (configuration.containsKey(k.toString())) {
-                    configurationDefinesEnumValues = true;
-                    break;
-                }
+    public static List<Characteristic> buildRequiredCharacteristics(HomekitEndpointEntity endpoint) {
+        List<Characteristic> characteristics = new ArrayList<>();
+        var types = MANDATORY_CHARACTERISTICS.get(endpoint.getAccessoryType());
+        if (types != null) {
+            for (HomekitCharacteristicType type : types) {
+                characteristics.add(OPTIONAL_CHARACTERISTICS.get(type).apply(endpoint));
             }
-        }*/
+        }
+        return characteristics;
+    }
 
-        for (var k : klazz.getEnumConstants()) {
-            if (numberType) {
-                int code = k.getCode();
-                if ((switchType || contactType) && code == 0 && !configurationDefinesEnumValues) {
-                    map.put(k, inverted ? onValue : offValue);
-                    offEnumValue = k;
-                } else if ((switchType || contactType) && code == 1 && !configurationDefinesEnumValues) {
-                    map.put(k, inverted ? offValue : onValue);
-                    onEnumValue = k;
-                } else if (percentType && code == 0) {
-                    map.put(k, "OFF");
-                } else if (percentType && code == 1) {
-                    map.put(k, "ON");
+    public static List<Characteristic> buildOptionalCharacteristics(HomekitEndpointEntity endpoint) {
+        List<Characteristic> characteristics = new ArrayList<>();
+        addIfNotNull(characteristics, createManufacturerCharacteristic(endpoint));
+        addIfNotNull(characteristics, createModelCharacteristic(endpoint));
+        addIfNotNull(characteristics, createSerialNumberCharacteristic(endpoint));
+        addIfNotNull(characteristics, createFirmwareRevisionCharacteristic(endpoint));
+        addIfNotNull(characteristics, createHardwareRevisionCharacteristic(endpoint));
+        addIfNotNull(characteristics, createIdentifyCharacteristic(endpoint));
+        addIfNotNull(characteristics, createNameCharacteristic(endpoint));
+
+        for (Map.Entry<HomekitCharacteristicType, Function<HomekitEndpointEntity, Characteristic>> entry : OPTIONAL_CHARACTERISTICS.entrySet()) {
+            HomekitCharacteristicType charType = entry.getKey();
+            if (isAccessoryInfoType(charType)) {
+                continue;
+            }
+            try {
+                Characteristic characteristic = entry.getValue().apply(endpoint);
+                addIfNotNull(characteristics, characteristic);
+            } catch (Exception e) {
+                log.error("Error creating characteristic {} for endpoint {} [{}]: {}",
+                        charType, endpoint.getName(), endpoint.getEntityID(), e.getMessage(), e);
+            }
+        }
+        return characteristics;
+    }
+
+    private static void addIfNotNull(List<Characteristic> list, @Nullable Characteristic c) {
+        if (c != null) {
+            list.add(c);
+        }
+    }
+
+    private static boolean isAccessoryInfoType(HomekitCharacteristicType type) {
+        return type == MANUFACTURER || type == MODEL || type == SERIAL_NUMBER ||
+               type == FIRMWARE_REVISION || type == HARDWARE_REVISION || type == NAME || type == IDENTIFY;
+    }
+
+    public static <T extends Enum<T> & CharacteristicEnum> Map<T, Object> createMapping(
+            @Nullable ContextVar.Variable variable, Class<T> klazz,
+            @Nullable List<T> customEnumList, boolean invertedDefault) {
+        EnumMap<T, Object> map = new EnumMap<>(klazz);
+        if (variable == null) {
+            for (var k : klazz.getEnumConstants()) map.put(k, Integer.toString(k.getCode()));
+            if (customEnumList != null) customEnumList.addAll(map.keySet());
+            return map;
+        }
+        boolean isHomioSwitchLike = variable instanceof OnOffType;
+        boolean isHomioNumeric = variable instanceof DecimalType;
+        boolean itemSpecificInversion = false; // variable.getJsonData("inverted", false);
+        boolean finalInversion = invertedDefault ^ itemSpecificInversion;
+        String onValue = OnOffType.ON.toString();
+        String offValue = OnOffType.OFF.toString();
+        T mappedOffEnumValue = null, mappedOnEnumValue = null;
+
+        for (T k : klazz.getEnumConstants()) {
+            int code = k.getCode();
+            if (isHomioSwitchLike) {
+                if (code == 0) {
+                    map.put(k, finalInversion ? onValue : offValue);
+                    mappedOffEnumValue = k;
+                } else if (code == 1) {
+                    map.put(k, finalInversion ? offValue : onValue);
+                    mappedOnEnumValue = k;
                 } else {
                     map.put(k, Integer.toString(code));
                 }
+            } else if (isHomioNumeric) {
+                map.put(k, Integer.toString(code));
             } else {
                 map.put(k, k.toString());
             }
         }
-        /*if (configuration != null && !configuration.isEmpty()) {
-            map.forEach((k, current_value) -> {
-                Object newValue = configuration.get(k.toString());
-                if (newValue instanceof String || newValue instanceof Number || newValue instanceof List) {
-                    if (newValue instanceof Number) {
-                        newValue = newValue.toString();
-                    } else if (newValue instanceof List listValue) {
-                        newValue = listValue.stream().map(v -> {
-                            // they probably put "NULL" in the YAML in MainUI;
-                            // and they meant it as a string to match the UnDefType.NULL
-                            if (v == null) {
-                                return "NULL";
-                            } else {
-                                return v.toString();
-                            }
-                        }).collect(Collectors.toList());
-                    }
-                    map.put(k, Objects.requireNonNull(newValue));
-                    if (customEnumList != null) {
-                        customEnumList.add(k);
-                    }
-                }
-            });
-        }*/
         if (customEnumList != null && customEnumList.isEmpty()) {
-            if (switchType || contactType) {
-                // Switches and Contacts automatically filter the valid values to the first two
-                customEnumList.add(Objects.requireNonNull(offEnumValue));
-                customEnumList.add(Objects.requireNonNull(onEnumValue));
+            if (isHomioSwitchLike && mappedOffEnumValue != null && mappedOnEnumValue != null) {
+                customEnumList.add(mappedOffEnumValue);
+                customEnumList.add(mappedOnEnumValue);
             } else {
                 customEnumList.addAll(map.keySet());
             }
         }
-        /*log.debug("Created {} mapping for item {} ({}): {}", klazz.getSimpleName(), item.getName(),
-                item.getBaseItem().getClass().getSimpleName(), map);*/
         return map;
     }
 
-    public static <T extends Enum<T> & CharacteristicEnum> Map<T, Object> createMapping(
-            HomekitEndpointEntity item,
-            ContextVar.Variable variable,
-            Class<T> klazz) {
-        return createMapping(item, variable, klazz, null, false);
+    public static <T extends Enum<T> & CharacteristicEnum> Map<T, Object> createMapping(@Nullable ContextVar.Variable v, Class<T> k) {
+        return createMapping(v, k, null, false);
     }
 
-    public static <T extends Enum<T> & CharacteristicEnum> Map<T, Object> createMapping(
-            HomekitEndpointEntity item,
-            ContextVar.Variable variable,
-            Class<T> klazz, @Nullable List<T> customEnumList) {
-        return createMapping(item, variable, klazz, customEnumList, false);
+    public static <T extends Enum<T> & CharacteristicEnum> Map<T, Object> createMapping(@Nullable ContextVar.Variable v, Class<T> k, @Nullable List<T> l) {
+        return createMapping(v, k, l, false);
     }
 
-    public static <T extends Enum<T> & CharacteristicEnum> Map<T, Object> createMapping(
-            HomekitEndpointEntity item,
-            ContextVar.Variable variable,
-            Class<T> klazz, boolean inverted) {
-        return createMapping(item, variable, klazz, null, inverted);
+    public static <T extends Enum<T> & CharacteristicEnum> Map<T, Object> createMapping(@Nullable ContextVar.Variable v, Class<T> k, boolean i) {
+        return createMapping(v, k, null, i);
     }
 
-    /**
-     * Takes item state as value and retrieves the key for that value from mapping.
-     * E.g. used to map StringItem value to HomeKit Enum
-     *
-     * @param item         item
-     * @param mapping      mapping
-     * @param defaultValue default value if nothing found in mapping
-     * @param <T>          type of the result derived from
-     * @return key for the value
-     */
-    public static <T> T getKeyFromMapping(HomekitEndpointEntity item, State state, Map<T, Object> mapping, T defaultValue) {
-        /*log.trace("getKeyFromMapping: characteristic {}, state {}, mapping {}", item.getAccessoryType().getTag(),
-                state, mapping);*/
-
-        String value;
-        /*if (state instanceof UnDefType) {
-            return defaultValue;
-        } else */
-        if (state instanceof StringType || state instanceof OnOffType) {
-            value = state.toString();
-        } /*else if (state.getClass().equals(PercentType.class)) {
-            // We specifically want PercentType, but _not_ HSBType, so don't use instanceof
-            value = state.as(OnOffType.class).toString();
-        } */ else if (state.getClass().equals(DecimalType.class)) {
-            // We specifically want DecimalType, but _not_ PercentType or HSBType, so don't use instanceof
-            value = Integer.toString(((DecimalType) state).intValue());
-        } else {
-            /*log.warn(
-                    "Wrong value type {} ({}) for {} characteristic of the item {}. Expected StringItem, NumberItem, or SwitchItem.",
-                    state.toString(), state.getClass().getSimpleName(), item.getAccessoryType().getTag(),
-                    item.getName());*/
+    public static <T> T getKeyFromMapping(@Nullable ContextVar.Variable variable, Map<T, Object> mapping, T defaultValue) {
+        if (variable == null) {
             return defaultValue;
         }
-
-        return mapping.entrySet().stream().filter(entry -> {
-            Object mappingValue = entry.getValue();
-            if (mappingValue instanceof String stringValue) {
-                return value.equalsIgnoreCase(stringValue);
-            } else if (mappingValue instanceof List listValue) {
-                return listValue.stream().filter(listEntry -> value.equalsIgnoreCase(listEntry.toString())).findAny()
-                        .isPresent();
-            } else {
-                log.warn("Found unexpected enum value type {}; this is a bug.", mappingValue.getClass());
-                return false;
-            }
-        }).findAny().map(Map.Entry::getKey).orElseGet(() -> {
-            /*log.warn(
-                    "Wrong value {} for {} characteristic of the item {}. Expected one of following {}. Returning {}.",
-                    state.toString(), item.getAccessoryType().getTag(), item.getName(), mapping.values(), defaultValue);*/
-            return defaultValue;
-        });
-    }
-
-    // supporting methods
-
-    public static boolean useFahrenheit() {
-        return true;
-        /*return Boolean.TRUE.equals(FrameworkUtil.getBundle(HomekitImpl.class).getBundleContext()
-                .getServiceReference(Homekit.class.getName()).getProperty("useFahrenheitTemperature"));*/
-    }
-
-    public static TemperatureDisplayUnitCharacteristic createSystemTemperatureDisplayUnitCharacteristic() {
-        return new TemperatureDisplayUnitCharacteristic(() -> CompletableFuture
-                .completedFuture(HomekitCharacteristicFactory.useFahrenheit() ? TemperatureDisplayUnitEnum.FAHRENHEIT
-                        : TemperatureDisplayUnitEnum.CELSIUS),
-                (value) -> {
-                }, (cb) -> {
-        }, () -> {
-        });
-    }
-
-    /*public static Unit<Temperature> getSystemTemperatureUnit() {
-        return useFahrenheit() ? ImperialUnits.FAHRENHEIT : SIUnits.CELSIUS;
-    }*/
-
-    private static <T extends CharacteristicEnum> CompletableFuture<T> getEnumFromItem(HomekitEndpointEntity item,
-                                                                                       ContextVar.Variable variable,
-                                                                                       Map<T, Object> mapping, T defaultValue) {
-        return CompletableFuture
-                .completedFuture(getKeyFromMapping(item, variable.getValue(), mapping, defaultValue));
-    }
-
-    public static <T extends Enum<T>> void setValueFromEnum(HomekitEndpointEntity endpoint, T value, Map<T, Object> map) {
-        Object mapValue = map.get(value);
-        // if the mapping has multiple values for this enum, just use the first one for the command sent to the item
-        if (mapValue instanceof List listValue) {
-            if (listValue.isEmpty()) {
-                mapValue = null;
-            } else {
-                mapValue = listValue.get(0);
-            }
-        }
-        if (mapValue == null) {
-            // log.warn("Unable to find mapping value for {} for item {}", value, endpoint.getName());
-            return;
-        }
-        // endpoint.getVariable().set(mapValue.toString());
-    }
-
-    private static int getIntFromItem(HomekitEndpointEntity endpoint, int defaultValue) {
-        int value = defaultValue;
-       /* State state = endpoint.getVariable().getValue();
-        if (state instanceof DecimalType stateAsDecimalType) {
-            value = stateAsDecimalType.intValue();
-        } else {
-            log.warn(
-                    "Item state {} is not supported for {}. Only PercentType and DecimalType (0/100) are supported.",
-                    state, endpoint.getName());
-        }*/
-        return value;
-    }
-
-    /*private static <T extends Quantity<T>> double convertAndRound(double value, Unit<T> from, Unit<T> to) {
-        double rawValue = from.equals(to) ? value : from.getConverterTo(to).convert(value);
-        return new BigDecimal(rawValue).setScale(1, RoundingMode.HALF_UP).doubleValue();
-    }*/
-
-    public static @Nullable Double stateAsTemperature(@Nullable State state) {
+        var state = variable.getValue();
         if (state == null) {
-            return null;
+            return defaultValue;
         }
-
-        /*if (state instanceof QuantityType<?> qt) {
-            if (qt.getDimension().equals(SIUnits.CELSIUS.getDimension())) {
-                return qt.toUnit(SIUnits.CELSIUS).doubleValue();
+        String valueToMatch;
+        switch (state) {
+            case DecimalType ignored -> valueToMatch = Integer.toString(state.intValue());
+            case OnOffType ignored -> valueToMatch = state.toString();
+            case StringType ignored -> valueToMatch = state.toString();
+            default -> {
+                return defaultValue;
             }
-        }*/
-
-        return convertToCelsius(state.as(DecimalType.class).doubleValue());
+        }
+        for (Map.Entry<T, Object> entry : mapping.entrySet()) {
+            Object mappingConfigValue = entry.getValue();
+            if (mappingConfigValue instanceof String && valueToMatch.equalsIgnoreCase((String) mappingConfigValue))
+                return entry.getKey();
+            if (mappingConfigValue instanceof List) {
+                for (Object listItem : (List<?>) mappingConfigValue) {
+                    if (valueToMatch.equalsIgnoreCase(listItem.toString())) return entry.getKey();
+                }
+            }
+        }
+        return defaultValue;
     }
 
-    public static double convertToCelsius(double degrees) {
-        return new BigDecimal(degrees).setScale(1, RoundingMode.HALF_UP).doubleValue();
-        //return convertAndRound(degrees, getSystemTemperatureUnit(), SIUnits.CELSIUS);
+    private static <T extends Enum<T> & CharacteristicEnum> CompletableFuture<T> getCurrentEnumValue(@Nullable ContextVar.Variable v, Map<T, Object> m, T d) {
+        return (v == null) ? completedFuture(d) : completedFuture(getKeyFromMapping(v, m, d));
     }
 
-    public static double convertFromCelsius(double degrees) {
-        return new BigDecimal(degrees).setScale(1, RoundingMode.HALF_UP).doubleValue();
-        //return convertAndRound(degrees, SIUnits.CELSIUS, getSystemTemperatureUnit());
-    }
-
-    private static Supplier<CompletableFuture<Integer>> getAngleSupplier(ContextVar.Variable variable, int defaultValue) {
-        return () -> CompletableFuture.completedFuture(variable.getValue().intValue(defaultValue));
-    }
-
-    private static Supplier<CompletableFuture<Integer>> getIntSupplier(HomekitEndpointEntity endpoint, int defaultValue) {
-        return () -> CompletableFuture.completedFuture(getIntFromItem(endpoint, defaultValue));
-    }
-
-    private static ExceptionalConsumer<Integer> setIntConsumer(HomekitEndpointEntity endpoint) {
-        return (value) -> {
-            System.out.println("twet");
-            // endpoint.send(new DecimalType(value));
-        };
-    }
-
-    private static ExceptionalConsumer<Integer> setAngleConsumer(HomekitEndpointEntity endpoint) {
-        return (value) -> {
-            // endpoint.send(new DecimalType(value));
-            /*if (endpoint.getBaseItem() instanceof NumberItem) {
-                endpoint.send(new DecimalType(value));
-            } else if (endpoint.getBaseItem() instanceof DimmerItem) {
-                value = (int) (value * 50.0 / 90.0 + 50.0);
-                endpoint.send(new PercentType(value));
-            } else {
-                log.warn("Item type {} is not supported for {}. Only DimmerItem and NumberItem are supported.",
-                        endpoint.getBaseItem().getType(), endpoint.getName());
-            }*/
-        };
-    }
-
-    private static Supplier<CompletableFuture<Double>> getDoubleSupplier(HomekitEndpointEntity endpoint,
-                                                                         double defaultValue) {
-        return () -> {
-            double value = defaultValue;
+    public static <T extends Enum<T>> void setHomioVariableFromEnum(@Nullable ContextVar.Variable variable, T enumFromHk, Map<T, Object> mapping) {
+        if (variable == null || enumFromHk == null) return;
+        Object homioValueRepresentation = mapping.get(enumFromHk);
+        if (homioValueRepresentation instanceof List)
+            homioValueRepresentation = ((List<?>) homioValueRepresentation).isEmpty() ? null : ((List<?>) homioValueRepresentation).getFirst();
+        if (homioValueRepresentation != null) {
+            String stringValueToSet = homioValueRepresentation.toString();
             try {
-                // value = endpoint.getVariable().getValue().floatValue();
-            } catch (Exception ex) {
-            }
-            /*final State state = endpoint.getItem().getState();
-            double value = defaultValue;
-            if (state instanceof PercentType stateAsPercentType) {
-                value = stateAsPercentType.doubleValue();
-            } else if (state instanceof DecimalType stateAsDecimalType) {
-                value = stateAsDecimalType.doubleValue();
-            } else if (state instanceof QuantityType stateAsQuantityType) {
-                value = stateAsQuantityType.doubleValue();
-            }*/
-            return CompletableFuture.completedFuture(value);
-        };
-    }
-
-    private static ExceptionalConsumer<Double> setDoubleConsumer(HomekitEndpointEntity endpoint) {
-        return (value) -> {
-            //   endpoint.send(new DecimalType(value));
-            /*if (endpoint.getBaseItem() instanceof NumberItem) {
-                endpoint.send(new DecimalType(value.doubleValue()));
-            } else if (endpoint.getBaseItem() instanceof DimmerItem) {
-                endpoint.send(new PercentType(value.intValue()));
-            } else {
-                log.warn("Item type {} is not supported for {}. Only Number and Dimmer type are supported.",
-                        endpoint.getBaseItem().getType(), endpoint.getName());
-            }*/
-        };
-    }
-
-    private static Supplier<CompletableFuture<Double>> getTemperatureSupplier(HomekitEndpointEntity endpoint,
-                                                                              double defaultValue) {
-        return () -> {
-            final @Nullable Double value = null; //  stateAsTemperature(endpoint.getVariable().getValue());
-            return CompletableFuture.completedFuture(value != null ? value : defaultValue);
-        };
-    }
-
-    private static ExceptionalConsumer<Double> setTemperatureConsumer(HomekitEndpointEntity endpoint) {
-        return (value) -> {
-            // endpoint.send(new DecimalType(value));
-            /*Item baseItem = endpoint.getBaseItem();
-            if (baseItem instanceof NumberItem baseAsNumberItem) {
-                if (baseAsNumberItem.getUnit() != null) {
-                    endpoint.send(new QuantityType(value, SIUnits.CELSIUS));
+                if (OnOffType.ON.toString().equalsIgnoreCase(stringValueToSet) || OnOffType.OFF.toString().equalsIgnoreCase(stringValueToSet)) {
+                    variable.set(OnOffType.of(stringValueToSet.toUpperCase()));
+                } else if (variable instanceof DecimalType) {
+                    variable.set(new DecimalType(new BigDecimal(stringValueToSet)));
                 } else {
-                    endpoint.send(new DecimalType(convertFromCelsius(value)));
+                    variable.set(new StringType(stringValueToSet));
                 }
-            } else {
-                log.warn("Item type {} is not supported for {}. Only Number type is supported.",
-                        endpoint.getBaseItem().getType(), endpoint.getName());
-            }*/
-        };
-    }
-
-    protected static Consumer<HomekitCharacteristicChangeCallback> getSubscriber(ContextVar.Variable variable,
-                                                                                 HomekitEndpointEntity endpoint) {
-        return (callback) -> {
-            variable.setListener(endpoint.getName() + "_sub", state -> callback.changed());
-        };
-    }
-
-    protected static Runnable getUnsubscriber(ContextVar.Variable variable, HomekitEndpointEntity endpoint) {
-        return () -> {
-            variable.setListener(endpoint.getName() + "_sub", null);
-        };
-    }
-
-    // METHODS TO CREATE SINGLE CHARACTERISTIC FROM OPENHAB ITEM
-    /*private static ActiveCharacteristic createActiveCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, ActiveEnum.class, false);
-        return new ActiveCharacteristic(() -> getEnumFromItem(endpoint, map, ActiveEnum.INACTIVE),
-                (value) -> {
-                    setValueFromEnum(endpoint, value, map);
-                }, new Consumer<HomekitCharacteristicChangeCallback>() {
-            @Override
-            public void accept(HomekitCharacteristicChangeCallback homekitCharacteristicChangeCallback) {
-                getSubscriber(variable, endpoint, ACTIVE);
+            } catch (Exception e) {
+                log.error("Error setting Homio variable {} from HomeKit enum {}: {}", variable, enumFromHk, e.getMessage());
             }
-        },
-                getUnsubscriber(variable, endpoint, ACTIVE));
-    }*/
-
-    /*private static ActiveIdentifierCharacteristic createActiveIdentifierCharacteristic(HomekitEndpointEntity endpoint) {
-        return new ActiveIdentifierCharacteristic(getIntSupplier(endpoint, 1), setIntConsumer(endpoint),
-                getSubscriber(variable, endpoint, ACTIVE_IDENTIFIER),
-                getUnsubscriber(variable, endpoint, ACTIVE_IDENTIFIER));
-    }*/
-
-    private static BrightnessCharacteristic createBrightnessCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getBrightness());
-        return new BrightnessCharacteristic(() -> {
-            int value = variable.getValue().intValue();// endpoint.getVariable().getValue().intValue();
-            /*if (state instanceof HSBType stateAsHSBType) {
-                value = stateAsHSBType.getBrightness().intValue();
-            } else if (state instanceof PercentType stateAsPercentType) {
-                value = stateAsPercentType.intValue();
-            }*/
-            return CompletableFuture.completedFuture(value);
-        }, (brightness) -> {
-            variable.set(brightness);
-            //endpoint.send(new DecimalType(brightness));
-            /*if (endpoint.getBaseItem() instanceof DimmerItem) {
-                endpoint.sendCommandProxy(HomekitCommandType.BRIGHTNESS_COMMAND, new PercentType(brightness));
-            } else {
-                log.warn("Item type {} is not supported for {}. Only ColorItem and DimmerItem are supported.",
-                        endpoint.getBaseItem().getType(), endpoint.getName());
-            }*/
-        }, getSubscriber(variable, endpoint), getUnsubscriber(variable, endpoint));
-    }
-
-    private static CarbonDioxideLevelCharacteristic createCarbonDioxideLevelCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getCarbonDioxideLevel());
-        return new CarbonDioxideLevelCharacteristic(
-                getDoubleSupplier(endpoint,
-                        variable.getMinValue(CarbonDioxideLevelCharacteristic.DEFAULT_MIN_VALUE)),
-                getSubscriber(variable, endpoint),
-                getUnsubscriber(variable, endpoint));
-    }
-
-    private static CarbonDioxidePeakLevelCharacteristic createCarbonDioxidePeakLevelCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getCarbonDioxidePeakLevel());
-        return new CarbonDioxidePeakLevelCharacteristic(
-                getDoubleSupplier(endpoint,
-                        variable.getMinValue(CarbonDioxidePeakLevelCharacteristic.DEFAULT_MIN_VALUE)),
-                getSubscriber(variable, endpoint),
-                getUnsubscriber(variable, endpoint));
-    }
-
-    private static CarbonMonoxideLevelCharacteristic createCarbonMonoxideLevelCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getCarbonMonoxideLevel());
-        return new CarbonMonoxideLevelCharacteristic(
-                getDoubleSupplier(endpoint,
-                        variable.getMinValue(CarbonMonoxideLevelCharacteristic.DEFAULT_MIN_VALUE)),
-                getSubscriber(variable, endpoint),
-                getUnsubscriber(variable, endpoint));
-    }
-
-    private static CarbonMonoxidePeakLevelCharacteristic createCarbonMonoxidePeakLevelCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getCarbonMonoxidePeakLevel());
-        return new CarbonMonoxidePeakLevelCharacteristic(
-                getDoubleSupplier(endpoint,
-                        variable.getMinValue(CarbonMonoxidePeakLevelCharacteristic.DEFAULT_MIN_VALUE)),
-                getSubscriber(variable, endpoint),
-                getUnsubscriber(variable, endpoint));
-    }
-
-    private static ClosedCaptionsCharacteristic createClosedCaptionsCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getClosedCaptions());
-        var map = createMapping(endpoint, variable, ClosedCaptionsEnum.class);
-        return new ClosedCaptionsCharacteristic(() -> {
-            return getEnumFromItem(endpoint, variable, map, ClosedCaptionsEnum.DISABLED);
-        },
-                (value) -> setValueFromEnum(endpoint, value, map),
-                getSubscriber(variable, endpoint),
-                getUnsubscriber(variable, endpoint));
-    }
-
-    private static ColorTemperatureCharacteristic createColorTemperatureCharacteristic(HomekitEndpointEntity endpoint) {
-        final boolean inverted = endpoint.isColorTemperatureInverted();
-        var variable = endpoint.getVariable(endpoint.getColorTemperature());
-
-        int minValue = (int) variable.getMinValue(COLOR_TEMPERATURE_MIN_MIREDS);
-        int maxValue = (int) variable.getMaxValue(COLOR_TEMPERATURE_MAX_MIREDS);
-
-        // It's common to swap these if you're providing in Kelvin instead of mired
-        if (minValue > maxValue) {
-            int temp = minValue;
-            minValue = maxValue;
-            maxValue = temp;
+        } else {
+            log.warn("No Homio mapping for HK enum {} on var {}", enumFromHk, variable);
         }
-
-        int finalMinValue = minValue;
-        int range = maxValue - minValue;
-        boolean isDimmer = variable.isPercentType();
-
-        return new ColorTemperatureCharacteristic(minValue, maxValue, () -> {
-            int value = finalMinValue;
-            final State rs = variable.getValue();
-            var state = (DecimalType) rs;
-            if (isDimmer) {
-                double percent = state.doubleValue();
-                // invert so that 0% == coolest
-                if (inverted) {
-                    percent = 100.0 - percent;
-                }
-
-                // Dimmer
-                // scale to the originally configured range
-                value = (int) (percent * range / 100) + finalMinValue;
-            } else {
-                value = state.intValue();
-            }
-            /*if (state instanceof QuantityType<?> qt) {
-                // Number:Temperature
-                qt = qt.toInvertibleUnit(Units.MIRED);
-                if (qt == null) {
-                    log.warn("Item {}'s state '{}' is not convertible to mireds.", endpoint.getName(), state);
-                } else {
-                    value = qt.intValue();
-                }
-            } else if (state instanceof PercentType stateAsPercentType) {
-                double percent = stateAsPercentType.doubleValue();
-                // invert so that 0% == coolest
-                if (inverted) {
-                    percent = 100.0 - percent;
-                }
-
-                // Dimmer
-                // scale to the originally configured range
-                value = (int) (percent * range / 100) + finalMinValue;
-            } else if (state instanceof DecimalType stateAsDecimalType) {
-                value = stateAsDecimalType.intValue();
-            }*/
-            return CompletableFuture.completedFuture(value);
-        }, (value) -> {
-            if (isDimmer) {
-                // scale to a percent
-                double percent = (((double) value) - finalMinValue) * 100 / range;
-                if (inverted) {
-                    percent = 100.0 - percent;
-                }
-                variable.set(new DecimalType(BigDecimal.valueOf(percent)));
-            } else {
-                variable.set(new DecimalType(value));
-            }
-            /*if (endpoint.getBaseItem() instanceof DimmerItem) {
-                // scale to a percent
-                double percent = (((double) value) - finalMinValue) * 100 / range;
-                if (inverted) {
-                    percent = 100.0 - percent;
-                }
-                endpoint.send(new PercentType(BigDecimal.valueOf(percent)));
-            } else if (endpoint.getBaseItem() instanceof NumberItem) {
-                endpoint.send(new QuantityType(value, Units.MIRED));
-            }*/
-        }, getSubscriber(variable, endpoint),
-                getUnsubscriber(variable, endpoint));
     }
 
-    /*private static ConfiguredNameCharacteristic createConfiguredNameCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(CONFIGURED_NAME);
-        return new ConfiguredNameCharacteristic(() -> {
-            final State state = variable.getValue();
-            return CompletableFuture
-                    .completedFuture(*//*state instanceof UnDefType ? endpoint.getName() : *//*state.toString());
-        }, (value) -> variable.set(new StringType(value)),
-                getSubscriber(variable, endpoint),
-                getUnsubscriber(variable, endpoint));
-    }*/
-
-    private static CoolingThresholdTemperatureCharacteristic createCoolingThresholdCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getThresholdTemperature());
-        double minValue = variable.getMinValue(CoolingThresholdTemperatureCharacteristic.DEFAULT_MIN_VALUE);
-        double maxValue = variable.getMaxValue(CoolingThresholdTemperatureCharacteristic.DEFAULT_MAX_VALUE);
-        double step = variable.getStep(CoolingThresholdTemperatureCharacteristic.DEFAULT_STEP);
-
-        return new CoolingThresholdTemperatureCharacteristic(minValue, maxValue, step,
-                getTemperatureSupplier(endpoint, minValue), setTemperatureConsumer(endpoint),
-                getSubscriber(variable, endpoint),
-                getUnsubscriber(variable, endpoint));
+    private static Supplier<CompletableFuture<Boolean>> getBooleanSupplier(@Nullable ContextVar.Variable v) {
+        return () -> (v == null) ? completedFuture(false) : completedFuture(v.getValue().boolValue());
     }
 
-    private static CurrentDoorStateCharacteristic createCurrentDoorStateCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getCurrentDoorState());
-        /*if (taggedItem.getBaseItem() instanceof RollershutterItem) {
-            return new CurrentDoorStateCharacteristic(() -> {
-                if (taggedItem.getItem().getState() instanceof PercentType percentType
-                    && percentType.equals(PercentType.HUNDRED)) {
-                    return CompletableFuture.completedFuture(CurrentDoorStateEnum.CLOSED);
-                }
-                return CompletableFuture.completedFuture(CurrentDoorStateEnum.OPEN);
-            }, getSubscriber(variable, endpoint),
-                    getUnsubscriber(variable, endpoint));
-        } else {*/
-            List<CurrentDoorStateEnum> validValues = new ArrayList<>();
-            var map = createMapping(endpoint, variable, CurrentDoorStateEnum.class, validValues, true);
-            return new CurrentDoorStateCharacteristic(
-                    () -> getEnumFromItem(endpoint,  variable, map, CurrentDoorStateEnum.CLOSED),
-                    getSubscriber(variable, endpoint),
-                    getUnsubscriber(variable, endpoint));
-        // }
+    private static ExceptionalConsumer<Boolean> setBooleanConsumer(@Nullable ContextVar.Variable v) {
+        return val -> {
+            if (v != null) v.set(OnOffType.of(val));
+        };
     }
 
-    private static CurrentHeatingCoolingStateCharacteristic createCurrentHeatingCoolingStateCharacteristic(HomekitEndpointEntity endpoint) {
-        List<CurrentHeatingCoolingStateEnum> validValues = new ArrayList<>();
-        var variable = endpoint.getVariable(endpoint.getCurrentHeatingCoolingState());
-        var map = createMapping(endpoint, variable, CurrentHeatingCoolingStateEnum.class, validValues);
-        return new CurrentHeatingCoolingStateCharacteristic(validValues.toArray(new CurrentHeatingCoolingStateEnum[0]),
-                () -> getEnumFromItem(endpoint, variable, map, CurrentHeatingCoolingStateEnum.OFF),
-                getSubscriber(variable, endpoint),
-                getUnsubscriber(variable, endpoint));
+    private static Supplier<CompletableFuture<Integer>> getIntSupplier(@Nullable ContextVar.Variable v, int def) {
+        return () -> (v == null) ? completedFuture(def) : completedFuture(v.getValue().intValue(def));
     }
 
-    private static CurrentFanStateCharacteristic createCurrentFanStateCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getfan);
-        var map = createMapping(endpoint, CurrentFanStateEnum.class);
-        return new CurrentFanStateCharacteristic(() -> getEnumFromItem(endpoint, map, CurrentFanStateEnum.INACTIVE),
-                getSubscriber(variable, endpoint, CURRENT_FAN_STATE),
-                getUnsubscriber(variable, endpoint, CURRENT_FAN_STATE));
+    private static ExceptionalConsumer<Integer> setIntConsumer(@Nullable ContextVar.Variable v) {
+        return val -> {
+            if (v != null) v.set(new DecimalType(val));
+        };
     }
 
-    private static CurrentHorizontalTiltAngleCharacteristic createCurrentHorizontalTiltAngleCharacteristic(
-            HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getCurrentHorizontalTiltAngle());
-        return new CurrentHorizontalTiltAngleCharacteristic(
-                () -> CompletableFuture.completedFuture(variable.getValue().intValue(0)),
-                getSubscriber(variable, endpoint, CURRENT_HORIZONTAL_TILT_ANGLE),
-                getUnsubscriber(variable, endpoint, CURRENT_HORIZONTAL_TILT_ANGLE));
+    private static Supplier<CompletableFuture<Double>> getDoubleSupplier(@Nullable ContextVar.Variable v, double def) {
+        return () -> (v == null) ? completedFuture(def) : completedFuture(v.getValue().doubleValue(def));
     }
 
-    private static CurrentMediaStateCharacteristic createCurrentMediaStateCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, CurrentMediaStateEnum.class);
-        return new CurrentMediaStateCharacteristic(
-                () -> getEnumFromItem(endpoint, map, CurrentMediaStateEnum.UNKNOWN),
-                getSubscriber(variable, endpoint, CURRENT_MEDIA_STATE),
-                getUnsubscriber(variable, endpoint, CURRENT_MEDIA_STATE));
+    private static ExceptionalConsumer<Double> setDoubleConsumer(@Nullable ContextVar.Variable v) {
+        return val -> {
+            if (v != null) v.set(new DecimalType(val));
+        };
     }
 
-    private static CurrentTemperatureCharacteristic createCurrentTemperatureCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getCurrentTemperature());
-        double minValue = variable.getMinValue(CURRENT_TEMPERATURE_MIN_CELSIUS);
-        double maxValue = variable.getMinValue(CurrentTemperatureCharacteristic.DEFAULT_MAX_VALUE);
-        double step = variable.getMinValue(CurrentTemperatureCharacteristic.DEFAULT_STEP);
-
-        return new CurrentTemperatureCharacteristic(minValue, maxValue, step,
-                getTemperatureSupplier(endpoint, minValue), getSubscriber(variable, endpoint, TARGET_TEMPERATURE),
-                getUnsubscriber(variable, endpoint, TARGET_TEMPERATURE));
+    private static Supplier<CompletableFuture<String>> getStringSupplier(@Nullable ContextVar.Variable v, String def) {
+        return () -> (v == null) ? completedFuture(def) : completedFuture(v.getValue().stringValue(def));
     }
 
-    private static CurrentTiltAngleCharacteristic createCurrentTiltAngleCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getCurrentTiltTiltAngle());
-        return new CurrentTiltAngleCharacteristic(
-                () -> CompletableFuture.completedFuture(variable.getValue().intValue(0)),
-                getSubscriber(variable, endpoint, CURRENT_TILT_ANGLE),
-                getUnsubscriber(variable, endpoint, CURRENT_TILT_ANGLE));
+    private static ExceptionalConsumer<String> setStringConsumer(@Nullable ContextVar.Variable v) {
+        return val -> {
+            if (v != null) v.set(new StringType(val));
+        };
     }
 
-    private static CurrentVerticalTiltAngleCharacteristic createCurrentVerticalTiltAngleCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getCurrentVerticalTiltAngle());
-        return new CurrentVerticalTiltAngleCharacteristic(
-                () -> CompletableFuture.completedFuture(variable.getValue().intValue(0)),
-                getSubscriber(variable, endpoint, CURRENT_VERTICAL_TILT_ANGLE),
-                getUnsubscriber(variable, endpoint, CURRENT_VERTICAL_TILT_ANGLE));
+    private static Supplier<CompletableFuture<Double>> getTemperatureSupplier(@Nullable ContextVar.Variable v, double dC) {
+        return () -> (v == null) ? completedFuture(dC) : completedFuture(v.getValue().doubleValue(dC));
     }
 
-    private static CurrentVisibilityStateCharacteristic createCurrentVisibilityStateCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, CurrentVisibilityStateEnum.class, true);
-        return new CurrentVisibilityStateCharacteristic(
-                () -> getEnumFromItem(endpoint, map, CurrentVisibilityStateEnum.HIDDEN),
-                getSubscriber(variable, endpoint, CURRENT_VISIBILITY),
-                getUnsubscriber(variable, endpoint, CURRENT_VISIBILITY));
+    private static ExceptionalConsumer<Double> setTemperatureConsumer(@Nullable ContextVar.Variable v) {
+        return valC -> {
+            if (v != null) v.set(new DecimalType(valC));
+        };
     }
 
-    private static SetDurationCharacteristic createDurationCharacteristic(HomekitEndpointEntity endpoint) {
-        // var variable = endpoint.getVariable(DURATION);
-        return new SetDurationCharacteristic(() -> {
-            int value = getIntFromItem(endpoint, 0);
-            // final @Nullable Map<String, Object> itemConfiguration = endpoint.getConfiguration();
-            /*if ((value == 0) && (itemConfiguration != null)) { // check for default duration
-                final Object duration = itemConfiguration.get(HomekitValveImpl.CONFIG_DEFAULT_DURATION);
-                if (duration instanceof BigDecimal durationAsBigDecimal) {
-                    value = durationAsBigDecimal.intValue();
-                    if (endpoint.getItem() instanceof NumberItem taggedNumberItem) {
-                        taggedNumberItem.setState(new DecimalType(value));
-                    }
-                }
-            }*/
-            return CompletableFuture.completedFuture(value);
-        }, setIntConsumer(endpoint), getSubscriber(variable, endpoint, DURATION),
-                getUnsubscriber(variable, endpoint, DURATION));
+    protected static Consumer<HomekitCharacteristicChangeCallback> getSubscriber(
+            @Nullable ContextVar.Variable v,
+            HomekitEndpointEntity e,
+            HomekitCharacteristicType t) {
+        if (v == null) return cb -> {
+        };
+        String k = e.getEntityID() + "_" + t.name() + "_sub";
+        return cb -> {
+            if (cb == null) return;
+            v.addListener(k, s -> cb.changed());
+        };
     }
 
-    private static FilterLifeLevelCharacteristic createFilterLifeLevelCharacteristic(HomekitEndpointEntity endpoint) {
-        return new FilterLifeLevelCharacteristic(getDoubleSupplier(endpoint, 0),
-                getSubscriber(variable, endpoint, FILTER_LIFE_LEVEL),
-                getUnsubscriber(variable, endpoint, FILTER_LIFE_LEVEL));
+    protected static Runnable getUnsubscriber(@Nullable ContextVar.Variable v, HomekitEndpointEntity e, HomekitCharacteristicType t) {
+        if (v == null) return () -> {
+        };
+        String k = e.getEntityID() + "_" + t.name() + "_sub";
+        return () -> v.removeListener(k);
     }
 
-    private static ResetFilterIndicationCharacteristic createFilterResetCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getFilterResetIndication());
-        return new ResetFilterIndicationCharacteristic(
-                (value) -> variable.set(OnOffType.ON));
+    // Accessory Info
+    private static ManufacturerCharacteristic createManufacturerCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getManufacturer());
+        return (v == null) ? new ManufacturerCharacteristic(() -> completedFuture("Homio")) : new ManufacturerCharacteristic(getStringSupplier(v, "Homio"));
     }
 
-    private static FirmwareRevisionCharacteristic createFirmwareRevisionCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getFirmwareRevision());
-        return new FirmwareRevisionCharacteristic(() -> {
-            final State state = variable.getValue();
-            return CompletableFuture.completedFuture(state == null ? "" : state.toString());
-        });
+    private static ModelCharacteristic createModelCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getModel());
+        return (v == null) ? new ModelCharacteristic(() -> completedFuture("Virtual")) : new ModelCharacteristic(getStringSupplier(v, "Virtual"));
     }
 
-    private static HardwareRevisionCharacteristic createHardwareRevisionCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getHardwareRevision());
-        return new HardwareRevisionCharacteristic(() -> {
-            final State state = variable.getValue();
-            return CompletableFuture.completedFuture(state == null ? "" : state.toString());
-        });
+    private static SerialNumberCharacteristic createSerialNumberCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getSerialNumber());
+        return (v == null) ? new SerialNumberCharacteristic(() -> completedFuture(e.getEntityID())) : new SerialNumberCharacteristic(getStringSupplier(v, e.getEntityID()));
     }
 
-    private static HeatingThresholdTemperatureCharacteristic createHeatingThresholdCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getHeatingThresholdTemperature());
-        double minValue = variable.getMinValue(HeatingThresholdTemperatureCharacteristic.DEFAULT_MIN_VALUE);
-        double maxValue = variable.getMinValue(HeatingThresholdTemperatureCharacteristic.DEFAULT_MAX_VALUE);
-        double step = variable.getMinValue(HeatingThresholdTemperatureCharacteristic.DEFAULT_STEP);
-
-        return new HeatingThresholdTemperatureCharacteristic(minValue, maxValue, step,
-                getTemperatureSupplier(endpoint, minValue), setTemperatureConsumer(endpoint),
-                getSubscriber(variable, endpoint, HEATING_THRESHOLD_TEMPERATURE),
-                getUnsubscriber(variable, endpoint, HEATING_THRESHOLD_TEMPERATURE));
+    private static FirmwareRevisionCharacteristic createFirmwareRevisionCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getFirmwareRevision());
+        return (v == null) ? new FirmwareRevisionCharacteristic(() -> completedFuture("1.0")) : new FirmwareRevisionCharacteristic(getStringSupplier(v, "1.0"));
     }
 
-    private static HoldPositionCharacteristic createWindowHoldPositionCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getWindowHoldPosition());
-        /*if (!(item instanceof SwitchItem || item instanceof RollershutterItem)) {
-            log.warn(
-                    "Item {} cannot be used for the HoldPosition characteristic; only SwitchItem and RollershutterItem are supported. Hold requests will be ignored.",
-                    item.getName());
-        }*/
+    private static HardwareRevisionCharacteristic createHardwareRevisionCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getHardwareRevision());
+        return (v == null) ? new HardwareRevisionCharacteristic(() -> completedFuture("1.0")) : new HardwareRevisionCharacteristic(getStringSupplier(v, "1.0"));
+    }
 
+    private static IdentifyCharacteristic createIdentifyCharacteristic(HomekitEndpointEntity e) {
+        return new IdentifyCharacteristic((onOff) -> log.info("Identify called for: {}. Value: {}",
+                e.getName(), onOff));
+    }
+
+    private static NameCharacteristic createNameCharacteristic(HomekitEndpointEntity e) {
+        return new NameCharacteristic(() -> completedFuture(e.getDevice().getTitle()));
+    }
+
+    // Common Binary
+    private static OnCharacteristic createOnStateCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getOnState());
+        if (v == null) return null;
+        return new OnCharacteristic(getBooleanSupplier(v), setBooleanConsumer(v), getSubscriber(v, e, ON_STATE), getUnsubscriber(v, e, ON_STATE));
+    }
+
+    private static ActiveCharacteristic createActiveCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getActiveState());
+        if (v == null) return null;
+        Map<ActiveEnum, Object> m = createMapping(v, ActiveEnum.class);
+        return new ActiveCharacteristic(
+                () -> getCurrentEnumValue(v, m, ActiveEnum.INACTIVE),
+                val -> setHomioVariableFromEnum(v, val, m),
+                getSubscriber(v, e, ACTIVE),
+                getUnsubscriber(v, e, ACTIVE));
+    }
+
+    private static MuteCharacteristic createMuteCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getMute());
+        if (v == null) return null;
+        return new MuteCharacteristic(getBooleanSupplier(v), setBooleanConsumer(v), getSubscriber(v, e, MUTE), getUnsubscriber(v, e, MUTE));
+    }
+
+    private static ObstructionDetectedCharacteristic createObstructionDetectedCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getObstructionDetected());
+        if (v == null) return null;
+        return new ObstructionDetectedCharacteristic(
+                getBooleanSupplier(v),
+                getSubscriber(v, e, OBSTRUCTION_STATUS),
+                getUnsubscriber(v, e, OBSTRUCTION_STATUS));
+    }
+
+    // Sensors
+    private static MotionDetectedCharacteristic createMotionDetectedCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getDetectedState());
+        if (v == null || e.getAccessoryType() != HomekitAccessoryType.MOTION_SENSOR) return null;
+        return new MotionDetectedCharacteristic(
+                getBooleanSupplier(v),
+                getSubscriber(v, e, MOTION_DETECTED_STATE),
+                getUnsubscriber(v, e, MOTION_DETECTED_STATE));
+    }
+
+    private static OccupancyDetectedCharacteristic createOccupancyDetectedCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getDetectedState());
+        if (v == null || e.getAccessoryType() != HomekitAccessoryType.OCCUPANCY_SENSOR) return null;
+        Map<OccupancyDetectedEnum, Object> m = createMapping(v, OccupancyDetectedEnum.class);
+        return new OccupancyDetectedCharacteristic(() -> getCurrentEnumValue(v, m, OccupancyDetectedEnum.NOT_DETECTED), getSubscriber(v, e, OCCUPANCY_DETECTED_STATE), getUnsubscriber(v, e, OCCUPANCY_DETECTED_STATE));
+    }
+
+    // Lightbulb
+    private static BrightnessCharacteristic createBrightnessCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getBrightness());
+        if (v == null) return null;
+        return new BrightnessCharacteristic(getIntSupplier(v, 100), setIntConsumer(v), getSubscriber(v, e, BRIGHTNESS), getUnsubscriber(v, e, BRIGHTNESS));
+    }
+
+    private static HueCharacteristic createHueCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getHue());
+        if (v == null) return null;
+        Supplier<CompletableFuture<Double>> getter = () -> completedFuture(v.getValue().doubleValue(0));
+        ExceptionalConsumer<Double> setter = hue -> v.set(new DecimalType(hue));
+        return new HueCharacteristic(getter, setter, getSubscriber(v, e, HUE), getUnsubscriber(v, e, HUE));
+    }
+
+    private static SaturationCharacteristic createSaturationCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getSaturation());
+        if (v == null) return null;
+        Supplier<CompletableFuture<Double>> getter = () -> completedFuture(v.getValue().doubleValue(0));
+        ExceptionalConsumer<Double> setter = sat -> v.set(new DecimalType(sat));
+        return new SaturationCharacteristic(getter, setter, getSubscriber(v, e, SATURATION), getUnsubscriber(v, e, SATURATION));
+    }
+
+    private static ColorTemperatureCharacteristic createColorTemperatureCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getColorTemperature());
+        if (v == null) return null;
+        int minM = (int) v.getMinValue(COLOR_TEMPERATURE_MIN_MIREDS);
+        int maxM = (int) v.getMaxValue(COLOR_TEMPERATURE_MAX_MIREDS);
+        boolean inv = e.isColorTemperatureInverted();
+        Supplier<CompletableFuture<Integer>> getter = () -> {
+            int mV = v.getValue().intValue(minM);
+            if (inv) mV = maxM - (mV - minM);
+            return completedFuture(mV);
+        };
+        ExceptionalConsumer<Integer> setter = mVHk -> {
+            int sV = mVHk;
+            if (inv) sV = maxM - (sV - minM);
+            v.set(new DecimalType(sV));
+        };
+        return new ColorTemperatureCharacteristic(minM, maxM, getter, setter, getSubscriber(v, e, COLOR_TEMPERATURE), getUnsubscriber(v, e, COLOR_TEMPERATURE));
+    }
+
+    // Temperature & Climate
+    private static CurrentTemperatureCharacteristic createCurrentTemperatureCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getCurrentTemperature());
+        if (v == null) return null;
+        return new CurrentTemperatureCharacteristic(v.getMinValue(CURRENT_TEMPERATURE_MIN_CELSIUS), v.getMaxValue(100), v.getStep(0.1), getTemperatureSupplier(v, 20.0), getSubscriber(v, e, CURRENT_TEMPERATURE), getUnsubscriber(v, e, CURRENT_TEMPERATURE));
+    }
+
+    private static TargetTemperatureCharacteristic createTargetTemperatureCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getTargetTemperature());
+        if (v == null) return null;
+        return new TargetTemperatureCharacteristic(v.getMinValue(10.0), v.getMaxValue(38.0), v.getStep(0.5), getTemperatureSupplier(v, 21.0), setTemperatureConsumer(v), getSubscriber(v, e, TARGET_TEMPERATURE), getUnsubscriber(v, e, TARGET_TEMPERATURE));
+    }
+
+    private static CurrentHeatingCoolingStateCharacteristic createCurrentHeatingCoolingStateCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getCurrentHeatingCoolingState());
+        if (v == null) return null;
+        List<CurrentHeatingCoolingStateEnum> vals = new ArrayList<>();
+        Map<CurrentHeatingCoolingStateEnum, Object> m = createMapping(v, CurrentHeatingCoolingStateEnum.class, vals);
+        return new CurrentHeatingCoolingStateCharacteristic(vals.isEmpty() ? null : vals.toArray(new CurrentHeatingCoolingStateEnum[0]), () -> getCurrentEnumValue(v, m, CurrentHeatingCoolingStateEnum.OFF), getSubscriber(v, e, CURRENT_HEATING_COOLING_STATE), getUnsubscriber(v, e, CURRENT_HEATING_COOLING_STATE));
+    }
+
+    private static TargetHeatingCoolingStateCharacteristic createTargetHeatingCoolingStateCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getTargetHeatingCoolingState());
+        if (v == null) return null;
+        List<TargetHeatingCoolingStateEnum> vals = new ArrayList<>();
+        Map<TargetHeatingCoolingStateEnum, Object> m = createMapping(v, TargetHeatingCoolingStateEnum.class, vals);
+        return new TargetHeatingCoolingStateCharacteristic(vals.isEmpty() ? null : vals.toArray(new TargetHeatingCoolingStateEnum[0]), () -> getCurrentEnumValue(v, m, TargetHeatingCoolingStateEnum.OFF), newVal -> setHomioVariableFromEnum(v, newVal, m), getSubscriber(v, e, TARGET_HEATING_COOLING_STATE), getUnsubscriber(v, e, TARGET_HEATING_COOLING_STATE));
+    }
+
+    private static CoolingThresholdTemperatureCharacteristic createCoolingThresholdTemperatureCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getCoolingThresholdTemperature());
+        if (v == null) return null;
+        return new CoolingThresholdTemperatureCharacteristic(v.getMinValue(10.0), v.getMaxValue(35.0), v.getStep(0.5), getTemperatureSupplier(v, 25.0), setTemperatureConsumer(v), getSubscriber(v, e, COOLING_THRESHOLD_TEMPERATURE), getUnsubscriber(v, e, COOLING_THRESHOLD_TEMPERATURE));
+    }
+
+    private static HeatingThresholdTemperatureCharacteristic createHeatingThresholdTemperatureCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getHeatingThresholdTemperature());
+        if (v == null) return null;
+        return new HeatingThresholdTemperatureCharacteristic(v.getMinValue(0.0), v.getMaxValue(25.0), v.getStep(0.5), getTemperatureSupplier(v, 18.0), setTemperatureConsumer(v), getSubscriber(v, e, HEATING_THRESHOLD_TEMPERATURE), getUnsubscriber(v, e, HEATING_THRESHOLD_TEMPERATURE));
+    }
+
+    private static TargetRelativeHumidityCharacteristic createTargetRelativeHumidityCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getTargetRelativeHumidity());
+        if (v == null) return null;
+        return new TargetRelativeHumidityCharacteristic(getDoubleSupplier(v, 45.0F), setDoubleConsumer(v), getSubscriber(v, e, TARGET_RELATIVE_HUMIDITY), getUnsubscriber(v, e, TARGET_RELATIVE_HUMIDITY));
+    }
+
+    // Lock
+    private static LockCurrentStateCharacteristic createLockCurrentStateCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getLockCurrentState());
+        if (v == null) return null;
+        Map<LockCurrentStateEnum, Object> m = createMapping(v, LockCurrentStateEnum.class);
+        return new LockCurrentStateCharacteristic(() -> getCurrentEnumValue(v, m, LockCurrentStateEnum.UNKNOWN), getSubscriber(v, e, LOCK_CURRENT_STATE), getUnsubscriber(v, e, LOCK_CURRENT_STATE));
+    }
+
+    private static LockTargetStateCharacteristic createLockTargetStateCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getLockTargetState());
+        if (v == null) return null;
+        Map<LockTargetStateEnum, Object> m = createMapping(v, LockTargetStateEnum.class);
+        return new LockTargetStateCharacteristic(() -> getCurrentEnumValue(v, m, LockTargetStateEnum.UNSECURED), newVal -> setHomioVariableFromEnum(v, newVal, m), getSubscriber(v, e, LOCK_TARGET_STATE), getUnsubscriber(v, e, LOCK_TARGET_STATE));
+    }
+
+    // Window Covering & Slats
+    private static HoldPositionCharacteristic createHoldPositionCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getWindowHoldPosition());
+        if (v == null) return null;
         return new HoldPositionCharacteristic(value -> {
             if (!value) {
                 return;
             }
-            variable.set(OnOffType.ON);
-            /*if (item instanceof SwitchItem switchItem) {
-                switchItem.send(OnOffType.ON);
-            } else if (item instanceof RollershutterItem rollershutterItem) {
-                rollershutterItem.send(StopMoveType.STOP);
-            }*/
+            v.set(OnOffType.ON);
         });
     }
 
-    private static HueCharacteristic createHueCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getHue());
-        return new HueCharacteristic(() -> {
-            double value = variable.getValue().floatValue();
-
-            /*if (state instanceof HSBType stateAsHSBType) {
-                value = stateAsHSBType.getHue().doubleValue();
-            }*/
-            return CompletableFuture.completedFuture(value);
-        }, (hue) -> {
-            /*if (endpoint.getBaseItem() instanceof ColorItem) {
-                endpoint.sendCommandProxy(HomekitCommandType.HUE_COMMAND, new DecimalType(hue));
-            } else {*/
-                /*log.warn("Item type {} is not supported for {}. Only Color type is supported.",
-                        endpoint.getBaseItem().getType(), endpoint.getName());*/
-            // }
-        }, getSubscriber(variable, endpoint, HUE), getUnsubscriber(variable, endpoint, HUE));
+    private static CurrentHorizontalTiltAngleCharacteristic createCurrentHorizontalTiltAngleCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getCurrentHorizontalTiltAngle());
+        if (v == null) return null;
+        return new CurrentHorizontalTiltAngleCharacteristic(getIntSupplier(v, 0), getSubscriber(v, e, CURRENT_HORIZONTAL_TILT_ANGLE), getUnsubscriber(v, e, CURRENT_HORIZONTAL_TILT_ANGLE));
     }
 
-    private static IdentifierCharacteristic createIdentifierCharacteristic(HomekitEndpointEntity endpoint) {
-        return new IdentifierCharacteristic(getIntSupplier(endpoint, 1));
+    private static TargetHorizontalTiltAngleCharacteristic createTargetHorizontalTiltAngleCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getTargetHorizontalTiltAngle());
+        if (v == null) return null;
+        return new TargetHorizontalTiltAngleCharacteristic(getIntSupplier(v, 0), setIntConsumer(v), getSubscriber(v, e, TARGET_HORIZONTAL_TILT_ANGLE), getUnsubscriber(v, e, TARGET_HORIZONTAL_TILT_ANGLE));
     }
 
-    /*private static IdentifyCharacteristic createIdentifyCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(IDENTIFY);
-        return new IdentifyCharacteristic((value) -> variable.set(OnOffType.ON));
-    }*/
-
-    private static InputDeviceTypeCharacteristic createInputDeviceTypeCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, InputDeviceTypeEnum.class);
-        return new InputDeviceTypeCharacteristic(() -> getEnumFromItem(endpoint, map, InputDeviceTypeEnum.OTHER),
-                getSubscriber(variable, endpoint, INPUT_DEVICE_TYPE),
-                getUnsubscriber(variable, endpoint, INPUT_DEVICE_TYPE));
+    private static CurrentVerticalTiltAngleCharacteristic createCurrentVerticalTiltAngleCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getCurrentVerticalTiltAngle());
+        if (v == null) return null;
+        return new CurrentVerticalTiltAngleCharacteristic(getIntSupplier(v, 0), getSubscriber(v, e, CURRENT_VERTICAL_TILT_ANGLE), getUnsubscriber(v, e, CURRENT_VERTICAL_TILT_ANGLE));
     }
 
-    private static InputSourceTypeCharacteristic createInputSourceTypeCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, InputSourceTypeEnum.class);
-        return new InputSourceTypeCharacteristic(() -> getEnumFromItem(endpoint, map, InputSourceTypeEnum.OTHER),
-                getSubscriber(variable, endpoint, INPUT_SOURCE_TYPE),
-                getUnsubscriber(variable, endpoint, INPUT_SOURCE_TYPE));
+    private static TargetVerticalTiltAngleCharacteristic createTargetVerticalTiltAngleCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getTargetVerticalTiltAngle());
+        if (v == null) return null;
+        return new TargetVerticalTiltAngleCharacteristic(getIntSupplier(v, 0), setIntConsumer(v), getSubscriber(v, e, TARGET_VERTICAL_TILT_ANGLE), getUnsubscriber(v, e, TARGET_VERTICAL_TILT_ANGLE));
     }
 
-    private static IsConfiguredCharacteristic createIsConfiguredCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, IsConfiguredEnum.class);
-        return new IsConfiguredCharacteristic(() -> getEnumFromItem(endpoint, map, IsConfiguredEnum.NOT_CONFIGURED),
-                (value) -> setValueFromEnum(endpoint, value, map), getSubscriber(variable, endpoint, CONFIGURED),
-                getUnsubscriber(variable, endpoint, CONFIGURED));
+    private static CurrentTiltAngleCharacteristic createCurrentTiltAngleCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getCurrentTiltAngle());
+        if (v == null) return null;
+        return new CurrentTiltAngleCharacteristic(getIntSupplier(v, 0), getSubscriber(v, e, CURRENT_TILT_ANGLE), getUnsubscriber(v, e, CURRENT_TILT_ANGLE));
     }
 
-    private static LockPhysicalControlsCharacteristic createLockPhysicalControlsCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, LockPhysicalControlsEnum.class);
-        return new LockPhysicalControlsCharacteristic(
-                () -> getEnumFromItem(endpoint, map, LockPhysicalControlsEnum.CONTROL_LOCK_DISABLED),
-                (value) -> setValueFromEnum(endpoint, value, map), getSubscriber(variable, endpoint, LOCK_CONTROL),
-                getUnsubscriber(variable, endpoint, LOCK_CONTROL));
+    private static TargetTiltAngleCharacteristic createTargetTiltAngleCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getTargetTiltAngle());
+        if (v == null) return null;
+        return new TargetTiltAngleCharacteristic(getIntSupplier(v, 0), setIntConsumer(v), getSubscriber(v, e, TARGET_TILT_ANGLE), getUnsubscriber(v, e, TARGET_TILT_ANGLE));
     }
 
-    private static LockCurrentStateCharacteristic createLockCurrentStateCharacteristic(org.homio.addon.homekit.HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, LockCurrentStateEnum.class);
-        return new LockCurrentStateCharacteristic(() -> getEnumFromItem(endpoint, map, LockCurrentStateEnum.UNKNOWN),
-                getSubscriber(variable, endpoint, LOCK_CURRENT_STATE),
-                getUnsubscriber(variable, endpoint, LOCK_CURRENT_STATE));
+    // Garage Door
+    private static CurrentDoorStateCharacteristic createCurrentDoorStateCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getCurrentDoorState());
+        if (v == null || e.getAccessoryType() != HomekitAccessoryType.GARAGE_DOOR_OPENER) return null;
+        Map<CurrentDoorStateEnum, Object> m = createMapping(v, CurrentDoorStateEnum.class, true);
+        return new CurrentDoorStateCharacteristic(() -> getCurrentEnumValue(v, m, CurrentDoorStateEnum.CLOSED), getSubscriber(v, e, CURRENT_DOOR_STATE), getUnsubscriber(v, e, CURRENT_DOOR_STATE));
     }
 
-    private static LockTargetStateCharacteristic createLockTargetStateCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, LockTargetStateEnum.class);
-        return new LockTargetStateCharacteristic(() -> getEnumFromItem(endpoint, map, LockTargetStateEnum.UNSECURED),
-                (value) -> setValueFromEnum(endpoint, value, map),
-                getSubscriber(variable, endpoint, LOCK_TARGET_STATE),
-                getUnsubscriber(variable, endpoint, LOCK_TARGET_STATE));
+    private static TargetDoorStateCharacteristic createTargetDoorStateCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getTargetDoorState());
+        if (v == null || e.getAccessoryType() != HomekitAccessoryType.GARAGE_DOOR_OPENER) return null;
+        Map<TargetDoorStateEnum, Object> m = createMapping(v, TargetDoorStateEnum.class, true);
+        return new TargetDoorStateCharacteristic(() -> getCurrentEnumValue(v, m, TargetDoorStateEnum.CLOSED), newVal -> setHomioVariableFromEnum(v, newVal, m), getSubscriber(v, e, TARGET_DOOR_STATE), getUnsubscriber(v, e, TARGET_DOOR_STATE));
     }
 
-    private static ManufacturerCharacteristic createManufacturerCharacteristic(HomekitEndpointEntity endpoint) {
-        return new ManufacturerCharacteristic(() -> {
-            final State state = endpoint.getVariable(MANUFACTURER).getValue();
-            return CompletableFuture.completedFuture(state == null ? "" : state.toString());
-        });
+    // Fan
+    private static CurrentFanStateCharacteristic createCurrentFanStateCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getCurrentFanState());
+        if (v == null) return null;
+        Map<CurrentFanStateEnum, Object> m = createMapping(v, CurrentFanStateEnum.class);
+        return new CurrentFanStateCharacteristic(() -> getCurrentEnumValue(v, m, CurrentFanStateEnum.INACTIVE), getSubscriber(v, e, CURRENT_FAN_STATE), getUnsubscriber(v, e, CURRENT_FAN_STATE));
     }
 
-    private static ModelCharacteristic createModelCharacteristic(HomekitEndpointEntity endpoint) {
-        return new ModelCharacteristic(() -> {
-            final State state = endpoint.getVariable(MODEL).getValue();
-            return CompletableFuture.completedFuture(state == null ? "" : state.toString());
-        });
+    private static TargetFanStateCharacteristic createTargetFanStateCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getTargetFanState());
+        if (v == null) return null;
+        Map<TargetFanStateEnum, Object> m = createMapping(v, TargetFanStateEnum.class);
+        return new TargetFanStateCharacteristic(() -> getCurrentEnumValue(v, m, TargetFanStateEnum.MANUAL), newVal -> setHomioVariableFromEnum(v, newVal, m), getSubscriber(v, e, TARGET_FAN_STATE), getUnsubscriber(v, e, TARGET_FAN_STATE));
     }
 
-    private static MuteCharacteristic createMuteCharacteristic(HomekitEndpointEntity endpoint) {
-        /*BooleanItemReader muteReader = new BooleanItemReader(endpoint.getItem(),
-                OnOffType.of(!endpoint.isInverted()),
-                endpoint.isInverted() ? OnOffType.OFF : OnOffType.ON);*/
-        var variable = endpoint.getVariable(MUTE);
-        return new MuteCharacteristic(() -> CompletableFuture.completedFuture(variable.getValue().boolValue()),
-                (value) -> variable.set(OnOffType.of(value)), getSubscriber(variable, endpoint, MUTE),
-                getUnsubscriber(variable, endpoint, MUTE));
+    private static RotationDirectionCharacteristic createRotationDirectionCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getRotationDirection());
+        if (v == null) return null;
+        Map<RotationDirectionEnum, Object> m = createMapping(v, RotationDirectionEnum.class);
+        return new RotationDirectionCharacteristic(() -> getCurrentEnumValue(v, m, RotationDirectionEnum.CLOCKWISE), newVal -> setHomioVariableFromEnum(v, newVal, m), getSubscriber(v, e, ROTATION_DIRECTION), getUnsubscriber(v, e, ROTATION_DIRECTION));
     }
 
-    private static NameCharacteristic createNameCharacteristic(HomekitEndpointEntity endpoint) {
-        return new NameCharacteristic(() -> {
-            final State state = endpoint.getVariable(NAME).getValue();
-            return CompletableFuture.completedFuture(state == null ? "" : state.toString());
-        });
+    private static RotationSpeedCharacteristic createRotationSpeedCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getRotationSpeed());
+        if (v == null) return null;
+        return new RotationSpeedCharacteristic(getDoubleSupplier(v, 0), setDoubleConsumer(v), getSubscriber(v, e, ROTATION_SPEED), getUnsubscriber(v, e, ROTATION_SPEED));
     }
 
-    /*private static NitrogenDioxideDensityCharacteristic createNitrogenDioxideDensityCharacteristic(HomekitEndpointEntity endpoint) {
-        return new NitrogenDioxideDensityCharacteristic(
-                getDoubleSupplier(endpoint,
-                        endpoint.getConfigurationAsDouble(HomekitEndpoint.MIN_VALUE,
-                                NitrogenDioxideDensityCharacteristic.DEFAULT_MIN_VALUE)),
-                getSubscriber(variable, endpoint, NITROGEN_DIOXIDE_DENSITY),
-                getUnsubscriber(variable, endpoint, NITROGEN_DIOXIDE_DENSITY));
-    }*/
-
-    private static ObstructionDetectedCharacteristic createObstructionDetectedCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(OBSTRUCTION_STATUS);
-        return new ObstructionDetectedCharacteristic(
-                () -> CompletableFuture.completedFuture(variable.getValue().boolValue()),
-                getSubscriber(variable, endpoint, OBSTRUCTION_STATUS),
-                getUnsubscriber(variable, endpoint, OBSTRUCTION_STATUS));
+    private static SwingModeCharacteristic createSwingModeCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getFanSwingMode());
+        if (v == null) return null;
+        Map<SwingModeEnum, Object> m = createMapping(v, SwingModeEnum.class);
+        return new SwingModeCharacteristic(() -> getCurrentEnumValue(v, m, SwingModeEnum.SWING_DISABLED), newVal -> setHomioVariableFromEnum(v, newVal, m), getSubscriber(v, e, SWING_MODE), getUnsubscriber(v, e, SWING_MODE));
     }
 
-    private static OzoneDensityCharacteristic createOzoneDensityCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(OZONE_DENSITY);
-        return new OzoneDensityCharacteristic(
-                getDoubleSupplier(endpoint, variable.getMinValue(OzoneDensityCharacteristic.DEFAULT_MIN_VALUE)),
-                getSubscriber(variable, endpoint, OZONE_DENSITY), getUnsubscriber(variable, endpoint, OZONE_DENSITY));
+    // Air Quality Sensor
+    private static AirQualityCharacteristic createAirQualityCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getAirQuality());
+        if (v == null) return null;
+        Map<AirQualityEnum, Object> m = createMapping(v, AirQualityEnum.class);
+        return new AirQualityCharacteristic(() -> getCurrentEnumValue(v, m, AirQualityEnum.UNKNOWN), getSubscriber(v, e, AIR_QUALITY), getUnsubscriber(v, e, AIR_QUALITY));
     }
 
-    private static PM10DensityCharacteristic createPM10DensityCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(PM10_DENSITY);
-        return new PM10DensityCharacteristic(
-                getDoubleSupplier(endpoint, variable.getMinValue(PM10DensityCharacteristic.DEFAULT_MIN_VALUE)),
-                getSubscriber(variable, endpoint, PM10_DENSITY), getUnsubscriber(variable, endpoint, PM10_DENSITY));
+    private static OzoneDensityCharacteristic createOzoneDensityCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getOzoneDensity());
+        if (v == null) return null;
+        return new OzoneDensityCharacteristic(getDoubleSupplier(v, 0), getSubscriber(v, e, OZONE_DENSITY), getUnsubscriber(v, e, OZONE_DENSITY));
     }
 
-    private static PM25DensityCharacteristic createPM25DensityCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(PM25_DENSITY);
-        return new PM25DensityCharacteristic(
-                getDoubleSupplier(endpoint, variable.getMinValue(PM25DensityCharacteristic.DEFAULT_MIN_VALUE)),
-                getSubscriber(variable, endpoint, PM25_DENSITY), getUnsubscriber(variable, endpoint, PM25_DENSITY));
+    private static NitrogenDioxideDensityCharacteristic createNitrogenDioxideDensityCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getNitrogenDioxideDensity());
+        if (v == null) return null;
+        return new NitrogenDioxideDensityCharacteristic(getDoubleSupplier(v, 0), getSubscriber(v, e, NITROGEN_DIOXIDE_DENSITY), getUnsubscriber(v, e, NITROGEN_DIOXIDE_DENSITY));
     }
 
-    private static CurrentRelativeHumidityCharacteristic createRelativeHumidityCharacteristic(
-            HomekitEndpointEntity endpoint) {
-        return new CurrentRelativeHumidityCharacteristic(getDoubleSupplier(endpoint, 0.0),
-                getSubscriber(variable, endpoint, RELATIVE_HUMIDITY),
-                getUnsubscriber(variable, endpoint, RELATIVE_HUMIDITY));
+    private static SulphurDioxideDensityCharacteristic createSulphurDioxideDensityCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getSulphurDioxideDensity());
+        if (v == null) return null;
+        return new SulphurDioxideDensityCharacteristic(getDoubleSupplier(v, 0), getSubscriber(v, e, SULPHUR_DIOXIDE_DENSITY), getUnsubscriber(v, e, SULPHUR_DIOXIDE_DENSITY));
     }
 
-    private static PictureModeCharacteristic createPictureModeCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, PictureModeEnum.class);
-        return new PictureModeCharacteristic(() -> getEnumFromItem(endpoint, map, PictureModeEnum.OTHER),
-                (value) -> setValueFromEnum(endpoint, value, map), getSubscriber(variable, endpoint, PICTURE_MODE),
-                getUnsubscriber(variable, endpoint, PICTURE_MODE));
+    private static PM25DensityCharacteristic createPM25DensityCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getPm25Density());
+        if (v == null) return null;
+        return new PM25DensityCharacteristic(getDoubleSupplier(v, 0), getSubscriber(v, e, PM25_DENSITY), getUnsubscriber(v, e, PM25_DENSITY));
     }
 
-    private static PowerModeCharacteristic createPowerModeCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, PowerModeEnum.class, true);
-        return new PowerModeCharacteristic((value) -> setValueFromEnum(endpoint, value, map));
+    private static PM10DensityCharacteristic createPM10DensityCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getPm10Density());
+        if (v == null) return null;
+        return new PM10DensityCharacteristic(getDoubleSupplier(v, 0), getSubscriber(v, e, PM10_DENSITY), getUnsubscriber(v, e, PM10_DENSITY));
     }
 
-    // this characteristic is unique in a few ways, so we can't use the "normal" helpers:
-    // * you don't return a "current" value, just the value of the most recent event
-    // * NULL/invalid values are very much expected, and should silently _not_ trigger an event
-    // * every update to the item should trigger an event, not just changes
-
-    private static ProgrammableSwitchEventCharacteristic createProgrammableSwitchEventCharacteristic(
-            HomekitEndpointEntity endpoint) {
-        // have to build the map custom, since SINGLE_PRESS starts at 0
-        Map<ProgrammableSwitchEnum, Object> map = new EnumMap(ProgrammableSwitchEnum.class);
-        List<ProgrammableSwitchEnum> validValues = new ArrayList<>();
-
-        /*if (endpoint.getBaseItem().getAcceptedDataTypes().contains(OnOffType.class)) {
-            map.put(ProgrammableSwitchEnum.SINGLE_PRESS, OnOffType.ON.toString());
-            validValues.add(ProgrammableSwitchEnum.SINGLE_PRESS);
-        } else if (endpoint.getBaseItem().getAcceptedDataTypes().contains(OpenClosedType.class)) {
-            map.put(ProgrammableSwitchEnum.SINGLE_PRESS, OpenClosedType.OPEN.toString());
-            validValues.add(ProgrammableSwitchEnum.SINGLE_PRESS);
-        } else {
-            map = createMapping(endpoint, ProgrammableSwitchEnum.class, validValues, false);
-        }*/
-
-        var helper = new ProgrammableSwitchEventCharacteristicHelper(endpoint, map);
-
-        return new ProgrammableSwitchEventCharacteristic(validValues.toArray(new ProgrammableSwitchEnum[0]),
-                helper::getValue, helper::subscribe, getUnsubscriber(variable, endpoint, PROGRAMMABLE_SWITCH_EVENT));
+    private static VOCDensityCharacteristic createVOCDensityCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getVocDensity());
+        if (v == null) return null;
+        return new VOCDensityCharacteristic(getDoubleSupplier(v, 0), getSubscriber(v, e, VOC_DENSITY), getUnsubscriber(v, e, VOC_DENSITY));
     }
 
-    private static RemainingDurationCharacteristic createRemainingDurationCharacteristic(HomekitEndpointEntity endpoint) {
-        return new RemainingDurationCharacteristic(getIntSupplier(endpoint, 0),
-                getSubscriber(variable, endpoint, REMAINING_DURATION),
-                getUnsubscriber(variable, endpoint, REMAINING_DURATION));
+    // CO2/CO Sensors
+    private static CarbonDioxideLevelCharacteristic createCarbonDioxideLevelCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getCarbonDioxideLevel());
+        if (v == null) return null;
+        return new CarbonDioxideLevelCharacteristic(getDoubleSupplier(v, 0), getSubscriber(v, e, CARBON_DIOXIDE_LEVEL), getUnsubscriber(v, e, CARBON_DIOXIDE_LEVEL));
     }
 
-    private static RemoteKeyCharacteristic createRemoteKeyCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, RemoteKeyEnum.class);
-        return new RemoteKeyCharacteristic((value) -> setValueFromEnum(endpoint, value, map));
+    private static CarbonDioxidePeakLevelCharacteristic createCarbonDioxidePeakLevelCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getCarbonDioxidePeakLevel());
+        if (v == null) return null;
+        return new CarbonDioxidePeakLevelCharacteristic(getDoubleSupplier(v, 0), getSubscriber(v, e, CARBON_DIOXIDE_PEAK_LEVEL), getUnsubscriber(v, e, CARBON_DIOXIDE_PEAK_LEVEL));
     }
 
-    private static RotationDirectionCharacteristic createRotationDirectionCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, RotationDirectionEnum.class);
-        return new RotationDirectionCharacteristic(
-                () -> getEnumFromItem(endpoint, map, RotationDirectionEnum.CLOCKWISE),
-                (value) -> setValueFromEnum(endpoint, value, map),
-                getSubscriber(variable, endpoint, ROTATION_DIRECTION),
-                getUnsubscriber(variable, endpoint, ROTATION_DIRECTION));
+    private static CarbonMonoxideLevelCharacteristic createCarbonMonoxideLevelCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getCarbonMonoxideLevel());
+        if (v == null) return null;
+        return new CarbonMonoxideLevelCharacteristic(getDoubleSupplier(v, 0), getSubscriber(v, e, CARBON_MONOXIDE_LEVEL), getUnsubscriber(v, e, CARBON_MONOXIDE_LEVEL));
     }
 
-    private static RotationSpeedCharacteristic createRotationSpeedCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(ROTATION_SPEED);
-        return new RotationSpeedCharacteristic(
-                variable.getMinValue(RotationSpeedCharacteristic.DEFAULT_MIN_VALUE),
-                variable.getMaxValue(RotationSpeedCharacteristic.DEFAULT_MAX_VALUE),
-                variable.getStep(RotationSpeedCharacteristic.DEFAULT_STEP),
-                getDoubleSupplier(endpoint, 0), setDoubleConsumer(endpoint), getSubscriber(variable, endpoint, ROTATION_SPEED),
-                getUnsubscriber(variable, endpoint, ROTATION_SPEED));
+    private static CarbonMonoxidePeakLevelCharacteristic createCarbonMonoxidePeakLevelCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getCarbonMonoxidePeakLevel());
+        if (v == null) return null;
+        return new CarbonMonoxidePeakLevelCharacteristic(getDoubleSupplier(v, 0), getSubscriber(v, e, CARBON_MONOXIDE_PEAK_LEVEL), getUnsubscriber(v, e, CARBON_MONOXIDE_PEAK_LEVEL));
     }
 
-    private static SaturationCharacteristic createSaturationCharacteristic(HomekitEndpointEntity endpoint) {
-        return new SaturationCharacteristic(() -> {
-            State state = endpoint.getVariable(SATURATION).getValue();
-            double value = state.floatValue();
-            /*if (state instanceof HSBType stateAsHSBType) {
-                value = stateAsHSBType.getSaturation().doubleValue();
-            } else if (state instanceof PercentType stateAsPercentType) {
-                value = stateAsPercentType.doubleValue();
-            }*/
-            return CompletableFuture.completedFuture(value);
-        }, (saturation) -> {
-            /*if (endpoint.getBaseItem() instanceof ColorItem) {
-                endpoint.sendCommandProxy(HomekitCommandType.SATURATION_COMMAND,
-                        new PercentType(saturation.intValue()));
-            } else {*/
-                /*log.warn("Item type {} is not supported for {}. Only Color type is supported.",
-                        endpoint.getBaseItem().getType(), endpoint.getName());*/
-            //}
-        }, getSubscriber(variable, endpoint, SATURATION), getUnsubscriber(variable, endpoint, SATURATION));
+    private static FilterLifeLevelCharacteristic createFilterLifeLevelCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getFilterLifeLevel());
+        if (v == null) return null;
+        return new FilterLifeLevelCharacteristic(getDoubleSupplier(v, 100), getSubscriber(v, e, FILTER_LIFE_LEVEL), getUnsubscriber(v, e, FILTER_LIFE_LEVEL));
     }
 
-    private static SerialNumberCharacteristic createSerialNumberCharacteristic(HomekitEndpointEntity endpoint) {
-        return new SerialNumberCharacteristic(() -> {
-            final State state = endpoint.getVariable(SERIAL_NUMBER).getValue();
-            return CompletableFuture.completedFuture(state == null ? "" : state.toString());
-        });
+    private static ResetFilterIndicationCharacteristic createFilterResetIndicationCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getFilterResetIndication());
+        if (v == null) return null;
+        return new ResetFilterIndicationCharacteristic(val -> v.set(OnOffType.ON));
     }
 
-    private static SleepDiscoveryModeCharacteristic createSleepDiscoveryModeCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, SleepDiscoveryModeEnum.class);
-        return new SleepDiscoveryModeCharacteristic(
-                () -> getEnumFromItem(endpoint, map, SleepDiscoveryModeEnum.ALWAYS_DISCOVERABLE),
-                getSubscriber(variable, endpoint, SLEEP_DISCOVERY_MODE),
-                getUnsubscriber(variable, endpoint, SLEEP_DISCOVERY_MODE));
+    private static RemainingDurationCharacteristic createRemainingDurationCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getRemainingDuration());
+        if (v == null) return null;
+        return new RemainingDurationCharacteristic(getIntSupplier(v, 0), getSubscriber(v, e, REMAINING_DURATION), getUnsubscriber(v, e, REMAINING_DURATION));
     }
 
-    private static StatusActiveCharacteristic createStatusActiveCharacteristic(HomekitEndpointEntity endpoint) {
-        return new StatusActiveCharacteristic(
-                () -> CompletableFuture.completedFuture(endpoint.getVariable(ACTIVE_STATUS).getValue().boolValue()),
-                getSubscriber(variable, endpoint, ACTIVE_STATUS), getUnsubscriber(variable, endpoint, ACTIVE_STATUS));
+    // Smart Speaker / Speaker / Television Speaker
+    private static VolumeCharacteristic createVolumeCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getVolume());
+        if (v == null) return null;
+        return new VolumeCharacteristic(getIntSupplier(v, 50), setIntConsumer(v), getSubscriber(v, e, VOLUME), getUnsubscriber(v, e, VOLUME));
     }
 
-    private static StatusFaultCharacteristic createStatusFaultCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, StatusFaultEnum.class);
-        return new StatusFaultCharacteristic(() -> getEnumFromItem(endpoint, map, StatusFaultEnum.NO_FAULT),
-                getSubscriber(variable, endpoint, FAULT_STATUS), getUnsubscriber(variable, endpoint, FAULT_STATUS));
+    private static CurrentMediaStateCharacteristic createCurrentMediaStateCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getCurrentMediaState());
+        if (v == null) return null;
+        Map<CurrentMediaStateEnum, Object> m = createMapping(v, CurrentMediaStateEnum.class);
+        return new CurrentMediaStateCharacteristic(() -> getCurrentEnumValue(v, m, CurrentMediaStateEnum.UNKNOWN), getSubscriber(v, e, CURRENT_MEDIA_STATE), getUnsubscriber(v, e, CURRENT_MEDIA_STATE));
     }
 
-    private static StatusLowBatteryCharacteristic createStatusLowBatteryCharacteristic(HomekitEndpointEntity endpoint) {
-        /*BigDecimal lowThreshold = endpoint.getConfiguration(HomekitEndpoint.BATTERY_LOW_THRESHOLD,
-                BigDecimal.valueOf(20));*/
-        var variable = endpoint.getVariable(endpoint.getBatteryLowStatus())
-        /*BooleanItemReader lowBatteryReader = new BooleanItemReader(endpoint.getItem(),
-                OnOffType.of(!endpoint.isInverted()),
-                endpoint.isInverted() ? OnOffType.OFF : OnOffType.ON, lowThreshold, true);*/
-        return new StatusLowBatteryCharacteristic(
-                () -> CompletableFuture.completedFuture(
-                        variable.getValue().boolValue() ? StatusLowBatteryEnum.LOW : StatusLowBatteryEnum.NORMAL),
-                getSubscriber(variable, endpoint, BATTERY_LOW_STATUS),
-                getUnsubscriber(variable, endpoint, BATTERY_LOW_STATUS));
+    private static TargetMediaStateCharacteristic createTargetMediaStateCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getTargetMediaState());
+        if (v == null) return null;
+        Map<TargetMediaStateEnum, Object> m = createMapping(v, TargetMediaStateEnum.class);
+        return new TargetMediaStateCharacteristic(() -> getCurrentEnumValue(v, m, TargetMediaStateEnum.STOP), newVal -> setHomioVariableFromEnum(v, newVal, m), getSubscriber(v, e, TARGET_MEDIA_STATE), getUnsubscriber(v, e, TARGET_MEDIA_STATE));
     }
 
-    private static StatusTamperedCharacteristic createStatusTamperedCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, StatusTamperedEnum.class);
-        return new StatusTamperedCharacteristic(() -> getEnumFromItem(endpoint, map, StatusTamperedEnum.NOT_TAMPERED),
-                getSubscriber(variable, endpoint, TAMPERED_STATUS),
-                getUnsubscriber(variable, endpoint, TAMPERED_STATUS));
+    private static VolumeControlTypeCharacteristic createVolumeControlTypeCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getVolumeControlType());
+        if (v == null) return null;
+        Map<VolumeControlTypeEnum, Object> m = createMapping(v, VolumeControlTypeEnum.class);
+        return new VolumeControlTypeCharacteristic(() -> getCurrentEnumValue(v, m, VolumeControlTypeEnum.NONE), getSubscriber(v, e, VOLUME_CONTROL_TYPE), getUnsubscriber(v, e, VOLUME_CONTROL_TYPE));
     }
 
-    private static SwingModeCharacteristic createSwingModeCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, SwingModeEnum.class);
-        return new SwingModeCharacteristic(() -> getEnumFromItem(endpoint, map, SwingModeEnum.SWING_DISABLED),
-                (value) -> setValueFromEnum(endpoint, value, map), getSubscriber(variable, endpoint, SWING_MODE),
-                getUnsubscriber(variable, endpoint, SWING_MODE));
+    private static VolumeSelectorCharacteristic createVolumeSelectorCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getVolumeSelector());
+        if (v == null) return null;
+        Map<VolumeSelectorEnum, Object> m = createMapping(v, VolumeSelectorEnum.class);
+        return new VolumeSelectorCharacteristic(newVal -> setHomioVariableFromEnum(v, newVal, m));
     }
 
-    /*private static SulphurDioxideDensityCharacteristic createSulphurDioxideDensityCharacteristic(HomekitEndpointEntity endpoint) {
-        return new SulphurDioxideDensityCharacteristic(
-                getDoubleSupplier(endpoint,
-                        endpoint.getConfigurationAsDouble(HomekitEndpoint.MIN_VALUE,
-                                SulphurDioxideDensityCharacteristic.DEFAULT_MIN_VALUE)),
-                getSubscriber(variable, endpoint, SULPHUR_DIOXIDE_DENSITY),
-                getUnsubscriber(variable, endpoint, SULPHUR_DIOXIDE_DENSITY));
-    }*/
-
-    private static TargetDoorStateCharacteristic createTargetDoorStateCharacteristic(HomekitEndpointEntity endpoint) {
-        /*if (endpoint.getBaseItem() instanceof RollershutterItem) {
-            return new TargetDoorStateCharacteristic(() -> {
-                if (endpoint.getItem().getState() instanceof PercentType percentType
-                        && percentType.equals(PercentType.HUNDRED)) {
-                    return CompletableFuture.completedFuture(TargetDoorStateEnum.CLOSED);
+    // Stateless Programmable Switch / Doorbell
+    private static ProgrammableSwitchEventCharacteristic createProgrammableSwitchEventCharacteristic(HomekitEndpointEntity e) {
+        /*ContextVar.Variable v = e.getVariable(e.getProgrammableSwitchEvent());
+        if (v == null) return null;
+        List<ProgrammableSwitchEnum> validVals = Arrays.asList(
+                ProgrammableSwitchEnum.SINGLE_PRESS,
+                ProgrammableSwitchEnum.DOUBLE_PRESS,
+                ProgrammableSwitchEnum.LONG_PRESS
+        );
+        ProgrammableSwitchEnum[] switchEnums = validVals.toArray(new ProgrammableSwitchEnum[0]);
+        var characteristic = new ProgrammableSwitchEventCharacteristic(switchEnums, );
+        String listenerKey = e.getEntityID() + "_" + PROGRAMMABLE_SWITCH_EVENT.name() + "_sub";
+        v.addListener(listenerKey, newState -> {
+            if (newState != null) {
+                try {
+                    int eventCode = newState.intValue(-1);
+                    ProgrammableSwitchEnum hkEvent = null;
+                    if (eventCode == 0)
+                        hkEvent = ProgrammableSwitchEnum.SINGLE_PRESS;
+                    else if (eventCode == 1)
+                        hkEvent = ProgrammableSwitchEnum.DOUBLE_PRESS;
+                    else if (eventCode == 2)
+                        hkEvent = ProgrammableSwitchEnum.LONG_PRESS;
+                    if (hkEvent != null) characteristic.sendEvent(hkEvent);
+                } catch (Exception ex) {
+                    log.error("Error processing ProgrammableSwitchEvent for {}: {}", e.getName(), ex.getMessage());
                 }
-                return CompletableFuture.completedFuture(TargetDoorStateEnum.OPEN);
-            }, (targetState) -> endpoint
-                    .send(targetState.equals(TargetDoorStateEnum.OPEN) ? UpDownType.UP : UpDownType.DOWN),
-                    getSubscriber(variable, endpoint, TARGET_DOOR_STATE),
-                    getUnsubscriber(variable, endpoint, TARGET_DOOR_STATE));
-        } else {*/
-        List<TargetDoorStateEnum> validValues = new ArrayList<>();
-        var map = createMapping(endpoint, TargetDoorStateEnum.class, validValues, true);
-        return new TargetDoorStateCharacteristic(() -> getEnumFromItem(endpoint, map, TargetDoorStateEnum.CLOSED),
-                (targetState) -> setValueFromEnum(endpoint, targetState, map),
-                getSubscriber(variable, endpoint, TARGET_DOOR_STATE),
-                getUnsubscriber(variable, endpoint, TARGET_DOOR_STATE));
-        //}
+            }
+        });
+        // HAP-Java might handle unsubscription internally, or you might need to:
+        // characteristic.onUnsubscribe(() -> v.removeListener(listenerKey)); // If such a hook exists
+        return characteristic;*/
+        return null;
     }
 
-    private static TargetFanStateCharacteristic createTargetFanStateCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, TargetFanStateEnum.class);
-        return new TargetFanStateCharacteristic(() -> getEnumFromItem(endpoint, map, TargetFanStateEnum.AUTO),
-                (targetState) -> setValueFromEnum(endpoint, targetState, map),
-                getSubscriber(variable, endpoint, TARGET_FAN_STATE),
-                getUnsubscriber(variable, endpoint, TARGET_FAN_STATE));
+    // Television & InputSource
+    private static ActiveIdentifierCharacteristic createActiveIdentifierCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getActiveIdentifier());
+        if (v == null) return null;
+        return new ActiveIdentifierCharacteristic(getIntSupplier(v, 1), setIntConsumer(v), getSubscriber(v, e, ACTIVE_IDENTIFIER), getUnsubscriber(v, e, ACTIVE_IDENTIFIER));
     }
 
-    private static TargetHeatingCoolingStateCharacteristic createTargetHeatingCoolingStateCharacteristic(HomekitEndpointEntity endpoint) {
-        List<TargetHeatingCoolingStateEnum> validValues = new ArrayList<>();
-        var map = createMapping(endpoint, TargetHeatingCoolingStateEnum.class, validValues);
-        return new TargetHeatingCoolingStateCharacteristic(validValues.toArray(new TargetHeatingCoolingStateEnum[0]),
-                () -> getEnumFromItem(endpoint, map, TargetHeatingCoolingStateEnum.OFF),
-                (value) -> setValueFromEnum(endpoint, value, map),
-                getSubscriber(variable, endpoint, TARGET_HEATING_COOLING_STATE),
-                getUnsubscriber(variable, endpoint, TARGET_HEATING_COOLING_STATE));
+    private static ConfiguredNameCharacteristic createConfiguredNameCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getConfiguredName());
+        if (v == null) return null;
+        return new ConfiguredNameCharacteristic(getStringSupplier(v, "Input"), setStringConsumer(v), getSubscriber(v, e, CONFIGURED_NAME), getUnsubscriber(v, e, CONFIGURED_NAME));
     }
 
-    private static TargetHorizontalTiltAngleCharacteristic createTargetHorizontalTiltAngleCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getTargetHorizontalTiltAngle());
-        return new TargetHorizontalTiltAngleCharacteristic(getAngleSupplier(variable, 0),
-                setAngleConsumer(endpoint), getSubscriber(variable, endpoint, TARGET_HORIZONTAL_TILT_ANGLE),
-                getUnsubscriber(variable, endpoint, TARGET_HORIZONTAL_TILT_ANGLE));
+    private static InputDeviceTypeCharacteristic createInputDeviceTypeCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getInputDeviceType());
+        if (v == null) return null;
+        Map<InputDeviceTypeEnum, Object> m = createMapping(v, InputDeviceTypeEnum.class);
+        return new InputDeviceTypeCharacteristic(() -> getCurrentEnumValue(v, m, InputDeviceTypeEnum.OTHER), getSubscriber(v, e, INPUT_DEVICE_TYPE), getUnsubscriber(v, e, INPUT_DEVICE_TYPE));
     }
 
-    private static TargetMediaStateCharacteristic createTargetMediaStateCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, TargetMediaStateEnum.class);
-        return new TargetMediaStateCharacteristic(() -> getEnumFromItem(endpoint, map, TargetMediaStateEnum.STOP),
-                (value) -> setValueFromEnum(endpoint, value, map),
-                getSubscriber(variable, endpoint, TARGET_MEDIA_STATE),
-                getUnsubscriber(variable, endpoint, TARGET_MEDIA_STATE));
+    private static InputSourceTypeCharacteristic createInputSourceTypeCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getInputSourceType());
+        if (v == null) return null;
+        Map<InputSourceTypeEnum, Object> m = createMapping(v, InputSourceTypeEnum.class);
+        return new InputSourceTypeCharacteristic(() -> getCurrentEnumValue(v, m, InputSourceTypeEnum.OTHER), getSubscriber(v, e, INPUT_SOURCE_TYPE), getUnsubscriber(v, e, INPUT_SOURCE_TYPE));
     }
 
-    private static TargetRelativeHumidityCharacteristic createTargetRelativeHumidityCharacteristic(HomekitEndpointEntity endpoint) {
-        return new TargetRelativeHumidityCharacteristic(getDoubleSupplier(endpoint, 0), setDoubleConsumer(endpoint),
-                getSubscriber(variable, endpoint, TARGET_RELATIVE_HUMIDITY),
-                getUnsubscriber(variable, endpoint, TARGET_RELATIVE_HUMIDITY));
+    /*private static IdentifierCharacteristic createIdentifierInputSourceCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getIdentifierInputSource());
+        if (v == null) return null;
+        return new IdentifierCharacteristic(getIntSupplier(v, 1));
+    }*/ // This is usually read-only unique ID for an InputSource
+
+    /*private static CurrentVisibilityStateCharacteristic createCurrentVisibilityStateCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getCurrentVisibilityState());
+        if (v == null) return null;
+        Map<CurrentVisibilityStateEnum, Object> m = createMapping(e, v, CurrentVisibilityStateEnum.class);
+        return new CurrentVisibilityStateCharacteristic(() -> getCurrentEnumValue(e, v, m, CurrentVisibilityStateEnum.SHOWN), getSubscriber(v, e, CURRENT_VISIBILITY_STATE), getUnsubscriber(v, e, CURRENT_VISIBILITY_STATE));
+    }*/
+
+    private static TargetVisibilityStateCharacteristic createTargetVisibilityStateCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getTargetVisibilityState());
+        if (v == null) return null;
+        Map<TargetVisibilityStateEnum, Object> m = createMapping(v, TargetVisibilityStateEnum.class);
+        return new TargetVisibilityStateCharacteristic(() -> getCurrentEnumValue(v, m, TargetVisibilityStateEnum.SHOWN), newVal -> setHomioVariableFromEnum(v, newVal, m), getSubscriber(v, e, TARGET_VISIBILITY_STATE), getUnsubscriber(v, e, TARGET_VISIBILITY_STATE));
     }
 
-    private static TargetTemperatureCharacteristic createTargetTemperatureCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(TARGET_TEMPERATURE);
-        double minValue = variable.getMinValue(TargetTemperatureCharacteristic.DEFAULT_MIN_VALUE);
-        double maxValue = variable.getMinValue(TargetTemperatureCharacteristic.DEFAULT_MAX_VALUE);
-        double step = variable.getMinValue(TargetTemperatureCharacteristic.DEFAULT_STEP);
-
-        /*double minValue = endpoint
-                .getConfigurationAsQuantity(HomekitEndpoint.MIN_VALUE,
-                        Objects.requireNonNull(
-                                new QuantityType(TargetTemperatureCharacteristic.DEFAULT_MIN_VALUE, SIUnits.CELSIUS)
-                                        .toUnit(getSystemTemperatureUnit())),
-                        false)
-                .toUnit(SIUnits.CELSIUS).doubleValue();
-        double maxValue = endpoint
-                .getConfigurationAsQuantity(HomekitEndpoint.MAX_VALUE,
-                        Objects.requireNonNull(
-                                new QuantityType(TargetTemperatureCharacteristic.DEFAULT_MAX_VALUE, SIUnits.CELSIUS)
-                                        .toUnit(getSystemTemperatureUnit())),
-                        false)
-                .toUnit(SIUnits.CELSIUS).doubleValue();
-        double step = endpoint
-                .getConfigurationAsQuantity(HomekitEndpoint.STEP,
-                        Objects.requireNonNull(
-                                new QuantityType(TargetTemperatureCharacteristic.DEFAULT_STEP, SIUnits.CELSIUS)
-                                        .toUnit(getSystemTemperatureUnit())),
-                        true)
-                .toUnitRelative(SIUnits.CELSIUS).doubleValue();*/
-        return new TargetTemperatureCharacteristic(minValue, maxValue, step,
-                getTemperatureSupplier(endpoint, minValue), setTemperatureConsumer(endpoint),
-                getSubscriber(variable, endpoint, TARGET_TEMPERATURE),
-                getUnsubscriber(variable, endpoint, TARGET_TEMPERATURE));
+    private static SleepDiscoveryModeCharacteristic createSleepDiscoveryModeCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getSleepDiscoveryMode());
+        if (v == null) return null;
+        Map<SleepDiscoveryModeEnum, Object> m = createMapping(v, SleepDiscoveryModeEnum.class);
+        return new SleepDiscoveryModeCharacteristic(() -> getCurrentEnumValue(v, m, SleepDiscoveryModeEnum.ALWAYS_DISCOVERABLE), getSubscriber(v, e, SLEEP_DISCOVERY_MODE), getUnsubscriber(v, e, SLEEP_DISCOVERY_MODE));
     }
 
-    private static TargetTiltAngleCharacteristic createTargetTiltAngleCharacteristic(HomekitEndpointEntity endpoint) {
-        return new TargetTiltAngleCharacteristic(getAngleSupplier(endpoint, 0), setAngleConsumer(endpoint),
-                getSubscriber(variable, endpoint, TARGET_TILT_ANGLE),
-                getUnsubscriber(variable, endpoint, TARGET_TILT_ANGLE));
+    private static RemoteKeyCharacteristic createRemoteKeyCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getRemoteKey());
+        if (v == null) return null;
+        Map<RemoteKeyEnum, Object> m = createMapping(v, RemoteKeyEnum.class);
+        return new RemoteKeyCharacteristic(newVal -> setHomioVariableFromEnum(v, newVal, m));
     }
 
-    private static TargetVerticalTiltAngleCharacteristic createTargetVerticalTiltAngleCharacteristic(HomekitEndpointEntity endpoint) {
-        return new TargetVerticalTiltAngleCharacteristic(getAngleSupplier(endpoint, 0), setAngleConsumer(endpoint),
-                getSubscriber(variable, endpoint, TARGET_HORIZONTAL_TILT_ANGLE),
-                getUnsubscriber(variable, endpoint, TARGET_HORIZONTAL_TILT_ANGLE));
+    private static PowerModeCharacteristic createPowerModeCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getPowerModeSelection());
+        if (v == null) return null;
+        Map<PowerModeEnum, Object> m = createMapping(v, PowerModeEnum.class);
+        return new PowerModeCharacteristic(newVal -> setHomioVariableFromEnum(v, newVal, m));
     }
 
-    private static TargetVisibilityStateCharacteristic createTargetVisibilityStateCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, TargetVisibilityStateEnum.class, true);
-        return new TargetVisibilityStateCharacteristic(
-                () -> getEnumFromItem(endpoint, map, TargetVisibilityStateEnum.HIDDEN),
-                (value) -> setValueFromEnum(endpoint, value, map),
-                getSubscriber(variable, endpoint, TARGET_VISIBILITY_STATE),
-                getUnsubscriber(variable, endpoint, TARGET_VISIBILITY_STATE));
+    private static PictureModeCharacteristic createPictureModeCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getPictureMode());
+        if (v == null) return null;
+        Map<PictureModeEnum, Object> m = createMapping(v, PictureModeEnum.class);
+        return new PictureModeCharacteristic(() -> getCurrentEnumValue(v, m, PictureModeEnum.OTHER), newVal -> setHomioVariableFromEnum(v, newVal, m), getSubscriber(v, e, PICTURE_MODE), getUnsubscriber(v, e, PICTURE_MODE));
     }
 
-    private static TemperatureDisplayUnitCharacteristic createTemperatureDisplayUnitCharacteristic(HomekitEndpointEntity endpoint) {
-        var map = createMapping(endpoint, TemperatureDisplayUnitEnum.class, true);
-        return new TemperatureDisplayUnitCharacteristic(
-                () -> getEnumFromItem(endpoint, map,
-                        useFahrenheit() ? TemperatureDisplayUnitEnum.FAHRENHEIT : TemperatureDisplayUnitEnum.CELSIUS),
-                (value) -> setValueFromEnum(endpoint, value, map),
-                getSubscriber(variable, endpoint, TEMPERATURE_UNIT),
-                getUnsubscriber(variable, endpoint, TEMPERATURE_UNIT));
+    private static ClosedCaptionsCharacteristic createClosedCaptionsCharacteristic(HomekitEndpointEntity e) {
+        ContextVar.Variable v = e.getVariable(e.getClosedCaptions());
+        if (v == null) return null;
+        Map<ClosedCaptionsEnum, Object> m = createMapping(v, ClosedCaptionsEnum.class);
+        return new ClosedCaptionsCharacteristic(() -> getCurrentEnumValue(v, m, ClosedCaptionsEnum.DISABLED), newVal -> setHomioVariableFromEnum(v, newVal, m), getSubscriber(v, e, CLOSED_CAPTIONS), getUnsubscriber(v, e, CLOSED_CAPTIONS));
     }
 
-    private static VOCDensityCharacteristic createVOCDensityCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(VOC_DENSITY);
-        double minValue = variable.getMinValue(VOCDensityCharacteristic.DEFAULT_MIN_VALUE);
-        return new VOCDensityCharacteristic(
-                minValue,
-                variable.getMaxValue(VOCDensityCharacteristic.DEFAULT_MAX_VALUE),
-                variable.getStep(VOCDensityCharacteristic.DEFAULT_STEP),
-                getDoubleSupplier(endpoint, minValue),
-                getSubscriber(variable, endpoint, VOC_DENSITY), getUnsubscriber(variable, endpoint, VOC_DENSITY));
-    }
-
-    private static VolumeCharacteristic createVolumeCharacteristic(HomekitEndpointEntity endpoint) {
-        return new VolumeCharacteristic(getIntSupplier(endpoint, 0),
-                (volume) -> {
-                    // endpoint.send(new DecimalType(volume));
-                },
-                getSubscriber(variable, endpoint, DURATION), getUnsubscriber(variable, endpoint, DURATION));
-    }
-
-    private static VolumeSelectorCharacteristic createVolumeSelectorCharacteristic(HomekitEndpointEntity endpoint) {
-        /*if (endpoint.getItem() instanceof DimmerItem) {
-            return new VolumeSelectorCharacteristic((value) -> endpoint
-                    .send(value.equals(VolumeSelectorEnum.INCREMENT) ? IncreaseDecreaseType.INCREASE
-                            : IncreaseDecreaseType.DECREASE));
-        } else {*/
-        var map = createMapping(endpoint, VolumeSelectorEnum.class);
-        return new VolumeSelectorCharacteristic((value) -> setValueFromEnum(endpoint, value, map));
-        // }
-    }
-
-    private static VolumeControlTypeCharacteristic createVolumeControlTypeCharacteristic(HomekitEndpointEntity endpoint) {
-        var variable = endpoint.getVariable(endpoint.getVolumeControlType());
-        var map = createMapping(endpoint, VolumeControlTypeEnum.class);
-        return new VolumeControlTypeCharacteristic(() -> getEnumFromItem(endpoint, map, VolumeControlTypeEnum.NONE),
-                getSubscriber(variable, endpoint, VOLUME_CONTROL_TYPE),
-                getUnsubscriber(variable, endpoint, VOLUME_CONTROL_TYPE));
-    }
-
-    private static class ProgrammableSwitchEventCharacteristicHelper {
-        private final HomekitEndpointEntity endpoint;
-        private final Map<ProgrammableSwitchEnum, Object> map;
-        private @Nullable ProgrammableSwitchEnum lastValue = null;
-
-        ProgrammableSwitchEventCharacteristicHelper(HomekitEndpointEntity endpoint, Map<ProgrammableSwitchEnum, Object> map) {
-            this.endpoint = endpoint;
-            this.map = map;
-        }
-
-        public CompletableFuture<ProgrammableSwitchEnum> getValue() {
-            return CompletableFuture.completedFuture(lastValue);
-        }
-
-        public void subscribe(HomekitCharacteristicChangeCallback cb) {
-            /*updater.subscribeToUpdates(endpoint, PROGRAMMABLE_SWITCH_EVENT.getTag(),
-                    state -> {
-                        // perform inversion here, so logic below only needs to deal with the
-                        // canonical style
-                        if (state instanceof OnOffType && endpoint.isInverted()) {
-                            if (state.equals(OnOffType.ON)) {
-                                state = OnOffType.OFF;
-                            } else {
-                                state = OnOffType.ON;
-                            }
-                        } else if (state instanceof OnOffType && endpoint.isInverted()) {
-                            if (state.equals(OnOffType.ON)) {
-                                state = OnOffType.OFF;
-                            } else {
-                                state = OnOffType.ON;
-                            }
-                        }
-                        // if "not pressed", don't send an event
-                        if (state == null || (state instanceof OnOffType && state.equals(OnOffType.OFF))
-                                || (state instanceof OnOffType && state.equals(OnOffType.OFF))) {
-                            lastValue = null;
-                            return;
-                        }
-                        lastValue = getKeyFromMapping(endpoint, state, map, ProgrammableSwitchEnum.SINGLE_PRESS);
-                        cb.changed();
-                    });
-        }*/
-        }
-    }
 }
