@@ -22,11 +22,9 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
+import org.homio.addon.homekit.HomekitEntity;
 import org.homio.api.Context;
-import org.homio.api.entity.BaseEntity;
-import org.homio.api.entity.EntityFieldMetadata;
-import org.homio.api.entity.HasStatusAndMsg;
-import org.homio.api.entity.UserEntity;
+import org.homio.api.entity.*;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.log.HasEntitySourceLog;
@@ -774,7 +772,13 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
         Class<? extends BaseEntity> className = (Class<? extends BaseEntity>) entityManager.getUIFieldClassByType(type);
         BaseEntity newEntity = objectMapper.readValue(entityFields.toString(), className);
-        FieldUtils.writeField(newEntity, mappedBy, owner, true);
+        if(mappedBy.equals("in-memory") && owner instanceof HasTabEntities hte) {
+          Set items = hte.getItems();
+          items.add(newEntity);
+          hte.setItems(items);
+        } else {
+          FieldUtils.writeField(newEntity, mappedBy, owner, true);
+        }
         context.db().save(newEntity);
       }
 

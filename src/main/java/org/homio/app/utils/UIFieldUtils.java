@@ -15,6 +15,7 @@ import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.HasTabEntities;
 import org.homio.api.entity.validation.MaxItems;
 import org.homio.api.entity.validation.UIFieldValidationSize;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
@@ -785,6 +786,7 @@ public class UIFieldUtils {
 
     UIFieldType fieldType = field.disableEdit() ? UIFieldType.String : UIFieldType.SelectBox;
     if (fieldContext.isAnnotationPresent(UIFieldDevicePortSelection.class)
+        || isMatch(fieldContext, UIFieldEntityByClassSelection.class, UIFieldEntityByClassSelection::rawInput)
         || isMatch(fieldContext, UIFieldStaticSelection.class, UIFieldStaticSelection::rawInput)
         || isMatch(fieldContext, UIFieldTreeNodeSelection.class, UIFieldTreeNodeSelection::rawInput)
         || isMatch(fieldContext, UIFieldDynamicSelection.class, UIFieldDynamicSelection::rawInput)
@@ -891,7 +893,13 @@ public class UIFieldUtils {
         jsonTypeMetadata.put("max", fieldContext.getDeclaredAnnotation(MaxItems.class).value());
       }
       jsonTypeMetadata.put("type", ((Class<?>) argument).getSimpleName());
-      jsonTypeMetadata.put("mappedBy", fieldContext.getDeclaredAnnotation(OneToMany.class).mappedBy());
+      OneToMany oneToMany = fieldContext.getDeclaredAnnotation(OneToMany.class);
+      if(oneToMany != null) {
+        jsonTypeMetadata.put("mappedBy", oneToMany.mappedBy());
+      } else /*if(fieldContext.getType().isAssignableFrom(HasTabEntities.class))*/{
+        // this mean, that this is in-memory series
+        jsonTypeMetadata.put("mappedBy", "in-memory");
+      }
       return true;
     }
     return false;

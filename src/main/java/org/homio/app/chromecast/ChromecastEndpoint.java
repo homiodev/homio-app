@@ -14,14 +14,11 @@ import java.util.function.Supplier;
 @Setter
 public class ChromecastEndpoint extends BaseDeviceEndpoint<ChromecastEntity> {
 
-  @Nullable
-  private Function<MediaStatus, State> mediaStatusReader;
+  @Nullable private Function<MediaStatus, State> mediaStatusReader;
 
-  @Nullable
-  private Function<su.litvak.chromecast.api.v2.Status, State> statusReader;
+  @Nullable private Function<su.litvak.chromecast.api.v2.Status, State> statusReader;
 
-  @Nullable
-  private Supplier<State> closeEventReader;
+  @Nullable private Supplier<State> closeEventReader;
 
   public ChromecastEndpoint(@NotNull Context context) {
     super("CHROMECAST", context);

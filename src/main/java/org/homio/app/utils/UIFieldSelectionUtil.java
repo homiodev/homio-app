@@ -71,8 +71,9 @@ public final class UIFieldSelectionUtil {
       selectOptions.addAll(OptionModel.list(staticSelection.value()));
     }
 
+    // TODO: find way to dynamic select if size is heavy
     if (uiFieldContext.getType().isEnum()
-        && uiFieldContext.getType().getEnumConstants().length < 20) {
+        /*&& uiFieldContext.getType().getEnumConstants().length < 20*/) {
       selectOptions.addAll(OptionModel.enumList((Class<? extends Enum>) uiFieldContext.getType()));
     }
 

@@ -15,10 +15,13 @@ import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository.CidrAddress;
 import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceInfo;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Arrays;
@@ -176,6 +179,19 @@ public class ContextNetworkImpl implements ContextNetwork {
     for (UdpContext udpContext : this.listenUdpMap.values()) {
       udpContext.cancel(key);
     }
+  }
+
+  @SneakyThrows
+  public @Nullable JmDNS getPrimaryMDNS(@Nullable InetAddress address) {
+    if(address == null) {
+      address = InetAddress.getByName(MACHINE_IP_ADDRESS);
+    }
+    for (JmDNS mdns : mdnsClient.getClientInstances()) {
+      if (mdns.getInetAddress().equals(address)) {
+        return mdns;
+      }
+    }
+    return null;
   }
 
   @RequiredArgsConstructor

@@ -1,9 +1,34 @@
 package org.homio.app.manager.common.impl;
 
+import static java.lang.String.format;
+import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
+import static org.homio.api.util.CommonUtils.getErrorMessage;
+import static org.homio.api.util.Constants.ADMIN_ROLE;
+import static org.homio.app.manager.common.impl.ContextUserImpl.GENERATED_SUPER_ADMIN;
+
 import com.fathzer.soft.javaluator.DoubleEvaluator;
 import com.fathzer.soft.javaluator.Operator;
 import com.fathzer.soft.javaluator.Parameters;
 import com.pivovarit.function.ThrowingConsumer;
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -14,6 +39,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.homio.api.ContextService.MQTTEntityService;
 import org.homio.api.ContextVar;
 import org.homio.api.entity.HasJsonData;
+import org.homio.api.entity.device.DeviceBaseEntity;
+import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
 import org.homio.api.entity.widget.AggregationType;
 import org.homio.api.entity.widget.PeriodRequest;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
@@ -50,32 +77,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import java.math.BigDecimal;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
-import static java.lang.String.format;
-import static org.homio.api.entity.HasJsonData.LIST_DELIMITER;
-import static org.homio.api.util.CommonUtils.getErrorMessage;
-import static org.homio.api.util.Constants.ADMIN_ROLE;
-import static org.homio.app.manager.common.impl.ContextUserImpl.GENERATED_SUPER_ADMIN;
-
 @Log4j2
 @RequiredArgsConstructor
 public class ContextVarImpl implements ContextVar {
@@ -103,9 +104,7 @@ public class ContextVarImpl implements ContextVar {
     User user = new User(GENERATED_SUPER_ADMIN, "", List.of(new SimpleGrantedAuthority(ADMIN_ROLE)));
     var admin = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
     if (TransactionSynchronizationManager.isActualTransactionActive()) {
-      new Thread(() -> {
-        executeAsSuperAdmin(runnable, admin, backupAuth);
-      }).start();
+      new Thread(() -> executeAsSuperAdmin(runnable, admin, backupAuth)).start();
     }
     executeAsSuperAdmin(runnable, admin, backupAuth);
   }
@@ -296,6 +295,11 @@ public class ContextVarImpl implements ContextVar {
   }
 
   @Override
+  public Variable getVariable(@NotNull String variableId) {
+    return getOrCreateContext(variableId).variable;
+  }
+
+  @Override
   public boolean exists(@NotNull String variableId) {
     return globalVarStorageMap.containsKey(fixVariableEntityID(variableId));
   }
@@ -475,7 +479,7 @@ public class ContextVarImpl implements ContextVar {
       if (context.variable.getValueType() == HasGetStatusValue.ValueType.Float) {
         variableMessage = WorkspaceVariableMessage.average(values);
       } else {
-        variableMessage = values.get(values.size() - 1);
+        variableMessage = values.getLast();
       }
       variableBackupRepository.save(context.variable, variableMessage);
     } else {
@@ -764,6 +768,23 @@ public class ContextVarImpl implements ContextVar {
 
   @RequiredArgsConstructor
   public static class VariableMetaBuilderImpl implements VariableMetaBuilder, TransformVariableMetaBuilder {
+    @Override
+    public @NotNull VariableMetaBuilder setOwner(@NotNull DeviceBaseEntity owner) {
+      String ieeeAddress = owner.getIeeeAddress();
+      if(ieeeAddress != null) {
+        entity.setJsonData("owner", ieeeAddress);
+      }
+      return this;
+    }
+
+    @Override
+    public @NotNull VariableMetaBuilder setOwner(@NotNull DeviceEndpointsBehaviourContract owner) {
+      String identifier = owner.getIdentifier();
+      if(identifier != null) {
+          entity.setJsonData("owner", identifier);
+      }
+      return this;
+    }
 
     private final WorkspaceVariable entity;
 
@@ -817,7 +838,7 @@ public class ContextVarImpl implements ContextVar {
     }
 
     @Override
-    public @NotNull VariableMetaBuilderImpl setDescription(String value) {
+    public @NotNull VariableMetaBuilderImpl setDescription(@NotNull String value) {
       entity.setDescription(value);
       return this;
     }
@@ -858,7 +879,7 @@ public class ContextVarImpl implements ContextVar {
     }
 
     @Override
-    public @NotNull VariableMetaBuilderImpl setValues(Set<String> values) {
+    public @NotNull VariableMetaBuilderImpl setValues(@NotNull Set<String> values) {
       entity.setJsonData("options", String.join(LIST_DELIMITER, values));
       return this;
     }
@@ -867,6 +888,12 @@ public class ContextVarImpl implements ContextVar {
     public @NotNull VariableMetaBuilder setRange(float min, float max) {
       entity.setMin(min);
       entity.setMax(max);
+      return this;
+    }
+
+    @Override
+    public @NotNull VariableMetaBuilder setStep(float step) {
+      entity.setStep(step);
       return this;
     }
   }
