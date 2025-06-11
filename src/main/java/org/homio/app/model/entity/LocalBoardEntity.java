@@ -9,8 +9,8 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
 import org.homio.api.entity.CreateSingleEntity;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
-import org.homio.api.entity.types.MicroControllerBaseEntity;
 import org.homio.api.fs.TreeConfiguration;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
@@ -18,13 +18,13 @@ import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.service.EntityService;
-import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIContextMenuUploadAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.ui.route.UIRouteMicroController;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.service.device.LocalBoardService;
 import org.homio.app.service.device.LocalBoardUsbListener.DiskInfo;
@@ -49,8 +49,8 @@ import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 @Entity
 @Log4j2
 @CreateSingleEntity
-@UISidebarChildren(icon = "fas fa-computer", color = "#9C3866", allowCreateItem = false)
-public class LocalBoardEntity extends MicroControllerBaseEntity
+@UIRouteMicroController(icon = "fas fa-computer", color = "#9C3866", allowCreateItem = false)
+public class LocalBoardEntity extends DeviceBaseEntity
   implements EntityService<LocalBoardService>,
   BaseFileSystemEntity<LocalFileSystemProvider> {
 
@@ -142,11 +142,6 @@ public class LocalBoardEntity extends MicroControllerBaseEntity
   @Override
   public long getEntityServiceHashCode() {
     return getJsonDataHashCode("cpu_interval", "fs_root");
-  }
-
-  @Override
-  public @NotNull Class<LocalBoardService> getEntityServiceItemClass() {
-    return LocalBoardService.class;
   }
 
   @Override

@@ -555,6 +555,9 @@ public class ContextVarImpl implements ContextVar {
   }
 
   private VariableContext getOrCreateContext(@NotNull String variableId) {
+    if(variableId.contains("-->")) {
+      variableId = variableId.substring(variableId.indexOf("-->") + 3);
+    }
     VariableContext variableContext = globalVarStorageMap.get(variableId);
     if (variableContext == null) {
       try {
@@ -838,7 +841,7 @@ public class ContextVarImpl implements ContextVar {
     }
 
     @Override
-    public @NotNull VariableMetaBuilderImpl setDescription(@NotNull String value) {
+    public @NotNull VariableMetaBuilderImpl setDescription(String value) {
       entity.setDescription(value);
       return this;
     }

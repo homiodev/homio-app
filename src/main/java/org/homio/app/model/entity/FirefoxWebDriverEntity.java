@@ -3,20 +3,12 @@ package org.homio.app.model.entity;
 import com.pivovarit.function.ThrowingConsumer;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import jakarta.persistence.Entity;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.Context;
 import org.homio.api.entity.CreateSingleEntity;
-import org.homio.api.entity.types.MediaEntity;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.version.HasFirmwareVersion;
 import org.homio.api.exception.ServerException;
 import org.homio.api.fs.archive.ArchiveUtil;
@@ -24,9 +16,8 @@ import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Status;
 import org.homio.api.service.EntityService;
 import org.homio.api.ui.UI;
-import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.action.UIContextMenuAction;
-import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.ui.route.UIRouteMedia;
 import org.homio.api.util.CommonUtils;
 import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
@@ -36,11 +27,20 @@ import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 @Log4j2
 @Entity
 @CreateSingleEntity
-@UISidebarChildren(icon = "fab fa-firefox", color = "#E18010", allowCreateItem = false)
-public class FirefoxWebDriverEntity extends MediaEntity implements HasFirmwareVersion,
+@UIRouteMedia(icon = "fab fa-firefox", color = "#E18010", allowCreateItem = false)
+public class FirefoxWebDriverEntity extends DeviceBaseEntity implements HasFirmwareVersion,
   EntityService<FirefoxWebDriverEntity.FirefoxWebDriverService> {
 
   private static Thread driverInUseThread;
@@ -184,11 +184,6 @@ public class FirefoxWebDriverEntity extends MediaEntity implements HasFirmwareVe
   }
 
   @Override
-  public void assembleActions(UIInputBuilder uiInputBuilder) {
-
-  }
-
-  @Override
   public @Nullable String getFirmwareVersion() {
     return FirefoxWebDriverService.version;
   }
@@ -196,11 +191,6 @@ public class FirefoxWebDriverEntity extends MediaEntity implements HasFirmwareVe
   @Override
   public long getEntityServiceHashCode() {
     return 0;
-  }
-
-  @Override
-  public @NotNull Class<FirefoxWebDriverService> getEntityServiceItemClass() {
-    return FirefoxWebDriverService.class;
   }
 
   @Nullable

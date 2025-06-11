@@ -29,12 +29,5 @@ public enum HomekitDimmerMode {
     DIMMER_MODE_FILTER_BRIGHTNESS_100("filterBrightness100"),
     DIMMER_MODE_FILTER_ON_EXCEPT_BRIGHTNESS_100("filterOnExceptBrightness100");
 
-    private static final Map<String, HomekitDimmerMode> TAG_MAP = Arrays.stream(HomekitDimmerMode.values())
-            .collect(Collectors.toMap(type -> type.tag.toUpperCase(), type -> type));
-
     private final String tag;
-
-    public static Optional<HomekitDimmerMode> valueOfTag(String tag) {
-        return Optional.ofNullable(TAG_MAP.get(tag.toUpperCase()));
-    }
 }

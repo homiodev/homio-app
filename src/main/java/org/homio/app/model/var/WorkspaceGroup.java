@@ -27,7 +27,6 @@ import org.homio.api.model.Icon;
 import org.homio.api.model.JSON;
 import org.homio.api.model.OptionModel;
 import org.homio.api.state.DecimalType;
-import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldColorPicker;
 import org.homio.api.ui.field.UIFieldIconPicker;
@@ -52,6 +51,8 @@ import org.homio.api.ui.field.inline.UIFieldInlineGroup;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent.SelectionParent;
 import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader;
 import org.homio.api.ui.field.selection.dynamic.UIFieldDynamicSelection;
+import org.homio.api.ui.route.UIRouteMenu;
+import org.homio.api.ui.route.UIRouteStorage;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.manager.common.impl.ContextVarImpl;
@@ -84,10 +85,10 @@ import static org.homio.app.utils.UIFieldUtils.nullIfFalse;
 @Setter
 @Getter
 @Accessors(chain = true)
-@UISidebarMenu(order = 20,
+@UIRouteMenu(order = 20,
   icon = "fas fa-boxes-stacked",
-  bg = "#54AD24",
-  allowCreateNewItems = true,
+  color = "#54AD24",
+        allowCreateItem = true,
   overridePath = "variable",
   filter = {"*:fas fa-filter:#8DBA73"}
 )

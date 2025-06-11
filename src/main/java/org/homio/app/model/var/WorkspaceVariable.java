@@ -62,7 +62,7 @@ import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
         description = "Group variables")
 @NoArgsConstructor
 @Table(name = "workspace_variable")
-public class WorkspaceVariable extends BaseEntity
+public final class WorkspaceVariable extends BaseEntity
         implements HasJsonData,
         UIFieldSelectionParent.SelectionParent,
         HasTimeValueSeries,
@@ -370,11 +370,7 @@ public class WorkspaceVariable extends BaseEntity
     }
 
     @Override
-    public void setListener(@NotNull String key, @Nullable ThrowingConsumer<State, Exception> callback) {
-        if (callback == null) {
-            context().event().removeEventListener(key, getEntityID());
-            return;
-        }
+    public void addListener(@NotNull String key, @NotNull ThrowingConsumer<State, Exception> callback) {
         context().event().addEventBehaviourListener(getEntityID(), key, state -> {
             try {
                 callback.accept(state);
@@ -382,6 +378,11 @@ public class WorkspaceVariable extends BaseEntity
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    @Override
+    public void removeListener(@NotNull String key) {
+        context().event().removeEventListener(key, getEntityID());
     }
 
     @Override

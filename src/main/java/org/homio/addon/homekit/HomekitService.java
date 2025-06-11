@@ -1,7 +1,6 @@
 package org.homio.addon.homekit;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import io.github.hapjava.accessories.HomekitAccessory;
 import io.github.hapjava.server.HomekitAccessoryCategories;
 import io.github.hapjava.server.HomekitAuthInfo;
 import io.github.hapjava.server.impl.HomekitRoot;
@@ -9,9 +8,9 @@ import io.github.hapjava.server.impl.HomekitServer;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.homio.addon.homekit.accessories.HomekitAccessoryFactory;
 import org.homio.api.Context;
 import org.homio.api.service.EntityService;
-import org.homio.app.manager.common.impl.ContextNetworkImpl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -20,16 +19,15 @@ import java.math.BigInteger;
 import java.net.InetAddress;
 import java.util.Base64;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
 @Log4j2
 public class HomekitService extends EntityService.ServiceInstance<HomekitEntity> {
-    private final @NotNull Map<String, HomekitAccessory> createdAccessories = new HashMap<>();
     @Getter
-    private final @NotNull Map<String, HomekitEndpointEntity> endpoints = new HashMap<>();
+    private final @NotNull Map<Long, HomekitEndpointContext> endpoints = new ConcurrentHashMap<>();
     private int configurationRevision = 1;
     private HomekitServer homekitServer;
     private HomekitAuthInfoImpl authInfo;
@@ -38,27 +36,6 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
 
     public HomekitService(@NotNull Context context, @NotNull HomekitEntity entity) {
         super(context, entity, true, "homekit");
-        context
-                .network()
-                .addNetworkAddressChanged(
-                        "homekit",
-                        (added, removed) -> {
-                            if (!entity.getStatus().isOnline()) {
-                                return;
-                            }
-                            removed.forEach(i -> {
-                                if (i.address().equals(networkInterface)) {
-                                    stopHomekitServer();
-                                }
-                            });
-                            if (bridge == null && !added.isEmpty()) {
-                                try {
-                                    startHomekitServer();
-                                } catch (Exception e) {
-                                    log.warn("could not initialize HomeKit bridge: {}", e.getMessage());
-                                }
-                            }
-                        });
     }
 
     @Override
@@ -66,31 +43,89 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
         return true;
     }
 
+    /*@SneakyThrows
+    @Override
+    public void entityUpdated(@NotNull HomekitEntity entity) {
+        super.entityUpdated(entity);
+        if (bridge == null || !entity.getStatus().isOnline()) {
+            return;
+        }
+        final boolean[] hasUpdate = {false};
+        endpoints.entrySet().removeIf(pair -> {
+            HomekitEndpointContext ctx = pair.getValue();
+            if (!isHasEndpoint(entity, pair.getKey())) {
+                if (!hasUpdate[0]) {
+                    hasUpdate[0] = true;
+                    bridge.batchUpdate();
+                }
+                if (ctx.accessory() instanceof HomekitAccessoryFactory.HomekitGroup hg) {
+                    hg.removeService(ctx);
+                    if (hg.getServices().isEmpty()) {
+                        bridge.removeAccessory(hg);
+                    }
+                } else {
+                    bridge.removeAccessory(ctx.accessory());
+                }
+                return true;
+            }
+            return false;
+        });
+        for (HomekitEndpointEntity endpoint : entity.getSeries()) {
+            if (!endpoints.containsKey(endpoint.getEntityHashCode())) {
+                if (!hasUpdate[0]) {
+                    hasUpdate[0] = true;
+                    bridge.batchUpdate();
+                }
+                addEndpoint(endpoint);
+            }
+        }
+        if (hasUpdate[0]) {
+            bridge.setConfigurationIndex(makeNewConfigurationRevision());
+            bridge.completeUpdateBatch();
+        }
+    }*/
+
     @Override
     public void destroy(boolean forRestart, @Nullable Exception ex) throws Exception {
         stopHomekitServer();
     }
 
     private void stopHomekitServer() {
-        bridge.stop();
+        if (bridge != null) {
+            bridge.stop();
+        }
         if (homekitServer != null) {
             homekitServer.stop();
         }
+        homekitServer = null;
         bridge = null;
     }
 
     @SneakyThrows
     @Override
     protected void initialize() {
-        // destroy(true, null);
         endpoints.clear();
         networkInterface = InetAddress.getByName(MACHINE_IP_ADDRESS);
         startHomekitServer();
         bridge.batchUpdate();
-        for (HomekitEndpointEntity endpoint : entity.getItems()) {
+
+        for (HomekitEndpointEntity endpoint : entity.getSeries()) {
             addEndpoint(endpoint);
         }
+        bridge.setConfigurationIndex(makeNewConfigurationRevision());
         bridge.completeUpdateBatch();
+    }
+
+    @SneakyThrows
+    public void clearHomekitPairings() {
+        entity.setMac(HomekitServer.generateMac());
+        entity.setPrivateKey(Base64.getEncoder().encodeToString(HomekitServer.generateKey()));
+        entity.setSalt(HomekitServer.generateSalt().toString());
+        entity.setJsonData("users", null);
+        if (bridge != null) {
+            bridge.refreshAuthInfo();
+        }
+        context.db().save(entity);
     }
 
     @SneakyThrows
@@ -102,76 +137,66 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
     }
 
     private void startBridge() throws IOException {
-        this.bridge =
-                homekitServer.createBridge(
-                        authInfo,
-                        entity.getName(),
-                        HomekitAccessoryCategories.BRIDGES,
-                        "Homio",
-                        "Homio",
-                        "none",
-                        "1.0",
-                        "3.0");
-        createdAccessories.values().forEach(bridge::addAccessory);
+        this.bridge = homekitServer.createBridge(
+                authInfo,
+                entity.getName(),
+                HomekitAccessoryCategories.BRIDGES,
+                entity.getManufacturer(),
+                entity.getModel(),
+                entity.getSerialNumber(),
+                "1.0",
+                "1.0");
         makeNewConfigurationRevision();
         bridge.start();
     }
 
     private @NotNull HomekitServer createHomekitServer() throws IOException {
-        var mdns = ((ContextNetworkImpl) context.network()).getPrimaryMDNS(null);
+        /*var mdns = ((ContextNetworkImpl) context.network()).getPrimaryMDNS(null);
         if (mdns != null) {
             return new HomekitServer(mdns, entity.getPort());
-        } else {
-            return new HomekitServer(networkInterface, entity.getPort());
-        }
+        } else {*/
+        return new HomekitServer(networkInterface, entity.getPort());
+        //}
     }
-
-/*
-    public void clearHomekitPairings() {
-        for (int i = 1; i <= authInfos.size(); ++i) {
-            clearHomekitPairings(i);
-        }
-    }
-*/
-
-    /*public void clearHomekitPairings(int instance) {
-        if (instance < 1 || instance > authInfos.size()) {
-            log.warn("Instance {} is out of range 1..{}.", instance, authInfos.size());
-            return;
-        }
-
-        try {
-            authInfos.get(instance - 1).clear();
-            bridges.get(instance - 1).refreshAuthInfo();
-        } catch (Exception e) {
-            log.warn("could not clear HomeKit pairings", e);
-        }
-    }*/
 
     public void addEndpoint(HomekitEndpointEntity endpoint) {
-        endpoints.put(endpoint.getName(), endpoint);
-        endpoint.setService(this);
-        var accessory = HomekitAccessoryFactory.create(endpoint.getAccessoryType(), endpoint);
-        createdAccessories.put(endpoint.getName(), accessory);
-        bridge.addAccessory(accessory);
-        // TODO: we need to call this if we changed endpoint configuration
-//        bridge.setConfigurationIndex(configurationRevision);
+        long code = endpoint.getEntityHashCode();
+        if (!endpoints.containsKey(code)) {
+            var ctx = new HomekitEndpointContext(endpoint, entity, this);
+            endpoints.put(code, ctx);
+            String group = endpoint.getGroup();
+            if (group.isEmpty()) {
+                var accessory = HomekitAccessoryFactory.create(ctx);
+                bridge.addAccessory(accessory);
+            } else {
+                var accessoryGroup = findAccessoryGroup(endpoint);
+                if (accessoryGroup == null) {
+                    accessoryGroup = new HomekitAccessoryFactory.HomekitGroup(ctx);
+                    bridge.addAccessory(accessoryGroup);
+                }
+                accessoryGroup.addService(ctx);
+            }
+        }
     }
 
-    public void makeNewConfigurationRevision() {
+    public int makeNewConfigurationRevision() {
         configurationRevision = (configurationRevision + 1) % 65535;
-        final HomekitRoot bridge = this.bridge;
         try {
-            if (bridge != null) {
-                bridge.setConfigurationIndex(configurationRevision);
+            if (this.bridge != null) {
+                this.bridge.setConfigurationIndex(configurationRevision);
             }
         } catch (IOException e) {
             log.warn("Could not update configuration revision number", e);
         }
+        return configurationRevision;
     }
 
     public @NotNull Context getContext() {
         return context;
+    }
+
+    public void stateUpdated() {
+        context.ui().updateItem(entity);
     }
 
     private class HomekitAuthInfoImpl implements HomekitAuthInfo {
@@ -240,5 +265,15 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
         public boolean userIsAdmin(String username) {
             return true;
         }
+    }
+
+    private HomekitAccessoryFactory.HomekitGroup findAccessoryGroup(HomekitEndpointEntity endpoint) {
+        for (HomekitEndpointContext c : endpoints.values()) {
+            if (c.group() instanceof HomekitAccessoryFactory.HomekitGroup hg
+                && hg.getGroupName().equals(endpoint.getGroup())) {
+                return hg;
+            }
+        }
+        return null;
     }
 }

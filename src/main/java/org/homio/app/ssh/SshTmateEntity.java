@@ -11,8 +11,8 @@ import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.homio.api.service.ssh.SshBaseEntity;
-import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.ui.route.UIRouteIdentity;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.ContextImpl;
@@ -33,7 +33,7 @@ import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 @Log4j2
 @Entity
 @CreateSingleEntity
-@UISidebarChildren(icon = "fas fa-satellite-dish", color = "#0088CC", allowCreateItem = false)
+@UIRouteIdentity(icon = "fas fa-satellite-dish", color = "#0088CC", allowCreateItem = false)
 public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateService> {
 
   public static void ensureEntityExists(ContextImpl context) {
@@ -103,11 +103,6 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
   @Override
   public long getEntityServiceHashCode() {
     return 0;
-  }
-
-  @Override
-  public @NotNull Class<SshTmateService> getEntityServiceItemClass() {
-    return SshTmateService.class;
   }
 
   @Override

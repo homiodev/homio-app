@@ -11,37 +11,44 @@ import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.homio.addon.homekit.accessories.HomekitAccessoryFactory;
 import org.homio.api.Context;
 import org.homio.api.entity.CreateSingleEntity;
-import org.homio.api.entity.HasTabEntities;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContractStub;
-import org.homio.api.entity.types.MiscEntity;
-import org.homio.api.model.Icon;
+import org.homio.api.entity.device.DeviceEntityAndSeries;
 import org.homio.api.model.endpoint.BaseDeviceEndpoint;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.service.EntityService;
-import org.homio.api.ui.UISidebarChildren;
+import org.homio.api.ui.UI;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldPort;
 import org.homio.api.ui.field.UIFieldType;
+import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.ui.route.UIRouteMisc;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Base64;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("JpaAttributeTypeInspection")
 @Entity
 @Log4j2
 @CreateSingleEntity
-@UISidebarChildren(icon = "fas fa-house-chimney-window", color = "#D6AD3A", allowCreateItem = false)
-public class HomekitEntity extends MiscEntity implements EntityService<HomekitService>,
-        DeviceEndpointsBehaviourContractStub, HasTabEntities<HomekitEndpointEntity> {
+@UIRouteMisc(allowCreateItem = false)
+public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEntity> implements
+        EntityService<HomekitService>,
+        DeviceEndpointsBehaviourContractStub {
+
+    @Override
+    @UIField(order = 10, label = "homekitName")
+    public String getName() {
+        return super.getName();
+    }
 
     @UIField(order = 1, inlineEdit = true)
     @UIFieldGroup("GENERAL")
@@ -53,10 +60,10 @@ public class HomekitEntity extends MiscEntity implements EntityService<HomekitSe
         setJsonData("start", start);
     }
 
-    @UIField(order = 2)
+    @UIField(order = 2, required = true, label = "homekitPin")
     @UIFieldGroup("GENERAL")
     public String getPin() {
-        return getJsonData("pin");
+        return getJsonData("pin", "031-45-154");
     }
 
     public void setPin(String value) {
@@ -94,27 +101,18 @@ public class HomekitEntity extends MiscEntity implements EntityService<HomekitSe
     }
 
     @Override
-    protected @NotNull String getDevicePrefix() {
-        return "homekit";
-    }
-
-    @Override
-    public @Nullable String getDefaultName() {
+    public String getDefaultName() {
         return "HomioBridge";
     }
 
     @Override
     public long getEntityServiceHashCode() {
-        return getJsonDataHashCode("instances", "port");
+        return getJsonDataHashCode("salt", "port", "sid", "qrCode", "pin", "pk", "mac") +
+               getChildEntityHashCode();
     }
 
     @Override
-    public @NotNull Class<HomekitService> getEntityServiceItemClass() {
-        return HomekitService.class;
-    }
-
-    @Override
-    public @Nullable HomekitService createService(@NotNull Context context) {
+    public HomekitService createService(@NotNull Context context) {
         return new HomekitService(context, this);
     }
 
@@ -130,6 +128,15 @@ public class HomekitEntity extends MiscEntity implements EntityService<HomekitSe
         }
     }
 
+    @UIContextMenuAction(
+            value = "CLEAR_HOMEKIT_PAIRINGS",
+            icon = "fas fa-soap",
+            iconColor = UI.Color.RED,
+            confirmMessage = "W.CONFIRM.CLEAR_HOMEKIT_PAIRINGS")
+    public void clearHomekitPairings() {
+        getService().clearHomekitPairings();
+    }
+
     @SneakyThrows
     @Override
     public void beforePersist() {
@@ -137,7 +144,6 @@ public class HomekitEntity extends MiscEntity implements EntityService<HomekitSe
         setMac(HomekitServer.generateMac());
         setPrivateKey(Base64.getEncoder().encodeToString(HomekitServer.generateKey()));
         setSetupId(HAPSetupCodeUtils.generateSetupId());
-        setPin("012-21-121");
         setSalt(HomekitServer.generateSalt().toString());
     }
 
@@ -146,7 +152,7 @@ public class HomekitEntity extends MiscEntity implements EntityService<HomekitSe
         return getJsonData("salt");
     }
 
-    private void setSalt(String salt) {
+    void setSalt(String salt) {
         setJsonData("salt", salt);
     }
 
@@ -155,11 +161,11 @@ public class HomekitEntity extends MiscEntity implements EntityService<HomekitSe
         return getJsonData("mac");
     }
 
-    private void setMac(String value) {
+    public void setMac(String value) {
         setJsonData("mac", value);
     }
 
-    @UIField(order = 16, disableEdit = true, type = UIFieldType.ImageBase64)
+    @UIField(order = 16, hideInEdit = true, type = UIFieldType.ImageBase64)
     public String getQrImage() {
         return getJsonData("qrImage");
     }
@@ -173,29 +179,32 @@ public class HomekitEntity extends MiscEntity implements EntityService<HomekitSe
         return getJsonData("pk");
     }
 
-    private void setPrivateKey(String value) {
+    void setPrivateKey(String value) {
         setJsonData("pk", value);
-    }
-
-    public Set<HomekitEndpointEntity> getItems() {
-        return getJsonDataSet("eps", HomekitEndpointEntity.class);
-    }
-
-    @Override
-    public void setItems(Set<HomekitEndpointEntity> items) {
-        setJsonDataObject("eps", items);
     }
 
     @Override
     public @NotNull Map<String, ? extends DeviceEndpoint> getDeviceEndpoints() {
-        return getService().getEndpoints().values().stream().map(homekitEndpointEntity -> new HomekitEndpointUI(homekitEndpointEntity, HomekitEntity.this)).collect(Collectors.toMap(HomekitEndpointUI::getId, e -> e));
+        return getService().getEndpoints().values()
+                .stream()
+                .filter(e -> e.accessory() != null)
+                .filter(e -> !(e.accessory() instanceof HomekitAccessoryFactory.HomekitGroup))
+                .map(HomekitEndpointUI::new)
+                .collect(Collectors.toMap(HomekitEndpointUI::getEndpointEntityID, e -> e));
+    }
+
+    @Override
+    public @Nullable String getDescription() {
+        return null;
+    }
+
+    @Override
+    protected @NotNull String getDevicePrefix() {
+        return "homekit";
     }
 
     @Override
     public void assembleActions(UIInputBuilder uiInputBuilder) {
-        /*for (int i = 0; i < getInstances(); i++) {
-            new HomekitEndpoint(getHomekitInstance(i), this).assembleUIAction(uiInputBuilder);
-        }*/
     }
 
     @UIField(order = 20, disableEdit = true)
@@ -209,86 +218,49 @@ public class HomekitEntity extends MiscEntity implements EntityService<HomekitSe
         return getJsonDataMap("users", String.class);
     }
 
-    /*@UIContextMenuAction(value = "ADD_WIDGET", icon = "fas fa-globe", iconColor = "#4AA734")
-    public void addEndpoint() {
-        context().ui().dialog().sendDialogRequest("key", "title",
-                (responseType, pressedButton, params) -> {
-                    var endpoints = getRawEndpoints();
-                    var newEndpoint = new EndpointDTO(params.get("name").asText(),
-                            HomekitAccessoryType.valueOf(params.get("accessoryType").asText()))
-                            .addVariable(HomekitCharacteristicType.valueOf(params.path("type_1`").asText()),
-                                    context().var().getVariable(params.path("variable_1").asText()))
-                            .addVariable(HomekitCharacteristicType.valueOf(params.path("type_2`").asText()),
-                                    context().var().getVariable(params.path("variable_2").asText()));
-                    if (endpoints.add(newEndpoint)) {
-                        getService().addEndpoint(newEndpoint);
-                    }
-                }, new Consumer<DialogModel>() {
-                    @Override
-                    public void accept(DialogModel dialogEditor) {
-                        dialogEditor.disableKeepOnUi();
-                        dialogEditor.appearance(new Icon("fas fa-house-chimney-window"), null);
-                        List<ActionInputParameter> inputs = new ArrayList<>();
-                        inputs.add(ActionInputParameter.textRequired("name", "Accessory name", 3, 20));
-                        inputs.add(ActionInputParameter.select("accessoryType", SWITCH.name(), OptionModel.enumList(HomekitAccessoryType.class)));
-                        dialogEditor
-                                .submitButton("Create", button -> {
-                                })
-                                .group("General", inputs)
-                                *//*.group("MandatoryCharacteristics", dialogGroup -> {
-                                    dialogGroup.setBorderColor("#FFAAAA");
-                                    var typeSelect = ActionInputParameter.select("type", HomekitCharacteristicType.EMPTY.name(), OptionModel.enumList(HomekitAccessoryType.class);
-                                    var varSelect = ActionInputParameter.selectVariable("variable_1");
-                                    dialogGroup.input(ActionInputParameter.multiItems("characteristic",
-                                            List.of(typeSelect, varSelect)));
-                                })
-                                .group("OptionalCharacteristics", dialogGroup -> {
-                                    dialogGroup.setBorderColor("#FF00FF");
-                                    var typeSelect = ActionInputParameter.select("type", HomekitCharacteristicType.EMPTY.name(), OptionModel.enumList(HomekitAccessoryType.class);
-                                    var varSelect = ActionInputParameter.selectVariable("variable_1");
-                                    dialogGroup.input(ActionInputParameter.multiItems("characteristic",
-                                            List.of(typeSelect, varSelect)));
-                                })*//*;
-                    }
-                });
-    }*/
+    @UIField(order = 100, hideInView = true)
+    public String getManufacturer() {
+        return getJsonData("manu", "Homio");
+    }
 
-   /* @JsonIgnore
-    @NotNull Set<EndpointDTO> getRawEndpoints() {
-        return getJsonDataSet("ep", EndpointDTO.class);
-    }*/
+    void setManufacturer(String value) {
+        setJsonData("manu", value);
+    }
 
+    @UIField(order = 101, hideInView = true)
+    public String getSerialNumber() {
+        return getJsonData("ser", "none");
+    }
+
+    void setSerialNumber(String value) {
+        setJsonData("ser", value);
+    }
+
+    @Getter
     public static class HomekitEndpointUI extends BaseDeviceEndpoint<HomekitEntity> {
 
-        @Getter
-        private final String id;
+        private final @NotNull HomekitEndpointEntity endpoint;
 
-        public HomekitEndpointUI(HomekitEndpointEntity endpoint, HomekitEntity device) {
-            super(new Icon("fas fa-1"),
-                    "Homekit 1",
-                    device.context(),
-                    device,
-                    endpoint.getName(),
+        public HomekitEndpointUI(HomekitEndpointContext ctx) {
+            super(ctx.accessory().getVariable().getIconModel(),
+                    "HOMEKIT",
+                    ctx.service().context(),
+                    ctx.owner(),
+                    ctx.endpoint().getTitle(),
                     false,
-                    DeviceEndpoint.EndpointType.string);
-            this.id = String.valueOf(endpoint.getId());
+                    ctx.accessory().getVariable().getRestriction().getEndpointType());
+            this.endpoint = ctx.endpoint();
         }
 
-        public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
-            /*String html = Arrays.stream(getValue().toString().split(" "))
-                    .collect(Collectors.joining("</div><div>", "<div>", "</div>"));
-            uiInputBuilder.addInfo("<div class=\"dfc fs14\">%s</div>".formatted(html), UIInfoItemBuilder.InfoType.HTML);
-            uiInputBuilder.addButton("qrCode", new Icon("fas fa-retweet", "#FF0000"),
-                            (context, params) -> {
-                                context.ui().dialog().topImageDialog("QR code", "fas fa-icon", "#FF00FF")
-                                        .sendImage(settings.getQrImage());
-                                return null;
-                                //return sendRequest(Z2MDeviceEndpointFirmwareUpdate.Request.update);
-                            })
-                    .setText("QR")
-                    .setConfirmMessage("W.CONFIRM.ZIGBEE_UPDATE")
-                    .setConfirmMessageDialogColor(UI.Color.ERROR_DIALOG)
-                    .setDisabled(!getDevice().getStatus().isOnline());*/
+        @Override
+        public @Nullable String getDescription() {
+            String value = endpoint.getAccessoryType().name();
+            if (!endpoint.getGroup().isEmpty()) {
+                value = "[" + endpoint.getGroup() + "] " + value;
+
+            }
+            return value;
         }
     }
 }
+

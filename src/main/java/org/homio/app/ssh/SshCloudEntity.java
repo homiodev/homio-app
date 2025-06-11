@@ -9,13 +9,12 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.hibernate.resource.beans.container.internal.NoSuchBeanException;
 import org.homio.api.Context;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.log.HasEntityLog;
-import org.homio.api.entity.types.IdentityEntity;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.service.CloudProviderService;
 import org.homio.api.ui.UI.Color;
-import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldPort;
@@ -25,6 +24,7 @@ import org.homio.api.ui.field.action.UIActionInput;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.selection.UIFieldBeanSelection;
+import org.homio.api.ui.route.UIRouteIdentity;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.service.cloud.CloudService;
@@ -44,8 +44,8 @@ import static org.homio.app.ssh.SshGenericEntity.updateSSHData;
 
 @Log4j2
 @Entity
-@UISidebarChildren(icon = "fas fa-cloud", color = "#644DAB")
-public class SshCloudEntity extends IdentityEntity implements
+@UIRouteIdentity(icon = "fas fa-cloud", color = "#644DAB")
+public class SshCloudEntity extends DeviceBaseEntity implements
   CloudProviderService.SshCloud<SshCloudEntity>, HasEntityLog, HasDynamicContextMenuActions {
 
   public static SshCloudEntity ensureEntityExists(ContextImpl context) {
@@ -145,7 +145,11 @@ public class SshCloudEntity extends IdentityEntity implements
   @UIField(order = 7)
   @UIFieldGroup("SSH")
   public boolean isEnableWatchdog() {
-    return true;
+   return getJsonData("ew", true);
+  }
+
+  public void setEnableWatchdog(boolean value) {
+    setJsonData("ew", value);
   }
 
   public boolean isRestartOnFailure() {

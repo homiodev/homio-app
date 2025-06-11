@@ -1,0 +1,146 @@
+package org.homio.addon.homekit.accessories;
+
+import io.github.hapjava.characteristics.HomekitCharacteristicChangeCallback;
+import io.github.hapjava.characteristics.impl.windowcovering.PositionStateEnum;
+import io.github.hapjava.services.Service;
+import lombok.extern.log4j.Log4j2;
+import org.homio.addon.homekit.HomekitEndpointContext;
+import org.homio.api.ContextVar;
+import org.homio.api.state.DecimalType;
+
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import static org.homio.addon.homekit.HomekitCharacteristicFactory.createMapping;
+import static org.homio.addon.homekit.HomekitCharacteristicFactory.getKeyFromMapping;
+import static org.homio.addon.homekit.enums.HomekitCharacteristicType.TargetPosition;
+
+@Log4j2
+public abstract class AbstractHomekitPositionAccessory extends AbstractHomekitAccessory {
+
+    final boolean emulateState;
+    final boolean emulateStopSameDirection;
+    final boolean sendUpDownForExtents;
+    final int closedPosition;
+    final int openPosition;
+    final Map<PositionStateEnum, Object> positionStateMapping;
+    private final ContextVar.Variable currentPositionVar;
+    private final ContextVar.Variable targetPositionVar;
+    PositionStateEnum emulatedState = PositionStateEnum.STOPPED;
+
+    public AbstractHomekitPositionAccessory(HomekitEndpointContext ctx, Class<? extends Service> serviceClass) {
+        super(ctx, serviceClass, ctx.endpoint().getPositionState());
+        emulateState = ctx.endpoint().getEmulateStopState();
+        emulateStopSameDirection = ctx.endpoint().getEmulateStopState();
+        sendUpDownForExtents = ctx.endpoint().getSendUpDownForExtents();
+        closedPosition = inverted ? 0 : 100;
+        openPosition = inverted ? 100 : 0;
+        ContextVar.Variable psv = ctx.getVariable(ctx.endpoint().getPositionState());
+        positionStateMapping = createMapping(psv, PositionStateEnum.class);
+        currentPositionVar = ctx.getVariable(ctx.endpoint().getCurrentPosition());
+        targetPositionVar = ctx.getVariable(ctx.endpoint().getTargetPosition());
+    }
+
+    public CompletableFuture<Integer> getCurrentPosition() {
+        return CompletableFuture.completedFuture(convertPositionState(currentPositionVar, openPosition, closedPosition));
+    }
+
+    public CompletableFuture<PositionStateEnum> getPositionState() {
+        return CompletableFuture.completedFuture(emulateState ? emulatedState
+                : getKeyFromMapping(variable, positionStateMapping, PositionStateEnum.STOPPED));
+    }
+
+    public CompletableFuture<Integer> getTargetPosition() {
+        return CompletableFuture.completedFuture(convertPositionState(targetPositionVar, openPosition, closedPosition));
+    }
+
+    public CompletableFuture<Void> setTargetPosition(int value) {
+        getCharacteristic(TargetPosition).ifPresentOrElse(taggedItem -> {
+            int targetPosition = convertPosition(value, openPosition);
+            targetPositionVar.set(new DecimalType(targetPosition));
+            // Item item = taggedItem.getItem();
+                /*if (item instanceof RollershutterItem itemAsRollerShutterItem) {
+                    // HomeKit home app never sends STOP. we emulate stop if we receive 100% or 0% while the blind is moving
+                    if (emulateState && (targetPosition == 100 && emulatedState == PositionStateEnum.DECREASING)
+                        || ((targetPosition == 0 && emulatedState == PositionStateEnum.INCREASING))) {
+                        if (emulateStopSameDirection) {
+                            // some blinds devices do not support "STOP" but would stop if receive UP/DOWN while moving
+                            itemAsRollerShutterItem
+                                    .send(emulatedState == PositionStateEnum.INCREASING ? UpDownType.UP : UpDownType.DOWN);
+                        } else {
+                            itemAsRollerShutterItem.send(StopMoveType.STOP);
+                        }
+                        emulatedState = PositionStateEnum.STOPPED;
+                    } else {
+                        if (sendUpDownForExtents && targetPosition == 0) {
+                            itemAsRollerShutterItem.send(UpDownType.UP);
+                        } else if (sendUpDownForExtents && targetPosition == 100) {
+                            itemAsRollerShutterItem.send(UpDownType.DOWN);
+                        } else {
+                            itemAsRollerShutterItem.send(new PercentType(targetPosition));
+                        }
+                        if (emulateState) {
+                            @Nullable
+                            PercentType currentPosition = item.getStateAs(PercentType.class);
+                            emulatedState = currentPosition == null || currentPosition.intValue() == targetPosition
+                                    ? PositionStateEnum.STOPPED
+                                    : currentPosition.intValue() < targetPosition ? PositionStateEnum.INCREASING
+                                    : PositionStateEnum.DECREASING;
+                        }
+                    }
+                } else if (item instanceof DimmerItem itemAsDimmerItem) {
+                    itemAsDimmerItem.send(new PercentType(targetPosition));
+                } else if (item instanceof NumberItem itemAsNumberItem) {
+                    itemAsNumberItem.send(new DecimalType(targetPosition));
+                } else if (item instanceof GroupItem itemAsGroupItem
+                           && itemAsGroupItem.getBaseItem() instanceof RollershutterItem) {
+                    itemAsGroupItem.send(new PercentType(targetPosition));
+                } else if (item instanceof GroupItem itemAsGroupItem
+                           && itemAsGroupItem.getBaseItem() instanceof DimmerItem) {
+                    itemAsGroupItem.send(new PercentType(targetPosition));
+                } else if (item instanceof GroupItem itemAsGroupItem
+                           && itemAsGroupItem.getBaseItem() instanceof NumberItem) {
+                    itemAsGroupItem.send(new DecimalType(targetPosition));
+                } else {
+                    log.warn(
+                            "Unsupported item type for characteristic {} at accessory {}. Expected Rollershutter, Dimmer or Number item, got {}",
+                            TargetPosition, getName(), item.getClass());
+                }*/
+        }, () -> {
+            log.warn("Mandatory characteristic {} not found at accessory {}. ", TargetPosition, getName());
+        });
+        return CompletableFuture.completedFuture(null);
+    }
+
+    public void subscribeCurrentPosition(HomekitCharacteristicChangeCallback callback) {
+        subscribe(currentPositionVar, callback);
+    }
+
+    public void subscribePositionState(HomekitCharacteristicChangeCallback callback) {
+        subscribe(callback);
+    }
+
+    public void subscribeTargetPosition(HomekitCharacteristicChangeCallback callback) {
+        subscribe(targetPositionVar, callback);
+    }
+
+    public void unsubscribeCurrentPosition() {
+        unsubscribe(currentPositionVar);
+    }
+
+    public void unsubscribePositionState() {
+        unsubscribe();
+    }
+
+    public void unsubscribeTargetPosition() {
+        unsubscribe(targetPositionVar);
+    }
+
+    protected int convertPosition(int value, int openPosition) {
+        return Math.abs(openPosition - value);
+    }
+
+    protected int convertPositionState(ContextVar.Variable positionVar, int openPosition, int closedPosition) {
+        return positionVar != null ? convertPosition(positionVar.getValue().intValue(), openPosition) : closedPosition;
+    }
+}

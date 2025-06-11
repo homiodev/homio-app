@@ -72,7 +72,7 @@ public final class HardwareUtils {
     public static void setDatabaseProperties(Logger log) {
         Properties properties = ContextSettingImpl.getHomioProperties();
 
-        String dbUrl = properties.getProperty("db-url", "jdbc:sqlite:" + CommonUtils.getRootPath().resolve("data.db") +
+        String dbUrl = properties.getProperty("db-url", "jdbc:sqlite:" + CommonUtils.getConfigPath().resolve("data.db") +
                                                         "?user=postgres&password=password");
 
         System.setProperty("spring.datasource.url", dbUrl.split("\\?")[0]);

@@ -13,6 +13,20 @@ CREATE TABLE IF NOT EXISTS devices (
 
 CREATE INDEX IF NOT EXISTS dc ON devices (updateTime);
 
+CREATE TABLE IF NOT EXISTS device_series (
+    dtype varchar(31) NOT NULL,
+    entityid varchar(128) NOT NULL,
+    creationTime timestamp(6) NOT NULL,
+    name varchar(255),
+    updateTime timestamp(6) NOT NULL,
+    version integer,
+    jsonData varchar(65535),
+    priority integer NOT NULL,
+    deviceEntity_entityID varchar(128),
+    PRIMARY KEY (entityid),
+    CONSTRAINT fk_device_series_widget FOREIGN KEY (deviceEntity_entityID) REFERENCES devices
+    );
+
 CREATE TABLE IF NOT EXISTS scripts (
     entityid varchar(128) NOT NULL,
     creationTime timestamp(6) NOT NULL,

@@ -3,6 +3,7 @@ package org.homio.app.rest;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.bluetooth.BluetoothCharacteristicService;
 import org.homio.api.Context;
 import org.homio.api.entity.UserEntity;
@@ -153,8 +154,9 @@ public class DeviceController {
     for (DeviceBaseEntity deviceEntity : context.db().findAll(DeviceBaseEntity.class)) {
       if (deviceEntity instanceof DeviceEndpointsBehaviourContract deviceContract) {
         if ((isEmpty(prefix) || deviceEntity.getEntityID().startsWith("dvc_" + prefix)) && deviceFilter.test(deviceContract)) {
+          String id = Objects.toString(deviceEntity.getIeeeAddress(), deviceEntity.getEntityID());
           Icon icon = deviceEntity.getEntityIcon();
-          list.add(OptionModel.of(Objects.requireNonNull(deviceEntity.getIeeeAddress()), deviceContract.getDeviceFullName())
+          list.add(OptionModel.of(id, deviceContract.getDeviceFullName())
             .setDescription(deviceContract.getDescription())
             .setIcon(icon.getIcon())
             .setColor(icon.getColor()));

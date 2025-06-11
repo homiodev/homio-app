@@ -8,8 +8,8 @@ import org.apache.logging.log4j.Logger;
 import org.hibernate.validator.internal.constraintvalidators.hv.EmailValidator;
 import org.homio.api.Context;
 import org.homio.api.entity.UserEntity;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.log.HasEntityLog;
-import org.homio.api.entity.types.IdentityEntity;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
@@ -31,13 +31,13 @@ import java.util.Set;
 import static org.homio.api.util.Constants.ADMIN_ROLE;
 
 @Entity
-public abstract class UserBaseEntity extends IdentityEntity
+public abstract class UserBaseEntity extends DeviceBaseEntity
   implements UserEntity, HasEntityLog, HasDynamicContextMenuActions {
 
   public static Logger log = LogManager.getLogger(UserBaseEntity.class);
 
   public static void logInfo(String entityID, String message) {
-    log.info(entityID + ": " + message);
+      log.info("{}: {}", entityID, message);
   }
 
   @Override

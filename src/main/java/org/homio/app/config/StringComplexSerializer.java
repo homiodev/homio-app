@@ -8,8 +8,7 @@ import com.fasterxml.jackson.databind.ser.ContextualSerializer;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.entity.BaseEntity;
-import org.homio.api.ui.field.UIFieldLinkToEntity;
-import org.homio.api.ui.field.UIFieldLinkToEntity.FieldLinkToEntityTitleProvider;
+import org.homio.api.ui.field.UIFieldLinkToRoute;
 import org.homio.app.manager.common.ContextImpl;
 import org.jetbrains.annotations.NotNull;
 
@@ -30,8 +29,8 @@ public class StringComplexSerializer extends StdSerializer<String> implements Co
           gen.writeString(value);
         } else {
           String title = entity.getTitle();
-          if (entity instanceof UIFieldLinkToEntity.FieldLinkToEntityTitleProvider) {
-            title = ((FieldLinkToEntityTitleProvider) entity).getLinkTitle();
+          if (entity instanceof UIFieldLinkToRoute.FieldLinkToEntityTitleProvider) {
+            title = ((UIFieldLinkToRoute.FieldLinkToEntityTitleProvider) entity).getLinkTitle();
           }
           gen.writeString("%s###{\"title\":\"%s\"}".formatted(value, title));
         }
@@ -43,7 +42,7 @@ public class StringComplexSerializer extends StdSerializer<String> implements Co
   public JsonSerializer<?> createContextual(SerializerProvider prov, BeanProperty property) {
     // Check if the field has the ReferenceToBean annotation
     if (property != null) {
-      UIFieldLinkToEntity annotation = property.getAnnotation(UIFieldLinkToEntity.class);
+      UIFieldLinkToRoute annotation = property.getAnnotation(UIFieldLinkToRoute.class);
       if (annotation != null && annotation.applyTitle()) {
         return createFieldLinkSerializer();
       }

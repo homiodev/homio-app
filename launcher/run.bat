@@ -4,8 +4,8 @@ setlocal enabledelayedexpansion
 
 set "root_path=%USERPROFILE%\homio"
 
-if exist "homio.properties" (
-    for /f "usebackq delims=" %%i in ("homio.properties") do (
+if exist "config/homio.properties" (
+    for /f "usebackq delims=" %%i in ("config/homio.properties") do (
         for /f "tokens=1* delims==" %%a in ("%%i") do (
             if "%%a"=="rootPath" if exist "%%b" (
                 set "root_path=%%b"

@@ -11,6 +11,7 @@ import org.homio.app.model.entity.widget.attributes.HasIcon;
 import org.homio.app.model.entity.widget.attributes.HasMargin;
 import org.jetbrains.annotations.NotNull;
 
+@SuppressWarnings("unused")
 @Entity
 public class WidgetSimpleTextEntity extends WidgetEntity<WidgetSimpleTextEntity>
   implements

@@ -1,12 +1,6 @@
 package org.homio.app.model.entity.user;
 
-import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
-import static org.springframework.http.HttpHeaders.ORIGIN;
-
 import jakarta.persistence.Entity;
-import java.util.Base64;
-import java.util.Set;
-import java.util.function.Predicate;
 import lombok.SneakyThrows;
 import org.homio.api.Context;
 import org.homio.api.console.ConsolePlugin;
@@ -15,11 +9,11 @@ import org.homio.api.entity.HasPermissions;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.setting.SettingPlugin;
-import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldTab;
 import org.homio.api.ui.field.action.UIContextMenuAction;
+import org.homio.api.ui.route.UIRouteIdentity;
 import org.homio.api.util.NotificationLevel;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.WorkspaceEntity;
@@ -27,8 +21,15 @@ import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.WidgetTabEntity;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Base64;
+import java.util.Set;
+import java.util.function.Predicate;
+
+import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
+import static org.springframework.http.HttpHeaders.ORIGIN;
+
 @Entity
-@UISidebarChildren(icon = "fas fa-person-walking-luggage", color = "#B5B812")
+@UIRouteIdentity(icon = "fas fa-person-walking-luggage", color = "#B5B812")
 public final class UserGuestEntity extends UserBaseEntity {
 
   @SneakyThrows

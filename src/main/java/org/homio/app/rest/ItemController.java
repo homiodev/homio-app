@@ -12,19 +12,16 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.Part;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import lombok.SneakyThrows;
+import lombok.*;
 import lombok.extern.log4j.Log4j2;
-import lombok.val;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
-import org.homio.addon.homekit.HomekitEntity;
 import org.homio.api.Context;
-import org.homio.api.entity.*;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.EntityFieldMetadata;
+import org.homio.api.entity.HasStatusAndMsg;
+import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.log.HasEntitySourceLog;
@@ -39,16 +36,10 @@ import org.homio.api.model.FileModel;
 import org.homio.api.model.OptionModel;
 import org.homio.api.service.EntityService;
 import org.homio.api.ui.UIActionHandler;
-import org.homio.api.ui.UISidebarChildren;
-import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.UIFilterOptions;
-import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
-import org.homio.api.ui.field.action.HasDynamicUIFields;
-import org.homio.api.ui.field.action.UIActionButton;
-import org.homio.api.ui.field.action.UIContextMenuAction;
-import org.homio.api.ui.field.action.UIContextMenuUploadAction;
+import org.homio.api.ui.field.action.*;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.ui.field.inline.UIFieldInlineEntities;
@@ -57,6 +48,7 @@ import org.homio.api.ui.field.selection.dynamic.DynamicOptionLoader.DynamicOptio
 import org.homio.api.ui.field.selection.dynamic.DynamicParameterFields;
 import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
 import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields.RequestDynamicParameter;
+import org.homio.api.ui.route.UIRouteMenu;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.widget.HasCustomWidget;
 import org.homio.app.LogService;
@@ -90,17 +82,7 @@ import org.springframework.core.annotation.MergedAnnotations.SearchStrategy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
@@ -109,12 +91,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.AnnotatedType;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.*;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
@@ -123,17 +100,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
@@ -152,7 +120,7 @@ import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 @RequiredArgsConstructor
 public class ItemController implements ContextCreated, ContextRefreshed {
 
-  private static final Map<String, List<Class<?>>> typeToEntityClassNames =
+  private static final Map<String, Set<Class<?>>> typeToEntityClassNames =
     new ConcurrentHashMap<>();
   private static final Map<String, Class<?>> BASE_ENTITY_INTERFACES =
     Map.of(HasTextToSpeech.class.getSimpleName(), HasTextToSpeech.class);
@@ -278,13 +246,13 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
     if (classEntity == null) {
       // i.e in case we load Widget
-      if (entityID.contains(":GENERATED:")) {
+      if (entityID.contains(":GENERATED:")/* || entityID.contains(":IM:")*/) {
         entityID = entityID.substring(0, entityID.indexOf(":"));
       }
       Class<?> aClass = entityManager.getUIFieldClassByType(entityID);
       if (aClass == null) {
         List<Class<?>> classImplementationsByType = findAllClassImplementationsByType(entityID);
-        aClass = classImplementationsByType.isEmpty() ? null : classImplementationsByType.get(0);
+        aClass = classImplementationsByType.isEmpty() ? null : classImplementationsByType.getFirst();
       }
       if (aClass == null) {
         throw new IllegalArgumentException("Unable to find class for entity: " + entityID);
@@ -719,7 +687,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
   @GetMapping("/service/{esName}")
   public List<EntityService> getItemsByEntityServiceType(@PathVariable("esName") String esName) {
-    return context.getEntityServices(EntityService.class)
+    /*return context.getEntityServices(EntityService.class)
       .stream().filter(e -> {
         for (Class<?> anInterface : ClassUtils.getAllInterfaces(((EntityService<?>) e).getEntityServiceItemClass())) {
           if (anInterface.getSimpleName().equals(esName)) {
@@ -733,8 +701,9 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
         return false;
       })
-      .collect(Collectors.toList());
-  }
+      .collect(Collectors.toList());*/
+    throw new RuntimeException("Not implemented");
+ }
 
     /*@PostMapping("/{entityID}/image")
     public DeviceBaseEntity updateItemImage(@PathVariable("entityID") String entityID, @RequestBody ImageEntity imageEntity) {
@@ -754,7 +723,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     return list;
   }
-
   @SneakyThrows
   @PutMapping("/{entityID}/mappedBy/{mappedBy}")
   public BaseEntity putToItem(@PathVariable("entityID") String entityID, @PathVariable("mappedBy") String mappedBy, @RequestBody String json) {
@@ -772,13 +740,14 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
         Class<? extends BaseEntity> className = (Class<? extends BaseEntity>) entityManager.getUIFieldClassByType(type);
         BaseEntity newEntity = objectMapper.readValue(entityFields.toString(), className);
-        if(mappedBy.equals("in-memory") && owner instanceof HasTabEntities hte) {
-          Set items = hte.getItems();
-          items.add(newEntity);
-          hte.setItems(items);
-        } else {
+        newEntity.setContext(context);
+        /*if(mappedBy.equals("in-memory-series") && owner instanceof HasSeriesEntities hse) {
+          hse.addSeries(newEntity);
+          context.db().save(owner);
+          return newEntity;
+        } else {*/
           FieldUtils.writeField(newEntity, mappedBy, owner, true);
-        }
+        //}
         context.db().save(newEntity);
       }
 
@@ -810,7 +779,14 @@ public class ItemController implements ContextCreated, ContextRefreshed {
   @SneakyThrows
   @DeleteMapping("/{entityID}/series/{entityToRemove}")
   public BaseEntity removeFromItem(@PathVariable("entityID") String entityID, @PathVariable("entityToRemove") String entityToRemove) {
-    context.db().delete(entityToRemove);
+    /*if(entityToRemove.contains(":IM:")) {
+      BaseEntity entity = context.db().get(entityID);
+      if(entity instanceof HasSeriesEntities hse) {
+        hse.removeSeries(entityToRemove);
+      }
+    } else {*/
+      context.db().delete(entityToRemove);
+    //}
     return context.db().get(entityID);
   }
 
@@ -849,7 +825,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
         Class<?> superClass = (Class<?>) MergedAnnotations
           .from(obj.getClass(), SearchStrategy.SUPERCLASS)
-          .get(UISidebarMenu.class, MergedAnnotation::isDirectlyPresent)
+          .get(UIRouteMenu.class, MergedAnnotation::isDirectlyPresent)
           .getSource();
         if (superClass != null && !DeviceBaseEntity.class.getSimpleName().equals(superClass.getSimpleName())) {
           return superClass.getSimpleName();
@@ -958,7 +934,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
   private List<ItemContextResponse> buildItemBootstrap(String type, String subType) {
     List<ItemContextResponse> itemContexts = new ArrayList<>();
-
     for (Class<?> classType : findAllClassImplementationsByType(type)) {
       List<EntityUIMetaData> entityUIMetaData = UIFieldUtils.fillEntityUIMetadataList(classType, new HashSet<>(), context);
       if (isNotEmpty(subType)) {
@@ -1043,16 +1018,16 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
   private @Nullable OptionModel getUISideBarMenuOption(Class<?> aClass) {
     OptionModel optionModel = OptionModel.key(aClass.getSimpleName());
-    UISidebarChildren uiSidebarChildren = aClass.getAnnotation(UISidebarChildren.class);
-    if (uiSidebarChildren != null) {
-      if (!uiSidebarChildren.allowCreateItem()) {
+    var route = CommonUtils.getClassRoute(aClass);
+    if (route != null) {
+      if (!route.allowCreateNewItems()) {
         return null;
       }
       optionModel.json(json ->
-        json.put("icon", uiSidebarChildren.icon())
-          .put("color", uiSidebarChildren.color())
-          .put("maxExceeded", uiSidebarChildren.maxAllowCreateItem() > 0 &&
-                              uiSidebarChildren.maxAllowCreateItem() < getItems(aClass.getSimpleName()).size()));
+        json.put("icon", route.icon())
+          .put("color", route.color())
+          /*TODO: .put("maxExceeded", route.maxAllowCreateItem() > 0 &&
+                              route.maxAllowCreateItem() < getItems(aClass.getSimpleName()).size())*/);
     }
     return optionModel;
   }
@@ -1060,7 +1035,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
   // set synchronized to avoid calculate multiple times
   private synchronized void putTypeToEntityIfNotExists(String type) {
     if (!typeToEntityClassNames.containsKey(type)) {
-      typeToEntityClassNames.put(type, new ArrayList<>());
+      typeToEntityClassNames.put(type, new HashSet<>());
       Class<?> baseEntityByName = baseEntitySimpleClasses.get(type);
       if (baseEntityByName != null) {
         putTypeToEntityByClass(type, baseEntityByName);
@@ -1070,6 +1045,13 @@ public class ItemController implements ContextCreated, ContextRefreshed {
           for (Class<?> baseEntity : baseEntitySimpleClasses.values()) {
             if (baseEntityInterface.isAssignableFrom(baseEntity)) {
               putTypeToEntityByClass(type, baseEntity);
+            }
+          }
+        } else {
+          for (Class<?> aClass : baseEntitySimpleClasses.values()) {
+            CommonUtils.Route route = CommonUtils.getClassRoute(aClass);
+            if(route != null && route.path().equals(type)) {
+              putTypeToEntityByClass(type, aClass);
             }
           }
         }
@@ -1086,10 +1068,10 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     // populate if entity require extra packages to install
-    Set<Class> baseClasses = new HashSet<>();
+    /*Set<Class> baseClasses = new HashSet<>();
     for (Class<?> entityClass : typeToEntityClassNames.get(type)) {
       baseClasses.addAll(ClassFinder.findAllParentClasses(entityClass, baseEntityByName));
-    }
+    }*/
   }
 
   private Collection<BaseEntity> getUsages(
@@ -1166,7 +1148,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
       if (!typeToEntityClassNames.containsKey(type)) {
         return classTypes;
       }
-      classTypes.addAll(typeToEntityClassNames.getOrDefault(type, Collections.emptyList()));
+      classTypes.addAll(typeToEntityClassNames.getOrDefault(type, Collections.emptySet()));
     } else {
       classTypes.add(classByType);
     }

@@ -2,19 +2,14 @@ package org.homio.app.ssh;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.sshtools.client.SshClient;
-import com.sshtools.common.publickey.SshKeyPairGenerator;
-import com.sshtools.common.publickey.SshKeyUtils;
-import com.sshtools.common.publickey.SshPrivateKeyFile;
-import com.sshtools.common.publickey.SshPrivateKeyFileFactory;
-import com.sshtools.common.publickey.SshPublicKeyFile;
-import com.sshtools.common.publickey.SshPublicKeyFileFactory;
+import com.sshtools.common.publickey.*;
 import com.sshtools.common.ssh.components.SshKeyPair;
 import jakarta.persistence.Entity;
 import lombok.SneakyThrows;
 import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
-import org.homio.api.entity.types.IdentityEntity;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.FileContentType;
 import org.homio.api.model.FileModel;
@@ -22,13 +17,13 @@ import org.homio.api.model.OptionModel;
 import org.homio.api.service.EntityService;
 import org.homio.api.service.ssh.SshBaseEntity;
 import org.homio.api.service.ssh.SshProviderService;
-import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.action.UIActionInput;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.ui.route.UIRouteIdentity;
 import org.homio.api.util.SecureString;
 import org.homio.app.ssh.SshGenericEntity.GenericWebSocketService;
 import org.jetbrains.annotations.NotNull;
@@ -38,23 +33,19 @@ import org.json.JSONObject;
 import java.util.Objects;
 import java.util.Set;
 
-import static com.sshtools.common.publickey.SshKeyPairGenerator.ECDSA;
-import static com.sshtools.common.publickey.SshKeyPairGenerator.ED25519;
-import static com.sshtools.common.publickey.SshKeyPairGenerator.SSH2_RSA;
+import static com.sshtools.common.publickey.SshKeyPairGenerator.*;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
-import static org.homio.api.ui.field.action.UIActionInput.Type.select;
-import static org.homio.api.ui.field.action.UIActionInput.Type.text;
-import static org.homio.api.ui.field.action.UIActionInput.Type.textarea;
+import static org.homio.api.ui.field.action.UIActionInput.Type.*;
 
 @Entity
 @SuppressWarnings("unused")
-@UISidebarChildren(icon = "fas fa-terminal", color = "#0088CC")
+@UIRouteIdentity(icon = "fas fa-terminal", color = "#0088CC")
 public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWebSocketService>
   implements BaseFileSystemEntity<SshGenericFileSystem> {
 
   @SneakyThrows
-  public static ActionResponseModel execUploadPrivateKey(IdentityEntity entity, Context context, JSONObject params) {
+  public static ActionResponseModel execUploadPrivateKey(DeviceBaseEntity entity, Context context, JSONObject params) {
     if (entity.getJsonData().has("prv_key")) {
       return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_ALREADY_EXISTS");
     }
@@ -68,7 +59,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
   }
 
   @SneakyThrows
-  public static void updateSSHData(IdentityEntity entity, String passphrase, SshPrivateKeyFile kf) {
+  public static void updateSSHData(DeviceBaseEntity entity, String passphrase, SshPrivateKeyFile kf) {
     if (kf.isPassphraseProtected() && passphrase == null) {
       throw new IllegalArgumentException("Key protected with password");
     }
@@ -87,7 +78,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     entity.setJsonData("kt", kf.getType());
   }
 
-  public static ActionResponseModel execDeletePrivateKey(IdentityEntity entity, Context context, JSONObject params) {
+  public static ActionResponseModel execDeletePrivateKey(DeviceBaseEntity entity, Context context, JSONObject params) {
     if (!entity.getJsonData().has("prv_key")) {
       return ActionResponseModel.showError("ERROR.PRIVATE_KEY_NOT_FOUND");
     }
@@ -107,7 +98,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
   }
 
   @SneakyThrows
-  public static SshKeyPair buildSshKeyPair(IdentityEntity entity) {
+  public static SshKeyPair buildSshKeyPair(DeviceBaseEntity entity) {
     String passphrase = trimToNull(entity.getJsonData("key_pwd"));
     String privateKey = entity.getJsonData("prv_key");
     SshPrivateKeyFile keyFile = SshPrivateKeyFileFactory.parse(privateKey.getBytes());
@@ -384,11 +375,6 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
   @Override
   public void assembleActions(UIInputBuilder uiInputBuilder) {
 
-  }
-
-  @Override
-  public @NotNull Class<GenericWebSocketService> getEntityServiceItemClass() {
-    return GenericWebSocketService.class;
   }
 
   @Override

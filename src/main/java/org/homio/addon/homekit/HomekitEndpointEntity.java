@@ -1,1166 +1,1912 @@
 package org.homio.addon.homekit;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.Setter;
 import org.homio.addon.homekit.enums.HomekitAccessoryType;
 import org.homio.api.ContextVar.Variable;
-import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.device.DeviceSeriesEntity;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.api.ui.field.selection.UIFieldVariableSelection;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import static org.homio.addon.homekit.enums.HomekitAccessoryType.DUMMY;
-import static org.homio.api.ContextVar.VariableType.Bool;
+import static org.homio.api.ContextVar.VariableType.*;
 
+
+@SuppressWarnings("unused")
+@Entity
 @Getter
 @Setter
-public class HomekitEndpointEntity extends BaseEntity {
+public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntity> {
 
-    private transient HomekitService service;
     private transient int id = -1;
-    /**
-     * User-defined name for this HomeKit accessory endpoint.
-     * This name is often used as the primary display name in HomeKit apps.
-     * Used by: All accessory types.
-     * Characteristic: Often implicitly used for the Accessory Information service's Name characteristic if not overridden by a specific 'configuredName' or similar.
-     */
-    @UIField(order = 1)
-    private String name = "";
+
+    @Override
+    @UIField(order = 1, required = true)
+    @UIFieldGroup(value = "GENERAL", order = 1, borderColor = "#9F48B5")
+    public String getName() {
+        return super.getName();
+    }
+
+    @UIField(order = 2, label = "homekitGroup")
+    @UIFieldGroup("GENERAL")
+    public String getGroup() {
+        return getJsonData("group");
+    }
+
+    public void setGroup(String value) {
+        setJsonData("group", value);
+    }
+
     /**
      * The type of HomeKit accessory this entity represents.
      * Determines which characteristics are available and how the device behaves in HomeKit.
      * Used by: All accessory types (defines the entity's fundamental type).
      */
-    @UIField(order = 2)
-    private HomekitAccessoryType accessoryType = HomekitAccessoryType.SWITCH;
+    @UIField(order = 3, required = true)
+    @UIFieldGroup("GENERAL")
+    public @NotNull HomekitAccessoryType getAccessoryType() {
+        return getJsonDataEnum("at", HomekitAccessoryType.Switch);
+    }
+
+    public void setAccessoryType(HomekitAccessoryType value) {
+        setJsonDataEnum("at", value);
+    }
+
     /**
      * Represents the active state of an accessory.
      * Characteristic: Active (0 = Inactive, 1 = Active).
-     * Used by (Required): AIR_PURIFIER, FAN, FAUCET, HEATER_COOLER, HUMIDIFIER_DEHUMIDIFIER, IRRIGATION_SYSTEM, TELEVISION, VALVE.
+     * Used by (Required): AirPurifier, Fan, Faucet, HeaterCooler, HumidifierDehumidifier, IrrigationSystem, Television, Valve.
      */
-    @UIField(order = 5)
-    @UIFieldShowOnCondition("return ['AIR_PURIFIER', 'FAN', 'FAUCET', 'HEATER_COOLER', 'HUMIDIFIER_DEHUMIDIFIER', 'IRRIGATION_SYSTEM', 'TELEVISION', 'VALVE'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIField(order = 5, required = true)
+    @UIFieldShowOnCondition("return ['AirPurifier', 'Fan', 'Faucet', 'HeaterCooler', 'HumidifierDehumidifier', 'IrrigationSystem', 'Television', 'Valve'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup(value = "REQ_CHAR", order = 100, borderColor = "#8C3265")
-    private String activeState;
+    public String getActiveState() {
+        return getJsonData("as");
+    }
+
+    public void setActiveState(String value) {
+        setJsonData("as", value);
+    }
 
     // --- Consolidated / Widely Used Fields ---
     /**
      * Represents the detected state for various binary sensors.
      * Characteristic: Varies by sensor (e.g., ContactSensorState, MotionDetected, SmokeDetected, LeakDetected, OccupancyDetected, CarbonMonoxideDetected, CarbonDioxideDetected).
-     * Values typically 0 (Not Detected) or 1 (Detected).
-     * Used by (Required): CARBON_DIOXIDE_SENSOR, CARBON_MONOXIDE_SENSOR, CONTACT_SENSOR, LEAK_SENSOR, MOTION_SENSOR, OCCUPANCY_SENSOR, SMOKE_SENSOR.
+     * Values are typically 0 (Not Detected) or 1 (Detected).
+     * Used by (Required): CarbonDioxideSensor, CarbonMonoxideSensor, ContactSensor, LeakSensor, MotionSensor, OccupancySensor, SmokeSensor.
      */
-    @UIField(order = 6)
-    @UIFieldShowOnCondition("return ['CARBON_DIOXIDE_SENSOR', 'CARBON_MONOXIDE_SENSOR', 'CONTACT_SENSOR', 'LEAK_SENSOR', 'MOTION_SENSOR', 'OCCUPANCY_SENSOR', 'SMOKE_SENSOR'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIField(order = 6, required = true)
+    @UIFieldShowOnCondition("return ['CarbonDioxideSensor', 'CarbonMonoxideSensor', 'ContactSensor', 'LeakSensor', 'MotionSensor', 'OccupancySensor', 'SmokeSensor'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
-    private String detectedState;
+    public String getDetectedState() {
+        return getJsonData("ds");
+    }
+
+    public void setDetectedState(String value) {
+        setJsonData("ds", value);
+    }
+
     /**
      * Represents the target position for accessories that can be set to a specific position (e.g., doors, windows, blinds).
      * Characteristic: TargetPosition (0-100%).
-     * Used by (Required): DOOR, GARAGE_DOOR_OPENER, WINDOW, WINDOW_COVERING.
+     * Used by (Required): Door, GarageDoorOpener, Window, WindowCovering.
      */
-    @UIField(order = 7)
-    @UIFieldShowOnCondition("return ['DOOR', 'GARAGE_DOOR_OPENER', 'WINDOW', 'WINDOW_COVERING'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIField(order = 7, required = true)
+    @UIFieldShowOnCondition("return ['Door', 'GarageDoorOpener', 'Window', 'WindowCovering'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("REQ_CHAR")
-    private String targetPosition;
+    public String getTargetPosition() {
+        return getJsonData("tp");
+    }
+
+    public void setTargetPosition(String value) {
+        setJsonData("tp", value);
+    }
+
     /**
      * Represents the current position of accessories (e.g., doors, windows, blinds).
      * Characteristic: CurrentPosition (0-100%).
-     * Used by (Required): DOOR, GARAGE_DOOR_OPENER, WINDOW, WINDOW_COVERING.
+     * Used by (Required): Door, GarageDoorOpener, Window, WindowCovering.
      */
-    @UIField(order = 8)
-    @UIFieldShowOnCondition("return ['DOOR', 'GARAGE_DOOR_OPENER', 'WINDOW', 'WINDOW_COVERING'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIField(order = 8, required = true)
+    @UIFieldShowOnCondition("return ['Door', 'GarageDoorOpener', 'Window', 'WindowCovering'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("REQ_CHAR")
-    private String currentPosition;
+    public String getCurrentPosition() {
+        return getJsonData("cp");
+    }
+
+    public void setCurrentPosition(String value) {
+        setJsonData("cp", value);
+    }
+
     /**
      * Represents the state of movement for positional accessories.
      * Characteristic: PositionState (0 = Decreasing, 1 = Increasing, 2 = Stopped).
-     * Used by (Required): DOOR, WINDOW, WINDOW_COVERING. (GarageDoorOpener uses CurrentDoorState/TargetDoorState which imply movement).
+     * Used by (Required): Door, Window, WindowCovering.
+     * (GarageDoorOpener uses CurrentDoorState/TargetDoorState, which implies movement).
      */
-    @UIField(order = 9)
-    @UIFieldShowOnCondition("return ['DOOR', 'WINDOW', 'WINDOW_COVERING'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIField(order = 9, required = true)
+    @UIFieldShowOnCondition("return ['Door', 'Window', 'WindowCovering'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String positionState;
+    public String getPositionState() {
+        return getJsonData("ps");
+    }
+
+    public void setPositionState(String value) {
+        setJsonData("ps", value);
+    }
+
     /**
      * Represents the On/Off state for simple switchable devices.
      * Characteristic: On (true/false or 1/0).
-     * Used by (Required): OUTLET, SWITCH, LIGHTBULB, BASIC_FAN.
+     * Used by (Required): Outlet, Switch, LightBulb, BasicFan.
      */
-    @UIField(order = 10)
-    @UIFieldShowOnCondition("return ['OUTLET', 'SWITCH', 'LIGHTBULB', 'BASIC_FAN'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIField(order = 10, required = true)
+    @UIFieldShowOnCondition("return ['Outlet', 'Switch', 'LightBulb', 'BasicFan'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
-    private String onState;
+    public String getOnState() {
+        return getJsonData("os");
+    }
+
+    public void setOnState(String value) {
+        setJsonData("os", value);
+    }
+
     /**
      * Represents the mute state for audio output devices.
      * Characteristic: Mute (true/false or 1/0).
-     * Used by (Required): MICROPHONE, SPEAKER, SMART_SPEAKER, TELEVISION_SPEAKER.
+     * Used by (Required): Microphone, Speaker, SmartSpeaker, TelevisionSpeaker.
      */
-    @UIField(order = 11)
-    @UIFieldShowOnCondition("return ['TELEVISION_SPEAKER', 'SPEAKER', 'MICROPHONE', 'SMART_SPEAKER'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIField(order = 11, required = true)
+    @UIFieldShowOnCondition("return ['TelevisionSpeaker', 'Speaker', 'Microphone', 'SmartSpeaker'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
-    private String mute;
+    public String getMute() {
+        return getJsonData("mt");
+    }
+
+    public void setMute(String value) {
+        setJsonData("mt", value);
+    }
+
     /**
      * Represents a programmable switch event.
      * Characteristic: ProgrammableSwitchEvent (0 = Single Press, 1 = Double Press, 2 = Long Press). This is for stateless switches.
-     * Used by (Required): DOORBELL, STATELESS_PROGRAMMABLE_SWITCH, VIDEO_DOORBELL.
+     * Used by (Required): Doorbell, PushButton.
      */
-    @UIField(order = 12)
-    @UIFieldShowOnCondition("return ['DOORBELL', 'STATELESS_PROGRAMMABLE_SWITCH', 'VIDEO_DOORBELL'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIField(order = 12, required = true)
+    @UIFieldShowOnCondition("return ['Doorbell', 'PushButton'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String programmableSwitchEvent;
+    public String getProgrammableSwitchEvent() {
+        return getJsonData("pse");
+    }
+
+    public void setProgrammableSwitchEvent(String value) {
+        setJsonData("pse", value);
+    }
+
     /**
      * Represents the current temperature reading.
      * Characteristic: CurrentTemperature (Celsius).
-     * Used by (Required): HEATER_COOLER, TEMPERATURE_SENSOR, THERMOSTAT.
+     * Used by (Required): HeaterCooler, TemperatureSensor, Thermostat.
      */
-    @UIField(order = 13)
-    @UIFieldShowOnCondition("return ['HEATER_COOLER', 'TEMPERATURE_SENSOR', 'THERMOSTAT'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIField(order = 13, required = true)
+    @UIFieldShowOnCondition("return ['HeaterCooler', 'TemperatureSensor', 'Thermostat'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String currentTemperature;
+    public String getCurrentTemperature() {
+        return getJsonData("ct");
+    }
+
+    public void setCurrentTemperature(String value) {
+        setJsonData("ct", value);
+    }
+
     /**
      * Represents the target heating/cooling state for climate control devices.
      * Characteristic: TargetHeatingCoolingState (0 = Off, 1 = Heat, 2 = Cool, 3 = Auto).
-     * Used by (Required): HEATER_COOLER, THERMOSTAT.
+     * Used by (Required): HeaterCooler, Thermostat.
      */
-    @UIField(order = 14)
-    @UIFieldShowOnCondition("return ['HEATER_COOLER', 'THERMOSTAT'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIField(order = 14, required = true)
+    @UIFieldShowOnCondition("return ['HeaterCooler', 'Thermostat'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String targetHeatingCoolingState;
+    public String getTargetHeatingCoolingState() {
+        return getJsonData("thcs");
+    }
+
+    public void setTargetHeatingCoolingState(String value) {
+        setJsonData("thcs", value);
+    }
+
     /**
      * Represents the current heating/cooling mode of a climate control device.
      * Characteristic: CurrentHeatingCoolingState (0 = Off, 1 = Heat, 2 = Cool).
-     * Used by (Required): HEATER_COOLER, THERMOSTAT.
+     * Used by (Required): HeaterCooler, Thermostat.
      */
-    @UIField(order = 15)
-    @UIFieldShowOnCondition("return ['HEATER_COOLER', 'THERMOSTAT'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection(varType = Bool)
+    @UIField(order = 15, required = true)
+    @UIFieldShowOnCondition("return ['HeaterCooler', 'Thermostat'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Float)
     // Often mapped to 0/1/2, but source var might be boolean for simpler cases
     @UIFieldGroup("REQ_CHAR")
-    private String currentHeatingCoolingState;
+    public String getCurrentHeatingCoolingState() {
+        return getJsonData("chcs");
+    }
+
+    public void setCurrentHeatingCoolingState(String value) {
+        setJsonData("chcs", value);
+    }
+
     /**
      * Indicates whether the accessory is currently in use.
-     * Characteristic: InUse (0 = Not In Use, 1 = In Use).
-     * Used by (Required): VALVE, OUTLET, IRRIGATION_SYSTEM, FAUCET.
+     * Characteristic: InUse (0 = Not In Uses, 1 = In Use).
+     * Used by (Required): Valve, Outlet, IrrigationSystem, Faucet.
      */
-    @UIField(order = 16)
-    @UIFieldShowOnCondition("return ['VALVE', 'OUTLET', 'IRRIGATION_SYSTEM', 'FAUCET'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIField(order = 16, required = true)
+    @UIFieldShowOnCondition("return ['Valve', 'Outlet', 'IrrigationSystem', 'Faucet'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
-    private String inuseStatus;
+    public String getInuseStatus() {
+        return getJsonData("ius");
+    }
+
+    public void setInuseStatus(String value) {
+        setJsonData("ius", value);
+    }
+
     /**
      * Indicates the battery status of the accessory.
      * Characteristic: StatusLowBattery (0 = Normal, 1 = Low).
      * Used by (Optional): Many battery-powered sensors and devices.
-     * (AIR_QUALITY_SENSOR, BATTERY, CARBON_DIOXIDE_SENSOR, CARBON_MONOXIDE_SENSOR, CONTACT_SENSOR, HUMIDITY_SENSOR, LEAK_SENSOR, LIGHT_SENSOR, MOTION_SENSOR, OCCUPANCY_SENSOR, SMOKE_SENSOR, TEMPERATURE_SENSOR).
-     * For BATTERY accessory type, this is often linked to its primary battery level.
+     * (AirQualitySensor, Battery, CarbonDioxideSensor, CarbonMonoxideSensor, ContactSensor, HumiditySensor, LeakSensor, LightSensor, MotionSensor, OccupancySensor, SmokeSensor, TemperatureSensor).
+     * For Battery accessory type, this is often linked to its primary battery level.
      */
     @UIField(order = 17)
-    @UIFieldShowOnCondition("return ['AIR_QUALITY_SENSOR', 'BATTERY', 'CARBON_DIOXIDE_SENSOR', 'CARBON_MONOXIDE_SENSOR', 'CONTACT_SENSOR', 'HUMIDITY_SENSOR', 'LEAK_SENSOR', 'LIGHT_SENSOR', 'MOTION_SENSOR', 'OCCUPANCY_SENSOR', 'SMOKE_SENSOR', 'TEMPERATURE_SENSOR'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return ['AirQualitySensor', 'Battery', 'CarbonDioxideSensor', 'CarbonMonoxideSensor', 'ContactSensor', 'HumiditySensor', 'LeakSensor', 'LightSensor', 'MotionSensor', 'OccupancySensor', 'SmokeSensor', 'TemperatureSensor'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup(value = "OPT_CHAR", order = 150, borderColor = "#649639")
-    private String statusLowBattery;
+    public String getStatusLowBattery() {
+        return getJsonData("slb");
+    }
+
+    public void setStatusLowBattery(String value) {
+        setJsonData("slb", value);
+    }
 
     // --- Common Optional Status Fields ---
     /**
      * Indicates if the accessory has been tampered with.
      * Characteristic: StatusTampered (0 = Not Tampered, 1 = Tampered).
      * Used by (Optional): Security-sensitive devices and sensors.
-     * (AIR_QUALITY_SENSOR, CARBON_DIOXIDE_SENSOR, CARBON_MONOXIDE_SENSOR, CONTACT_SENSOR, HUMIDITY_SENSOR, LEAK_SENSOR, LIGHT_SENSOR, MOTION_SENSOR, OCCUPANCY_SENSOR, SMOKE_SENSOR, TEMPERATURE_SENSOR, WINDOW, DOOR, GARAGE_DOOR_OPENER, SECURITY_SYSTEM).
+     * (AirQualitySensor, CarbonDioxideSensor, CarbonMonoxideSensor, ContactSensor, HumiditySensor, LeakSensor, LightSensor, MotionSensor, OccupancySensor, SmokeSensor, TemperatureSensor, Window, Door, GarageDoorOpener, SecuritySystem).
      */
     @UIField(order = 18)
-    @UIFieldShowOnCondition("return ['AIR_QUALITY_SENSOR', 'CARBON_DIOXIDE_SENSOR', 'CARBON_MONOXIDE_SENSOR', 'CONTACT_SENSOR', 'HUMIDITY_SENSOR', 'LEAK_SENSOR', 'LIGHT_SENSOR', 'MOTION_SENSOR', 'OCCUPANCY_SENSOR', 'SMOKE_SENSOR', 'TEMPERATURE_SENSOR', 'WINDOW', 'DOOR', 'GARAGE_DOOR_OPENER', 'SECURITY_SYSTEM'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return ['AirQualitySensor', 'CarbonDioxideSensor', 'CarbonMonoxideSensor', 'ContactSensor', 'HumiditySensor', 'LeakSensor', 'LightSensor', 'MotionSensor', 'OccupancySensor', 'SmokeSensor', 'TemperatureSensor', 'Window', 'Door', 'GarageDoorOpener', 'SecuritySystem'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
-    private String statusTampered;
+    public String getStatusTampered() {
+        return getJsonData("st");
+    }
+
+    public void setStatusTampered(String value) {
+        setJsonData("st", value);
+    }
+
     /**
      * Indicates a general fault in the accessory.
      * Characteristic: StatusFault (0 = No Fault, 1 = Fault).
      * Used by (Optional): Many sensors and complex devices.
-     * (AIR_QUALITY_SENSOR, CARBON_DIOXIDE_SENSOR, CARBON_MONOXIDE_SENSOR, CONTACT_SENSOR, HUMIDITY_SENSOR, LEAK_SENSOR, LIGHT_SENSOR, MOTION_SENSOR, OCCUPANCY_SENSOR, SMOKE_SENSOR, TEMPERATURE_SENSOR).
+     * (AirQualitySensor, CarbonDioxideSensor, CarbonMonoxideSensor, ContactSensor, HumiditySensor, LeakSensor, LightSensor, MotionSensor, OccupancySensor, SmokeSensor, TemperatureSensor).
      */
     @UIField(order = 19)
-    @UIFieldShowOnCondition("return ['AIR_QUALITY_SENSOR', 'CARBON_DIOXIDE_SENSOR', 'CARBON_MONOXIDE_SENSOR', 'CONTACT_SENSOR', 'HUMIDITY_SENSOR', 'LEAK_SENSOR', 'LIGHT_SENSOR', 'MOTION_SENSOR', 'OCCUPANCY_SENSOR', 'SMOKE_SENSOR', 'TEMPERATURE_SENSOR'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return ['AirQualitySensor', 'CarbonDioxideSensor', 'CarbonMonoxideSensor', 'ContactSensor', 'HumiditySensor', 'LeakSensor', 'LightSensor', 'MotionSensor', 'OccupancySensor', 'SmokeSensor', 'TemperatureSensor'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
-    private String statusFault;
+    public String getStatusFault() {
+        return getJsonData("sf");
+    }
+
+    public void setStatusFault(String value) {
+        setJsonData("sf", value);
+    }
+
     /**
      * Current state of the air purifier.
      * Characteristic: CurrentAirPurifierState (0 = Inactive, 1 = Idle, 2 = Purifying Air).
-     * Used by (Required): AIR_PURIFIER.
+     * Used by (Required): AirPurifier.
      */
-    @UIField(order = 20)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AIR_PURIFIER'")
-    @UIFieldVariableSelection
+    @UIField(order = 20, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirPurifier'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String currentAirPurifierState;
+    public String getCurrentAirPurifierState() {
+        return getJsonData("caps");
+    }
+
+    public void setCurrentAirPurifierState(String value) {
+        setJsonData("caps", value);
+    }
 
 
-    // --- Accessory: AIR_PURIFIER ---
+    // --- Accessory: AirPurifier ---
     /**
      * Target state of the air purifier.
      * Characteristic: TargetAirPurifierState (0 = Manual, 1 = Auto).
-     * Used by (Required): AIR_PURIFIER.
+     * Used by (Required): AirPurifier.
      */
-    @UIField(order = 21)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AIR_PURIFIER'")
-    @UIFieldVariableSelection
+    @UIField(order = 21, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirPurifier'")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
-    private String targetAirPurifierState;
+    public String getTargetAirPurifierState() {
+        return getJsonData("taps");
+    }
+
+    public void setTargetAirPurifierState(String value) {
+        setJsonData("taps", value);
+    }
+
     /**
      * Swing mode for air purifiers that support oscillation.
      * Characteristic: SwingMode (0 = Disabled, 1 = Enabled).
-     * Used by (Optional): AIR_PURIFIER.
+     * Used by (Optional): AirPurifier.
      */
     @UIField(order = 22)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AIR_PURIFIER'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirPurifier'")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
-    private String airPurifierSwingMode;
+    public String getAirPurifierSwingMode() {
+        return getJsonData("apsm");
+    }
+
+    public void setAirPurifierSwingMode(String value) {
+        setJsonData("apsm", value);
+    }
+
     /**
      * Rotation speed for fans or air purifiers.
      * Characteristic: RotationSpeed (percentage 0-100).
-     * Used by (Optional): AIR_PURIFIER, FAN.
+     * Used by (Optional): AirPurifier, Fan.
      */
     @UIField(order = 23)
-    @UIFieldShowOnCondition("['AIR_PURIFIER', 'FAN'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("['AirPurifier', 'Fan'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
-    private String rotationSpeed;
+    public String getRotationSpeed() {
+        return getJsonData("rs");
+    }
+
+    public void setRotationSpeed(String value) {
+        setJsonData("rs", value);
+    }
+
     /**
      * Lock physical controls on the device.
      * Characteristic: LockPhysicalControls (0 = Unlocked, 1 = Locked).
-     * Used by (Optional): AIR_PURIFIER, HEATER_COOLER.
+     * Used by (Optional): AirPurifier, HeaterCooler.
      */
     @UIField(order = 24)
-    @UIFieldShowOnCondition("['AIR_PURIFIER', 'HEATER_COOLER'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("['AirPurifier', 'HeaterCooler'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
-    private String lockPhysicalControls;
+    public String getLockPhysicalControls() {
+        return getJsonData("lpc");
+    }
+
+    public void setLockPhysicalControls(String value) {
+        setJsonData("lpc", value);
+    }
+
     /**
      * Overall air quality level.
      * Characteristic: AirQuality (0 = Unknown, 1 = Excellent, 2 = Good, 3 = Fair, 4 = Inferior, 5 = Poor).
-     * Used by (Required): AIR_QUALITY_SENSOR.
+     * Used by (Required): AirQualitySensor.
      */
-    @UIField(order = 25)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AIR_QUALITY_SENSOR'")
-    @UIFieldVariableSelection
+    @UIField(order = 25, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String airQuality;
+    public String getAirQuality() {
+        return getJsonData("aq");
+    }
+
+    public void setAirQuality(String value) {
+        setJsonData("aq", value);
+    }
 
 
-    // --- Accessory: AIR_QUALITY_SENSOR ---
+    // --- Accessory: AirQualitySensor ---
     /**
      * Ozone density reading.
      * Characteristic: OzoneDensity (ppb, 0-1000).
-     * Used by (Optional): AIR_QUALITY_SENSOR.
+     * Used by (Optional): AirQualitySensor.
      */
     @UIField(order = 26)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AIR_QUALITY_SENSOR'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String ozoneDensity;
+    public String getOzoneDensity() {
+        return getJsonData("od");
+    }
+
+    public void setOzoneDensity(String value) {
+        setJsonData("od", value);
+    }
+
     /**
      * Nitrogen Dioxide density reading.
      * Characteristic: NitrogenDioxideDensity (ppb, 0-1000).
-     * Used by (Optional): AIR_QUALITY_SENSOR.
+     * Used by (Optional): AirQualitySensor.
      */
     @UIField(order = 27)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AIR_QUALITY_SENSOR'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String nitrogenDioxideDensity;
+    public String getNitrogenDioxideDensity() {
+        return getJsonData("ndd");
+    }
+
+    public void setNitrogenDioxideDensity(String value) {
+        setJsonData("ndd", value);
+    }
+
     /**
      * Sulphur Dioxide density reading.
      * Characteristic: SulphurDioxideDensity (ppb, 0-1000).
-     * Used by (Optional): AIR_QUALITY_SENSOR.
+     * Used by (Optional): AirQualitySensor.
      */
     @UIField(order = 28)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AIR_QUALITY_SENSOR'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String sulphurDioxideDensity;
+    public String getSulphurDioxideDensity() {
+        return getJsonData("sdd");
+    }
+
+    public void setSulphurDioxideDensity(String value) {
+        setJsonData("sdd", value);
+    }
+
     /**
      * PM2.5 (Particulate Matter 2.5 micrometers) density reading.
      * Characteristic: PM2_5Density (µg/m³, 0-1000).
-     * Used by (Optional): AIR_QUALITY_SENSOR.
+     * Used by (Optional): AirQualitySensor.
      */
     @UIField(order = 29)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AIR_QUALITY_SENSOR'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String pm25Density;
+    public String getPm25Density() {
+        return getJsonData("pm25d");
+    }
+
+    public void setPm25Density(String value) {
+        setJsonData("pm25d", value);
+    }
+
     /**
      * PM10 (Particulate Matter 10 micrometers) density reading.
      * Characteristic: PM10Density (µg/m³, 0-1000).
-     * Used by (Optional): AIR_QUALITY_SENSOR.
+     * Used by (Optional): AirQualitySensor.
      */
     @UIField(order = 30)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AIR_QUALITY_SENSOR'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String pm10Density;
+    public String getPm10Density() {
+        return getJsonData("pm10d");
+    }
+
+    public void setPm10Density(String value) {
+        setJsonData("pm10d", value);
+    }
+
     /**
      * VOC (Volatile Organic Compounds) density reading.
      * Characteristic: VOCDensity (µg/m³, 0-1000).
-     * Used by (Optional): AIR_QUALITY_SENSOR.
+     * Used by (Optional): AirQualitySensor.
      */
     @UIField(order = 31)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AIR_QUALITY_SENSOR'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String vocDensity;
+    public String getVocDensity() {
+        return getJsonData("vd");
+    }
+
+    public void setVocDensity(String value) {
+        setJsonData("vd", value);
+    }
+
     /**
      * Current battery level.
      * Characteristic: BatteryLevel (percentage 0-100).
-     * Used by (Required): BATTERY. Also see 'statusLowBattery' for generic low battery indication.
+     * Used by (Required): Battery.
+     * Also see 'statusLowBattery' for generic low-battery indication.
      */
-    @UIField(order = 32)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'BATTERY'")
-    @UIFieldVariableSelection
+    @UIField(order = 32, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Battery'")
+    @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("REQ_CHAR")
-    private String batteryLevel;
+    public String getBatteryLevel() {
+        return getJsonData("bl");
+    }
+
+    public void setBatteryLevel(String value) {
+        setJsonData("bl", value);
+    }
 
 
-    // --- Accessory: BATTERY ---
+    // --- Accessory: Battery ---
     /**
      * Current charging state of the battery.
      * Characteristic: ChargingState (0 = Not Charging, 1 = Charging, 2 = Not Chargeable).
-     * Used by (Required): BATTERY.
+     * Used by (Required): Battery.
      */
-    @UIField(order = 33)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'BATTERY'")
-    @UIFieldVariableSelection
+    @UIField(order = 33, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Battery'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String batteryChargingState;
+    public String getBatteryChargingState() {
+        return getJsonData("bcs");
+    }
+
+    public void setBatteryChargingState(String value) {
+        setJsonData("bcs", value);
+    }
+
     /**
      * Current Carbon Dioxide level.
      * Characteristic: CarbonDioxideLevel (ppm, 0-100000).
-     * Used by (Optional): CARBON_DIOXIDE_SENSOR. ('detectedState' is the required characteristic).
+     * Used by (Optional): CarbonDioxideSensor. ('detectedState' is the required characteristic).
      */
     @UIField(order = 34)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'CARBON_DIOXIDE_SENSOR'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'CarbonDioxideSensor'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String carbonDioxideLevel;
+    public String getCarbonDioxideLevel() {
+        return getJsonData("cdl");
+    }
+
+    public void setCarbonDioxideLevel(String value) {
+        setJsonData("cdl", value);
+    }
 
 
-    // --- Accessory: CARBON_DIOXIDE_SENSOR ---
+    // --- Accessory: CarbonDioxideSensor ---
     /**
      * Peak Carbon Dioxide level detected.
      * Characteristic: CarbonDioxidePeakLevel (ppm, 0-100000).
-     * Used by (Optional): CARBON_DIOXIDE_SENSOR.
+     * Used by (Optional): CarbonDioxideSensor.
      */
     @UIField(order = 35)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'CARBON_DIOXIDE_SENSOR'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'CarbonDioxideSensor'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String carbonDioxidePeakLevel;
+    public String getCarbonDioxidePeakLevel() {
+        return getJsonData("cdpl");
+    }
+
+    public void setCarbonDioxidePeakLevel(String value) {
+        setJsonData("cdpl", value);
+    }
+
     /**
      * Current Carbon Monoxide level.
      * Characteristic: CarbonMonoxideLevel (ppm, 0-100).
-     * Used by (Optional): CARBON_MONOXIDE_SENSOR. ('detectedState' is the required characteristic).
+     * Used by (Optional): CarbonMonoxideSensor. ('detectedState' is the required characteristic).
      */
     @UIField(order = 36)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'CARBON_MONOXIDE_SENSOR'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'CarbonMonoxideSensor'")
+    @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
-    private String carbonMonoxideLevel;
+    public String getCarbonMonoxideLevel() {
+        return getJsonData("cml");
+    }
+
+    public void setCarbonMonoxideLevel(String value) {
+        setJsonData("cml", value);
+    }
 
 
-    // --- Accessory: CARBON_MONOXIDE_SENSOR ---
+    // --- Accessory: CarbonMonoxideSensor ---
     /**
      * Peak Carbon Monoxide level detected.
      * Characteristic: CarbonMonoxidePeakLevel (ppm, 0-100).
-     * Used by (Optional): CARBON_MONOXIDE_SENSOR.
+     * Used by (Optional): CarbonMonoxideSensor.
      */
     @UIField(order = 37)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'CARBON_MONOXIDE_SENSOR'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'CarbonMonoxideSensor'")
+    @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
-    private String carbonMonoxidePeakLevel;
+    public String getCarbonMonoxidePeakLevel() {
+        return getJsonData("cmpl");
+    }
+
+    public void setCarbonMonoxidePeakLevel(String value) {
+        setJsonData("cmpl", value);
+    }
+
     /**
      * Indicates if an obstruction is detected during movement.
      * Characteristic: ObstructionDetected (true/false or 1/0).
-     * Used by (Optional): DOOR, WINDOW, WINDOW_COVERING, GARAGE_DOOR_OPENER.
+     * Used by (Optional): Door, Window, WindowCovering, GarageDoorOpener.
      */
     @UIField(order = 38)
-    @UIFieldShowOnCondition("return ['DOOR', 'WINDOW', 'WINDOW_COVERING', 'GARAGE_DOOR_OPENER'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return ['Door', 'Window', 'WindowCovering', 'GarageDoorOpener'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
-    private String obstructionDetected;
+    public String getObstructionDetected() {
+        return getJsonData("obd");
+    }
+
+    public void setObstructionDetected(String value) {
+        setJsonData("obd", value);
+    }
 
 
-    // --- Accessory: DOOR / WINDOW / WINDOW_COVERING / GARAGE_DOOR_OPENER ---
+    // --- Accessory: Door / Window / WindowCovering / GarageDoorOpener ---
     /**
      * Current operational state of the fan, more detailed than just Active.
      * Characteristic: CurrentFanState (0 = Inactive, 1 = Idle, 2 = Blowing Air).
-     * Used by (Optional): FAN. 'activeState' is required.
+     * Used by (Optional): Fan. 'activeState' is required.
      */
     @UIField(order = 39)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'FAN'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Fan'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String currentFanState;
+    public String getCurrentFanState() {
+        return getJsonData("cfs");
+    }
+
+    public void setCurrentFanState(String value) {
+        setJsonData("cfs", value);
+    }
 
 
-    // --- Accessory: FAN (Full) ---
-    @UIField(order = 39)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'FAN'")
-    @UIFieldVariableSelection
+    // --- Accessory: Fan (Full) ---
+    @UIField(order = 39) // Preserving duplicate order from the original
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Fan'")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
-    private String rotationDirection;
+    public String getRotationDirection() {
+        return getJsonData("rd");
+    }
+
+    public void setRotationDirection(String value) {
+        setJsonData("rd", value);
+    }
+
     /**
      * Target fan state (Manual/Auto).
      * Characteristic: TargetFanState (0 = Manual, 1 = Auto).
-     * Used by (Optional): FAN.
+     * Used by (Optional): Fan.
      */
     @UIField(order = 40)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'FAN'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Fan'")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
-    private String targetFanState;
+    public String getTargetFanState() {
+        return getJsonData("tfs");
+    }
+
+    public void setTargetFanState(String value) {
+        setJsonData("tfs", value);
+    }
+
     /**
      * Swing mode for fans that support oscillation.
      * Characteristic: SwingMode (0 = Swing Disabled, 1 = Swing Enabled). (Same as AirPurifier's SwingMode).
-     * Used by (Optional): FAN.
+     * Used by (Optional): Fan.
      */
     @UIField(order = 41)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'FAN'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Fan'")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
-    private String fanSwingMode;
+    public String getFanSwingMode() {
+        return getJsonData("fsm");
+    }
+
+    public void setFanSwingMode(String value) {
+        setJsonData("fsm", value);
+    }
+
     /**
      * Indicates if the filter needs to be changed.
      * Characteristic: FilterChangeIndication (0 = OK, 1 = Change).
-     * Used by (Required): FILTER_MAINTENANCE. (Optional for AIR_PURIFIER).
+     * Used by (Required): FilterMaintenance. (Optional for AirPurifier).
      */
-    @UIField(order = 42)
-    @UIFieldShowOnCondition("['FILTER_MAINTENANCE', 'AIR_PURIFIER'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIField(order = 42, required = true)
+    @UIFieldShowOnCondition("['FilterMaintenance', 'AirPurifier'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
-    private String filterChangeIndication;
+    public String getFilterChangeIndication() {
+        return getJsonData("fci");
+    }
+
+    public void setFilterChangeIndication(String value) {
+        setJsonData("fci", value);
+    }
 
 
-    // --- Accessory: FILTER_MAINTENANCE ---
+    // --- Accessory: FilterMaintenance ---
     /**
      * Remaining life of the filter.
      * Characteristic: FilterLifeLevel (percentage 0-100).
-     * Used by (Optional): FILTER_MAINTENANCE, AIR_PURIFIER.
+     * Used by (Optional): FilterMaintenance, AirPurifier.
      */
     @UIField(order = 43)
-    @UIFieldShowOnCondition("['FILTER_MAINTENANCE', 'AIR_PURIFIER'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("['FilterMaintenance', 'AirPurifier'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
-    private String filterLifeLevel;
+    public String getFilterLifeLevel() {
+        return getJsonData("fll");
+    }
+
+    public void setFilterLifeLevel(String value) {
+        setJsonData("fll", value);
+    }
+
     /**
      * Command to reset the filter change indication / life level. Write-only.
      * Characteristic: ResetFilterIndication (Write a value, typically 1, to reset).
-     * Used by (Optional): FILTER_MAINTENANCE, AIR_PURIFIER.
+     * Used by (Optional): FilterMaintenance, AirPurifier.
      */
     @UIField(order = 44)
-    @UIFieldShowOnCondition("['FILTER_MAINTENANCE', 'AIR_PURIFIER'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("['FilterMaintenance', 'AirPurifier'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String filterResetIndication;
+    public String getFilterResetIndication() {
+        return getJsonData("fri");
+    }
+
+    public void setFilterResetIndication(String value) {
+        setJsonData("fri", value);
+    }
+
     /**
      * Current state of the garage door.
      * Characteristic: CurrentDoorState (0 = Open, 1 = Closed, 2 = Opening, 3 = Closing, 4 = Stopped).
-     * Used by (Required): GARAGE_DOOR_OPENER.
+     * Used by (Required): GarageDoorOpener.
      */
-    @UIField(order = 45)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'GARAGE_DOOR_OPENER'")
-    @UIFieldVariableSelection
+    @UIField(order = 45, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'GarageDoorOpener'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String currentDoorState;
+    public String getCurrentDoorState() {
+        return getJsonData("cds");
+    }
+
+    public void setCurrentDoorState(String value) {
+        setJsonData("cds", value);
+    }
 
 
-    // --- Accessory: GARAGE_DOOR_OPENER ---
+    // --- Accessory: GarageDoorOpener ---
     /**
      * Target state of the garage door.
      * Characteristic: TargetDoorState (0 = Open, 1 = Closed).
-     * Used by (Required): GARAGE_DOOR_OPENER.
+     * Used by (Required): GarageDoorOpener.
      */
-    @UIField(order = 46)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'GARAGE_DOOR_OPENER'")
-    @UIFieldVariableSelection
+    @UIField(order = 46, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'GarageDoorOpener'")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
-    private String targetDoorState;
+    public String getTargetDoorState() {
+        return getJsonData("tds");
+    }
+
+    public void setTargetDoorState(String value) {
+        setJsonData("tds", value);
+    }
+
     /**
      * Current state of the garage door's lock mechanism (if present).
      * Characteristic: LockCurrentState (0 = Unsecured, 1 = Secured, 2 = Jammed, 3 = Unknown).
-     * Used by (Optional): GARAGE_DOOR_OPENER.
+     * Used by (Optional): GarageDoorOpener.
      */
     @UIField(order = 47)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'GARAGE_DOOR_OPENER'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'GarageDoorOpener'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String lockCurrentStateGarage;
+    public String getLockCurrentStateGarage() {
+        return getJsonData("lcsg");
+    }
+
+    public void setLockCurrentStateGarage(String value) {
+        setJsonData("lcsg", value);
+    }
+
     /**
      * Target state of the garage door's lock mechanism (if present).
      * Characteristic: LockTargetState (0 = Unsecured, 1 = Secured).
-     * Used by (Optional): GARAGE_DOOR_OPENER.
+     * Used by (Optional): GarageDoorOpener.
      */
     @UIField(order = 48)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'GARAGE_DOOR_OPENER'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'GarageDoorOpener'")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
-    private String lockTargetStateGarage;
+    public String getLockTargetStateGarage() {
+        return getJsonData("ltsg");
+    }
+
+    public void setLockTargetStateGarage(String value) {
+        setJsonData("ltsg", value);
+    }
+
     /**
      * Current operational state of the heater/cooler. More detailed than 'activeState'.
      * Characteristic: CurrentHeaterCoolerState (0 = Inactive, 1 = Idle, 2 = Heating, 3 = Cooling).
-     * Used by (Required): HEATER_COOLER.
+     * Used by (Required): HeaterCooler.
      */
-    @UIField(order = 49)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'HEATER_COOLER'")
-    @UIFieldVariableSelection
+    @UIField(order = 49, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'HeaterCooler'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String currentHeaterCoolerState;
+    public String getCurrentHeaterCoolerState() {
+        return getJsonData("chcshc");
+    }
+
+    public void setCurrentHeaterCoolerState(String value) {
+        setJsonData("chcshc", value);
+    }
 
 
-    // --- Accessory: HEATER_COOLER ---
+    // --- Accessory: HeaterCooler ---
     /**
      * Cooling threshold temperature for HeaterCooler in Auto mode.
      * Characteristic: CoolingThresholdTemperature (Celsius, typically 10-35).
-     * Used by (Optional): HEATER_COOLER.
+     * Used by (Optional): HeaterCooler.
      */
     @UIField(order = 51)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'HEATER_COOLER'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'HeaterCooler'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String coolingThresholdTemperature;
+    public String getCoolingThresholdTemperature() {
+        return getJsonData("ctt");
+    }
+
+    public void setCoolingThresholdTemperature(String value) {
+        setJsonData("ctt", value);
+    }
+
     /**
      * Heating threshold temperature for HeaterCooler in Auto mode.
      * Characteristic: HeatingThresholdTemperature (Celsius, typically 0-25).
-     * Used by (Optional): HEATER_COOLER.
+     * Used by (Optional): HeaterCooler.
      */
     @UIField(order = 52)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'HEATER_COOLER'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'HeaterCooler'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String heatingThresholdTemperature;
+    public String getHeatingThresholdTemperature() {
+        return getJsonData("htt");
+    }
+
+    public void setHeatingThresholdTemperature(String value) {
+        setJsonData("htt", value);
+    }
+
     /**
-     * Current relative humidity, can be part of a HeaterCooler or HumidifierDehumidifier.
+     * Current relative humidity can be part of a HeaterCooler or HumidifierDehumidifier.
      * Characteristic: CurrentRelativeHumidity (percentage 0-100).
-     * Used by (Optional): HEATER_COOLER, HUMIDIFIER_DEHUMIDIFIER.
+     * Used by (Optional): HeaterCooler, HumidifierDehumidifier.
      */
     @UIField(order = 53)
-    @UIFieldShowOnCondition("['HEATER_COOLER', 'HUMIDIFIER_DEHUMIDIFIER'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("['HeaterCooler', 'HumidifierDehumidifier'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
-    private String currentRelativeHumidity;
+    public String getCurrentRelativeHumidity() {
+        return getJsonData("crh");
+    }
+
+    public void setCurrentRelativeHumidity(String value) {
+        setJsonData("crh", value);
+    }
+
     /**
      * Target relative humidity for devices with humidification/dehumidification capabilities.
      * Characteristic: TargetRelativeHumidity (percentage 0-100).
-     * Used by (Optional): HEATER_COOLER (if it has humidifier function), HUMIDIFIER_DEHUMIDIFIER.
+     * Used by (Optional): HeaterCooler (if it has a humidifier function), HumidifierDehumidifier.
      */
     @UIField(order = 54)
-    @UIFieldShowOnCondition("['HEATER_COOLER', 'HUMIDIFIER_DEHUMIDIFIER'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("['HeaterCooler', 'HumidifierDehumidifier'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
-    private String targetRelativeHumidity;
+    public String getTargetRelativeHumidity() {
+        return getJsonData("trh");
+    }
+
+    public void setTargetRelativeHumidity(String value) {
+        setJsonData("trh", value);
+    }
+
     /**
      * Current state of the humidifier/dehumidifier.
      * Characteristic: CurrentHumidifierDehumidifierState (0 = Inactive, 1 = Idle, 2 = Humidifying, 3 = Dehumidifying).
-     * Used by (Required): HUMIDIFIER_DEHUMIDIFIER.
+     * Used by (Required): HumidifierDehumidifier.
      */
-    @UIField(order = 55)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'HUMIDIFIER_DEHUMIDIFIER'")
-    @UIFieldVariableSelection
+    @UIField(order = 55, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'HumidifierDehumidifier'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String currentHumidifierDehumidifierState;
+    public String getCurrentHumidifierDehumidifierState() {
+        return getJsonData("chds");
+    }
+
+    public void setCurrentHumidifierDehumidifierState(String value) {
+        setJsonData("chds", value);
+    }
 
 
-    // --- Accessory: HUMIDIFIER_DEHUMIDIFIER ---
+    // --- Accessory: HumidifierDehumidifier ---
     /**
      * Target state of the humidifier/dehumidifier.
      * Characteristic: TargetHumidifierDehumidifierState (0 = Auto, 1 = Humidify, 2 = Dehumidify).
-     * Used by (Required): HUMIDIFIER_DEHUMIDIFIER.
+     * Used by (Required): HumidifierDehumidifier.
      */
-    @UIField(order = 56)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'HUMIDIFIER_DEHUMIDIFIER'")
-    @UIFieldVariableSelection
+    @UIField(order = 56, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'HumidifierDehumidifier'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String targetHumidifierDehumidifierState;
+    public String getTargetHumidifierDehumidifierState() {
+        return getJsonData("thds");
+    }
+
+    public void setTargetHumidifierDehumidifierState(String value) {
+        setJsonData("thds", value);
+    }
+
     /**
      * Relative humidity threshold for dehumidifier activation (when in Auto mode).
      * Characteristic: RelativeHumidityDehumidifierThreshold (percentage 0-100).
-     * Used by (Optional): HUMIDIFIER_DEHUMIDIFIER.
+     * Used by (Optional): HumidifierDehumidifier.
      */
     @UIField(order = 57)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'HUMIDIFIER_DEHUMIDIFIER'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'HumidifierDehumidifier'")
+    @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
-    private String relativeHumidityDehumidifierThreshold;
+    public String getRelativeHumidityDehumidifierThreshold() {
+        return getJsonData("rhdt");
+    }
+
+    public void setRelativeHumidityDehumidifierThreshold(String value) {
+        setJsonData("rhdt", value);
+    }
+
     /**
      * Relative humidity threshold for humidifier activation (when in Auto mode).
      * Characteristic: RelativeHumidityHumidifierThreshold (percentage 0-100).
-     * Used by (Optional): HUMIDIFIER_DEHUMIDIFIER.
+     * Used by (Optional): HumidifierDehumidifier.
      */
     @UIField(order = 58)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'HUMIDIFIER_DEHUMIDIFIER'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'HumidifierDehumidifier'")
+    @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
-    private String relativeHumidityHumidifierThreshold;
+    public String getRelativeHumidityHumidifierThreshold() {
+        return getJsonData("rhht");
+    }
+
+    public void setRelativeHumidityHumidifierThreshold(String value) {
+        setJsonData("rhht", value);
+    }
+
     /**
      * Water level in devices that use water.
      * Characteristic: WaterLevel (percentage 0-100).
-     * Used by (Optional): HUMIDIFIER_DEHUMIDIFIER, FAUCET, VALVE (e.g., for a tank).
+     * Used by (Optional): HumidifierDehumidifier, Faucet, Valve (e.g., for a tank).
      */
     @UIField(order = 59)
-    @UIFieldShowOnCondition("['VALVE', 'FAUCET', 'HUMIDIFIER_DEHUMIDIFIER'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("['Valve', 'Faucet', 'HumidifierDehumidifier'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
-    private String waterLevel;
+    public String getWaterLevel() {
+        return getJsonData("wl");
+    }
+
+    public void setWaterLevel(String value) {
+        setJsonData("wl", value);
+    }
+
     /**
      * Current relative humidity. This is the primary characteristic for a dedicated Humidity Sensor.
      * Characteristic: CurrentRelativeHumidity (percentage 0-100).
-     * Used by (Required): HUMIDITY_SENSOR.
+     * Used by (Required): HumiditySensor.
      */
-    @UIField(order = 60)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'HUMIDITY_SENSOR'")
-    @UIFieldVariableSelection
+    @UIField(order = 60, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'HumiditySensor'")
+    @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("REQ_CHAR")
-    private String relativeHumidity;
+    public String getRelativeHumidity() {
+        return getJsonData("rh");
+    }
+
+    public void setRelativeHumidity(String value) {
+        setJsonData("rh", value);
+    }
 
 
-    // --- Accessory: HUMIDITY_SENSOR ---
+    // --- Accessory: HumiditySensor ---
     /**
      * Program mode for irrigation systems.
      * Characteristic: ProgramMode (0 = No Program Scheduled, 1 = Program Scheduled, 2 = Program Scheduled, Manual Mode).
-     * Used by (Required): IRRIGATION_SYSTEM.
+     * Used by (Required): IrrigationSystem.
      */
-    @UIField(order = 61)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'IRRIGATION_SYSTEM'")
-    @UIFieldVariableSelection
+    @UIField(order = 61, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'IrrigationSystem'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String programMode;
+    public String getProgramMode() {
+        return getJsonData("pm");
+    }
+
+    public void setProgramMode(String value) {
+        setJsonData("pm", value);
+    }
 
 
-    // --- Accessory: IRRIGATION_SYSTEM ---
+    // --- Accessory: IrrigationSystem ---
     /**
      * Remaining duration for an active irrigation cycle or valve operation.
      * Characteristic: RemainingDuration (seconds). Read-only.
-     * Used by (Optional): IRRIGATION_SYSTEM, VALVE.
+     * Used by (Optional): IrrigationSystem, Valve.
      */
     @UIField(order = 62)
-    @UIFieldShowOnCondition("['IRRIGATION_SYSTEM', 'VALVE'].includes(context.get('accessoryType'))")
-    // OH has this for Valve too
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("['IrrigationSystem', 'Valve'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String remainingDuration;
+    public String getRemainingDuration() {
+        return getJsonData("rdur");
+    }
+
+    public void setRemainingDuration(String value) {
+        setJsonData("rdur", value);
+    }
+
     /**
-     * Set duration for a valve's operation.
+     * Set the duration for a valve's operation.
      * Characteristic: SetDuration (seconds). Writeable.
-     * Used by (Optional): IRRIGATION_SYSTEM (for individual zones/valves), VALVE.
+     * Used by (Optional): IrrigationSystem (for individual zones/valves), Valve.
      */
     @UIField(order = 63)
-    @UIFieldShowOnCondition("['IRRIGATION_SYSTEM', 'VALVE'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("['IrrigationSystem', 'Valve'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String setDuration;
+    public String getSetDuration() {
+        return getJsonData("sdur");
+    }
+
+    public void setSetDuration(String value) {
+        setJsonData("sdur", value);
+    }
+
     /**
      * Current ambient light level.
      * Characteristic: CurrentAmbientLightLevel (lux, 0.0001 to 100000).
-     * Used by (Required): LIGHT_SENSOR.
+     * Used by (Required): LightSensor.
      */
-    @UIField(order = 64)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'LIGHT_SENSOR'")
-    @UIFieldVariableSelection
+    @UIField(order = 64, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightSensor'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String lightLevel;
+    public String getLightLevel() {
+        return getJsonData("ll");
+    }
+
+    public void setLightLevel(String value) {
+        setJsonData("ll", value);
+    }
 
 
-    // --- Accessory: LIGHT_SENSOR ---
+    // --- Accessory: LightSensor ---
     /**
      * Brightness of the light.
      * Characteristic: Brightness (percentage 0-100).
-     * Used by (Optional): LIGHTBULB. 'onState' is required.
+     * Used by (Optional): LightBulb. 'onState' is required.
      */
     @UIField(order = 65)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'LIGHTBULB'")
-    @UIFieldEntityByClassSelection(value = Variable.class)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightBulb'")
+    @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
-    private String brightness;
+    public String getBrightness() {
+        return getJsonData("br");
+    }
+
+    public void setBrightness(String value) {
+        setJsonData("br", value);
+    }
 
 
-    // --- Accessory: LIGHTBULB ---
+    // --- Accessory: LightBulb ---
     /**
      * Hue of the light color.
      * Characteristic: Hue (degrees 0-360).
-     * Used by (Optional): LIGHTBULB (for color lights).
+     * Used by (Optional): LightBulb (for color lights).
      */
     @UIField(order = 66)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'LIGHTBULB'")
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightBulb'")
     @UIFieldEntityByClassSelection(value = Variable.class)
     @UIFieldGroup("OPT_CHAR")
-    private String hue;
+    public String getHue() {
+        return getJsonData("hu");
+    }
+
+    public void setHue(String value) {
+        setJsonData("hu", value);
+    }
+
     /**
      * Saturation of the light color.
      * Characteristic: Saturation (percentage 0-100).
-     * Used by (Optional): LIGHTBULB (for color lights).
+     * Used by (Optional): LightBulb (for color lights).
      */
     @UIField(order = 67)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'LIGHTBULB'")
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightBulb'")
     @UIFieldEntityByClassSelection(value = Variable.class)
     @UIFieldGroup("OPT_CHAR")
-    private String saturation;
+    public String getSaturation() {
+        return getJsonData("sa");
+    }
+
+    public void setSaturation(String value) {
+        setJsonData("sa", value);
+    }
+
     /**
      * Color temperature of the light.
      * Characteristic: ColorTemperature (Mireds, typically 50-400).
-     * Used by (Optional): LIGHTBULB (for tunable white lights).
+     * Used by (Optional): LightBulb (for tunable white lights).
      */
     @UIField(order = 68)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'LIGHTBULB'")
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightBulb'")
     @UIFieldEntityByClassSelection(value = Variable.class)
     @UIFieldGroup("OPT_CHAR")
-    private String colorTemperature;
+    public String getColorTemperature() {
+        return getJsonData("ctemp");
+    }
+
+    public void setColorTemperature(String value) {
+        setJsonData("ctemp", value);
+    }
+
     /**
      * Inverts the color temperature scale if the source device uses an inverted scale.
      * This is a local setting, not a HomeKit characteristic.
-     * Used by: LIGHTBULB (local logic).
+     * Used by: LightBulb (local logic).
      */
     @UIField(order = 69)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'LIGHTBULB'")
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightBulb'")
     @UIFieldGroup("OPT_CHAR")
-    private boolean colorTemperatureInverted;
+    public boolean isColorTemperatureInverted() {
+        return getJsonData("cti", false);
+    }
+
+    public void setColorTemperatureInverted(boolean value) {
+        setJsonData("cti", value);
+    }
+
     /**
      * Current state of the lock.
      * Characteristic: LockCurrentState (0 = Unsecured, 1 = Secured, 2 = Jammed, 3 = Unknown).
-     * Used by (Required): LOCK.
+     * Used by (Required): Lock.
      */
-    @UIField(order = 70)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'LOCK'")
-    @UIFieldVariableSelection
+    @UIField(order = 70, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Lock'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String lockCurrentState;
+    public String getLockCurrentState() {
+        return getJsonData("lcs");
+    }
+
+    public void setLockCurrentState(String value) {
+        setJsonData("lcs", value);
+    }
 
 
-    // --- Accessory: LOCK ---
+    // --- Accessory: Lock ---
     /**
      * Target state of the lock.
      * Characteristic: LockTargetState (0 = Unsecured, 1 = Secured).
-     * Used by (Required): LOCK.
+     * Used by (Required): Lock.
      */
-    @UIField(order = 71)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'LOCK'")
-    @UIFieldVariableSelection
+    @UIField(order = 71, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Lock'")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
-    private String lockTargetState;
+    public String getLockTargetState() {
+        return getJsonData("lts");
+    }
+
+    public void setLockTargetState(String value) {
+        setJsonData("lts", value);
+    }
+
     /**
      * Current state of the security system.
      * Characteristic: SecuritySystemCurrentState (0 = Stay Arm, 1 = Away Arm, 2 = Night Arm, 3 = Disarmed, 4 = Alarm Triggered).
-     * Used by (Required): SECURITY_SYSTEM.
+     * Used by (Required): SecuritySystem.
      */
-    @UIField(order = 72)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'SECURITY_SYSTEM'")
-    @UIFieldVariableSelection
+    @UIField(order = 72, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'SecuritySystem'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String securitySystemCurrentState;
+    public String getSecuritySystemCurrentState() {
+        return getJsonData("sscs");
+    }
+
+    public void setSecuritySystemCurrentState(String value) {
+        setJsonData("sscs", value);
+    }
 
 
-    // --- Accessory: SECURITY_SYSTEM ---
+    // --- Accessory: SecuritySystem ---
     /**
      * Target state of the security system.
      * Characteristic: SecuritySystemTargetState (0 = Stay Arm, 1 = Away Arm, 2 = Night Arm, 3 = Disarm).
-     * Used by (Required): SECURITY_SYSTEM.
+     * Used by (Required): SecuritySystem.
      */
-    @UIField(order = 73)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'SECURITY_SYSTEM'")
-    @UIFieldVariableSelection
+    @UIField(order = 73, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'SecuritySystem'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String securitySystemTargetState;
+    public String getSecuritySystemTargetState() {
+        return getJsonData("ssts");
+    }
+
+    public void setSecuritySystemTargetState(String value) {
+        setJsonData("ssts", value);
+    }
+
     /**
      * Indicates if the security system has been tampered with. Can use general 'statusTampered' or this specific one.
      * Characteristic: StatusTampered (0 = Not Tampered, 1 = Tampered).
-     * Used by (Optional): SECURITY_SYSTEM.
+     * Used by (Optional): SecuritySystem.
      */
     @UIField(order = 74)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'SECURITY_SYSTEM'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'SecuritySystem'")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
-    private String statusTamperedSecurity;
+    public String getStatusTamperedSecurity() {
+        return getJsonData("sts_sec");
+    }
+
+    public void setStatusTamperedSecurity(String value) {
+        setJsonData("sts_sec", value);
+    }
+
     /**
      * Type of alarm for the security system. Read-only.
      * Characteristic: SecuritySystemAlarmType (0 = No Alarm, 1 = Unknown).
-     * Used by (Optional): SECURITY_SYSTEM.
+     * Used by (Optional): SecuritySystem.
      */
     @UIField(order = 75)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'SECURITY_SYSTEM'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'SecuritySystem'")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
-    private String securitySystemAlarmType;
+    public String getSecuritySystemAlarmType() {
+        return getJsonData("ssat");
+    }
+
+    public void setSecuritySystemAlarmType(String value) {
+        setJsonData("ssat", value);
+    }
+
     /**
      * Current state of the slats (e.g., open/closed). This is for a dedicated Slat service, often part of WindowCovering.
      * Characteristic: CurrentSlatState (0 = Fixed, 1 = Jammed, 2 = Swinging).
-     * Used by (Required): SLAT.
+     * Used by (Required): Slat.
      */
-    @UIField(order = 76)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'SLAT'")
-    @UIFieldVariableSelection
+    @UIField(order = 76, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Slat'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String currentSlatState;
+    public String getCurrentSlatState() {
+        return getJsonData("css");
+    }
+
+    public void setCurrentSlatState(String value) {
+        setJsonData("css", value);
+    }
 
 
-    // --- Accessory: SLAT ---
+    // --- Accessory: Slat ---
     /**
      * Type of slats (horizontal or vertical).
      * Characteristic: SlatType (0 = Horizontal, 1 = Vertical).
-     * Used by (Optional): SLAT.
+     * Used by (Optional): Slat.
      */
     @UIField(order = 77)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'SLAT'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Slat'")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
-    private String slatType;
+    public String getSlatType() {
+        return getJsonData("stype");
+    }
+
+    public void setSlatType(String value) {
+        setJsonData("stype", value);
+    }
+
     /**
      * Current tilt angle of slats (part of Slat service or WindowCovering).
      * Characteristic: CurrentTiltAngle (degrees, -90 to 90).
-     * Used by (Optional): SLAT, WINDOW_COVERING (if it has tiltable slats).
+     * Used by (Optional): Slat, WindowCovering (if it has tiltable slats).
      */
     @UIField(order = 78)
-    @UIFieldShowOnCondition("['SLAT', 'WINDOW_COVERING'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("['Slat', 'WindowCovering'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String currentTiltAngle;
+    public String getCurrentTiltAngle() {
+        return getJsonData("cta");
+    }
+
+    public void setCurrentTiltAngle(String value) {
+        setJsonData("cta", value);
+    }
+
     /**
      * Target tilt angle of slats (part of Slat service or WindowCovering).
      * Characteristic: TargetTiltAngle (degrees, -90 to 90).
-     * Used by (Optional): SLAT, WINDOW_COVERING (if it has tiltable slats).
+     * Used by (Optional): Slat, WindowCovering (if it has tiltable slats).
      */
     @UIField(order = 79)
-    @UIFieldShowOnCondition("['SLAT', 'WINDOW_COVERING'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("['Slat', 'WindowCovering'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String targetTiltAngle;
+    public String getTargetTiltAngle() {
+        return getJsonData("tta");
+    }
+
+    public void setTargetTiltAngle(String value) {
+        setJsonData("tta", value);
+    }
+
     /**
      * Volume level for audio output.
      * Characteristic: Volume (percentage 0-100).
-     * Used by (Optional): SMART_SPEAKER, SPEAKER, TELEVISION_SPEAKER. 'mute' is required.
+     * Used by (Optional): SmartSpeaker, Speaker, TelevisionSpeaker. 'mute' is required.
      */
     @UIField(order = 80)
-    @UIFieldShowOnCondition("return ['SMART_SPEAKER', 'SPEAKER', 'TELEVISION_SPEAKER'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return ['SmartSpeaker', 'Speaker', 'TelevisionSpeaker'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
-    private String volume;
+    public String getVolume() {
+        return getJsonData("vol");
+    }
+
+    public void setVolume(String value) {
+        setJsonData("vol", value);
+    }
 
 
-    // --- Accessory: SMART_SPEAKER / SPEAKER / TELEVISION_SPEAKER ---
+    // --- Accessory: SmartSpeaker / Speaker / TelevisionSpeaker ---
     /**
      * Current media state for SmartSpeaker.
-     * Characteristic: CurrentMediaState (0=Play, 1=Pause, 2=Stop, 3=Loading, 4=Interrupted - HAP specific values).
-     * Used by (Required): SMART_SPEAKER.
+     * Characteristic: CurrentMediaState (0=Play, 1=Pause, 2=Stop, 3=Loading, 4=Interrupted – HAP specific values).
+     * Used by (Required): SmartSpeaker.
      */
-    @UIField(order = 81)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'SMART_SPEAKER'")
-    @UIFieldVariableSelection
+    @UIField(order = 81, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'SmartSpeaker'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String currentMediaState;
+    public String getCurrentMediaState() {
+        return getJsonData("cms");
+    }
+
+    public void setCurrentMediaState(String value) {
+        setJsonData("cms", value);
+    }
+
     /**
      * Target media state for SmartSpeaker.
-     * Characteristic: TargetMediaState (0=Play, 1=Pause, 2=Stop - HAP specific values).
-     * Used by (Optional): SMART_SPEAKER.
+     * Characteristic: TargetMediaState (0=Play, 1=Pause, 2=Stop – HAP specific values).
+     * Used by (Optional): SmartSpeaker.
      */
     @UIField(order = 82)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'SMART_SPEAKER'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'SmartSpeaker'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String targetMediaState;
+    public String getTargetMediaState() {
+        return getJsonData("tms");
+    }
+
+    public void setTargetMediaState(String value) {
+        setJsonData("tms", value);
+    }
+
     /**
      * Identifier of the currently active input source on the Television.
      * Characteristic: ActiveIdentifier (UInt32, matches Identifier of an InputSource service).
-     * Used by (Required): TELEVISION.
+     * Used by (Required): Television.
      */
-    @UIField(order = 83)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'TELEVISION'")
-    @UIFieldVariableSelection
+    @UIField(order = 83, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String activeIdentifier;
+    public String getActiveIdentifier() {
+        return getJsonData("ai");
+    }
+
+    public void setActiveIdentifier(String value) {
+        setJsonData("ai", value);
+    }
 
 
-    // --- Accessory: TELEVISION ---
+    // --- Accessory: Television ---
     /**
      * Name of the input source as configured by the user (e.g., "HDMI 1", "Netflix").
      * Characteristic: ConfiguredName (String). This is for the InputSource service linked to Television.
      * This field would typically be on an InputSource entity, but placed here if TV manages input names directly.
-     * Used by (Optional): TELEVISION (via linked InputSource services).
+     * Used by (Optional): Television (via linked InputSource services).
      */
     @UIField(order = 84)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'TELEVISION'") // Relates to InputSource naming
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'") // Relates to InputSource naming
+    @UIFieldVariableSelection(varType = Text, rawInput = true)
     @UIFieldGroup("OPT_CHAR")
-    private String configuredName;
-    @UIField(order = 84)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'TELEVISION'") // Relates to InputSource naming
-    @UIFieldVariableSelection
+    public String getConfiguredName() {
+        return getJsonData("cn");
+    }
+
+    public void setConfiguredName(String value) {
+        setJsonData("cn", value);
+    }
+
+    @UIField(order = 84) // Preserving duplicate order
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'") // Relates to InputSource naming
+    @UIFieldVariableSelection(varType = Text, rawInput = true)
     @UIFieldGroup("OPT_CHAR")
-    private String inputDeviceType;
-    @UIField(order = 84)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'TELEVISION'") // Relates to InputSource naming
-    @UIFieldVariableSelection
+    public String getInputDeviceType() {
+        return getJsonData("idt");
+    }
+
+    public void setInputDeviceType(String value) {
+        setJsonData("idt", value);
+    }
+
+    @UIField(order = 84) // Preserving duplicate order
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'") // Relates to InputSource naming
+    @UIFieldVariableSelection(varType = Text, rawInput = true)
     @UIFieldGroup("OPT_CHAR")
-    private String inputSourceType;
+    public String getInputSourceType() {
+        return getJsonData("ist");
+    }
+
+    public void setInputSourceType(String value) {
+        setJsonData("ist", value);
+    }
+
     /**
      * Sleep/wake discovery mode for the Television.
      * Characteristic: SleepDiscoveryMode (0 = Not Discoverable, 1 = Always Discoverable).
-     * Used by (Optional): TELEVISION.
+     * Used by (Optional): Television.
      */
     @UIField(order = 85)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'TELEVISION'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
-    private String sleepDiscoveryMode;
+    public String getSleepDiscoveryMode() {
+        return getJsonData("sdm");
+    }
+
+    public void setSleepDiscoveryMode(String value) {
+        setJsonData("sdm", value);
+    }
+
     /**
      * Simulates a remote key press for the Television. Write-only.
-     * Characteristic: RemoteKey (various enum values like PlayPause, ArrowUp, Select etc.).
-     * Used by (Optional): TELEVISION.
+     * Characteristic: RemoteKey (various enum values like PlayPause, ArrowUp, Select, etc.).
+     * Used by (Optional): Television.
      */
     @UIField(order = 86)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'TELEVISION'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
+    @UIFieldVariableSelection(varType = Text)
     @UIFieldGroup("OPT_CHAR")
-    private String remoteKey;
+    public String getRemoteKey() {
+        return getJsonData("rk");
+    }
+
+    public void setRemoteKey(String value) {
+        setJsonData("rk", value);
+    }
+
     /**
      * Selects if a power mode change should trigger OSD display. Write-only.
      * Characteristic: PowerModeSelection (0=Show, 1=Hide).
-     * Used by (Optional): TELEVISION.
+     * Used by (Optional): Television.
      */
     @UIField(order = 87)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'TELEVISION'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
-    private String powerModeSelection;
+    public String getPowerModeSelection() {
+        return getJsonData("pmsel");
+    }
+
+    public void setPowerModeSelection(String value) {
+        setJsonData("pmsel", value);
+    }
+
     /**
      * Closed captions state for Television.
      * Characteristic: ClosedCaptions (0 = Disabled, 1 = Enabled).
-     * Used by (Optional): TELEVISION.
+     * Used by (Optional): Television.
      */
     @UIField(order = 88)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'TELEVISION'")
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
     @UIFieldGroup("OPT_CHAR")
-    @UIFieldVariableSelection
-    private String closedCaptions;
+    @UIFieldVariableSelection(varType = Bool)
+    public String getClosedCaptions() {
+        return getJsonData("cc");
+    }
+
+    public void setClosedCaptions(String value) {
+        setJsonData("cc", value);
+    }
+
     /**
      * Type of volume control supported by Television or TelevisionSpeaker.
      * Characteristic: VolumeControlType (0 = None, 1 = Relative, 2 = Absolute, 3 = Relative with Current).
-     * Used by (Optional): TELEVISION, TELEVISION_SPEAKER.
+     * Used by (Optional): Television, TelevisionSpeaker.
      */
     @UIField(order = 89)
-    @UIFieldShowOnCondition("['TELEVISION', 'TELEVISION_SPEAKER'].includes(context.get('accessoryType'))")
+    @UIFieldShowOnCondition("['Television', 'TelevisionSpeaker'].includes(context.get('accessoryType'))")
     @UIFieldGroup("OPT_CHAR")
-    @UIFieldVariableSelection
-    private String volumeControlType;
+    @UIFieldVariableSelection(varType = Float)
+    public String getVolumeControlType() {
+        return getJsonData("vct");
+    }
+
+    public void setVolumeControlType(String value) {
+        setJsonData("vct", value);
+    }
+
     /**
      * Sends volume up/down commands for relative volume control. Write-only.
-     * Characteristic: VolumeSelector (0 = Increment, 1 = Decrement).
-     * Used by (Optional): TELEVISION, TELEVISION_SPEAKER (if VolumeControlType is Relative).
+     * Characteristic: VolumeSelector (0 = Increments, 1 = Decrement).
+     * Used by (Optional): Television, TelevisionSpeaker (if VolumeControlType is Relative).
      */
     @UIField(order = 90)
-    @UIFieldShowOnCondition("['TELEVISION', 'TELEVISION_SPEAKER'].includes(context.get('accessoryType'))")
+    @UIFieldShowOnCondition("['Television', 'TelevisionSpeaker'].includes(context.get('accessoryType'))")
     @UIFieldGroup("OPT_CHAR")
-    @UIFieldVariableSelection
-    private String volumeSelector;
-    @UIField(order = 90)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'TELEVISION'")
-    @UIFieldVariableSelection
+    @UIFieldVariableSelection(varType = Bool)
+    public String getVolumeSelector() {
+        return getJsonData("vs");
+    }
+
+    public void setVolumeSelector(String value) {
+        setJsonData("vs", value);
+    }
+
+    @UIField(order = 90) // Preserving duplicate order
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
+    @UIFieldVariableSelection(varType = Text)
     @UIFieldGroup("OPT_CHAR")
-    private String pictureMode;
-    @UIField(order = 92)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'TELEVISION'")
-    @UIFieldVariableSelection
+    public String getPictureMode() {
+        return getJsonData("pmode");
+    }
+
+    public void setPictureMode(String value) {
+        setJsonData("pmode", value);
+    }
+
+    @UIField(order = 92) // Preserving duplicate order
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
+    @UIFieldVariableSelection(varType = Text)
     @UIFieldGroup("OPT_CHAR")
-    private String targetVisibilityState;
+    public String getTargetVisibilityState() {
+        return getJsonData("tvs");
+    }
+
+    public void setTargetVisibilityState(String value) {
+        setJsonData("tvs", value);
+    }
+
     /**
      * Target temperature for the Thermostat.
      * Characteristic: TargetTemperature (Celsius, typically 10-38).
-     * Used by (Required): THERMOSTAT.
+     * Used by (Required): Thermostat.
      */
-    @UIField(order = 91)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'THERMOSTAT'")
-    @UIFieldVariableSelection
+    @UIField(order = 91, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Thermostat'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String targetTemperature;
+    public String getTargetTemperature() {
+        return getJsonData("tt");
+    }
+
+    public void setTargetTemperature(String value) {
+        setJsonData("tt", value);
+    }
 
 
-    // --- Accessory: THERMOSTAT ---
+    // --- Accessory: Thermostat ---
     /**
      * Cooling threshold temperature for Thermostat (if it supports separate cooling/heating thresholds).
      * Characteristic: CoolingThresholdTemperature (Celsius, typically 10-35).
-     * Used by (Optional): THERMOSTAT.
+     * Used by (Optional): Thermostat.
      */
-    @UIField(order = 92)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'THERMOSTAT'")
-    @UIFieldVariableSelection
+    @UIField(order = 92) // Preserving duplicate order
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Thermostat'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String coolingThresholdTemperatureThermo;
+    public String getCoolingThresholdTemperatureThermo() {
+        return getJsonData("cttt");
+    }
+
+    public void setCoolingThresholdTemperatureThermo(String value) {
+        setJsonData("cttt", value);
+    }
+
     /**
      * Heating threshold temperature for Thermostat (if it supports separate cooling/heating thresholds).
      * Characteristic: HeatingThresholdTemperature (Celsius, typically 0-25).
-     * Used by (Optional): THERMOSTAT.
+     * Used by (Optional): Thermostat.
      */
     @UIField(order = 93)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'THERMOSTAT'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Thermostat'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String heatingThresholdTemperatureThermo;
+    public String getHeatingThresholdTemperatureThermo() {
+        return getJsonData("httt");
+    }
+
+    public void setHeatingThresholdTemperatureThermo(String value) {
+        setJsonData("httt", value);
+    }
+
     /**
      * Current relative humidity, if the Thermostat includes a humidity sensor.
      * Characteristic: CurrentRelativeHumidity (percentage 0-100).
-     * Used by (Optional): THERMOSTAT.
+     * Used by (Optional): Thermostat.
      */
     @UIField(order = 94)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'THERMOSTAT'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Thermostat'")
+    @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
-    private String currentRelativeHumidityThermo;
+    public String getCurrentRelativeHumidityThermo() {
+        return getJsonData("crht");
+    }
+
+    public void setCurrentRelativeHumidityThermo(String value) {
+        setJsonData("crht", value);
+    }
+
     /**
      * Type of valve.
      * Characteristic: ValveType (0 = Generic, 1 = Irrigation, 2 = Shower Head, 3 = Water Faucet).
-     * Used by (Required): VALVE.
+     * Used by (Required): Valve.
      */
-    @UIField(order = 95)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'VALVE'")
-    @UIFieldVariableSelection
+    @UIField(order = 95, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Valve'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    private String valveType;
+    public String getValveType() {
+        return getJsonData("vt");
+    }
 
+    public void setValveType(String value) {
+        setJsonData("vt", value);
+    }
 
-    // --- Accessory: VALVE ---
+    // --- Accessory: Valve ---
     /**
      * Indicates if the valve is configured and ready for use. Read-only.
      * Characteristic: IsConfigured (0 = Not Configured, 1 = Configured).
-     * Used by (Optional): VALVE.
+     * Used by (Optional): Valve.
      */
     @UIField(order = 96)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'VALVE'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Valve'")
+    @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
-    private String isConfigured;
+    public String getIsConfigured() {
+        return getJsonData("ic");
+    }
+
+    public void setIsConfigured(String value) {
+        setJsonData("ic", value);
+    }
+
     /**
      * Index for a labeled service, e.g., if there are multiple valves in an irrigation system.
      * Characteristic: ServiceLabelIndex (UInt8).
-     * Used by (Optional): VALVE (especially when grouped, like in IrrigationSystem).
+     * Used by (Optional): Valve (especially when grouped, like in IrrigationSystem).
      */
     @UIField(order = 97)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'VALVE'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Valve'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String serviceLabelIndex;
+    public String getServiceLabelIndex() {
+        return getJsonData("sli");
+    }
+
+    public void setServiceLabelIndex(String value) {
+        setJsonData("sli", value);
+    }
+
     /**
      * Command to hold the current position of the window covering. Write-only.
      * Characteristic: HoldPosition (Write any value to hold).
-     * Used by (Optional): WINDOW_COVERING.
+     * Used by (Optional): WindowCovering.
      */
     @UIField(order = 98)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'WINDOW_COVERING'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'WindowCovering'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String windowHoldPosition;
+    public String getWindowHoldPosition() {
+        return getJsonData("whp");
+    }
+
+    public void setWindowHoldPosition(String value) {
+        setJsonData("whp", value);
+    }
 
 
-    // --- Accessory: WINDOW_COVERING ---
+    // --- Accessory: WindowCovering ---
     /**
      * Current horizontal tilt angle of slats on a window covering.
      * Characteristic: CurrentHorizontalTiltAngle (degrees, -90 to 90).
-     * Used by (Optional): WINDOW_COVERING.
+     * Used by (Optional): WindowCovering.
      */
     @UIField(order = 99)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'WINDOW_COVERING'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'WindowCovering'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String currentHorizontalTiltAngle;
+    public String getCurrentHorizontalTiltAngle() {
+        return getJsonData("chta");
+    }
+
+    public void setCurrentHorizontalTiltAngle(String value) {
+        setJsonData("chta", value);
+    }
+
     /**
      * Target horizontal tilt angle of slats on a window covering.
      * Characteristic: TargetHorizontalTiltAngle (degrees, -90 to 90).
-     * Used by (Optional): WINDOW_COVERING.
+     * Used by (Optional): WindowCovering.
      */
     @UIField(order = 100)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'WINDOW_COVERING'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'WindowCovering'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String targetHorizontalTiltAngle;
+    public String getTargetHorizontalTiltAngle() {
+        return getJsonData("thta");
+    }
+
+    public void setTargetHorizontalTiltAngle(String value) {
+        setJsonData("thta", value);
+    }
+
     /**
      * Current vertical tilt angle of slats on a window covering.
      * Characteristic: CurrentVerticalTiltAngle (degrees, -90 to 90).
-     * Used by (Optional): WINDOW_COVERING.
+     * Used by (Optional): WindowCovering.
      */
     @UIField(order = 101)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'WINDOW_COVERING'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'WindowCovering'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String currentVerticalTiltAngle;
+    public String getCurrentVerticalTiltAngle() {
+        return getJsonData("cvta");
+    }
+
+    public void setCurrentVerticalTiltAngle(String value) {
+        setJsonData("cvta", value);
+    }
+
     /**
      * Target vertical tilt angle of slats on a window covering.
      * Characteristic: TargetVerticalTiltAngle (degrees, -90 to 90).
-     * Used by (Optional): WINDOW_COVERING.
+     * Used by (Optional): WindowCovering.
      */
     @UIField(order = 102)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'WINDOW_COVERING'")
-    @UIFieldVariableSelection
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'WindowCovering'")
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    private String targetVerticalTiltAngle;
+    public String getTargetVerticalTiltAngle() {
+        return getJsonData("tvta");
+    }
+
+    public void setTargetVerticalTiltAngle(String value) {
+        setJsonData("tvta", value);
+    }
+
     /**
      * Manufacturer of the accessory.
-     * Characteristic: Manufacturer (String). Part of Accessory Information service.
+     * Characteristic: Manufacturer (String).
+     * Part of the Accessory Information service.
      * Used by (Optional): All accessory types.
      */
     @UIField(order = 110)
-    @UIFieldEntityByClassSelection(value = Variable.class, rawInput = true)
-    @UIFieldGroup(value = "OPT_INFO", order = 200, borderColor = "#395D96")
-    private String manufacturer;
+    @UIFieldVariableSelection(varType = Text, rawInput = true)
+    @UIFieldGroup(value = "CMN_CHAR", order = 200, borderColor = "#395D96")
+    public String getManufacturer() {
+        return getJsonData("man");
+    }
+
+    public void setManufacturer(String value) {
+        setJsonData("man", value);
+    }
 
 
     // --- Generic Optional Info (Accessory Information Service) ---
     /**
      * Model of the accessory.
-     * Characteristic: Model (String). Part of Accessory Information service.
+     * Characteristic: Model (String).
+     * Part of the Accessory Information service.
      * Used by (Optional): All accessory types.
      */
     @UIField(order = 111)
-    @UIFieldEntityByClassSelection(value = Variable.class, rawInput = true)
-    @UIFieldGroup("OPT_INFO")
-    private String model;
+    @UIFieldVariableSelection(varType = Text, rawInput = true)
+    @UIFieldGroup("CMN_CHAR")
+    public String getModel() {
+        return getJsonData("mod");
+    }
+
+    public void setModel(String value) {
+        setJsonData("mod", value);
+    }
+
     /**
      * Serial number of the accessory.
-     * Characteristic: SerialNumber (String). Part of Accessory Information service.
+     * Characteristic: SerialNumber (String).
+     * Part of the Accessory Information service.
      * Used by (Optional): All accessory types.
      */
     @UIField(order = 112)
-    @UIFieldEntityByClassSelection(value = Variable.class, rawInput = true)
-    @UIFieldGroup("OPT_INFO")
-    private String serialNumber;
+    @UIFieldVariableSelection(varType = Text, rawInput = true)
+    @UIFieldGroup("CMN_CHAR")
+    public String getSerialNumber() {
+        return getJsonData("sn", "none");
+    }
+
+    public void setSerialNumber(String value) {
+        setJsonData("sn", value);
+    }
+
     /**
      * Firmware revision of the accessory.
-     * Characteristic: FirmwareRevision (String). Part of Accessory Information service.
+     * Characteristic: FirmwareRevision (String).
+     * Part of the Accessory Information service.
      * Used by (Optional): All accessory types.
      */
     @UIField(order = 113)
-    @UIFieldEntityByClassSelection(value = Variable.class, rawInput = true)
-    @UIFieldGroup("OPT_INFO")
-    private String firmwareRevision;
+    @UIFieldVariableSelection(varType = Text, rawInput = true)
+    @UIFieldGroup("CMN_CHAR")
+    public String getFirmwareRevision() {
+        return getJsonData("fr", "1");
+    }
+
+    public void setFirmwareRevision(String value) {
+        setJsonData("fr", value);
+    }
+
     /**
      * Hardware revision of the accessory.
-     * Characteristic: HardwareRevision (String). Part of Accessory Information service.
+     * Characteristic: HardwareRevision (String).
+     * Part of the Accessory Information service.
      * Used by (Optional): All accessory types.
      */
     @UIField(order = 114)
-    @UIFieldEntityByClassSelection(value = Variable.class, rawInput = true)
-    @UIFieldGroup("OPT_INFO")
-    private String hardwareRevision;
+    @UIFieldVariableSelection(varType = Text, rawInput = true)
+    @UIFieldGroup("CMN_CHAR")
+    public String getHardwareRevision() {
+        return getJsonData("hr", "none");
+    }
+
+    public void setHardwareRevision(String value) {
+        setJsonData("hr", value);
+    }
 
     public static int calculateId(String name) {
         int id = 629 + name.hashCode();
@@ -1174,43 +1920,53 @@ public class HomekitEndpointEntity extends BaseEntity {
         return id;
     }
 
-    @Override
-    public String getEntityID() {
-        return String.valueOf(accessoryType.name().hashCode() + name.hashCode());
-    }
-
     @JsonIgnore
     public int getId() {
         if (id == -1) {
-            id = accessoryType == DUMMY ? 0 : calculateId(getTitle());
+            id = calculateId(getTitle());
         }
         return id;
     }
 
-    @JsonIgnore
-    public HomekitEntity getDevice() {
-        return service.getEntity();
+    @Override
+    public String getDefaultName() {
+        return "Homekit characteristic";
     }
 
     @Override
-    public @Nullable String getDefaultName() {
-        return "Homekit accessory";
+    protected String getSeriesPrefix() {
+        return "homekit-acs";
     }
 
-    @Override
-    protected long getChildEntityHashCode() {
-        return 0;
+    public boolean getEmulateStopState() {
+        return getJsonData("emst", false);
     }
 
-    @Override
-    public @NotNull String getEntityPrefix() {
-        return "homekit-ep";
+    public void setEmulateStopState(boolean value) {
+        setJsonData("emst", value);
     }
 
-    public Variable getVariable(String variableId) {
-        if (variableId == null || variableId.isEmpty()) {
-            return null;
-        }
-        return service.getContext().var().getVariable(variableId);
+    public boolean getEmulateStopSameDirection() {
+        return getJsonData("emssd", false);
+    }
+
+    public void setEmulateStopSameDirection(boolean value) {
+        setJsonData("emssd", value);
+    }
+
+    public boolean getSendUpDownForExtents() {
+        return getJsonData("sudfe", false);
+    }
+
+    public void setSendUpDownForExtents(boolean value) {
+        setJsonData("sudfe", value);
+    }
+
+    public boolean getInverted() {
+        return getJsonData("inv", false);
+    }
+
+    public void setInverted(boolean value) {
+        setJsonData("inv", value);
     }
 }
