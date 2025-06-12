@@ -248,16 +248,22 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
                     ctx.owner(),
                     ctx.endpoint().getTitle(),
                     false,
-                    ctx.accessory().getVariable().getRestriction().getEndpointType());
+                    ctx.accessory().getVariable() == null ?
+                            EndpointType.string :
+                            ctx.accessory().getVariable().getRestriction().getEndpointType());
+            if (ctx.accessory().getVariable() != null) {
+                setInitialValue(ctx.accessory().getVariable().getValue());
+            }
             this.endpoint = ctx.endpoint();
+            ctx.updateUI = () -> setValue(ctx.accessory().getVariable().getValue(), true);
         }
 
         @Override
         public @Nullable String getDescription() {
             String value = endpoint.getAccessoryType().name();
             if (!endpoint.getGroup().isEmpty()) {
-                value = "[" + endpoint.getGroup() + "] " + value;
-
+                var color = UI.Color.random(endpoint.getGroup().hashCode());
+                value = "<span style=\"color: " + color + ";\">[" + endpoint.getGroup() + "]</span> " + value;
             }
             return value;
         }

@@ -6,7 +6,7 @@ import io.github.hapjava.services.Service;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.homekit.HomekitEndpointContext;
 import org.homio.api.ContextVar;
-import org.homio.api.state.DecimalType;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -28,8 +28,9 @@ public abstract class AbstractHomekitPositionAccessory extends AbstractHomekitAc
     private final ContextVar.Variable targetPositionVar;
     PositionStateEnum emulatedState = PositionStateEnum.STOPPED;
 
-    public AbstractHomekitPositionAccessory(HomekitEndpointContext ctx, Class<? extends Service> serviceClass) {
-        super(ctx, serviceClass, ctx.endpoint().getPositionState());
+    public AbstractHomekitPositionAccessory(@NotNull HomekitEndpointContext ctx,
+                                            @NotNull Class<? extends Service> serviceClass) {
+        super(ctx, ctx.endpoint().getPositionState(), serviceClass);
         emulateState = ctx.endpoint().getEmulateStopState();
         emulateStopSameDirection = ctx.endpoint().getEmulateStopState();
         sendUpDownForExtents = ctx.endpoint().getSendUpDownForExtents();
@@ -55,9 +56,13 @@ public abstract class AbstractHomekitPositionAccessory extends AbstractHomekitAc
     }
 
     public CompletableFuture<Void> setTargetPosition(int value) {
+        return setTargetPosition((Integer) value);
+    }
+
+    public CompletableFuture<Void> setTargetPosition(Integer value) {
         getCharacteristic(TargetPosition).ifPresentOrElse(taggedItem -> {
             int targetPosition = convertPosition(value, openPosition);
-            targetPositionVar.set(new DecimalType(targetPosition));
+            updateVar(targetPositionVar, targetPosition);
             // Item item = taggedItem.getItem();
                 /*if (item instanceof RollershutterItem itemAsRollerShutterItem) {
                     // HomeKit home app never sends STOP. we emulate stop if we receive 100% or 0% while the blind is moving
@@ -106,9 +111,7 @@ public abstract class AbstractHomekitPositionAccessory extends AbstractHomekitAc
                             "Unsupported item type for characteristic {} at accessory {}. Expected Rollershutter, Dimmer or Number item, got {}",
                             TargetPosition, getName(), item.getClass());
                 }*/
-        }, () -> {
-            log.warn("Mandatory characteristic {} not found at accessory {}. ", TargetPosition, getName());
-        });
+        }, () -> log.warn("Mandatory characteristic {} not found at accessory {}. ", TargetPosition, getName()));
         return CompletableFuture.completedFuture(null);
     }
 
