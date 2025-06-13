@@ -8,6 +8,7 @@ import io.github.hapjava.services.impl.AccessoryInformationService;
 import org.homio.api.ContextVar;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public interface BaseHomekitAccessory extends HomekitAccessory {
@@ -63,4 +64,6 @@ public interface BaseHomekitAccessory extends HomekitAccessory {
     }
 
     ContextVar.Variable getVariable();
+
+    Map<String, ContextVar.Variable> getExtraVariables();
 }

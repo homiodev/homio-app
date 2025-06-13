@@ -11,8 +11,10 @@ import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.homio.addon.homekit.accessories.BaseHomekitAccessory;
 import org.homio.addon.homekit.accessories.HomekitAccessoryFactory;
 import org.homio.api.Context;
+import org.homio.api.ContextVar;
 import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContractStub;
 import org.homio.api.entity.device.DeviceEntityAndSeries;
@@ -240,6 +242,7 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
     public static class HomekitEndpointUI extends BaseDeviceEndpoint<HomekitEntity> {
 
         private final @NotNull HomekitEndpointEntity endpoint;
+        private final BaseHomekitAccessory accessory;
 
         public HomekitEndpointUI(HomekitEndpointContext ctx) {
             super(ctx.accessory().getVariable().getIconModel(),
@@ -255,17 +258,22 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
                 setInitialValue(ctx.accessory().getVariable().getValue());
             }
             this.endpoint = ctx.endpoint();
+            this.accessory = ctx.accessory();
             ctx.updateUI = () -> setValue(ctx.accessory().getVariable().getValue(), true);
         }
 
         @Override
         public @Nullable String getDescription() {
-            String value = endpoint.getAccessoryType().name();
+            StringBuilder value = new StringBuilder(endpoint.getAccessoryType().name());
             if (!endpoint.getGroup().isEmpty()) {
                 var color = UI.Color.random(endpoint.getGroup().hashCode());
-                value = "<span style=\"color: " + color + ";\">[" + endpoint.getGroup() + "]</span> " + value;
+                value.insert(0, "<span style=\"color: " + color + ";\">[" + endpoint.getGroup() + "]</span> ");
             }
-            return value;
+            for (Map.Entry<String, ContextVar.Variable> entry : accessory.getExtraVariables().entrySet()) {
+                value.append(" ${field.%s}=%s".formatted(entry.getKey(), entry.getValue().getValue()));
+            }
+
+            return value.toString();
         }
     }
 }

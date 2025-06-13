@@ -17,10 +17,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 
 import static org.homio.addon.homekit.HomekitCharacteristicFactory.*;
@@ -33,6 +30,8 @@ public abstract class AbstractHomekitAccessory implements BaseHomekitAccessory {
     @Getter
     private final @NotNull List<Service> services = new ArrayList<>();
     private final @NotNull Characteristics characteristics = new Characteristics();
+    @Getter
+    private Map<String, ContextVar.Variable> extraVariables = new HashMap<>();
 
     public AbstractHomekitAccessory(@NotNull HomekitEndpointContext ctx) {
         this(ctx, null, null);
@@ -105,12 +104,16 @@ public abstract class AbstractHomekitAccessory implements BaseHomekitAccessory {
     }
 
     State getVariableValue(Function<HomekitEndpointEntity, String> supplier, State defaultValue) {
-        var variable = getVariable(supplier);
+        var variable = getVariable(null, supplier);
         return variable == null ? defaultValue : variable.getValue();
     }
 
-    ContextVar.Variable getVariable(Function<HomekitEndpointEntity, String> supplier) {
-        return ctx.getVariable(supplier.apply(ctx.endpoint()));
+    ContextVar.Variable getVariable(String name, Function<HomekitEndpointEntity, String> supplier) {
+        ContextVar.Variable accVar = ctx.getVariable(supplier.apply(ctx.endpoint()));
+        if (accVar != null && name != null) {
+            extraVariables.put(name, accVar);
+        }
+        return accVar;
     }
 
     public void addService(Service service) {

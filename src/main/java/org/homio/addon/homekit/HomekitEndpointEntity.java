@@ -741,7 +741,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldVariableSelection(varType = Float, rawInput = true)
     @UIFieldGroup("OPT_CHAR")
     public String getBatteryLowThreshold() {
-        return getJsonData("blt");
+        return getJsonData("blt", "20");
     }
 
     public void setBatteryLowThreshold(String value) {

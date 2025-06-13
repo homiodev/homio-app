@@ -134,6 +134,11 @@ public class HomekitAccessoryFactory {
         }
 
         @Override
+        public Map<String, ContextVar.Variable> getExtraVariables() {
+            return Map.of();
+        }
+
+        @Override
         public int getId() {
             return groupName.hashCode();
         }
@@ -280,7 +285,7 @@ public class HomekitAccessoryFactory {
 
         public HomekitValve(@NotNull HomekitEndpointContext ctx) {
             super(ctx, ctx.endpoint().getActiveState(), ValveService.class);
-            inUseStatus = ctx.getVariable(ctx.endpoint().getInuseStatus());
+            inUseStatus = getVariable("inuseStatus", HomekitEndpointEntity::getInuseStatus);
             homekitTimer = false; // getAccessoryConfigurationAsBoolean(CONFIG_TIMER, false);
 
             var remainingDurationCharacteristic = getCharacteristic(RemainingDurationCharacteristic.class);
@@ -292,7 +297,7 @@ public class HomekitAccessoryFactory {
             valveTypeConfig = valveTypeConfig; // getAccessoryConfiguration(CONFIG_VALVE_TYPE_DEPRECATED, valveTypeConfig);
             var valveType = CONFIG_VALVE_TYPE_MAPPING.get(valveTypeConfig.toUpperCase());
             this.valveType = valveType != null ? valveType : ValveTypeEnum.GENERIC;
-            this.remainingDurationVar = ctx.getVariable(ctx.endpoint().getRemainingDuration());
+            this.remainingDurationVar = getVariable("remainingDuration", HomekitEndpointEntity::getRemainingDuration);
         }
 
         private void addRemainingDurationCharacteristic(ValveService service) {
@@ -313,7 +318,7 @@ public class HomekitAccessoryFactory {
         }
 
         @Override
-        public CompletableFuture<Void> setValveActive(ActiveEnum activeEnum) throws Exception {
+        public CompletableFuture<Void> setValveActive(ActiveEnum activeEnum) {
             /*getItem(ACTIVE_STATUS, SwitchItem.class).ifPresent(item -> {
                 item.send(OnOffType.from(state == ActiveEnum.ACTIVE));
                 if (homekitTimer) {
@@ -449,8 +454,8 @@ public class HomekitAccessoryFactory {
         public HomekitBattery(@NotNull HomekitEndpointContext ctx) {
             super(ctx, ctx.endpoint().getBatteryLevel(), BatteryService.class);
             lowThreshold = getVariableValue(HomekitEndpointEntity::getBatteryLowThreshold, new DecimalType(20)).intValue();
-            lowBatteryVar = getVariable(HomekitEndpointEntity::getStatusLowBattery);
-            chargingBatteryVar = getVariable(HomekitEndpointEntity::getBatteryChargingState);
+            lowBatteryVar = getVariable("statusLowBattery", HomekitEndpointEntity::getStatusLowBattery);
+            chargingBatteryVar = getVariable("batteryChargingState", HomekitEndpointEntity::getBatteryChargingState);
 
         }
 
@@ -760,9 +765,9 @@ public class HomekitAccessoryFactory {
 
         public HomekitHeaterCooler(@NotNull HomekitEndpointContext ctx) {
             super(ctx, null);
-            currentTemperatureVar = getVariable(HomekitEndpointEntity::getCurrentTemperature);
-            currentHeaterCoolerStateVar = getVariable(HomekitEndpointEntity::getCurrentHeaterCoolerState);
-            targetHeatingCoolStateVar = getVariable(HomekitEndpointEntity::getTargetHeatingCoolingState);
+            currentTemperatureVar = getVariable("currentTemperature", HomekitEndpointEntity::getCurrentTemperature);
+            currentHeaterCoolerStateVar = getVariable("currentHeaterCoolerState", HomekitEndpointEntity::getCurrentHeaterCoolerState);
+            targetHeatingCoolStateVar = getVariable("targetHeatingCoolingState", HomekitEndpointEntity::getTargetHeatingCoolingState);
             targetStateMapping = createMapping(targetHeatingCoolStateVar, TargetHeaterCoolerStateEnum.class,
                     customTargetStateList);
             currentStateMapping = createMapping(currentHeaterCoolerStateVar, CurrentHeaterCoolerStateEnum.class,
@@ -913,7 +918,7 @@ public class HomekitAccessoryFactory {
 
         public HomekitLock(@NotNull HomekitEndpointContext ctx) {
             super(ctx, ctx.endpoint().getLockCurrentState(), LockMechanismService.class);
-            lockTargetStateVar = getVariable(HomekitEndpointEntity::getLockTargetState);
+            lockTargetStateVar = getVariable("lockTargetState", HomekitEndpointEntity::getLockTargetState);
             currentStateMapping = createMapping(variable, LockCurrentStateEnum.class);
             targetStateMapping = createMapping(lockTargetStateVar, LockTargetStateEnum.class);
         }
@@ -991,7 +996,7 @@ public class HomekitAccessoryFactory {
 
         public HomekitOutlet(@NotNull HomekitEndpointContext ctx) {
             super(ctx, ctx.endpoint().getOnState(), OutletService.class);
-            inUseStatus = ctx.getVariable(ctx.endpoint().getInuseStatus());
+            inUseStatus = getVariable("inuseStatus", HomekitEndpointEntity::getInuseStatus);
         }
 
         @Override
@@ -1063,8 +1068,7 @@ public class HomekitAccessoryFactory {
             // CoolingThresholdTemperature
             // as appropriate
             if (targetTemperatureCharacteristic.isEmpty()) {
-                if (Arrays.stream(targetHeatingCoolingStateCharacteristic.getValidValues())
-                            .anyMatch(v -> v.equals(TargetHeatingCoolingStateEnum.HEAT))
+                if (Arrays.asList(targetHeatingCoolingStateCharacteristic.getValidValues()).contains(TargetHeatingCoolingStateEnum.HEAT)
                     && heatingThresholdTemperatureCharacteristic == null) {
                     throw new RuntimeException(
                             "HeatingThresholdTemperature must be provided if HEAT mode is allowed and TargetTemperature is not provided.");
@@ -1097,17 +1101,14 @@ public class HomekitAccessoryFactory {
                         .of(new TargetTemperatureCharacteristic(minValue, maxValue, minStep, () -> {
                             // return the value from the characteristic corresponding to the current mode
                             try {
-                                switch (targetHeatingCoolingStateCharacteristic.getEnumValue().get()) {
-                                    case HEAT:
-                                        return heatingThresholdTemperatureCharacteristic.getValue();
-                                    case COOL:
-                                        return coolingThresholdTemperatureCharacteristic.getValue();
-                                    default:
-                                        return CompletableFuture.completedFuture(
-                                                (heatingThresholdTemperatureCharacteristic.getValue().get()
-                                                 + coolingThresholdTemperatureCharacteristic.getValue().get())
-                                                / 2);
-                                }
+                                return switch (targetHeatingCoolingStateCharacteristic.getEnumValue().get()) {
+                                    case HEAT -> heatingThresholdTemperatureCharacteristic.getValue();
+                                    case COOL -> coolingThresholdTemperatureCharacteristic.getValue();
+                                    default -> CompletableFuture.completedFuture(
+                                            (heatingThresholdTemperatureCharacteristic.getValue().get()
+                                             + coolingThresholdTemperatureCharacteristic.getValue().get())
+                                            / 2);
+                                };
                             } catch (InterruptedException | ExecutionException e) {
                                 return null;
                             }
