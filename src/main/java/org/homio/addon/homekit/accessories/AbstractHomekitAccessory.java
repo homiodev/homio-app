@@ -142,6 +142,11 @@ public abstract class AbstractHomekitAccessory implements BaseHomekitAccessory {
     }
 
     @Override
+    public Collection<Characteristic> getCharacteristics() {
+        return characteristics.values();
+    }
+
+    @Override
     public <T> T getCharacteristic(Class<? extends T> klazz) {
         return characteristics.get(klazz);
     }
@@ -150,10 +155,7 @@ public abstract class AbstractHomekitAccessory implements BaseHomekitAccessory {
         return Optional.ofNullable(characteristics.get(klazz));
     }
 
-    protected <T> Optional<T> getCharacteristic(HomekitCharacteristicType homekitCharacteristicType) {
-        /*return characteristics.values().stream()
-                .filter(c -> cgetCharacteristicType() == type)
-                .findAny();*/
-        return null;
+    protected <T> Optional<T> getCharacteristic(HomekitCharacteristicType type) {
+        return Optional.ofNullable(characteristics.get(type));
     }
 }

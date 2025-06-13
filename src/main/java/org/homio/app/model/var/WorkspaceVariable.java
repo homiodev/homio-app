@@ -365,8 +365,13 @@ public final class WorkspaceVariable extends BaseEntity
 
     @Override
     public double getStep(double defValue) {
-        Float step = this.getMax();
+        Float step = this.getStep();
         return step == null ? defValue : step;
+    }
+
+    @Override
+    public boolean isWritable() {
+        return !readOnly;
     }
 
     @Override

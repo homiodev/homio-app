@@ -5,6 +5,7 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.MultiFormatWriter;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
+import io.github.hapjava.characteristics.Characteristic;
 import io.github.hapjava.server.impl.HomekitServer;
 import io.github.hapjava.server.impl.crypto.HAPSetupCodeUtils;
 import jakarta.persistence.Entity;
@@ -34,6 +35,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -269,6 +271,12 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
                 var color = UI.Color.random(endpoint.getGroup().hashCode());
                 value.insert(0, "<span style=\"color: " + color + ";\">[" + endpoint.getGroup() + "]</span> ");
             }
+            for (Characteristic characteristic : accessory.getCharacteristics()) {
+                if(characteristic instanceof HasSourceCharacteristic sc) {
+                    sc.getSource();
+                }
+            }
+            Collection<Characteristic> characteristics = accessory.getCharacteristics();
             for (Map.Entry<String, ContextVar.Variable> entry : accessory.getExtraVariables().entrySet()) {
                 value.append(" ${field.%s}=%s".formatted(entry.getKey(), entry.getValue().getValue()));
             }

@@ -16,6 +16,10 @@ public class Characteristics {
         return (T) rawCharacteristics.get(klazz);
     }
 
+    public <T> T get(HomekitCharacteristicType type) {
+        return (T) rawByTpeCharacteristics.get(type);
+    }
+
     public <T> Optional<T> getOpt(Class<? extends T> klazz) {
         return Optional.ofNullable((T) rawCharacteristics.get(klazz));
     }

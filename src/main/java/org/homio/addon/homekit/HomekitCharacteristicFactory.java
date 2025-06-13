@@ -477,11 +477,13 @@ public class HomekitCharacteristicFactory {
         ContextVar.Variable v = c.getVariable(c.endpoint().getActiveState());
         if (v == null) return null;
         Map<ActiveEnum, Object> m = createMapping(v, ActiveEnum.class);
-        return new ActiveCharacteristic(
+        var characteristic = new ActiveCharacteristic(
                 () -> getCurrentEnumValue(v, m, ActiveEnum.INACTIVE),
                 val -> setHomioVariableFromEnum(v, val, m),
                 getSubscriber(v, c, Active),
                 getUnsubscriber(v, c, Active));
+        c.setCharacteristic(characteristic, v, "activeState");
+        return characteristic;
     }
 
     private static @Nullable MuteCharacteristic createMuteCharacteristic(@NotNull HomekitEndpointContext c) {

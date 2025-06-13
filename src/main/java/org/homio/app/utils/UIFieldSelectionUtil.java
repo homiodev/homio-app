@@ -20,6 +20,7 @@ import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.impl.ContextServiceImpl;
 import org.homio.app.model.var.WorkspaceVariable;
 import org.homio.app.utils.OptionUtil.LoadOptionsParameters;
+import org.jetbrains.annotations.NotNull;
 
 import java.lang.annotation.Annotation;
 import java.util.*;
@@ -220,29 +221,7 @@ public final class UIFieldSelectionUtil {
         variable(UIFieldVariableSelection.class, params -> {
             List<OptionModel> list = new ArrayList<>();
             for (UIFieldVariableSelection item : params.field.getDeclaredAnnotationsByType(UIFieldVariableSelection.class)) {
-                Predicate<BaseEntity> filter = item.varType() == ContextVar.VariableType.Any ?
-                        baseEntity -> true :
-                        baseEntity -> {
-                            WorkspaceVariable variable = (WorkspaceVariable) baseEntity;
-                            var bv = variable.getRestriction();
-                            if (bv == ContextVar.VariableType.Any) {
-                                return true;
-                            }
-                            if(item.varType() == ContextVar.VariableType.Text && (bv == ContextVar.VariableType.Text || bv == ContextVar.VariableType.Enum)) {
-                                return true;
-                            }
-                            if (item.varType() == ContextVar.VariableType.Percentage) {
-                                if (bv == ContextVar.VariableType.Percentage) {
-                                    return true;
-                                } else if (bv == ContextVar.VariableType.Float) {
-                                    var min = variable.getMin();
-                                    var max = variable.getMax();
-                                    return min != null && min >= 0 && max != null && max <= 100;
-                                }
-                                return false;
-                            }
-                            return bv == item.varType();
-                        };
+                Predicate<BaseEntity> filter = filterVariable(item);
                 List<WorkspaceVariable> items = params.context.db().findAll(WorkspaceVariable.class);
                 items = items.stream().filter(filter).collect(Collectors.toList());
                 OptionUtil.assembleItemsToOptions(list, WorkspaceVariable.class, items, params.context, params.classEntityForDynamicOptionLoader);
@@ -270,4 +249,41 @@ public final class UIFieldSelectionUtil {
         public final Class<? extends Annotation> selectClass;
         public final Function<LoadOptionsParameters, List<OptionModel>> handler;
     }
+
+    private static @NotNull Predicate<BaseEntity> filterVariable(UIFieldVariableSelection item) {
+        return baseEntity -> {
+            WorkspaceVariable variable = (WorkspaceVariable) baseEntity;
+            if (item.requireWritable() && variable.isReadOnly()) {
+                return false;
+            }
+
+            if (item.varType() == ContextVar.VariableType.Any) {
+                return true;
+            }
+
+            var bv = variable.getRestriction();
+            if (bv == ContextVar.VariableType.Any) {
+                return true;
+            }
+
+            if (item.varType() == ContextVar.VariableType.Text &&
+                (bv == ContextVar.VariableType.Text || bv == ContextVar.VariableType.Enum)) {
+                return true;
+            }
+
+            if (item.varType() == ContextVar.VariableType.Percentage) {
+                if (bv == ContextVar.VariableType.Percentage) {
+                    return true;
+                } else if (bv == ContextVar.VariableType.Float) {
+                    var min = variable.getMin();
+                    var max = variable.getMax();
+                    return min != null && min >= 0 && max != null && max <= 100;
+                }
+                return false;
+            }
+
+            return bv == item.varType();
+        };
+    }
+
 }
