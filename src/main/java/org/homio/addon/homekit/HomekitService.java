@@ -43,48 +43,6 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
         return true;
     }
 
-    /*@SneakyThrows
-    @Override
-    public void entityUpdated(@NotNull HomekitEntity entity) {
-        super.entityUpdated(entity);
-        if (bridge == null || !entity.getStatus().isOnline()) {
-            return;
-        }
-        final boolean[] hasUpdate = {false};
-        endpoints.entrySet().removeIf(pair -> {
-            HomekitEndpointContext ctx = pair.getValue();
-            if (!isHasEndpoint(entity, pair.getKey())) {
-                if (!hasUpdate[0]) {
-                    hasUpdate[0] = true;
-                    bridge.batchUpdate();
-                }
-                if (ctx.accessory() instanceof HomekitAccessoryFactory.HomekitGroup hg) {
-                    hg.removeService(ctx);
-                    if (hg.getServices().isEmpty()) {
-                        bridge.removeAccessory(hg);
-                    }
-                } else {
-                    bridge.removeAccessory(ctx.accessory());
-                }
-                return true;
-            }
-            return false;
-        });
-        for (HomekitEndpointEntity endpoint : entity.getSeries()) {
-            if (!endpoints.containsKey(endpoint.getEntityHashCode())) {
-                if (!hasUpdate[0]) {
-                    hasUpdate[0] = true;
-                    bridge.batchUpdate();
-                }
-                addEndpoint(endpoint);
-            }
-        }
-        if (hasUpdate[0]) {
-            bridge.setConfigurationIndex(makeNewConfigurationRevision());
-            bridge.completeUpdateBatch();
-        }
-    }*/
-
     @Override
     public void destroy(boolean forRestart, @Nullable Exception ex) throws Exception {
         stopHomekitServer();
@@ -199,6 +157,16 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
         context.ui().updateItem(entity);
     }
 
+    private HomekitAccessoryFactory.HomekitGroup findAccessoryGroup(HomekitEndpointEntity endpoint) {
+        for (HomekitEndpointContext c : endpoints.values()) {
+            if (c.group() instanceof HomekitAccessoryFactory.HomekitGroup hg
+                && hg.getGroupName().equals(endpoint.getGroup())) {
+                return hg;
+            }
+        }
+        return null;
+    }
+
     private class HomekitAuthInfoImpl implements HomekitAuthInfo {
 
         @Override
@@ -265,15 +233,5 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
         public boolean userIsAdmin(String username) {
             return true;
         }
-    }
-
-    private HomekitAccessoryFactory.HomekitGroup findAccessoryGroup(HomekitEndpointEntity endpoint) {
-        for (HomekitEndpointContext c : endpoints.values()) {
-            if (c.group() instanceof HomekitAccessoryFactory.HomekitGroup hg
-                && hg.getGroupName().equals(endpoint.getGroup())) {
-                return hg;
-            }
-        }
-        return null;
     }
 }

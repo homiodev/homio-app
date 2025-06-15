@@ -20,7 +20,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.function.Function;
 
-import static org.homio.addon.homekit.HomekitCharacteristicFactory.*;
+import static org.homio.addon.homekit.HomekitCharacteristicFactory.buildCharacteristics;
+import static org.homio.addon.homekit.HomekitCharacteristicFactory.buildInitialCharacteristics;
 
 public abstract class AbstractHomekitAccessory implements BaseHomekitAccessory {
     @Getter
@@ -47,8 +48,7 @@ public abstract class AbstractHomekitAccessory implements BaseHomekitAccessory {
         this.ctx = ctx;
         this.variable = varId == null ? null : ctx.getVariable(varId);
         buildInitialCharacteristics(ctx, null, characteristics);
-        buildRequiredCharacteristics(ctx, characteristics);
-        buildOptionalCharacteristics(ctx, characteristics);
+        buildCharacteristics(ctx, characteristics);
         this.inverted = ctx.endpoint().getInverted();
 
         if (serviceClass != null) {
@@ -67,8 +67,13 @@ public abstract class AbstractHomekitAccessory implements BaseHomekitAccessory {
         return ctx.endpoint().getId();
     }
 
+    boolean getVarValue(ContextVar.Variable variable) {
+        boolean value = variable.getValue().boolValue();
+        return inverted != value;
+    }
+
     protected void updateVar(ContextVar.Variable variable, boolean value) {
-        updateVar(variable, OnOffType.of(value));
+        updateVar(variable, OnOffType.of(inverted != value));
     }
 
     protected void updateVar(ContextVar.Variable variable, int value) {
@@ -77,9 +82,7 @@ public abstract class AbstractHomekitAccessory implements BaseHomekitAccessory {
 
     protected void updateVar(ContextVar.Variable variable, State state) {
         variable.set(state);
-        if (this.ctx.updateUI != null) {
-            this.ctx.updateUI.run();
-        }
+        ctx.updateUI();
     }
 
     protected void subscribe(ContextVar.Variable variable, HomekitCharacteristicChangeCallback callback) {

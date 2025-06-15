@@ -510,7 +510,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 return Collections.emptyList();
             }
         }
-        AbstractRepository repository = ContextImpl.getRepository(entity.getEntityID());
+        var repository = ContextImpl.getRepository(entity.getEntityID());
         Collection<BaseEntity> usages = getUsages(entityID, repository);
         return usages.stream().map(Object::toString).collect(Collectors.toList());
     }
@@ -821,7 +821,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                             .from(obj.getClass(), SearchStrategy.SUPERCLASS)
                             .get(UIRouteMenu.class, MergedAnnotation::isDirectlyPresent)
                             .getSource();
-                    if (superClass != null && !DeviceBaseEntity.class.getSimpleName().equals(superClass.getSimpleName())) {
+                    if (!DeviceBaseEntity.class.getSimpleName().equals(superClass.getSimpleName())) {
                         return superClass.getSimpleName();
                     }
                     return obj.getClass().getSimpleName();
@@ -876,7 +876,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
         // Case for WorkspaceVariable, if user click on single variable
         ActionResponseModel result;
-        String variableEntityID = request.params.optString("inlineEntity");
+        String variableEntityID = request.params != null ? request.params.optString("inlineEntity") : null;
         if (variableEntityID != null) {
             result = tryHandleInlineEntity(variableEntityID, actionHolder, actionID, actionEntity, request);
             if (result != null) {
@@ -950,6 +950,19 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             }
             // fetch type actions
             Collection<UIInputEntity> actions = UIFieldUtils.fetchUIActionsFromClass(classType, context);
+
+            for (Method method : MethodUtils.getMethodsWithAnnotation(classType, UIContextMenuAction.class)) {
+                UIContextMenuAction action = method.getDeclaredAnnotation(UIContextMenuAction.class);
+                if (!action.attachToField().isEmpty()) {
+                    var data = entityUIMetaData.stream().filter(e -> e.getEntityName().equals(action.attachToField()))
+                            .findAny().orElseThrow(() -> new RuntimeException("Unable to find attached action: " + action.attachToField()));
+                    String json = new JSONObject(Objects.toString(data.getTypeMetaData(), "{}"))
+                            .put("refContextActionIcon", action.icon())
+                            .put("refContextActionIconColor", action.iconColor())
+                            .put("refContextAction", action.value()).toString();
+                    data.setTypeMetaData(json);
+                }
+            }
 
             boolean hasSourceLogs = HasEntitySourceLog.class.isAssignableFrom(classType);
             boolean hasLogs = HasEntityLog.class.isAssignableFrom(classType);
@@ -1128,7 +1141,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                     .toList();
 
             if (methodsListWithAnnotation.size() == 1) {
-                return methodsListWithAnnotation.get(0);
+                return methodsListWithAnnotation.getFirst();
             }
         }
         return null;
@@ -1165,7 +1178,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         private Map<String, String> deps;
     }
 
-    private record ItemContextResponse(
+    public record ItemContextResponse(
             String type,
             boolean hasLogs,
             boolean hasSourceLogs,

@@ -5,20 +5,19 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.MultiFormatWriter;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
-import io.github.hapjava.characteristics.Characteristic;
 import io.github.hapjava.server.impl.HomekitServer;
 import io.github.hapjava.server.impl.crypto.HAPSetupCodeUtils;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.addon.homekit.accessories.BaseHomekitAccessory;
 import org.homio.addon.homekit.accessories.HomekitAccessoryFactory;
 import org.homio.api.Context;
 import org.homio.api.ContextVar;
 import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContractStub;
 import org.homio.api.entity.device.DeviceEntityAndSeries;
+import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.endpoint.BaseDeviceEndpoint;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.service.EntityService;
@@ -26,7 +25,6 @@ import org.homio.api.ui.UI;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldPort;
-import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.route.UIRouteMisc;
@@ -34,12 +32,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.ByteArrayOutputStream;
-import java.util.Base64;
-import java.util.Collection;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
-@SuppressWarnings("JpaAttributeTypeInspection")
+@SuppressWarnings({"JpaAttributeTypeInspection", "unused"})
 @Entity
 @Log4j2
 @CreateSingleEntity
@@ -54,7 +50,7 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
         return super.getName();
     }
 
-    @UIField(order = 1, inlineEdit = true)
+    @UIField(order = 11, inlineEdit = true)
     @UIFieldGroup("GENERAL")
     public boolean isStart() {
         return getJsonData("start", false);
@@ -64,8 +60,8 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
         setJsonData("start", start);
     }
 
-    @UIField(order = 2, required = true, label = "homekitPin")
-    @UIFieldGroup("GENERAL")
+    @UIField(order = 1, required = true, label = "homekitPin")
+    @UIFieldGroup(value = "CONNECTION", order = 20, borderColor = "#248E91")
     public String getPin() {
         return getJsonData("pin", "031-45-154");
     }
@@ -75,7 +71,8 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
         regenerateQrCode();
     }
 
-    @UIField(order = 3, disableEdit = true)
+    @UIField(order = 2, disableEdit = true)
+    @UIFieldGroup("CONNECTION")
     public String getSetupId() {
         return getJsonData("sid");
     }
@@ -85,8 +82,9 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
         regenerateQrCode();
     }
 
-    @UIField(order = 4)
+    @UIField(order = 3)
     @UIFieldPort(min = 1024)
+    @UIFieldGroup("CONNECTION")
     public int getPort() {
         return getJsonData("port", 9123);
     }
@@ -95,13 +93,60 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
         setJsonData("port", value);
     }
 
-    @UIField(order = 5, disableEdit = true)
+    @UIField(order = 4, disableEdit = true)
+    @UIFieldGroup("CONNECTION")
     public String getQrCode() {
         return getJsonData("qrCode");
     }
 
     private void setQrCode(String value) {
         setJsonData("qrCode", value);
+    }
+
+    @UIField(order = 10)
+    @UIFieldGroup("CONNECTION")
+    public String getSalt() {
+        return getJsonData("salt");
+    }
+
+    void setSalt(String salt) {
+        setJsonData("salt", salt);
+    }
+
+    @UIField(order = 11, disableEdit = true)
+    @UIFieldGroup("CONNECTION")
+    public String getMac() {
+        return getJsonData("mac");
+    }
+
+    public void setMac(String value) {
+        setJsonData("mac", value);
+    }
+
+    @UIField(order = 1, hideInView = true)
+    @UIFieldGroup(value = "MISC", order = 100, borderColor = "#4D912A")
+    public String getManufacturer() {
+        return getJsonData("manu", "Homio");
+    }
+
+    void setManufacturer(String value) {
+        setJsonData("manu", value);
+    }
+
+    @UIField(order = 2, hideInView = true)
+    @UIFieldGroup("MISC")
+    public String getSerialNumber() {
+        return getJsonData("ser", "none");
+    }
+
+    void setSerialNumber(String value) {
+        setJsonData("ser", value);
+    }
+
+    @UIField(order = 3, disableEdit = true)
+    @UIFieldGroup("MISC")
+    public String getUsers() {
+        return String.join(",", getUsersInternal().keySet());
     }
 
     @Override
@@ -137,8 +182,9 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
             icon = "fas fa-soap",
             iconColor = UI.Color.RED,
             confirmMessage = "W.CONFIRM.CLEAR_HOMEKIT_PAIRINGS")
-    public void clearHomekitPairings() {
+    public ActionResponseModel clearHomekitPairings() {
         getService().clearHomekitPairings();
+        return ActionResponseModel.success();
     }
 
     @SneakyThrows
@@ -151,25 +197,7 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
         setSalt(HomekitServer.generateSalt().toString());
     }
 
-    @UIField(order = 12)
-    public String getSalt() {
-        return getJsonData("salt");
-    }
-
-    void setSalt(String salt) {
-        setJsonData("salt", salt);
-    }
-
-    @UIField(order = 10, disableEdit = true)
-    public String getMac() {
-        return getJsonData("mac");
-    }
-
-    public void setMac(String value) {
-        setJsonData("mac", value);
-    }
-
-    @UIField(order = 16, hideInEdit = true, type = UIFieldType.ImageBase64)
+    // @UIField(order = 16, hideInEdit = true, type = UIFieldType.ImageBase64)
     public String getQrImage() {
         return getJsonData("qrImage");
     }
@@ -211,47 +239,30 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
     public void assembleActions(UIInputBuilder uiInputBuilder) {
     }
 
-    @UIField(order = 20, disableEdit = true)
-    public String getUsers() {
-        return String.join(",", getUsersInternal().keySet());
-    }
-
-    // user - encoded_key
+    // user – encoded_key
     @JsonIgnore
     public Map<String, String> getUsersInternal() {
         return getJsonDataMap("users", String.class);
     }
 
-    @UIField(order = 100, hideInView = true)
-    public String getManufacturer() {
-        return getJsonData("manu", "Homio");
-    }
-
-    void setManufacturer(String value) {
-        setJsonData("manu", value);
-    }
-
-    @UIField(order = 101, hideInView = true)
-    public String getSerialNumber() {
-        return getJsonData("ser", "none");
-    }
-
-    void setSerialNumber(String value) {
-        setJsonData("ser", value);
+    @UIContextMenuAction(value = "SHOW_QR_CODE", icon = "fas fa-qrcode",
+            iconColor = UI.Color.BLUE, attachToField = "qrCode")
+    public void showQrCode() {
+        context().ui().dialog().topImageDialog("field.qrCode", "fas fa-qrcode", UI.Color.BLUE)
+                .sendImage(getJsonData("qrImage"));
     }
 
     @Getter
     public static class HomekitEndpointUI extends BaseDeviceEndpoint<HomekitEntity> {
 
-        private final @NotNull HomekitEndpointEntity endpoint;
-        private final BaseHomekitAccessory accessory;
+        private final @NotNull HomekitEndpointContext ctx;
 
         public HomekitEndpointUI(HomekitEndpointContext ctx) {
             super(ctx.accessory().getVariable().getIconModel(),
                     "HOMEKIT",
                     ctx.service().context(),
                     ctx.owner(),
-                    ctx.endpoint().getTitle(),
+                    ctx.endpoint().getEntityID(),
                     false,
                     ctx.accessory().getVariable() == null ?
                             EndpointType.string :
@@ -259,30 +270,58 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
             if (ctx.accessory().getVariable() != null) {
                 setInitialValue(ctx.accessory().getVariable().getValue());
             }
-            this.endpoint = ctx.endpoint();
-            this.accessory = ctx.accessory();
-            ctx.updateUI = () -> setValue(ctx.accessory().getVariable().getValue(), true);
+            this.ctx = ctx;
+            setIgnoreDuplicates(false); // to allow update UI even if the same value
+            ctx.setUpdateUI(() -> setValue(ctx.accessory().getVariable().getValue(), true));
+        }
+
+        @Override
+        public @NotNull String getName(boolean shortFormat) {
+            return "<span style=\"%s\">[%s]</span> %s".formatted(
+                    UI.Color.GREEN,
+                    ctx.endpoint().getAccessoryType().name(),
+                    ctx.endpoint().getTitle());
         }
 
         @Override
         public @Nullable String getDescription() {
-            StringBuilder value = new StringBuilder(endpoint.getAccessoryType().name());
-            if (!endpoint.getGroup().isEmpty()) {
-                var color = UI.Color.random(endpoint.getGroup().hashCode());
-                value.insert(0, "<span style=\"color: " + color + ";\">[" + endpoint.getGroup() + "]</span> ");
-            }
-            for (Characteristic characteristic : accessory.getCharacteristics()) {
-                if(characteristic instanceof HasSourceCharacteristic sc) {
-                    sc.getSource();
+            var endpoint = ctx.endpoint();
+            var accessory = ctx.accessory();
+            List<Item> items = new ArrayList<>();
+            accessory.getExtraVariables().forEach((k, v) -> items.add(new Item(k, v)));
+            ctx.characteristics().forEach(ch -> items.add(new Item(ch.name(), ch.variable())));
+
+            items.sort(Comparator.comparingInt(i -> i.name.length()));
+            StringBuilder value = new StringBuilder();
+
+            value.append("<table>");
+            for (int i = 0; i < items.size(); i += 3) {
+                value.append("<tr>");
+                for (int j = 0; j < 3; j++) {
+                    if (i + j < items.size()) {
+                        var item = items.get(i + j);
+                        value.append("""
+                                <td style="padding:0;">
+                                    <span style="color:%s;">
+                                        <i class="fa-fw %s" style="margin-right: 2px;"></i>${field.%s}
+                                    </span>: %s
+                                </td>
+                                """.formatted(item.color, item.icon, item.name, item.value));
+                    } else {
+                        value.append("<td style=\"padding:0;\"></td>");
+                    }
                 }
-            }
-            Collection<Characteristic> characteristics = accessory.getCharacteristics();
-            for (Map.Entry<String, ContextVar.Variable> entry : accessory.getExtraVariables().entrySet()) {
-                value.append(" ${field.%s}=%s".formatted(entry.getKey(), entry.getValue().getValue()));
+                value.append("</tr>");
             }
 
+            value.append("</table>");
             return value.toString();
         }
     }
-}
 
+    record Item(String name, String value, String icon, String color) {
+        Item(String name, ContextVar.Variable v) {
+            this(name, v.getValue().stringValue("N/A"), v.getIcon(), v.getIconColor());
+        }
+    }
+}

@@ -1,6 +1,7 @@
 package org.homio.addon.homekit.accessories;
 
 import io.github.hapjava.accessories.*;
+import io.github.hapjava.characteristics.Characteristic;
 import io.github.hapjava.characteristics.HomekitCharacteristicChangeCallback;
 import io.github.hapjava.characteristics.impl.airquality.AirQualityEnum;
 import io.github.hapjava.characteristics.impl.battery.ChargingStateEnum;
@@ -124,6 +125,11 @@ public class HomekitAccessoryFactory {
         }
 
         @Override
+        public Collection<Characteristic> getCharacteristics() {
+            return List.of();
+        }
+
+        @Override
         public <T> T getCharacteristic(@NotNull Class<? extends T> klazz) {
             return characteristics.get(klazz);
         }
@@ -152,7 +158,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Boolean> getSwitchState() {
-            return completedFuture(variable.getValue().boolValue());
+            return completedFuture(getVarValue(variable));
         }
 
         @Override
@@ -314,7 +320,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<ActiveEnum> getValveActive() {
-            return completedFuture(variable.getValue().boolValue() ? ActiveEnum.ACTIVE : ActiveEnum.INACTIVE);
+            return completedFuture(getVarValue(variable) ? ActiveEnum.ACTIVE : ActiveEnum.INACTIVE);
         }
 
         @Override
@@ -425,7 +431,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Boolean> isOn() {
-            return completedFuture(variable.getValue().boolValue());
+            return completedFuture(getVarValue(variable));
         }
 
         @Override
@@ -569,7 +575,7 @@ public class HomekitAccessoryFactory {
         }
 
         public CompletableFuture<Boolean> isActive() {
-            return completedFuture(variable.getValue().boolValue());
+            return completedFuture(getVarValue(variable));
         }
 
         public CompletableFuture<Void> setActive(boolean value) {
@@ -656,7 +662,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Boolean> getMotionDetected() {
-            return CompletableFuture.completedFuture(variable.getValue().boolValue());
+            return CompletableFuture.completedFuture(getVarValue(variable));
         }
 
         @Override
@@ -891,7 +897,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Boolean> getLightbulbPowerState() {
-            return CompletableFuture.completedFuture(variable.getValue().boolValue());
+            return CompletableFuture.completedFuture(getVarValue(variable));
         }
 
         @Override
@@ -974,7 +980,7 @@ public class HomekitAccessoryFactory {
         }
 
         public CompletableFuture<Boolean> isMuted() {
-            return completedFuture(variable.getValue().boolValue());
+            return completedFuture(getVarValue(variable));
         }
 
         public CompletableFuture<Void> setMute(boolean value) {
@@ -1001,7 +1007,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Boolean> getPowerState() {
-            return CompletableFuture.completedFuture(variable.getValue().boolValue());
+            return CompletableFuture.completedFuture(getVarValue(variable));
         }
 
         @Override
@@ -1039,8 +1045,9 @@ public class HomekitAccessoryFactory {
     private static class HomekitTemperatureSensor extends AbstractHomekitAccessory {
         public HomekitTemperatureSensor(@NotNull HomekitEndpointContext ctx) {
             super(ctx, ctx.endpoint().getCurrentTemperature(), null);
-            var currentTemperatureCharacteristic = HomekitCharacteristicFactory.createCurrentTemperatureCharacteristic(ctx);
-            addService(new TemperatureSensorService(currentTemperatureCharacteristic));
+
+            var characteristic = HomekitEndpointEntity.createCurrentTemperatureCharacteristic(ctx, variable);
+            addService(new TemperatureSensorService(characteristic));
         }
     }
 

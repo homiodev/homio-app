@@ -87,10 +87,16 @@ public final class UIFieldSelectionUtil {
             }
         }
 
+        var variableBroadcastSelection = uiFieldContext.getDeclaredAnnotation(UIFieldVariableBroadcastSelection.class);
+        if (variableBroadcastSelection != null) {
+            ObjectNode meta = getSelectBoxList(jsonTypeMetadata);
+            meta.put("selectType", SelectHandler.variableBroadcast.name());
+        }
+
         var variableSelection = uiFieldContext.getDeclaredAnnotation(UIFieldVariableSelection.class);
         if (variableSelection != null) {
             ObjectNode meta = getSelectBoxList(jsonTypeMetadata);
-            meta.put("selectType", SelectHandler.entityByClass.name());
+            meta.put("selectType", SelectHandler.variable.name());
             meta.putPOJO("restriction", variableSelection.varType());
         }
 
@@ -193,6 +199,42 @@ public final class UIFieldSelectionUtil {
         }
     }
 
+    private static @NotNull Predicate<BaseEntity> filterVariable(UIFieldVariableSelection item) {
+        return baseEntity -> {
+            WorkspaceVariable variable = (WorkspaceVariable) baseEntity;
+            if (item.requireWritable() && variable.isReadOnly()) {
+                return false;
+            }
+
+            if (item.varType() == ContextVar.VariableType.Any) {
+                return true;
+            }
+
+            var bv = variable.getRestriction();
+            if (bv == ContextVar.VariableType.Any) {
+                return true;
+            }
+
+            if (item.varType() == ContextVar.VariableType.Text &&
+                (bv == ContextVar.VariableType.Text || bv == ContextVar.VariableType.Enum)) {
+                return true;
+            }
+
+            if (item.varType() == ContextVar.VariableType.Percentage) {
+                if (bv == ContextVar.VariableType.Percentage) {
+                    return true;
+                } else if (bv == ContextVar.VariableType.Float) {
+                    var min = variable.getMin();
+                    var max = variable.getMax();
+                    return min != null && min >= 0 && max != null && max <= 100;
+                }
+                return false;
+            }
+
+            return bv == item.varType();
+        };
+    }
+
     @RequiredArgsConstructor
     public enum SelectHandler {
         simple(UIFieldDynamicSelection.class, params -> {
@@ -228,6 +270,17 @@ public final class UIFieldSelectionUtil {
             }
             return list;
         }),
+        variableBroadcast(UIFieldVariableBroadcastSelection.class, params -> {
+            List<OptionModel> list = new ArrayList<>();
+            Predicate<BaseEntity> filter = entity -> {
+                WorkspaceVariable variable = (WorkspaceVariable) entity;
+                return "broadcast".equals(variable.getParentId());
+            };
+            List<WorkspaceVariable> items = params.context.db().findAll(WorkspaceVariable.class);
+            items = items.stream().filter(filter).collect(Collectors.toList());
+            OptionUtil.assembleItemsToOptions(list, WorkspaceVariable.class, items, params.context, params.classEntityForDynamicOptionLoader);
+            return list;
+        }),
         entityByClass(UIFieldEntityByClassSelection.class, params -> {
             List<OptionModel> list = new ArrayList<>();
             for (UIFieldEntityByClassSelection item : params.field.getDeclaredAnnotationsByType(UIFieldEntityByClassSelection.class)) {
@@ -248,42 +301,6 @@ public final class UIFieldSelectionUtil {
 
         public final Class<? extends Annotation> selectClass;
         public final Function<LoadOptionsParameters, List<OptionModel>> handler;
-    }
-
-    private static @NotNull Predicate<BaseEntity> filterVariable(UIFieldVariableSelection item) {
-        return baseEntity -> {
-            WorkspaceVariable variable = (WorkspaceVariable) baseEntity;
-            if (item.requireWritable() && variable.isReadOnly()) {
-                return false;
-            }
-
-            if (item.varType() == ContextVar.VariableType.Any) {
-                return true;
-            }
-
-            var bv = variable.getRestriction();
-            if (bv == ContextVar.VariableType.Any) {
-                return true;
-            }
-
-            if (item.varType() == ContextVar.VariableType.Text &&
-                (bv == ContextVar.VariableType.Text || bv == ContextVar.VariableType.Enum)) {
-                return true;
-            }
-
-            if (item.varType() == ContextVar.VariableType.Percentage) {
-                if (bv == ContextVar.VariableType.Percentage) {
-                    return true;
-                } else if (bv == ContextVar.VariableType.Float) {
-                    var min = variable.getMin();
-                    var max = variable.getMax();
-                    return min != null && min >= 0 && max != null && max <= 100;
-                }
-                return false;
-            }
-
-            return bv == item.varType();
-        };
     }
 
 }

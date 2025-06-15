@@ -7,7 +7,6 @@ package org.homio.addon.homekit.enums;
 public enum HomekitCharacteristicType {
     Empty,
 
-    Active,
     ActiveIdentifier,
     ActiveStatus,
     AirQuality,

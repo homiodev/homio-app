@@ -1,29 +1,81 @@
 package org.homio.addon.homekit;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.github.hapjava.characteristics.ExceptionalConsumer;
+import io.github.hapjava.characteristics.impl.airquality.*;
+import io.github.hapjava.characteristics.impl.audio.MuteCharacteristic;
+import io.github.hapjava.characteristics.impl.audio.VolumeCharacteristic;
+import io.github.hapjava.characteristics.impl.base.BaseCharacteristic;
+import io.github.hapjava.characteristics.impl.battery.StatusLowBatteryCharacteristic;
+import io.github.hapjava.characteristics.impl.carbondioxidesensor.CarbonDioxideLevelCharacteristic;
+import io.github.hapjava.characteristics.impl.carbondioxidesensor.CarbonDioxidePeakLevelCharacteristic;
+import io.github.hapjava.characteristics.impl.carbonmonoxidesensor.CarbonMonoxideLevelCharacteristic;
+import io.github.hapjava.characteristics.impl.carbonmonoxidesensor.CarbonMonoxidePeakLevelCharacteristic;
+import io.github.hapjava.characteristics.impl.common.*;
+import io.github.hapjava.characteristics.impl.fan.*;
+import io.github.hapjava.characteristics.impl.filtermaintenance.FilterLifeLevelCharacteristic;
+import io.github.hapjava.characteristics.impl.filtermaintenance.ResetFilterIndicationCharacteristic;
+import io.github.hapjava.characteristics.impl.garagedoor.CurrentDoorStateCharacteristic;
+import io.github.hapjava.characteristics.impl.garagedoor.TargetDoorStateCharacteristic;
+import io.github.hapjava.characteristics.impl.humiditysensor.TargetRelativeHumidityCharacteristic;
+import io.github.hapjava.characteristics.impl.inputsource.InputDeviceTypeCharacteristic;
+import io.github.hapjava.characteristics.impl.inputsource.InputSourceTypeCharacteristic;
+import io.github.hapjava.characteristics.impl.inputsource.TargetVisibilityStateCharacteristic;
+import io.github.hapjava.characteristics.impl.lightbulb.BrightnessCharacteristic;
+import io.github.hapjava.characteristics.impl.lightbulb.ColorTemperatureCharacteristic;
+import io.github.hapjava.characteristics.impl.lightbulb.HueCharacteristic;
+import io.github.hapjava.characteristics.impl.lightbulb.SaturationCharacteristic;
+import io.github.hapjava.characteristics.impl.lock.LockCurrentStateCharacteristic;
+import io.github.hapjava.characteristics.impl.lock.LockTargetStateCharacteristic;
+import io.github.hapjava.characteristics.impl.motionsensor.MotionDetectedCharacteristic;
+import io.github.hapjava.characteristics.impl.occupancysensor.OccupancyDetectedCharacteristic;
+import io.github.hapjava.characteristics.impl.slat.CurrentTiltAngleCharacteristic;
+import io.github.hapjava.characteristics.impl.slat.TargetTiltAngleCharacteristic;
+import io.github.hapjava.characteristics.impl.television.*;
+import io.github.hapjava.characteristics.impl.televisionspeaker.VolumeControlTypeCharacteristic;
+import io.github.hapjava.characteristics.impl.televisionspeaker.VolumeSelectorCharacteristic;
+import io.github.hapjava.characteristics.impl.thermostat.*;
+import io.github.hapjava.characteristics.impl.valve.RemainingDurationCharacteristic;
+import io.github.hapjava.characteristics.impl.windowcovering.*;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.log4j.Log4j2;
 import org.homio.addon.homekit.enums.HomekitAccessoryType;
+import org.homio.addon.homekit.enums.HomekitCharacteristicType;
+import org.homio.api.ContextVar;
 import org.homio.api.ContextVar.Variable;
 import org.homio.api.entity.device.DeviceSeriesEntity;
+import org.homio.api.state.DecimalType;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldNoReadDefaultValue;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
+import org.homio.api.ui.field.selection.UIFieldVariableBroadcastSelection;
 import org.homio.api.ui.field.selection.UIFieldVariableSelection;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
+
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.homio.addon.homekit.HomekitCharacteristicFactory.*;
+import static org.homio.addon.homekit.enums.HomekitCharacteristicType.*;
 import static org.homio.api.ContextVar.VariableType.*;
 
-
+// Master class))
+@Log4j2
 @SuppressWarnings("unused")
 @Entity
 @Getter
 @Setter
 public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntity> {
 
+    public static final int CURRENT_TEMPERATURE_MIN_CELSIUS = -100;
     private transient int id = -1;
 
     public static int calculateId(String name) {
@@ -36,6 +88,17 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
             id = 2;
         }
         return id;
+    }
+
+    public static CurrentTemperatureCharacteristic createCurrentTemperatureCharacteristic(
+            @NotNull HomekitEndpointContext c, @NotNull ContextVar.Variable v) {
+        return new CurrentTemperatureCharacteristic(
+                v.getMinValue(CURRENT_TEMPERATURE_MIN_CELSIUS),
+                v.getMaxValue(100),
+                v.getStep(0.1),
+                getTemperatureSupplier(v, 20.0),
+                getSubscriber(v, c, CurrentTemperature),
+                getUnsubscriber(v, c, CurrentTemperature));
     }
 
     @Override
@@ -55,6 +118,10 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         setJsonData("group", value);
     }
 
+    // --- Start REQ_CHAR Group ---
+    // Note: This group generally starts UI order from 100 internally for HomeKit fields.
+    // Fields here are conditionally required based on AccessoryType.
+
     /**
      * The type of HomeKit accessory this entity represents.
      * Determines which characteristics are available and how the device behaves in HomeKit.
@@ -66,10 +133,6 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     public @NotNull HomekitAccessoryType getAccessoryType() {
         return getJsonDataEnum("at", HomekitAccessoryType.Switch);
     }
-
-    // --- Start REQ_CHAR Group ---
-    // Note: This group generally starts UI order from 100 internally for HomeKit fields.
-    // Fields here are conditionally required based on AccessoryType.
 
     public void setAccessoryType(HomekitAccessoryType value) {
         setJsonDataEnum("at", value);
@@ -84,6 +147,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['AirPurifier', 'Fan', 'Faucet', 'HeaterCooler', 'HumidifierDehumidifier', 'IrrigationSystem', 'Television', 'Valve'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup(value = "REQ_CHAR", order = 100, borderColor = "#8C3265")
+    @HomekitCharacteristic(value = ActiveCharacteristic.class, type = ActiveStatus)
     public String getActiveState() {
         return getJsonData("as");
     }
@@ -102,6 +166,8 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['CarbonDioxideSensor', 'CarbonMonoxideSensor', 'ContactSensor', 'LeakSensor', 'MotionSensor', 'OccupancySensor', 'SmokeSensor'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = MotionDetectedCharacteristic.class, type = MotionDetectedState)
+    @HomekitCharacteristic(value = OccupancyDetectedCharacteristic.class, type = OccupancyDetectedState)
     public String getDetectedState() {
         return getJsonData("ds");
     }
@@ -171,6 +237,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['Outlet', 'Switch', 'LightBulb', 'BasicFan'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = OnCharacteristic.class, type = OnState)
     public String getOnState() {
         return getJsonData("os");
     }
@@ -189,6 +256,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['TelevisionSpeaker', 'Speaker', 'Microphone', 'SmartSpeaker'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = MuteCharacteristic.class, type = Mute)
     public String getMute() {
         return getJsonData("mt");
     }
@@ -204,8 +272,10 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      */
     @UIField(order = 12, required = true)
     @UIFieldShowOnCondition("return ['Doorbell', 'StatelessProgrammableSwitch'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection(varType = Float)
+    @UIFieldVariableBroadcastSelection
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = ProgrammableSwitchEventCharacteristic.class, type = ProgrammableSwitchEvent,
+            impl = ProgrammableSwitchEventCharacteristicSupplier.class)
     public String getStatelessProgrammableSwitch() {
         return getJsonData("pse");
     }
@@ -223,6 +293,8 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['HeaterCooler', 'TemperatureSensor', 'Thermostat'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = CurrentTemperatureCharacteristic.class, type = CurrentTemperature,
+            impl = CurrentTemperatureCharacteristicSupplier.class)
     public String getCurrentTemperature() {
         return getJsonData("ct");
     }
@@ -240,6 +312,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['HeaterCooler', 'Thermostat'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = TargetHeatingCoolingStateCharacteristic.class, type = TargetHeatingCoolingState, defaultStringValue = "OFF")
     public String getTargetHeatingCoolingState() {
         return getJsonData("thcs");
     }
@@ -257,6 +330,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'HeaterCooler'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = CurrentHeatingCoolingStateCharacteristic.class, type = CurrentHeatingCoolingState, defaultStringValue = "OFF")
     public String getCurrentHeatingCoolingState() {
         return getJsonData("chcs");
     }
@@ -325,6 +399,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = AirQualityCharacteristic.class, type = AirQuality, defaultStringValue = "UNKNOWN")
     public String getAirQuality() {
         return getJsonData("aq");
     }
@@ -358,7 +433,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIField(order = 33, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Battery'")
     @UIFieldVariableSelection(varType = Float)
-    @UIFieldGroup("REQ_CHAR")
+    @UIFieldGroup("OPT_CHAR")
     public String getBatteryChargingState() {
         return getJsonData("bcs");
     }
@@ -376,11 +451,11 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Battery'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
-    public String getStatusLowBatteryForBattery() {
+    public String getBatteryLowStatus() {
         return getJsonData("slb");
     }
 
-    public void setStatusLowBatteryForBattery(String value) {
+    public void setBatteryLowStatus(String value) {
         setJsonData("slb", value);
     }
 
@@ -416,6 +491,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'GarageDoorOpener'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = CurrentDoorStateCharacteristic.class, type = CurrentDoorState, defaultStringValue = "CLOSED")
     public String getCurrentDoorState() {
         return getJsonData("cds");
     }
@@ -433,6 +509,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'GarageDoorOpener'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = TargetDoorStateCharacteristic.class, type = TargetDoorState, defaultStringValue = "CLOSED")
     public String getTargetDoorState() {
         return getJsonData("tds");
     }
@@ -552,6 +629,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Lock'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = LockCurrentStateCharacteristic.class, type = LockCurrentState, defaultStringValue = "UNKNOWN")
     public String getLockCurrentState() {
         return getJsonData("lcs");
     }
@@ -569,6 +647,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Lock'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = LockTargetStateCharacteristic.class, type = LockTargetState)
     public String getLockTargetState() {
         return getJsonData("lts");
     }
@@ -637,6 +716,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'SmartSpeaker'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = CurrentMediaStateCharacteristic.class, type = CurrentMediaState, defaultStringValue = "UNKNOWN")
     public String getCurrentMediaState() {
         return getJsonData("cms");
     }
@@ -654,6 +734,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'SmartSpeaker'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = TargetMediaStateCharacteristic.class, type = TargetMediaState, defaultStringValue = "STOP")
     public String getTargetMediaState() {
         return getJsonData("tms");
     }
@@ -671,6 +752,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = ActiveIdentifierCharacteristic.class, type = ActiveIdentifier, defaultIntValue = 1)
     public String getActiveIdentifier() {
         return getJsonData("ai");
     }
@@ -688,6 +770,8 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Thermostat'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = TargetTemperatureCharacteristic.class, type = TargetTemperature,
+            impl = TargetTemperatureCharacteristicSupplier.class)
     public String getTargetTemperature() {
         return getJsonData("tt");
     }
@@ -695,6 +779,11 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     public void setTargetTemperature(String value) {
         setJsonData("tt", value);
     }
+
+    // --- End REQ_CHAR Group ---
+
+
+    // --- Start OPT_CHAR Group ---
 
     /**
      * Type of valve.
@@ -708,11 +797,6 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     public String getValveType() {
         return getJsonData("vt");
     }
-
-    // --- End REQ_CHAR Group ---
-
-
-    // --- Start OPT_CHAR Group ---
 
     public void setValveType(String value) {
         setJsonData("vt", value);
@@ -728,6 +812,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['AirQualitySensor', 'CarbonDioxideSensor', 'CarbonMonoxideSensor', 'ContactSensor', 'HumiditySensor', 'LeakSensor', 'LightSensor', 'MotionSensor', 'OccupancySensor', 'SmokeSensor', 'TemperatureSensor'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup(value = "OPT_CHAR", order = 150, borderColor = "#649639")
+    @HomekitCharacteristic(value = StatusLowBatteryCharacteristic.class, type = HomekitCharacteristicType.BatteryLowStatus)
     public String getStatusLowBattery() {
         return getJsonData("slb");
     }
@@ -810,6 +895,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['AirPurifier', 'Fan'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = RotationSpeedCharacteristic.class, type = RotationSpeed)
     public String getRotationSpeed() {
         return getJsonData("rs");
     }
@@ -844,6 +930,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = OzoneDensityCharacteristic.class, type = OzoneDensity)
     public String getOzoneDensity() {
         return getJsonData("od");
     }
@@ -861,6 +948,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = NitrogenDioxideDensityCharacteristic.class, type = NitrogenDioxideDensity)
     public String getNitrogenDioxideDensity() {
         return getJsonData("ndd");
     }
@@ -878,6 +966,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = SulphurDioxideDensityCharacteristic.class, type = SulphurDioxideDensity)
     public String getSulphurDioxideDensity() {
         return getJsonData("sdd");
     }
@@ -895,6 +984,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = PM25DensityCharacteristic.class, type = PM25Density)
     public String getPm25Density() {
         return getJsonData("pm25d");
     }
@@ -912,6 +1002,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = PM10DensityCharacteristic.class, type = PM10Density)
     public String getPm10Density() {
         return getJsonData("pm10d");
     }
@@ -929,6 +1020,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = VOCDensityCharacteristic.class, type = VOCDensity)
     public String getVocDensity() {
         return getJsonData("vd");
     }
@@ -946,6 +1038,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'CarbonDioxideSensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = CarbonDioxideLevelCharacteristic.class, type = CarbonDioxideLevel)
     public String getCarbonDioxideLevel() {
         return getJsonData("cdl");
     }
@@ -963,6 +1056,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'CarbonDioxideSensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = CarbonDioxidePeakLevelCharacteristic.class, type = CarbonDioxidePeakLevel)
     public String getCarbonDioxidePeakLevel() {
         return getJsonData("cdpl");
     }
@@ -980,6 +1074,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'CarbonMonoxideSensor'")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = CarbonMonoxideLevelCharacteristic.class, type = CarbonMonoxideLevel)
     public String getCarbonMonoxideLevel() {
         return getJsonData("cml");
     }
@@ -997,6 +1092,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'CarbonMonoxideSensor'")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = CarbonMonoxidePeakLevelCharacteristic.class, type = CarbonMonoxidePeakLevel)
     public String getCarbonMonoxidePeakLevel() {
         return getJsonData("cmpl");
     }
@@ -1014,6 +1110,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['Door', 'Window', 'WindowCovering', 'GarageDoorOpener'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = ObstructionDetectedCharacteristic.class, type = ObstructionStatus)
     public String getObstructionDetected() {
         return getJsonData("obd");
     }
@@ -1031,6 +1128,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Fan'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = CurrentFanStateCharacteristic.class, type = CurrentFanState, defaultStringValue = "INACTIVE")
     public String getCurrentFanState() {
         return getJsonData("cfs");
     }
@@ -1048,6 +1146,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['Fan', 'BasicFan'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = RotationDirectionCharacteristic.class, type = RotationDirection, defaultStringValue = "CLOCKWISE")
     public String getRotationDirection() {
         return getJsonData("rd");
     }
@@ -1065,6 +1164,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Fan'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = TargetFanStateCharacteristic.class, type = TargetFanState, defaultStringValue = "MANUAL")
     public String getTargetFanState() {
         return getJsonData("tfs");
     }
@@ -1082,6 +1182,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Fan'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = SwingModeCharacteristic.class, type = SwingMode, defaultStringValue = "SWING_DISABLED")
     public String getFanSwingMode() {
         return getJsonData("fsm");
     }
@@ -1099,6 +1200,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['FilterMaintenance', 'AirPurifier'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = FilterLifeLevelCharacteristic.class, type = FilterLifeLevel, defaultIntValue = 100)
     public String getFilterLifeLevel() {
         return getJsonData("fll");
     }
@@ -1116,6 +1218,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['FilterMaintenance', 'AirPurifier'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = ResetFilterIndicationCharacteristic.class, type = FilterResetIndication)
     public String getFilterResetIndication() {
         return getJsonData("fri");
     }
@@ -1167,6 +1270,8 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'HeaterCooler'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = CoolingThresholdTemperatureCharacteristic.class, type = CoolingThresholdTemperature,
+            impl = CoolingThresholdTemperatureCharacteristicSupplier.class)
     public String getCoolingThresholdTemperature() {
         return getJsonData("ctt");
     }
@@ -1184,6 +1289,8 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'HeaterCooler'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = HeatingThresholdTemperatureCharacteristic.class, type = HeatingThresholdTemperature,
+            impl = HeatingThresholdTemperatureCharacteristicSupplier.class)
     public String getHeatingThresholdTemperature() {
         return getJsonData("htt");
     }
@@ -1218,6 +1325,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['HeaterCooler', 'HumidifierDehumidifier'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = TargetRelativeHumidityCharacteristic.class, type = TargetRelativeHumidity, defaultDoubleValue = 45.0F)
     public String getTargetRelativeHumidity() {
         return getJsonData("trh");
     }
@@ -1286,6 +1394,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['IrrigationSystem', 'Valve'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = RemainingDurationCharacteristic.class, type = RemainingDuration)
     public String getRemainingDuration() {
         return getJsonData("rdur");
     }
@@ -1320,6 +1429,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightBulb'")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = BrightnessCharacteristic.class, type = Brightness, defaultIntValue = 100)
     public String getBrightness() {
         return getJsonData("br");
     }
@@ -1337,6 +1447,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightBulb'")
     @UIFieldEntityByClassSelection(value = Variable.class)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = HueCharacteristic.class, type = Hue)
     public String getHue() {
         return getJsonData("hu");
     }
@@ -1354,6 +1465,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightBulb'")
     @UIFieldEntityByClassSelection(value = Variable.class)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = SaturationCharacteristic.class, type = Saturation)
     public String getSaturation() {
         return getJsonData("sa");
     }
@@ -1371,6 +1483,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightBulb'")
     @UIFieldEntityByClassSelection(value = Variable.class)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = ColorTemperatureCharacteristic.class, type = ColorTemperature, impl = ColorTemperatureCharacteristicSupplier.class)
     public String getColorTemperature() {
         return getJsonData("ctemp");
     }
@@ -1455,6 +1568,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['Slat', 'WindowCovering'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = CurrentTiltAngleCharacteristic.class, type = CurrentTiltAngle)
     public String getCurrentTiltAngle() {
         return getJsonData("cta");
     }
@@ -1472,6 +1586,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['Slat', 'WindowCovering'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = TargetTiltAngleCharacteristic.class, type = TargetTiltAngle)
     public String getTargetTiltAngle() {
         return getJsonData("tta");
     }
@@ -1489,6 +1604,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['SmartSpeaker', 'Speaker', 'TelevisionSpeaker', 'Microphone', 'Doorbell'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = VolumeCharacteristic.class, type = Volume, defaultIntValue = 50)
     public String getVolume() {
         return getJsonData("vol");
     }
@@ -1507,6 +1623,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['Television', 'SmartSpeaker'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Text, rawInput = true)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = ConfiguredNameCharacteristic.class, type = ConfiguredName, defaultStringValue = "Input")
     public String getConfiguredName() {
         return getJsonData("cn");
     }
@@ -1524,6 +1641,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
     @UIFieldVariableSelection(varType = Text, rawInput = true)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = InputDeviceTypeCharacteristic.class, type = InputDeviceType, defaultStringValue = "OTHER")
     public String getInputDeviceType() {
         return getJsonData("idt");
     }
@@ -1541,6 +1659,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
     @UIFieldVariableSelection(varType = Text, rawInput = true)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = InputSourceTypeCharacteristic.class, type = InputSourceType, defaultStringValue = "OTHER")
     public String getInputSourceType() {
         return getJsonData("ist");
     }
@@ -1558,6 +1677,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = SleepDiscoveryModeCharacteristic.class, type = SleepDiscoveryMode, defaultStringValue = "ALWAYS_DISCOVERABLE")
     public String getSleepDiscoveryMode() {
         return getJsonData("sdm");
     }
@@ -1575,6 +1695,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
     @UIFieldVariableSelection(varType = Text)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = RemoteKeyCharacteristic.class, type = RemoteKey)
     public String getRemoteKey() {
         return getJsonData("rk");
     }
@@ -1592,6 +1713,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = PowerModeCharacteristic.class, type = PowerMode)
     public String getPowerModeSelection() {
         return getJsonData("pmsel");
     }
@@ -1609,6 +1731,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = ClosedCaptionsCharacteristic.class, type = ClosedCaptions, defaultStringValue = "DISABLED")
     public String getClosedCaptions() {
         return getJsonData("cc");
     }
@@ -1626,6 +1749,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['Television', 'TelevisionSpeaker'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = VolumeControlTypeCharacteristic.class, type = VolumeControlType, defaultStringValue = "NONE")
     public String getVolumeControlType() {
         return getJsonData("vct");
     }
@@ -1643,6 +1767,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['Television', 'TelevisionSpeaker'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = VolumeSelectorCharacteristic.class, type = VolumeSelector)
     public String getVolumeSelector() {
         return getJsonData("vs");
     }
@@ -1660,6 +1785,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
     @UIFieldVariableSelection(varType = Text)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = PictureModeCharacteristic.class, type = PictureMode, defaultStringValue = "OTHER")
     public String getPictureMode() {
         return getJsonData("pmode");
     }
@@ -1677,6 +1803,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'") // Relates to InputSource
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = TargetVisibilityStateCharacteristic.class, type = TargetVisibilityState, defaultStringValue = "SHOWN")
     public String getTargetVisibilityState() {
         return getJsonData("tvs");
     }
@@ -1796,6 +1923,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['WindowCovering', 'Door', 'Window'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float) // Or Bool as it's a trigger
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = HoldPositionCharacteristic.class, type = HoldPosition)
     public String getWindowHoldPosition() { // Renamed to getHoldPosition for broader use
         return getJsonData("whp");
     }
@@ -1813,6 +1941,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'WindowCovering'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = CurrentHorizontalTiltAngleCharacteristic.class, type = CurrentHorizontalTiltAngle)
     public String getCurrentHorizontalTiltAngle() {
         return getJsonData("chta");
     }
@@ -1830,6 +1959,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'WindowCovering'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = TargetHorizontalTiltAngleCharacteristic.class, type = TargetHorizontalTiltAngle)
     public String getTargetHorizontalTiltAngle() {
         return getJsonData("thta");
     }
@@ -1847,6 +1977,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'WindowCovering'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = CurrentVerticalTiltAngleCharacteristic.class, type = CurrentVerticalTiltAngle)
     public String getCurrentVerticalTiltAngle() {
         return getJsonData("cvta");
     }
@@ -1854,6 +1985,12 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     public void setCurrentVerticalTiltAngle(String value) {
         setJsonData("cvta", value);
     }
+
+    // --- End OPT_CHAR Group ---
+
+
+    // --- Start CMN_CHAR Group (Accessory Information Service) ---
+    // Note: This group generally starts UI order from 200 internally for HomeKit fields.
 
     /**
      * Target vertical tilt angle of slats on a window covering.
@@ -1864,15 +2001,10 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'WindowCovering'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = TargetVerticalTiltAngleCharacteristic.class, type = TargetVerticalTiltAngle)
     public String getTargetVerticalTiltAngle() {
         return getJsonData("tvta");
     }
-
-    // --- End OPT_CHAR Group ---
-
-
-    // --- Start CMN_CHAR Group (Accessory Information Service) ---
-    // Note: This group generally starts UI order from 200 internally for HomeKit fields.
 
     public void setTargetVerticalTiltAngle(String value) {
         setJsonData("tvta", value);
@@ -1938,6 +2070,8 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         setJsonData("fr", value);
     }
 
+    // --- End CMN_CHAR Group ---
+
     /**
      * Hardware revision of the accessory.
      * Characteristic: HardwareRevision (String). Part of the Accessory Information service.
@@ -1948,8 +2082,6 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     public String getHardwareRevision() {
         return getJsonData("hr", "none");
     }
-
-    // --- End CMN_CHAR Group ---
 
     public void setHardwareRevision(String value) {
         setJsonData("hr", value);
@@ -1968,14 +2100,14 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         return "Homekit characteristic";
     }
 
+    // These seem like local configuration options, not direct HomeKit characteristics.
+    // They should ideally be in a separate UI group if they are general settings.
+    // Keeping them at the end for now.
+
     @Override
     protected String getSeriesPrefix() {
         return "homekit-acs";
     }
-
-    // These seem like local configuration options, not direct HomeKit characteristics.
-    // They should ideally be in a separate UI group if they are general settings.
-    // Keeping them at the end for now.
 
     public boolean getEmulateStopState() {
         return getJsonData("emst", false);
@@ -2001,11 +2133,129 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         setJsonData("sudfe", value);
     }
 
+    @UIField(order = 110)
+    @UIFieldShowOnCondition("return ['Switch', 'WindowCovering', 'Door', 'Window'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Float)
+    @UIFieldGroup("OPT_CHAR")
     public boolean getInverted() {
         return getJsonData("inv", false);
     }
 
     public void setInverted(boolean value) {
         setJsonData("inv", value);
+    }
+
+    public static class ColorTemperatureCharacteristicSupplier implements HomekitCharacteristic.CharacteristicSupplier {
+        public static final int COLOR_TEMPERATURE_MIN_MIREDS = 107; // ~9300 K
+        public static final int COLOR_TEMPERATURE_MAX_MIREDS = 556; // ~1800 K
+
+        @Override
+        public BaseCharacteristic get(HomekitEndpointContext c, ContextVar.Variable v) {
+            int minM = (int) v.getMinValue(COLOR_TEMPERATURE_MIN_MIREDS);
+            int maxM = (int) v.getMaxValue(COLOR_TEMPERATURE_MAX_MIREDS);
+            boolean inv = c.endpoint().isColorTemperatureInverted();
+            Supplier<CompletableFuture<Integer>> getter = () -> {
+                int mV = v.getValue().intValue(minM);
+                if (inv) mV = maxM - (mV - minM);
+                return completedFuture(mV);
+            };
+            ExceptionalConsumer<Integer> setter = mVHk -> {
+                int sV = mVHk;
+                if (inv) sV = maxM - (sV - minM);
+                v.set(new DecimalType(sV));
+                c.updateUI();
+            };
+            return new ColorTemperatureCharacteristic(minM, maxM, getter, setter,
+                    getSubscriber(v, c, ColorTemperature),
+                    getUnsubscriber(v, c, ColorTemperature));
+        }
+    }
+
+    public static class HeatingThresholdTemperatureCharacteristicSupplier implements HomekitCharacteristic.CharacteristicSupplier {
+        @Override
+        public BaseCharacteristic get(HomekitEndpointContext c, Variable v) {
+            return new HeatingThresholdTemperatureCharacteristic(
+                    v.getMinValue(0.0),
+                    v.getMaxValue(25.0),
+                    v.getStep(0.5),
+                    getTemperatureSupplier(v, 18.0),
+                    setTemperatureConsumer(v, c),
+                    getSubscriber(v, c, HeatingThresholdTemperature),
+                    getUnsubscriber(v, c, HeatingThresholdTemperature));
+        }
+    }
+
+    public static class ProgrammableSwitchEventCharacteristicSupplier implements HomekitCharacteristic.CharacteristicSupplier {
+        private @Nullable ProgrammableSwitchEnum lastValue = null;
+
+        @Override
+        public BaseCharacteristic get(HomekitEndpointContext c, Variable v) {
+            List<ProgrammableSwitchEnum> validVals = Arrays.asList(
+                    ProgrammableSwitchEnum.SINGLE_PRESS,
+                    ProgrammableSwitchEnum.DOUBLE_PRESS,
+                    ProgrammableSwitchEnum.LONG_PRESS
+            );
+
+            /*v.addListener(listenerKey, newState -> {
+                if (newState != null) {
+                    try {
+                        int eventCode = newState.intValue(-1);
+                        ProgrammableSwitchEnum hkEvent = null;
+                        if (eventCode == 0)
+                            hkEvent = ProgrammableSwitchEnum.SINGLE_PRESS;
+                        else if (eventCode == 1)
+                            hkEvent = ProgrammableSwitchEnum.DOUBLE_PRESS;
+                        else if (eventCode == 2)
+                            hkEvent = ProgrammableSwitchEnum.LONG_PRESS;
+                        if (hkEvent != null) characteristic.sendEvent(hkEvent);
+                    } catch (Exception ex) {
+                        log.error("Error processing ProgrammableSwitchEvent for {}: {}", e.getName(), ex.getMessage());
+                    }
+                }
+            });*/
+            var map = createMapping(v, ProgrammableSwitchEnum.class);
+            ProgrammableSwitchEnum[] switchEnums = validVals.toArray(new ProgrammableSwitchEnum[0]);
+            return new ProgrammableSwitchEventCharacteristic(switchEnums,
+                    () -> CompletableFuture.completedFuture(lastValue),
+                    getSubscriber(v, c, ProgrammableSwitchEvent, state -> {
+                        //
+                    }),
+                    getUnsubscriber(v, c, ProgrammableSwitchEvent));
+        }
+    }
+
+    public class CurrentTemperatureCharacteristicSupplier implements HomekitCharacteristic.CharacteristicSupplier {
+        @Override
+        public BaseCharacteristic get(HomekitEndpointContext c, ContextVar.Variable v) {
+            return createCurrentTemperatureCharacteristic(c, v);
+        }
+    }
+
+    public class TargetTemperatureCharacteristicSupplier implements HomekitCharacteristic.CharacteristicSupplier {
+        @Override
+        public BaseCharacteristic get(HomekitEndpointContext c, Variable v) {
+            return new TargetTemperatureCharacteristic(
+                    v.getMinValue(10.0),
+                    v.getMaxValue(38.0),
+                    v.getStep(0.5),
+                    getTemperatureSupplier(v, 21.0),
+                    setTemperatureConsumer(v, c),
+                    getSubscriber(v, c, TargetTemperature),
+                    getUnsubscriber(v, c, TargetTemperature));
+        }
+    }
+
+    public class CoolingThresholdTemperatureCharacteristicSupplier implements HomekitCharacteristic.CharacteristicSupplier {
+        @Override
+        public BaseCharacteristic get(HomekitEndpointContext c, Variable v) {
+            return new CoolingThresholdTemperatureCharacteristic(
+                    v.getMinValue(10.0),
+                    v.getMaxValue(35.0),
+                    v.getStep(0.5),
+                    getTemperatureSupplier(v, 25.0),
+                    setTemperatureConsumer(v, c),
+                    getSubscriber(v, c, CoolingThresholdTemperature),
+                    getUnsubscriber(v, c, CoolingThresholdTemperature));
+        }
     }
 }
