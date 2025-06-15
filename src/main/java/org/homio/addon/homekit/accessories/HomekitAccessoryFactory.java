@@ -21,9 +21,13 @@ import io.github.hapjava.characteristics.impl.leaksensor.LeakDetectedStateEnum;
 import io.github.hapjava.characteristics.impl.lock.LockCurrentStateEnum;
 import io.github.hapjava.characteristics.impl.lock.LockTargetStateEnum;
 import io.github.hapjava.characteristics.impl.occupancysensor.OccupancyDetectedEnum;
+import io.github.hapjava.characteristics.impl.securitysystem.CurrentSecuritySystemStateEnum;
+import io.github.hapjava.characteristics.impl.securitysystem.TargetSecuritySystemStateEnum;
 import io.github.hapjava.characteristics.impl.slat.CurrentSlatStateEnum;
 import io.github.hapjava.characteristics.impl.slat.SlatTypeEnum;
 import io.github.hapjava.characteristics.impl.smokesensor.SmokeDetectedStateEnum;
+import io.github.hapjava.characteristics.impl.television.CurrentMediaStateEnum;
+import io.github.hapjava.characteristics.impl.television.TargetMediaStateEnum;
 import io.github.hapjava.characteristics.impl.thermostat.*;
 import io.github.hapjava.characteristics.impl.valve.RemainingDurationCharacteristic;
 import io.github.hapjava.characteristics.impl.valve.ValveTypeEnum;
@@ -79,15 +83,15 @@ public class HomekitAccessoryFactory {
             put(MotionSensor, HomekitMotionSensor::new);
             put(OccupancySensor, HomekitOccupancySensor::new);
             put(Outlet, HomekitOutlet::new);
-            //put(SecuritySystem, HomekitSecuritySystem::new);
+            put(SecuritySystem, HomekitSecuritySystem::new);
             put(Slat, HomekitSlat::new);
-            // put(SmartSpeaker, HomekitSmartSpeaker::new);
+            put(SmartSpeaker, HomekitSmartSpeaker::new);
             put(SmokeSensor, HomekitSmokeSensor::new);
             put(Speaker, HomekitSpeaker::new);
             put(StatelessProgrammableSwitch, HomekitStatelessProgrammableSwitch::new);
             put(Switch, HomekitSwitch::new);
-            // put(TELEVISION, HomekitTelevisionImpl.class);
-            // put(TELEVISION_SPEAKER, HomekitTelevisionSpeakerImpl.class);
+            // put(Television, HomekitTelevisionImpl.class);
+            // put(TelevisionSpeaker, HomekitTelevisionSpeakerImpl.class);
             put(TemperatureSensor, HomekitTemperatureSensor::new);
             put(Thermostat, HomekitThermostat::new);
             put(Valve, HomekitValve::new);
@@ -548,7 +552,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<FilterChangeIndicationEnum> getFilterChangeIndication() {
-            return CompletableFuture.completedFuture(
+            return completedFuture(
                     getKeyFromMapping(variable, mapping, FilterChangeIndicationEnum.NO_CHANGE_NEEDED));
         }
 
@@ -635,7 +639,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<CurrentSlatStateEnum> getSlatState() {
-            return CompletableFuture.completedFuture(
+            return completedFuture(
                     getKeyFromMapping(variable, currentSlatStateMapping, CurrentSlatStateEnum.FIXED));
         }
 
@@ -651,7 +655,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<SlatTypeEnum> getSlatType() {
-            return CompletableFuture.completedFuture(slatType);
+            return completedFuture(slatType);
         }
     }
 
@@ -662,7 +666,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Boolean> getMotionDetected() {
-            return CompletableFuture.completedFuture(getVarValue(variable));
+            return completedFuture(getVarValue(variable));
         }
 
         @Override
@@ -683,7 +687,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Double> getCurrentRelativeHumidity() {
-            return CompletableFuture.completedFuture(variable.getValue().doubleValue());
+            return completedFuture(variable.getValue().doubleValue());
         }
 
         @Override
@@ -701,7 +705,7 @@ public class HomekitAccessoryFactory {
         public HomekitGarageDoorOpener(@NotNull HomekitEndpointContext ctx) {
             super(ctx);
             var obstructionDetectedCharacteristic = getCharacteristicOpt(ObstructionDetectedCharacteristic.class).orElseGet(
-                    () -> new ObstructionDetectedCharacteristic(() -> CompletableFuture.completedFuture(false), (cb) -> {
+                    () -> new ObstructionDetectedCharacteristic(() -> completedFuture(false), (cb) -> {
                     }, () -> {
                     }));
             addService(new GarageDoorOpenerService(getCharacteristic(CurrentDoorStateCharacteristic.class),
@@ -719,7 +723,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<CarbonDioxideDetectedEnum> getCarbonDioxideDetectedState() {
-            return CompletableFuture.completedFuture(
+            return completedFuture(
                     getKeyFromMapping(variable, mapping, CarbonDioxideDetectedEnum.NORMAL));
         }
 
@@ -744,7 +748,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<CarbonMonoxideDetectedEnum> getCarbonMonoxideDetectedState() {
-            return CompletableFuture.completedFuture(
+            return completedFuture(
                     getKeyFromMapping(variable, mapping, CarbonMonoxideDetectedEnum.NORMAL));
         }
 
@@ -805,25 +809,25 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Double> getCurrentTemperature() {
-            return CompletableFuture.completedFuture(currentTemperatureVar.getValue().doubleValue(currentTemperatureVar.getMinValue(0)));
+            return completedFuture(currentTemperatureVar.getValue().doubleValue(currentTemperatureVar.getMinValue(0)));
         }
 
         @Override
         public CompletableFuture<CurrentHeaterCoolerStateEnum> getCurrentHeaterCoolerState() {
-            return CompletableFuture.completedFuture(getKeyFromMapping(currentHeaterCoolerStateVar, currentStateMapping,
+            return completedFuture(getKeyFromMapping(currentHeaterCoolerStateVar, currentStateMapping,
                     CurrentHeaterCoolerStateEnum.INACTIVE));
         }
 
         @Override
         public CompletableFuture<TargetHeaterCoolerStateEnum> getTargetHeaterCoolerState() {
-            return CompletableFuture.completedFuture(
+            return completedFuture(
                     getKeyFromMapping(targetHeatingCoolStateVar, targetStateMapping, TargetHeaterCoolerStateEnum.AUTO));
         }
 
         @Override
         public CompletableFuture<Void> setTargetHeaterCoolerState(TargetHeaterCoolerStateEnum state) {
             updateVar(targetHeatingCoolStateVar, new StringType((String) targetStateMapping.get(state)));
-            return CompletableFuture.completedFuture(null);
+            return completedFuture(null);
         }
 
         @Override
@@ -865,8 +869,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Double> getCurrentAmbientLightLevel() {
-            return CompletableFuture
-                    .completedFuture(variable.getValue().doubleValue(getMinCurrentAmbientLightLevel()));
+            return completedFuture(variable.getValue().doubleValue(getMinCurrentAmbientLightLevel()));
         }
 
         @Override
@@ -897,13 +900,13 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Boolean> getLightbulbPowerState() {
-            return CompletableFuture.completedFuture(getVarValue(variable));
+            return completedFuture(getVarValue(variable));
         }
 
         @Override
         public CompletableFuture<Void> setLightbulbPowerState(boolean value) {
             updateVar(variable, value);
-            return CompletableFuture.completedFuture(null);
+            return completedFuture(null);
         }
 
         @Override
@@ -931,20 +934,20 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<LockCurrentStateEnum> getLockCurrentState() {
-            return CompletableFuture.completedFuture(getKeyFromMapping(variable,
+            return completedFuture(getKeyFromMapping(variable,
                     currentStateMapping, LockCurrentStateEnum.UNKNOWN));
         }
 
         @Override
         public CompletableFuture<LockTargetStateEnum> getLockTargetState() {
-            return CompletableFuture.completedFuture(getKeyFromMapping(lockTargetStateVar,
+            return completedFuture(getKeyFromMapping(lockTargetStateVar,
                     targetStateMapping, LockTargetStateEnum.UNSECURED));
         }
 
         @Override
         public CompletableFuture<Void> setLockTargetState(LockTargetStateEnum state) {
             updateVar(lockTargetStateVar, new StringType((String) targetStateMapping.get(state)));
-            return CompletableFuture.completedFuture(null);
+            return completedFuture(null);
         }
 
         @Override
@@ -1007,18 +1010,18 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Boolean> getPowerState() {
-            return CompletableFuture.completedFuture(getVarValue(variable));
+            return completedFuture(getVarValue(variable));
         }
 
         @Override
         public CompletableFuture<Boolean> getOutletInUse() {
-            return CompletableFuture.completedFuture(inUseStatus.getValue().boolValue());
+            return completedFuture(inUseStatus.getValue().boolValue());
         }
 
         @Override
         public CompletableFuture<Void> setPowerState(boolean value) {
             updateVar(variable, value);
-            return CompletableFuture.completedFuture(null);
+            return completedFuture(null);
         }
 
         @Override
@@ -1111,7 +1114,7 @@ public class HomekitAccessoryFactory {
                                 return switch (targetHeatingCoolingStateCharacteristic.getEnumValue().get()) {
                                     case HEAT -> heatingThresholdTemperatureCharacteristic.getValue();
                                     case COOL -> coolingThresholdTemperatureCharacteristic.getValue();
-                                    default -> CompletableFuture.completedFuture(
+                                    default -> completedFuture(
                                             (heatingThresholdTemperatureCharacteristic.getValue().get()
                                              + coolingThresholdTemperatureCharacteristic.getValue().get())
                                             / 2);
@@ -1173,7 +1176,7 @@ public class HomekitAccessoryFactory {
             var currentHeatingCoolingStateCharacteristic = getCharacteristicOpt(CurrentHeatingCoolingStateCharacteristic.class)
                     .orElseGet(() -> new CurrentHeatingCoolingStateCharacteristic(
                                     new CurrentHeatingCoolingStateEnum[]{CurrentHeatingCoolingStateEnum.OFF},
-                                    () -> CompletableFuture.completedFuture(CurrentHeatingCoolingStateEnum.OFF), (cb) -> {
+                                    () -> completedFuture(CurrentHeatingCoolingStateEnum.OFF), (cb) -> {
                             }, () -> {
                             })
 
@@ -1189,6 +1192,124 @@ public class HomekitAccessoryFactory {
 
         private void thresholdTemperatureChanged() {
             targetTemperatureCallback.changed();
+        }
+    }
+
+    private static class HomekitSmartSpeaker extends AbstractHomekitAccessory implements SmartSpeakerAccessory {
+        private final ContextVar.Variable targetMediaStateVar;
+        private final Map<CurrentMediaStateEnum, Object> currentMediaState;
+        private final Map<TargetMediaStateEnum, Object> targetMediaState;
+
+        public HomekitSmartSpeaker(@NotNull HomekitEndpointContext ctx) {
+            super(ctx, ctx.endpoint().getCurrentMediaState(), SmartSpeakerService.class);
+            targetMediaStateVar = getVariable("targetMediaState", HomekitEndpointEntity::getTargetMediaState);
+            currentMediaState = createMapping(variable, CurrentMediaStateEnum.class);
+            targetMediaState = createMapping(targetMediaStateVar, TargetMediaStateEnum.class);
+        }
+
+        @Override
+        public CompletableFuture<CurrentMediaStateEnum> getCurrentMediaState() {
+            return completedFuture(
+                    getKeyFromMapping(variable, currentMediaState, CurrentMediaStateEnum.UNKNOWN));
+        }
+
+        @Override
+        public void subscribeCurrentMediaState(final HomekitCharacteristicChangeCallback callback) {
+            subscribe(callback);
+        }
+
+        @Override
+        public void unsubscribeCurrentMediaState() {
+            unsubscribe();
+        }
+
+        @Override
+        public CompletableFuture<TargetMediaStateEnum> getTargetMediaState() {
+            return completedFuture(getKeyFromMapping(targetMediaStateVar, targetMediaState, TargetMediaStateEnum.STOP));
+        }
+
+        @Override
+        public CompletableFuture<Void> setTargetMediaState(final TargetMediaStateEnum targetState) {
+            HomekitCharacteristicFactory.setHomioVariableFromEnum(targetMediaStateVar, targetState, targetMediaState, ctx);
+            return completedFuture(null);
+        }
+
+        @Override
+        public void subscribeTargetMediaState(final HomekitCharacteristicChangeCallback callback) {
+            subscribe(targetMediaStateVar, callback);
+        }
+
+        @Override
+        public void unsubscribeTargetMediaState() {
+            unsubscribe(targetMediaStateVar);
+        }
+    }
+
+    private static class HomekitSecuritySystem extends AbstractHomekitAccessory implements SecuritySystemAccessory {
+        private final Map<CurrentSecuritySystemStateEnum, Object> currentStateMapping;
+        private final Map<TargetSecuritySystemStateEnum, Object> targetStateMapping;
+        private final List<CurrentSecuritySystemStateEnum> customCurrentStateList = new ArrayList<>();
+        private final List<TargetSecuritySystemStateEnum> customTargetStateList = new ArrayList<>();
+        private final ContextVar.Variable targetSecuritySystemStateVar;
+
+        public HomekitSecuritySystem(@NotNull HomekitEndpointContext ctx) {
+            super(ctx, ctx.endpoint().getCurrentSecuritySystemState(), SecuritySystemService.class);
+            currentStateMapping = createMapping(variable, CurrentSecuritySystemStateEnum.class,
+                    customCurrentStateList);
+            targetSecuritySystemStateVar = getVariable("targetSecuritySystemState", HomekitEndpointEntity::getTargetSecuritySystemState);
+            targetStateMapping = createMapping(targetSecuritySystemStateVar, TargetSecuritySystemStateEnum.class,
+                    customTargetStateList);
+        }
+
+        @Override
+        public CurrentSecuritySystemStateEnum[] getCurrentSecuritySystemStateValidValues() {
+            return customCurrentStateList.isEmpty()
+                    ? currentStateMapping.keySet().toArray(new CurrentSecuritySystemStateEnum[0])
+                    : customCurrentStateList.toArray(new CurrentSecuritySystemStateEnum[0]);
+        }
+
+        @Override
+        public TargetSecuritySystemStateEnum[] getTargetSecuritySystemStateValidValues() {
+            return customTargetStateList.isEmpty()
+                    ? targetStateMapping.keySet().toArray(new TargetSecuritySystemStateEnum[0])
+                    : customTargetStateList.toArray(new TargetSecuritySystemStateEnum[0]);
+        }
+
+        @Override
+        public CompletableFuture<CurrentSecuritySystemStateEnum> getCurrentSecuritySystemState() {
+            return CompletableFuture.completedFuture(getKeyFromMapping(variable, currentStateMapping,
+                    CurrentSecuritySystemStateEnum.DISARMED));
+        }
+
+        @Override
+        public CompletableFuture<TargetSecuritySystemStateEnum> getTargetSecuritySystemState() {
+            return CompletableFuture.completedFuture(getKeyFromMapping(targetSecuritySystemStateVar, targetStateMapping,
+                    TargetSecuritySystemStateEnum.DISARM));
+        }
+
+        @Override
+        public void setTargetSecuritySystemState(TargetSecuritySystemStateEnum state) {
+            HomekitCharacteristicFactory.setHomioVariableFromEnum(targetSecuritySystemStateVar, state, targetStateMapping, ctx);
+        }
+
+        @Override
+        public void subscribeCurrentSecuritySystemState(HomekitCharacteristicChangeCallback callback) {
+            subscribe(callback);
+        }
+
+        @Override
+        public void unsubscribeCurrentSecuritySystemState() {
+            unsubscribe();
+        }
+
+        @Override
+        public void subscribeTargetSecuritySystemState(HomekitCharacteristicChangeCallback callback) {
+            subscribe(targetSecuritySystemStateVar, callback);
+        }
+
+        @Override
+        public void unsubscribeTargetSecuritySystemState() {
+            unsubscribe(targetSecuritySystemStateVar);
         }
     }
 }

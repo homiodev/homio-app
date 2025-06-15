@@ -11,6 +11,7 @@ import io.github.hapjava.characteristics.impl.thermostat.TemperatureDisplayUnitC
 import io.github.hapjava.characteristics.impl.thermostat.TemperatureDisplayUnitEnum;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.homekit.accessories.Characteristics;
 import org.homio.addon.homekit.enums.HomekitCharacteristicType;
@@ -29,16 +30,14 @@ import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.homio.addon.homekit.enums.HomekitCharacteristicType.*;
+import static org.homio.api.util.CommonUtils.findObjectConstructor;
 
 @Log4j2
 public class HomekitCharacteristicFactory {
@@ -88,20 +87,18 @@ public class HomekitCharacteristicFactory {
                 }
                 continue;
             }
-            String name = method.getName();
-            if (name.startsWith("get") && name.length() > 3) {
-                name = Character.toLowerCase(name.charAt(3)) + name.substring(4);
-            }
-            if (characteristicClass.isAssignableFrom(BooleanCharacteristic.class)) {
-                characteristics.addIfNotNull(hc.type(), createBooleanCharacteristic(context, hc, name, v));
-            } else if (characteristicClass.isAssignableFrom(IntegerCharacteristic.class)) {
-                characteristics.addIfNotNull(hc.type(), createIntegerCharacteristic(context, hc, name, v));
-            } else if (characteristicClass.isAssignableFrom(EnumCharacteristic.class)) {
-                characteristics.addIfNotNull(hc.type(), createEnumCharacteristic(context, hc, name, v));
-            } else if (characteristicClass.isAssignableFrom(FloatCharacteristic.class)) {
-                characteristics.addIfNotNull(hc.type(), createFloatCharacteristic(context, hc, name, v));
-            } else if (characteristicClass.isAssignableFrom(StringCharacteristic.class)) {
-                characteristics.addIfNotNull(hc.type(), createStringCharacteristic(context, hc, name, v));
+            if (!hc.impl().equals(HomekitCharacteristic.DefaultSupplier.class)) {
+                characteristics.addIfNotNull(hc.type(), createCustomCharacteristic(context, hc, v));
+            } else if (BooleanCharacteristic.class.isAssignableFrom(characteristicClass)) {
+                characteristics.addIfNotNull(hc.type(), createBooleanCharacteristic(context, hc, v));
+            } else if (IntegerCharacteristic.class.isAssignableFrom(characteristicClass)) {
+                characteristics.addIfNotNull(hc.type(), createIntegerCharacteristic(context, hc, v));
+            } else if (EnumCharacteristic.class.isAssignableFrom(characteristicClass)) {
+                characteristics.addIfNotNull(hc.type(), createEnumCharacteristic(context, hc, v));
+            } else if (FloatCharacteristic.class.isAssignableFrom(characteristicClass)) {
+                characteristics.addIfNotNull(hc.type(), createFloatCharacteristic(context, hc, v));
+            } else if (StringCharacteristic.class.isAssignableFrom(characteristicClass)) {
+                characteristics.addIfNotNull(hc.type(), createStringCharacteristic(context, hc, v));
             } else {
                 throw new RuntimeException("Unable to find handler for characteristic: " + characteristicClass);
             }
@@ -110,7 +107,6 @@ public class HomekitCharacteristicFactory {
 
     private static Characteristic createEnumCharacteristic(HomekitEndpointContext c,
                                                            HomekitCharacteristic hc,
-                                                           String name,
                                                            ContextVar.Variable v) {
         Type superType = hc.value().getGenericSuperclass();
         if (superType instanceof ParameterizedType) {
@@ -124,7 +120,7 @@ public class HomekitCharacteristicFactory {
                         ? enumClass.getEnumConstants()[0]
                         : Enum.valueOf((Class<Enum>) enumClass.asSubclass(Enum.class), defValue);
 
-                BaseCharacteristic<?> characteristic = CommonUtils.newInstance(hc.value(),
+                BaseCharacteristic<?> characteristic = newCharacteristicInstance(hc.value(),
                         (Supplier<CompletableFuture>) () -> completedFuture(getKeyFromMapping2(v, m, defaultEnum)),
                         (ExceptionalConsumer) newVal -> {
                             setHomioVariableFromEnum2(v, newVal, m, c);
@@ -133,63 +129,84 @@ public class HomekitCharacteristicFactory {
                         getSubscriber(v, c, hc.type()),
                         getUnsubscriber(v, c, hc.type()));
 
-                c.setCharacteristic(characteristic, v, name);
+                c.setCharacteristic(characteristic, v, hc.type().name());
                 return characteristic;
             }
         }
         return null;
     }
 
-
     private static Characteristic createStringCharacteristic(HomekitEndpointContext c,
                                                              HomekitCharacteristic hc,
-                                                             String name,
                                                              ContextVar.Variable v) {
-        var characteristic = CommonUtils.newInstance(hc.value(),
+        var characteristic = newCharacteristicInstance(hc.value(),
                 getStringSupplier(v, hc.defaultStringValue()),
                 setStringConsumer(v, c),
                 getSubscriber(v, c, hc.type()),
                 getUnsubscriber(v, c, hc.type()));
-        c.setCharacteristic(characteristic, v, name);
+        c.setCharacteristic(characteristic, v, hc.type().name());
         return characteristic;
     }
 
     private static Characteristic createFloatCharacteristic(HomekitEndpointContext c,
                                                             HomekitCharacteristic hc,
-                                                            String name,
                                                             ContextVar.Variable v) {
-        var characteristic = CommonUtils.newInstance(hc.value(),
+        var characteristic = newCharacteristicInstance(hc.value(),
                 getDoubleSupplier(v, hc.defaultDoubleValue()),
                 setDoubleConsumer(v, c),
                 getSubscriber(v, c, hc.type()),
                 getUnsubscriber(v, c, hc.type()));
-        c.setCharacteristic(characteristic, v, name);
+        c.setCharacteristic(characteristic, v, hc.type().name());
         return characteristic;
     }
 
     private static Characteristic createIntegerCharacteristic(HomekitEndpointContext c,
                                                               HomekitCharacteristic hc,
-                                                              String name,
                                                               ContextVar.Variable v) {
-        var characteristic = CommonUtils.newInstance(hc.value(),
+        var characteristic = newCharacteristicInstance(hc.value(),
                 getIntSupplier(v, hc.defaultIntValue()),
                 setIntConsumer(v, c),
                 getSubscriber(v, c, hc.type()),
                 getUnsubscriber(v, c, hc.type()));
-        c.setCharacteristic(characteristic, v, name);
+        c.setCharacteristic(characteristic, v, hc.type().name());
+        return characteristic;
+    }
+
+    @SneakyThrows
+    private static BaseCharacteristic newCharacteristicInstance(Class<? extends BaseCharacteristic> clazz, Object... parameters) {
+        Object[] finalParameters = parameters;
+        var constructor = findObjectConstructor(clazz, ClassUtils.toClass(parameters));
+        if (constructor == null) {
+            // without setter
+            List<Object> paramList = new ArrayList<>(Arrays.asList(parameters));
+            paramList.remove(1);
+            finalParameters = paramList.toArray();
+            constructor = findObjectConstructor(clazz, ClassUtils.toClass(finalParameters));
+        }
+        if (constructor == null) {
+            throw new RuntimeException("Unable to find constructor for object: " + clazz.getSimpleName());
+        }
+        return constructor.newInstance(finalParameters);
+    }
+
+    private static BaseCharacteristic<?> createCustomCharacteristic(HomekitEndpointContext c,
+                                                                    HomekitCharacteristic hc,
+                                                                    ContextVar.Variable v) {
+        HomekitCharacteristic.CharacteristicSupplier supplier = CommonUtils.newInstance(hc.impl());
+        var characteristic = supplier.get(c, v);
+        c.setCharacteristic(characteristic, v, hc.type().name());
         return characteristic;
     }
 
     private static BaseCharacteristic<?> createBooleanCharacteristic(HomekitEndpointContext c,
                                                                      HomekitCharacteristic hc,
-                                                                     String name,
                                                                      ContextVar.Variable v) {
-        var characteristic = CommonUtils.newInstance(hc.value(),
+        var characteristic = newCharacteristicInstance(hc.value(),
                 getBooleanSupplier(v),
                 setBooleanConsumer(v, c),
                 getSubscriber(v, c, hc.type()),
                 getUnsubscriber(v, c, hc.type()));
-        c.setCharacteristic(characteristic, v, name);
+        c.setCharacteristic(characteristic, v, hc.type().name());
         return characteristic;
     }
 
@@ -398,8 +415,8 @@ public class HomekitCharacteristicFactory {
         };
     }
 
-    private static @NotNull Supplier<CompletableFuture<String>> getStringSupplier(@NotNull ContextVar.Variable v, String def) {
-        return () -> completedFuture(v.getValue().stringValue(def));
+    private static @NotNull Supplier<CompletableFuture<String>> getStringSupplier(@Nullable ContextVar.Variable v, String def) {
+        return () -> completedFuture(v == null ? def : v.getValue().stringValue(def));
     }
 
     private static @NotNull ExceptionalConsumer<String> setStringConsumer(@NotNull ContextVar.Variable v, @NotNull HomekitEndpointContext c) {

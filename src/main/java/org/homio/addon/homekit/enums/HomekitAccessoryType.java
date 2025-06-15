@@ -20,7 +20,7 @@ public enum HomekitAccessoryType {
     GarageDoorOpener,
     HeaterCooler,
     HumiditySensor,
-    InputSource,
+    //InputSource,
     LeakSensor,
     LightSensor,
     LightBulb,
@@ -36,11 +36,11 @@ public enum HomekitAccessoryType {
     Speaker,
     StatelessProgrammableSwitch,
     Switch,
-    Television,
-    TelevisionSpeaker,
+    //Television,
+    //TelevisionSpeaker,
     TemperatureSensor,
     Thermostat,
     Valve,
     Window,
-    WindowCovering;
+    WindowCovering
 }

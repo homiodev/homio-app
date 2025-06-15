@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.homekit.accessories.BaseHomekitAccessory;
 import org.homio.addon.homekit.accessories.HomekitAccessoryFactory;
 import org.homio.api.ContextVar;
@@ -46,7 +47,7 @@ public class HomekitEndpointContext {
     }
 
     public void setCharacteristic(BaseCharacteristic characteristic, ContextVar.Variable variable, String name) {
-        this.characteristics.add(new CharacteristicInfo(characteristic, variable, name));
+        this.characteristics.add(new CharacteristicInfo(characteristic, variable, StringUtils.uncapitalize(name)));
     }
 
     public void setUpdateUI(@NotNull Runnable runnable) {
