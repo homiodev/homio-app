@@ -223,22 +223,21 @@ public class HomekitCharacteristicFactory {
             }
             return map;
         }
-        boolean isHomioSwitchLike = variable instanceof OnOffType;
-        boolean isHomioNumeric = variable instanceof DecimalType;
+        boolean isHomioSwitchLike = variable.getRestriction() == ContextVar.VariableType.Bool;
+        boolean isHomioNumeric = variable.getRestriction() == ContextVar.VariableType.Float ||
+                                 variable.getRestriction() == ContextVar.VariableType.Percentage;
         boolean itemSpecificInversion = false; // variable.getJsonData("inverted", false);
         boolean finalInversion = invertedDefault ^ itemSpecificInversion;
-        String onValue = OnOffType.ON.toString();
-        String offValue = OnOffType.OFF.toString();
         T mappedOffEnumValue = null, mappedOnEnumValue = null;
 
         for (T k : klazz.getEnumConstants()) {
             int code = k.getCode();
             if (isHomioSwitchLike) {
                 if (code == 0) {
-                    map.put(k, finalInversion ? onValue : offValue);
+                    map.put(k, finalInversion ? 1 : 0);
                     mappedOffEnumValue = k;
                 } else if (code == 1) {
-                    map.put(k, finalInversion ? offValue : onValue);
+                    map.put(k, finalInversion ? 0 : 1);
                     mappedOnEnumValue = k;
                 } else {
                     map.put(k, Integer.toString(code));
@@ -274,15 +273,7 @@ public class HomekitCharacteristicFactory {
 
     public static <T> T getKeyFromMapping(ContextVar.Variable variable, Map<T, Object> mapping, T defaultValue) {
         var state = variable.getValue();
-        String valueToMatch;
-        switch (state) {
-            case DecimalType ignored -> valueToMatch = Integer.toString(state.intValue());
-            case OnOffType ignored -> valueToMatch = state.toString();
-            case StringType ignored -> valueToMatch = state.toString();
-            default -> {
-                return defaultValue;
-            }
-        }
+        String valueToMatch = state.stringValue();
         for (Map.Entry<T, Object> entry : mapping.entrySet()) {
             Object mappingConfigValue = entry.getValue();
             if (mappingConfigValue instanceof String && valueToMatch.equalsIgnoreCase((String) mappingConfigValue))

@@ -2,7 +2,9 @@ package org.homio.addon.homekit.accessories;
 
 import io.github.hapjava.characteristics.Characteristic;
 import io.github.hapjava.characteristics.HomekitCharacteristicChangeCallback;
+import io.github.hapjava.characteristics.impl.base.BaseCharacteristic;
 import io.github.hapjava.characteristics.impl.common.NameCharacteristic;
+import io.github.hapjava.characteristics.impl.windowcovering.PositionStateCharacteristic;
 import io.github.hapjava.services.Service;
 import lombok.Getter;
 import org.homio.addon.homekit.HomekitEndpointContext;
@@ -31,11 +33,33 @@ public abstract class AbstractHomekitAccessory implements BaseHomekitAccessory {
     @Getter
     private final @NotNull List<Service> services = new ArrayList<>();
     private final @NotNull Characteristics characteristics = new Characteristics();
+    private final BaseCharacteristic<?> masterCharacteristic;
     @Getter
     private Map<String, ContextVar.Variable> extraVariables = new HashMap<>();
 
     public AbstractHomekitAccessory(@NotNull HomekitEndpointContext ctx) {
-        this(ctx, null, null);
+        this(ctx, (String)null, null);
+    }
+
+    public AbstractHomekitAccessory(HomekitEndpointContext ctx,
+                                    Class<? extends BaseCharacteristic<?>> masterCharacteristicClass,
+                                    Class<? extends Service> serviceClass) {
+        this.ctx = ctx;
+        this.variable = varId == null ? null : ctx.getVariable(varId);
+        buildInitialCharacteristics(ctx, null, characteristics);
+        buildCharacteristics(ctx, characteristics);
+        masterCharacteristic = getCharacteristic(masterCharacteristicClass);
+        this.inverted = ctx.endpoint().getInverted();
+
+        if (serviceClass != null) {
+            addService(CommonUtils.newInstance(serviceClass, this));
+        }
+
+        // add information service only if this accessory not in groups
+        if (ctx.endpoint().getGroup().isEmpty()) {
+            // make sure this is the first service
+            services.addFirst(BaseHomekitAccessory.createInformationService(characteristics));
+        }
     }
 
     /**
@@ -107,16 +131,12 @@ public abstract class AbstractHomekitAccessory implements BaseHomekitAccessory {
     }
 
     State getVariableValue(Function<HomekitEndpointEntity, String> supplier, State defaultValue) {
-        var variable = getVariable(null, supplier);
+        var variable = ctx.getVariable(supplier.apply(ctx.endpoint()));
         return variable == null ? defaultValue : variable.getValue();
     }
 
-    ContextVar.Variable getVariable(String name, Function<HomekitEndpointEntity, String> supplier) {
-        ContextVar.Variable accVar = ctx.getVariable(supplier.apply(ctx.endpoint()));
-        if (accVar != null && name != null) {
-            extraVariables.put(name, accVar);
-        }
-        return accVar;
+    ContextVar.Variable getVariable(Function<HomekitEndpointEntity, String> supplier) {
+        return ctx.getVariable(supplier.apply(ctx.endpoint()));
     }
 
     public void addService(Service service) {

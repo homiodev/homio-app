@@ -4,6 +4,7 @@ import lombok.Getter;
 import org.homio.api.Context;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
+import org.homio.api.state.State;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.springframework.stereotype.Component;
@@ -55,6 +56,12 @@ public class Scratch3OperatorBlocks extends Scratch3ExtensionBlocks {
     blockReporter("not", this::notEvaluateEvaluate);
     blockReporter("mathop", this::mathOpEvaluateEvaluate);
     blockReporter("bool_to_num", this::boolToNumberEvaluate);
+    blockReporter("bool_if_else", this::boolIfElseEvaluate);
+  }
+
+  private DecimalType boolIfElseEvaluate(WorkspaceBlock workspaceBlock) {
+    String op = workspaceBlock.getInputBoolean("OPERAND") ? "THEN" : "ELSE";
+    return new DecimalType(workspaceBlock.getInputFloat(op));
   }
 
   private OnOffType boolToNumberEvaluate(WorkspaceBlock workspaceBlock) {

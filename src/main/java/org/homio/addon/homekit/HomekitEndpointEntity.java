@@ -8,6 +8,7 @@ import io.github.hapjava.characteristics.impl.airquality.*;
 import io.github.hapjava.characteristics.impl.audio.MuteCharacteristic;
 import io.github.hapjava.characteristics.impl.audio.VolumeCharacteristic;
 import io.github.hapjava.characteristics.impl.base.BaseCharacteristic;
+import io.github.hapjava.characteristics.impl.battery.ChargingStateCharacteristic;
 import io.github.hapjava.characteristics.impl.battery.StatusLowBatteryCharacteristic;
 import io.github.hapjava.characteristics.impl.carbondioxidesensor.CarbonDioxideLevelCharacteristic;
 import io.github.hapjava.characteristics.impl.carbondioxidesensor.CarbonDioxidePeakLevelCharacteristic;
@@ -19,6 +20,7 @@ import io.github.hapjava.characteristics.impl.filtermaintenance.FilterLifeLevelC
 import io.github.hapjava.characteristics.impl.filtermaintenance.ResetFilterIndicationCharacteristic;
 import io.github.hapjava.characteristics.impl.garagedoor.CurrentDoorStateCharacteristic;
 import io.github.hapjava.characteristics.impl.garagedoor.TargetDoorStateCharacteristic;
+import io.github.hapjava.characteristics.impl.heatercooler.CurrentHeaterCoolerStateCharacteristic;
 import io.github.hapjava.characteristics.impl.humidifier.TargetHumidifierDehumidifierStateCharacteristic;
 import io.github.hapjava.characteristics.impl.humiditysensor.CurrentRelativeHumidityCharacteristic;
 import io.github.hapjava.characteristics.impl.humiditysensor.TargetRelativeHumidityCharacteristic;
@@ -448,6 +450,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Battery'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = ChargingStateCharacteristic.class, type = BatteryChargingState)
     public String getBatteryChargingState() {
         return getJsonData("bcs");
     }
@@ -497,7 +500,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Used by (Required): GarageDoorOpener.
      */
     @UIField(order = 45, required = true)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'GarageDoorOpener'")
+    @UIFieldShowOnCondition("['GarageDoorOpener'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
     @HomekitCharacteristic(value = CurrentDoorStateCharacteristic.class, type = CurrentDoorState, defaultStringValue = "CLOSED")
@@ -536,6 +539,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'HeaterCooler'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = CurrentHeaterCoolerStateCharacteristic.class, type = CurrentHeaterCoolerState)
     public String getCurrentHeaterCoolerState() {
         return getJsonData("chcshc");
     }
@@ -2070,7 +2074,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     }
 
     public boolean getEmulateStopState() {
-        return getJsonData("emst", false);
+        return getJsonData("emst", true);
     }
 
     public void setEmulateStopState(boolean value) {
@@ -2078,7 +2082,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     }
 
     public boolean getEmulateStopSameDirection() {
-        return getJsonData("emssd", false);
+        return getJsonData("emssd", true);
     }
 
     public void setEmulateStopSameDirection(boolean value) {
@@ -2086,7 +2090,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     }
 
     public boolean getSendUpDownForExtents() {
-        return getJsonData("sudfe", false);
+        return getJsonData("sudfe", true);
     }
 
     public void setSendUpDownForExtents(boolean value) {
@@ -2095,7 +2099,6 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
 
     @UIField(order = 110)
     @UIFieldShowOnCondition("return ['ColorTemperature', 'Switch', 'WindowCovering', 'Door', 'Window'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
     public boolean getInverted() {
         return getJsonData("inv", false);

@@ -1,11 +1,15 @@
 package org.homio.addon.homekit.accessories;
 
 import io.github.hapjava.characteristics.HomekitCharacteristicChangeCallback;
+import io.github.hapjava.characteristics.impl.windowcovering.CurrentPositionCharacteristic;
+import io.github.hapjava.characteristics.impl.windowcovering.PositionStateCharacteristic;
 import io.github.hapjava.characteristics.impl.windowcovering.PositionStateEnum;
+import io.github.hapjava.characteristics.impl.windowcovering.TargetPositionCharacteristic;
 import io.github.hapjava.services.Service;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.homekit.HomekitEndpointContext;
-import org.homio.api.ContextVar;
+import org.homio.addon.homekit.HomekitEndpointEntity;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
@@ -24,26 +28,27 @@ public abstract class AbstractHomekitPositionAccessory extends AbstractHomekitAc
     final int closedPosition;
     final int openPosition;
     final Map<PositionStateEnum, Object> positionStateMapping;
-    private final ContextVar.Variable currentPositionVar;
-    private final ContextVar.Variable targetPositionVar;
+    private final CurrentPositionCharacteristic currentPositionCharacteristic;
+    private final TargetPositionCharacteristic targetPositionCharacteristic;
     PositionStateEnum emulatedState = PositionStateEnum.STOPPED;
 
     public AbstractHomekitPositionAccessory(@NotNull HomekitEndpointContext ctx,
                                             @NotNull Class<? extends Service> serviceClass) {
-        super(ctx, ctx.endpoint().getPositionState(), serviceClass);
+        super(ctx, PositionStateCharacteristic.class, serviceClass);
         emulateState = ctx.endpoint().getEmulateStopState();
         emulateStopSameDirection = ctx.endpoint().getEmulateStopState();
         sendUpDownForExtents = ctx.endpoint().getSendUpDownForExtents();
         closedPosition = inverted ? 0 : 100;
         openPosition = inverted ? 100 : 0;
-        ContextVar.Variable psv = ctx.getVariable(ctx.endpoint().getPositionState());
-        positionStateMapping = createMapping(psv, PositionStateEnum.class);
-        currentPositionVar = ctx.getVariable(ctx.endpoint().getCurrentPosition());
-        targetPositionVar = ctx.getVariable(ctx.endpoint().getTargetPosition());
+        positionStateMapping = createMapping(variable, PositionStateEnum.class);
+        currentPositionCharacteristic = getCharacteristic(CurrentPositionCharacteristic.class);
+        targetPositionCharacteristic = getCharacteristic(TargetPositionCharacteristic.class);
+        // currentDoorStateVar = getVariable("currentDoorState", HomekitEndpointEntity::getCurrentDoorState);
     }
 
     public CompletableFuture<Integer> getCurrentPosition() {
-        return CompletableFuture.completedFuture(convertPositionState(currentPositionVar, openPosition, closedPosition));
+        return currentPositionCharacteristic.getValue();
+        // return CompletableFuture.completedFuture(convertPositionState(currentPositionVar, openPosition, closedPosition));
     }
 
     public CompletableFuture<PositionStateEnum> getPositionState() {
@@ -52,19 +57,22 @@ public abstract class AbstractHomekitPositionAccessory extends AbstractHomekitAc
     }
 
     public CompletableFuture<Integer> getTargetPosition() {
-        return CompletableFuture.completedFuture(convertPositionState(targetPositionVar, openPosition, closedPosition));
+        return targetPositionCharacteristic.getValue();
     }
 
     public CompletableFuture<Void> setTargetPosition(int value) {
         return setTargetPosition((Integer) value);
     }
 
+
+    @SneakyThrows
     public CompletableFuture<Void> setTargetPosition(Integer value) {
+        targetPositionCharacteristic.setValue(value);
         getCharacteristic(TargetPosition).ifPresentOrElse(taggedItem -> {
-            int targetPosition = convertPosition(value, openPosition);
-            updateVar(targetPositionVar, targetPosition);
+            // int targetPosition = convertPosition(value, openPosition);
+            // updateVar(targetPositionVar, targetPosition);
             // Item item = taggedItem.getItem();
-                /*if (item instanceof RollershutterItem itemAsRollerShutterItem) {
+                /* if (item instanceof RollershutterItem itemAsRollerShutterItem) {
                     // HomeKit home app never sends STOP. we emulate stop if we receive 100% or 0% while the blind is moving
                     if (emulateState && (targetPosition == 100 && emulatedState == PositionStateEnum.DECREASING)
                         || ((targetPosition == 0 && emulatedState == PositionStateEnum.INCREASING))) {
@@ -116,7 +124,7 @@ public abstract class AbstractHomekitPositionAccessory extends AbstractHomekitAc
     }
 
     public void subscribeCurrentPosition(HomekitCharacteristicChangeCallback callback) {
-        subscribe(currentPositionVar, callback);
+        currentPositionCharacteristic.subscribe(callback);
     }
 
     public void subscribePositionState(HomekitCharacteristicChangeCallback callback) {
@@ -124,11 +132,11 @@ public abstract class AbstractHomekitPositionAccessory extends AbstractHomekitAc
     }
 
     public void subscribeTargetPosition(HomekitCharacteristicChangeCallback callback) {
-        subscribe(targetPositionVar, callback);
+        targetPositionCharacteristic.subscribe(callback);
     }
 
     public void unsubscribeCurrentPosition() {
-        unsubscribe(currentPositionVar);
+        currentPositionCharacteristic.unsubscribe();
     }
 
     public void unsubscribePositionState() {
@@ -136,14 +144,6 @@ public abstract class AbstractHomekitPositionAccessory extends AbstractHomekitAc
     }
 
     public void unsubscribeTargetPosition() {
-        unsubscribe(targetPositionVar);
-    }
-
-    protected int convertPosition(int value, int openPosition) {
-        return Math.abs(openPosition - value);
-    }
-
-    protected int convertPositionState(ContextVar.Variable positionVar, int openPosition, int closedPosition) {
-        return positionVar != null ? convertPosition(positionVar.getValue().intValue(), openPosition) : closedPosition;
+        targetPositionCharacteristic.unsubscribe();
     }
 }

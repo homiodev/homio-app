@@ -34,7 +34,8 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
 
   private void onChangeVariableHat(WorkspaceBlock workspaceBlock) {
     workspaceBlock.handleNext(next -> {
-      String variableId = getVariable(workspaceBlock);
+      // we need full variable entityID
+      String variableId = workspaceBlock.getFieldId("VARIABLE");
       Lock lock = workspaceBlock.getLockManager().getLock(workspaceBlock, variableId);
       workspaceBlock.subscribeToLock(lock, next::handle);
     });
@@ -43,7 +44,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
   private void onChangeVariableHatTo(WorkspaceBlock workspaceBlock) {
     workspaceBlock.handleNext(next -> {
       WhenValueOperator operator = WhenValueOperator.getByOp(workspaceBlock.getField("OPERATOR"));
-      String variableId = getVariable(workspaceBlock);
+      String variableId = workspaceBlock.getFieldId("VARIABLE");
       Lock lock = workspaceBlock.getLockManager().getLock(workspaceBlock, variableId);
       workspaceBlock.subscribeToLock(lock, o -> operator.checkFn.apply(workspaceBlock, o), next::handle);
     });

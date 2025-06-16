@@ -4,29 +4,38 @@ import io.github.hapjava.accessories.*;
 import io.github.hapjava.characteristics.Characteristic;
 import io.github.hapjava.characteristics.HomekitCharacteristicChangeCallback;
 import io.github.hapjava.characteristics.impl.airquality.AirQualityEnum;
+import io.github.hapjava.characteristics.impl.base.EnumCharacteristic;
+import io.github.hapjava.characteristics.impl.battery.ChargingStateCharacteristic;
 import io.github.hapjava.characteristics.impl.battery.ChargingStateEnum;
+import io.github.hapjava.characteristics.impl.battery.StatusLowBatteryCharacteristic;
 import io.github.hapjava.characteristics.impl.battery.StatusLowBatteryEnum;
 import io.github.hapjava.characteristics.impl.carbondioxidesensor.CarbonDioxideDetectedEnum;
 import io.github.hapjava.characteristics.impl.carbonmonoxidesensor.CarbonMonoxideDetectedEnum;
 import io.github.hapjava.characteristics.impl.common.ActiveEnum;
+import io.github.hapjava.characteristics.impl.common.InUseCharacteristic;
 import io.github.hapjava.characteristics.impl.common.InUseEnum;
 import io.github.hapjava.characteristics.impl.common.ObstructionDetectedCharacteristic;
 import io.github.hapjava.characteristics.impl.contactsensor.ContactStateEnum;
 import io.github.hapjava.characteristics.impl.filtermaintenance.FilterChangeIndicationEnum;
 import io.github.hapjava.characteristics.impl.garagedoor.CurrentDoorStateCharacteristic;
 import io.github.hapjava.characteristics.impl.garagedoor.TargetDoorStateCharacteristic;
+import io.github.hapjava.characteristics.impl.heatercooler.CurrentHeaterCoolerStateCharacteristic;
 import io.github.hapjava.characteristics.impl.heatercooler.CurrentHeaterCoolerStateEnum;
+import io.github.hapjava.characteristics.impl.heatercooler.TargetHeaterCoolerStateCharacteristic;
 import io.github.hapjava.characteristics.impl.heatercooler.TargetHeaterCoolerStateEnum;
 import io.github.hapjava.characteristics.impl.leaksensor.LeakDetectedStateEnum;
 import io.github.hapjava.characteristics.impl.lock.LockCurrentStateEnum;
+import io.github.hapjava.characteristics.impl.lock.LockTargetStateCharacteristic;
 import io.github.hapjava.characteristics.impl.lock.LockTargetStateEnum;
 import io.github.hapjava.characteristics.impl.occupancysensor.OccupancyDetectedEnum;
 import io.github.hapjava.characteristics.impl.securitysystem.CurrentSecuritySystemStateEnum;
+import io.github.hapjava.characteristics.impl.securitysystem.TargetSecuritySystemStateCharacteristic;
 import io.github.hapjava.characteristics.impl.securitysystem.TargetSecuritySystemStateEnum;
 import io.github.hapjava.characteristics.impl.slat.CurrentSlatStateEnum;
 import io.github.hapjava.characteristics.impl.slat.SlatTypeEnum;
 import io.github.hapjava.characteristics.impl.smokesensor.SmokeDetectedStateEnum;
 import io.github.hapjava.characteristics.impl.television.CurrentMediaStateEnum;
+import io.github.hapjava.characteristics.impl.television.TargetMediaStateCharacteristic;
 import io.github.hapjava.characteristics.impl.television.TargetMediaStateEnum;
 import io.github.hapjava.characteristics.impl.thermostat.*;
 import io.github.hapjava.characteristics.impl.valve.RemainingDurationCharacteristic;
@@ -34,6 +43,7 @@ import io.github.hapjava.characteristics.impl.valve.ValveTypeEnum;
 import io.github.hapjava.services.Service;
 import io.github.hapjava.services.impl.*;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.homekit.HomekitCharacteristicFactory;
 import org.homio.addon.homekit.HomekitEndpointContext;
@@ -42,7 +52,6 @@ import org.homio.addon.homekit.enums.HomekitAccessoryType;
 import org.homio.api.ContextVar;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
-import org.homio.api.state.StringType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -51,9 +60,9 @@ import java.util.concurrent.*;
 import java.util.function.Function;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.homio.addon.homekit.HomekitCharacteristicFactory.*;
+import static org.homio.addon.homekit.HomekitCharacteristicFactory.createMapping;
+import static org.homio.addon.homekit.HomekitCharacteristicFactory.getKeyFromMapping;
 import static org.homio.addon.homekit.enums.HomekitAccessoryType.*;
-import static org.homio.addon.homekit.enums.HomekitCharacteristicType.RemainingDuration;
 
 @Log4j2
 public class HomekitAccessoryFactory {
@@ -286,19 +295,17 @@ public class HomekitAccessoryFactory {
                 put("FAUCET", ValveTypeEnum.WATER_FAUCET);
             }
         };
-        private final ContextVar.Variable inUseStatus;
         private final ScheduledExecutorService timerService = Executors.newSingleThreadScheduledExecutor();
-        private final ContextVar.Variable remainingDurationVar;
         private final boolean homekitTimer;
+        private final InUseCharacteristic inUseStatusCharacteristic;
+        private final Optional<RemainingDurationCharacteristic> remainingDurationCharacteristic;
         private ScheduledFuture<?> valveTimer;
         private ValveTypeEnum valveType;
 
         public HomekitValve(@NotNull HomekitEndpointContext ctx) {
             super(ctx, ctx.endpoint().getActiveState(), ValveService.class);
-            inUseStatus = getVariable("inuseStatus", HomekitEndpointEntity::getInuseStatus);
+            inUseStatusCharacteristic = getCharacteristic(InUseCharacteristic.class);
             homekitTimer = false; // getAccessoryConfigurationAsBoolean(CONFIG_TIMER, false);
-
-            var remainingDurationCharacteristic = getCharacteristic(RemainingDurationCharacteristic.class);
 
             /*if (homekitTimer && remainingDurationCharacteristic == null) {
                 addRemainingDurationCharacteristic(getRootAccessory(), getUpdater(), service);
@@ -307,10 +314,10 @@ public class HomekitAccessoryFactory {
             valveTypeConfig = valveTypeConfig; // getAccessoryConfiguration(CONFIG_VALVE_TYPE_DEPRECATED, valveTypeConfig);
             var valveType = CONFIG_VALVE_TYPE_MAPPING.get(valveTypeConfig.toUpperCase());
             this.valveType = valveType != null ? valveType : ValveTypeEnum.GENERIC;
-            this.remainingDurationVar = getVariable("remainingDuration", HomekitEndpointEntity::getRemainingDuration);
+            remainingDurationCharacteristic = getCharacteristicOpt(RemainingDurationCharacteristic.class);
         }
 
-        private void addRemainingDurationCharacteristic(ValveService service) {
+        /*private void addRemainingDurationCharacteristic(ValveService service) {
             service.addOptionalCharacteristic(new RemainingDurationCharacteristic(() -> {
                 int remainingTime = 0;
                 ScheduledFuture<?> future = valveTimer;
@@ -320,7 +327,7 @@ public class HomekitAccessoryFactory {
                 return completedFuture(remainingTime);
             }, getSubscriber(remainingDurationVar, ctx, RemainingDuration),
                     getUnsubscriber(remainingDurationVar, ctx, RemainingDuration)));
-        }
+        }*/
 
         @Override
         public CompletableFuture<ActiveEnum> getValveActive() {
@@ -375,17 +382,17 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<InUseEnum> getValveInUse() {
-            return completedFuture(inUseStatus.getValue().boolValue() ? InUseEnum.IN_USE : InUseEnum.NOT_IN_USE);
+            return inUseStatusCharacteristic.getEnumValue();
         }
 
         @Override
         public void subscribeValveInUse(HomekitCharacteristicChangeCallback callback) {
-            subscribe(inUseStatus, callback);
+            inUseStatusCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeValveInUse() {
-            unsubscribe(inUseStatus);
+            inUseStatusCharacteristic.unsubscribe();
         }
 
         @Override
@@ -457,15 +464,15 @@ public class HomekitAccessoryFactory {
 
     private static class HomekitBattery extends AbstractHomekitAccessory implements BatteryAccessory {
 
-        private final ContextVar.Variable lowBatteryVar;
-        private final ContextVar.Variable chargingBatteryVar;
         private final int lowThreshold;
+        private final Optional<StatusLowBatteryCharacteristic> statusLowBatteryCharacteristic;
+        private final Optional<ChargingStateCharacteristic> chargingBatteryCharacteristic;
 
         public HomekitBattery(@NotNull HomekitEndpointContext ctx) {
             super(ctx, ctx.endpoint().getBatteryLevel(), BatteryService.class);
             lowThreshold = getVariableValue(HomekitEndpointEntity::getBatteryLowThreshold, new DecimalType(20)).intValue();
-            lowBatteryVar = getVariable("statusLowBattery", HomekitEndpointEntity::getStatusLowBattery);
-            chargingBatteryVar = getVariable("batteryChargingState", HomekitEndpointEntity::getBatteryChargingState);
+            statusLowBatteryCharacteristic = getCharacteristicOpt(StatusLowBatteryCharacteristic.class);
+            chargingBatteryCharacteristic = getCharacteristicOpt(ChargingStateCharacteristic.class);
 
         }
 
@@ -476,14 +483,12 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<StatusLowBatteryEnum> getLowBatteryState() {
-            return completedFuture(lowBatteryVar.getValue().boolValue(lowThreshold) ? StatusLowBatteryEnum.LOW : StatusLowBatteryEnum.NORMAL);
+            return statusLowBatteryCharacteristic.map(EnumCharacteristic::getEnumValue).orElse(completedFuture(StatusLowBatteryEnum.NORMAL));
         }
 
         @Override
         public CompletableFuture<ChargingStateEnum> getChargingState() {
-            return completedFuture(chargingBatteryVar != null
-                    ? chargingBatteryVar.getValue().boolValue() ? ChargingStateEnum.CHARGING : ChargingStateEnum.NOT_CHARGING
-                    : ChargingStateEnum.NOT_CHARABLE);
+            return chargingBatteryCharacteristic.map(EnumCharacteristic::getEnumValue).orElse(completedFuture(ChargingStateEnum.NOT_CHARABLE));
         }
 
         @Override
@@ -493,12 +498,12 @@ public class HomekitAccessoryFactory {
 
         @Override
         public void subscribeLowBatteryState(HomekitCharacteristicChangeCallback callback) {
-            subscribe(lowBatteryVar, callback);
+            statusLowBatteryCharacteristic.ifPresent(c -> subscribe(callback));
         }
 
         @Override
         public void subscribeBatteryChargingState(HomekitCharacteristicChangeCallback callback) {
-            subscribe(chargingBatteryVar, callback);
+            chargingBatteryCharacteristic.ifPresent(c -> subscribe(callback));
         }
 
         @Override
@@ -508,12 +513,12 @@ public class HomekitAccessoryFactory {
 
         @Override
         public void unsubscribeLowBatteryState() {
-            unsubscribe(lowBatteryVar);
+            statusLowBatteryCharacteristic.ifPresent(c -> unsubscribe());
         }
 
         @Override
         public void unsubscribeBatteryChargingState() {
-            unsubscribe(chargingBatteryVar);
+            chargingBatteryCharacteristic.ifPresent(c -> unsubscribe());
         }
     }
 
@@ -767,21 +772,21 @@ public class HomekitAccessoryFactory {
         private final List<CurrentHeaterCoolerStateEnum> customCurrentStateList = new ArrayList<>();
         private final List<TargetHeaterCoolerStateEnum> customTargetStateList = new ArrayList<>();
 
-        private final ContextVar.Variable currentTemperatureVar;
-        private final ContextVar.Variable targetHeatingCoolStateVar;
-        private final Map<TargetHeaterCoolerStateEnum, Object> targetStateMapping;
-        private final ContextVar.Variable currentHeaterCoolerStateVar;
-        private final Map<CurrentHeaterCoolerStateEnum, Object> currentStateMapping;
+        // private final Map<TargetHeaterCoolerStateEnum, Object> targetStateMapping;
+        // private final Map<CurrentHeaterCoolerStateEnum, Object> currentStateMapping;
+        private final CurrentTemperatureCharacteristic currentTemperatureCh;
+        private final CurrentHeaterCoolerStateCharacteristic currentHeaterCoolerStateCh;
+        private final TargetHeaterCoolerStateCharacteristic targetHeaterCoolerStateCh;
 
         public HomekitHeaterCooler(@NotNull HomekitEndpointContext ctx) {
             super(ctx, null);
-            currentTemperatureVar = getVariable("currentTemperature", HomekitEndpointEntity::getCurrentTemperature);
-            currentHeaterCoolerStateVar = getVariable("currentHeaterCoolerState", HomekitEndpointEntity::getCurrentHeaterCoolerState);
-            targetHeatingCoolStateVar = getVariable("targetHeatingCoolingState", HomekitEndpointEntity::getTargetHeatingCoolingState);
-            targetStateMapping = createMapping(targetHeatingCoolStateVar, TargetHeaterCoolerStateEnum.class,
+            currentTemperatureCh = getCharacteristic(CurrentTemperatureCharacteristic.class);
+            currentHeaterCoolerStateCh = getCharacteristic(CurrentHeaterCoolerStateCharacteristic.class);
+            targetHeaterCoolerStateCh = getCharacteristic(TargetHeaterCoolerStateCharacteristic.class);
+            /*targetStateMapping = createMapping(targetHeatingCoolStateVar, TargetHeaterCoolerStateEnum.class,
                     customTargetStateList);
             currentStateMapping = createMapping(currentHeaterCoolerStateVar, CurrentHeaterCoolerStateEnum.class,
-                    customCurrentStateList);
+                    customCurrentStateList);*/
 
             var service = new HeaterCoolerService(this);
 
@@ -796,69 +801,70 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CurrentHeaterCoolerStateEnum[] getCurrentHeaterCoolerStateValidValues() {
-            return customCurrentStateList.isEmpty()
+            return currentHeaterCoolerStateCh.getValidValues();
+            /*return customCurrentStateList.isEmpty()
                     ? currentStateMapping.keySet().toArray(new CurrentHeaterCoolerStateEnum[0])
-                    : customCurrentStateList.toArray(new CurrentHeaterCoolerStateEnum[0]);
+                    : customCurrentStateList.toArray(new CurrentHeaterCoolerStateEnum[0]);*/
         }
 
         @Override
         public TargetHeaterCoolerStateEnum[] getTargetHeaterCoolerStateValidValues() {
-            return customTargetStateList.isEmpty() ? targetStateMapping.keySet().toArray(new TargetHeaterCoolerStateEnum[0])
-                    : customTargetStateList.toArray(new TargetHeaterCoolerStateEnum[0]);
+            return targetHeaterCoolerStateCh.getValidValues();
+            /*return customTargetStateList.isEmpty() ? targetStateMapping.keySet().toArray(new TargetHeaterCoolerStateEnum[0])
+                    : customTargetStateList.toArray(new TargetHeaterCoolerStateEnum[0]);*/
         }
 
         @Override
         public CompletableFuture<Double> getCurrentTemperature() {
-            return completedFuture(currentTemperatureVar.getValue().doubleValue(currentTemperatureVar.getMinValue(0)));
+            return currentTemperatureCh.getValue();
         }
 
         @Override
         public CompletableFuture<CurrentHeaterCoolerStateEnum> getCurrentHeaterCoolerState() {
-            return completedFuture(getKeyFromMapping(currentHeaterCoolerStateVar, currentStateMapping,
-                    CurrentHeaterCoolerStateEnum.INACTIVE));
+            return currentHeaterCoolerStateCh.getEnumValue();
         }
 
         @Override
         public CompletableFuture<TargetHeaterCoolerStateEnum> getTargetHeaterCoolerState() {
-            return completedFuture(
-                    getKeyFromMapping(targetHeatingCoolStateVar, targetStateMapping, TargetHeaterCoolerStateEnum.AUTO));
+            return targetHeaterCoolerStateCh.getEnumValue();
         }
 
+        @SneakyThrows
         @Override
         public CompletableFuture<Void> setTargetHeaterCoolerState(TargetHeaterCoolerStateEnum state) {
-            updateVar(targetHeatingCoolStateVar, new StringType((String) targetStateMapping.get(state)));
+            targetHeaterCoolerStateCh.setValue(state);
             return completedFuture(null);
         }
 
         @Override
         public void subscribeCurrentHeaterCoolerState(HomekitCharacteristicChangeCallback callback) {
-            subscribe(currentHeaterCoolerStateVar, callback);
+            currentHeaterCoolerStateCh.subscribe(callback);
         }
 
         @Override
         public void unsubscribeCurrentHeaterCoolerState() {
-            unsubscribe(currentHeaterCoolerStateVar);
+            currentHeaterCoolerStateCh.unsubscribe();
         }
 
         @Override
         public void subscribeTargetHeaterCoolerState(HomekitCharacteristicChangeCallback callback) {
-            subscribe(targetHeatingCoolStateVar, callback);
+            targetHeaterCoolerStateCh.subscribe(callback);
         }
 
         @Override
         public void unsubscribeTargetHeaterCoolerState() {
-            unsubscribe(targetHeatingCoolStateVar);
+            targetHeaterCoolerStateCh.unsubscribe();
         }
 
         @Override
         public void subscribeCurrentTemperature(HomekitCharacteristicChangeCallback callback) {
-            subscribe(currentTemperatureVar, callback);
+            currentTemperatureCh.subscribe(callback);
 
         }
 
         @Override
         public void unsubscribeCurrentTemperature() {
-            unsubscribe(currentTemperatureVar);
+            currentTemperatureCh.unsubscribe();
         }
     }
 
@@ -921,15 +927,13 @@ public class HomekitAccessoryFactory {
     }
 
     private static class HomekitLock extends AbstractHomekitAccessory implements LockMechanismAccessory {
-        private final ContextVar.Variable lockTargetStateVar;
         private final Map<LockCurrentStateEnum, Object> currentStateMapping;
-        private final Map<LockTargetStateEnum, Object> targetStateMapping;
+        private final LockTargetStateCharacteristic lockTargetStateCh;
 
         public HomekitLock(@NotNull HomekitEndpointContext ctx) {
             super(ctx, ctx.endpoint().getLockCurrentState(), LockMechanismService.class);
-            lockTargetStateVar = getVariable("lockTargetState", HomekitEndpointEntity::getLockTargetState);
+            lockTargetStateCh = getCharacteristic(LockTargetStateCharacteristic.class);
             currentStateMapping = createMapping(variable, LockCurrentStateEnum.class);
-            targetStateMapping = createMapping(lockTargetStateVar, LockTargetStateEnum.class);
         }
 
         @Override
@@ -940,13 +944,13 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<LockTargetStateEnum> getLockTargetState() {
-            return completedFuture(getKeyFromMapping(lockTargetStateVar,
-                    targetStateMapping, LockTargetStateEnum.UNSECURED));
+            return lockTargetStateCh.getEnumValue();
         }
 
+        @SneakyThrows
         @Override
         public CompletableFuture<Void> setLockTargetState(LockTargetStateEnum state) {
-            updateVar(lockTargetStateVar, new StringType((String) targetStateMapping.get(state)));
+            lockTargetStateCh.setValue(state);
             return completedFuture(null);
         }
 
@@ -962,12 +966,12 @@ public class HomekitAccessoryFactory {
 
         @Override
         public void subscribeLockTargetState(HomekitCharacteristicChangeCallback callback) {
-            subscribe(lockTargetStateVar, callback);
+            lockTargetStateCh.subscribe(callback);
         }
 
         @Override
         public void unsubscribeLockTargetState() {
-            unsubscribe(lockTargetStateVar);
+            lockTargetStateCh.unsubscribe();
         }
     }
 
@@ -1001,11 +1005,11 @@ public class HomekitAccessoryFactory {
     }
 
     private static class HomekitOutlet extends AbstractHomekitAccessory implements OutletAccessory {
-        private final ContextVar.Variable inUseStatus;
+        private final InUseCharacteristic inUseStatusCharacteristic;
 
         public HomekitOutlet(@NotNull HomekitEndpointContext ctx) {
             super(ctx, ctx.endpoint().getOnState(), OutletService.class);
-            inUseStatus = getVariable("inuseStatus", HomekitEndpointEntity::getInuseStatus);
+            inUseStatusCharacteristic = getCharacteristic(InUseCharacteristic.class);
         }
 
         @Override
@@ -1014,8 +1018,9 @@ public class HomekitAccessoryFactory {
         }
 
         @Override
+        @SneakyThrows
         public CompletableFuture<Boolean> getOutletInUse() {
-            return completedFuture(inUseStatus.getValue().boolValue());
+            return completedFuture(inUseStatusCharacteristic.getEnumValue().get().equals(InUseEnum.IN_USE));
         }
 
         @Override
@@ -1031,7 +1036,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public void subscribeOutletInUse(HomekitCharacteristicChangeCallback callback) {
-            subscribe(inUseStatus, callback);
+            inUseStatusCharacteristic.subscribe(callback);
         }
 
         @Override
@@ -1041,7 +1046,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public void unsubscribeOutletInUse() {
-            unsubscribe(inUseStatus);
+            inUseStatusCharacteristic.unsubscribe();
         }
     }
 
@@ -1196,15 +1201,15 @@ public class HomekitAccessoryFactory {
     }
 
     private static class HomekitSmartSpeaker extends AbstractHomekitAccessory implements SmartSpeakerAccessory {
-        private final ContextVar.Variable targetMediaStateVar;
         private final Map<CurrentMediaStateEnum, Object> currentMediaState;
-        private final Map<TargetMediaStateEnum, Object> targetMediaState;
+        // private final Map<TargetMediaStateEnum, Object> targetMediaState;
+        private final TargetMediaStateCharacteristic targetMediaStateCh;
 
         public HomekitSmartSpeaker(@NotNull HomekitEndpointContext ctx) {
             super(ctx, ctx.endpoint().getCurrentMediaState(), SmartSpeakerService.class);
-            targetMediaStateVar = getVariable("targetMediaState", HomekitEndpointEntity::getTargetMediaState);
+            targetMediaStateCh = getCharacteristic(TargetMediaStateCharacteristic.class);
             currentMediaState = createMapping(variable, CurrentMediaStateEnum.class);
-            targetMediaState = createMapping(targetMediaStateVar, TargetMediaStateEnum.class);
+            // targetMediaState = createMapping(targetMediaStateVar, TargetMediaStateEnum.class);
         }
 
         @Override
@@ -1225,40 +1230,41 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<TargetMediaStateEnum> getTargetMediaState() {
-            return completedFuture(getKeyFromMapping(targetMediaStateVar, targetMediaState, TargetMediaStateEnum.STOP));
+            return targetMediaStateCh.getEnumValue();
         }
 
+        @SneakyThrows
         @Override
         public CompletableFuture<Void> setTargetMediaState(final TargetMediaStateEnum targetState) {
-            HomekitCharacteristicFactory.setHomioVariableFromEnum(targetMediaStateVar, targetState, targetMediaState, ctx);
+            targetMediaStateCh.setValue(targetState);
             return completedFuture(null);
         }
 
         @Override
         public void subscribeTargetMediaState(final HomekitCharacteristicChangeCallback callback) {
-            subscribe(targetMediaStateVar, callback);
+            targetMediaStateCh.subscribe(callback);
         }
 
         @Override
         public void unsubscribeTargetMediaState() {
-            unsubscribe(targetMediaStateVar);
+            targetMediaStateCh.unsubscribe();
         }
     }
 
     private static class HomekitSecuritySystem extends AbstractHomekitAccessory implements SecuritySystemAccessory {
         private final Map<CurrentSecuritySystemStateEnum, Object> currentStateMapping;
-        private final Map<TargetSecuritySystemStateEnum, Object> targetStateMapping;
+        // private final Map<TargetSecuritySystemStateEnum, Object> targetStateMapping;
         private final List<CurrentSecuritySystemStateEnum> customCurrentStateList = new ArrayList<>();
         private final List<TargetSecuritySystemStateEnum> customTargetStateList = new ArrayList<>();
-        private final ContextVar.Variable targetSecuritySystemStateVar;
+        private final TargetSecuritySystemStateCharacteristic targetSecuritySystemStateCh;
 
         public HomekitSecuritySystem(@NotNull HomekitEndpointContext ctx) {
             super(ctx, ctx.endpoint().getCurrentSecuritySystemState(), SecuritySystemService.class);
             currentStateMapping = createMapping(variable, CurrentSecuritySystemStateEnum.class,
                     customCurrentStateList);
-            targetSecuritySystemStateVar = getVariable("targetSecuritySystemState", HomekitEndpointEntity::getTargetSecuritySystemState);
-            targetStateMapping = createMapping(targetSecuritySystemStateVar, TargetSecuritySystemStateEnum.class,
-                    customTargetStateList);
+            targetSecuritySystemStateCh = getCharacteristic(TargetSecuritySystemStateCharacteristic.class);
+            /*targetStateMapping = createMapping(targetSecuritySystemStateVar, TargetSecuritySystemStateEnum.class,
+                    customTargetStateList);*/
         }
 
         @Override
@@ -1270,9 +1276,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public TargetSecuritySystemStateEnum[] getTargetSecuritySystemStateValidValues() {
-            return customTargetStateList.isEmpty()
-                    ? targetStateMapping.keySet().toArray(new TargetSecuritySystemStateEnum[0])
-                    : customTargetStateList.toArray(new TargetSecuritySystemStateEnum[0]);
+            return targetSecuritySystemStateCh.getValidValues();
         }
 
         @Override
@@ -1283,13 +1287,13 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<TargetSecuritySystemStateEnum> getTargetSecuritySystemState() {
-            return CompletableFuture.completedFuture(getKeyFromMapping(targetSecuritySystemStateVar, targetStateMapping,
-                    TargetSecuritySystemStateEnum.DISARM));
+            return targetSecuritySystemStateCh.getEnumValue();
         }
 
+        @SneakyThrows
         @Override
         public void setTargetSecuritySystemState(TargetSecuritySystemStateEnum state) {
-            HomekitCharacteristicFactory.setHomioVariableFromEnum(targetSecuritySystemStateVar, state, targetStateMapping, ctx);
+            targetSecuritySystemStateCh.setValue(state);
         }
 
         @Override
@@ -1304,12 +1308,12 @@ public class HomekitAccessoryFactory {
 
         @Override
         public void subscribeTargetSecuritySystemState(HomekitCharacteristicChangeCallback callback) {
-            subscribe(targetSecuritySystemStateVar, callback);
+            targetSecuritySystemStateCh.subscribe(callback);
         }
 
         @Override
         public void unsubscribeTargetSecuritySystemState() {
-            unsubscribe(targetSecuritySystemStateVar);
+            targetSecuritySystemStateCh.unsubscribe();
         }
     }
 }

@@ -55,6 +55,7 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
         if (homekitServer != null) {
             homekitServer.stop();
         }
+        endpoints.clear();
         homekitServer = null;
         bridge = null;
     }
