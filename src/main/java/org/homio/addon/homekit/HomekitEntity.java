@@ -21,6 +21,7 @@ import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.endpoint.BaseDeviceEndpoint;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.service.EntityService;
+import org.homio.api.state.State;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
@@ -258,21 +259,23 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
         private final @NotNull HomekitEndpointContext ctx;
 
         public HomekitEndpointUI(HomekitEndpointContext ctx) {
-            super(ctx.accessory().getVariable().getIconModel(),
-                    "HOMEKIT",
-                    ctx.service().context(),
-                    ctx.owner(),
-                    ctx.endpoint().getEntityID(),
-                    false,
-                    ctx.accessory().getVariable() == null ?
-                            EndpointType.string :
-                            ctx.accessory().getVariable().getRestriction().getEndpointType());
-            if (ctx.accessory().getVariable() != null) {
-                setInitialValue(ctx.accessory().getVariable().getValue());
-            }
+            super("HOMEKIT", ctx.service().context());
             this.ctx = ctx;
-            setIgnoreDuplicates(false); // to allow update UI even if the same value
-            ctx.setUpdateUI(() -> setValue(ctx.accessory().getVariable().getValue(), true));
+            setIgnoreDuplicates(false);
+            setEndpointEntityID(ctx.endpoint().getEntityID());
+            setDevice(ctx.owner());
+            setEndpointType(EndpointType.string);
+            setInitialValue(getAccessoryValue());
+            ctx.setUpdateUI(() -> setValue(getAccessoryValue(), true));
+        }
+
+        private State getAccessoryValue() {
+            try {
+                var masterCharacteristic = ctx.accessory().getMasterCharacteristic();
+                return masterCharacteristic == null ? State.empty : State.of(masterCharacteristic.getValue().get());
+            } catch (Exception e) {
+                return State.empty;
+            }
         }
 
         @Override
@@ -288,7 +291,6 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
             var endpoint = ctx.endpoint();
             var accessory = ctx.accessory();
             List<Item> items = new ArrayList<>();
-            accessory.getExtraVariables().forEach((k, v) -> items.add(new Item(k, v)));
             ctx.characteristics().forEach(ch -> items.add(new Item(ch.name(), ch.variable())));
 
             items.sort(Comparator.comparingInt(i -> i.name.length()));

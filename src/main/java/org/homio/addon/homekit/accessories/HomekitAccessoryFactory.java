@@ -3,19 +3,20 @@ package org.homio.addon.homekit.accessories;
 import io.github.hapjava.accessories.*;
 import io.github.hapjava.characteristics.Characteristic;
 import io.github.hapjava.characteristics.HomekitCharacteristicChangeCallback;
+import io.github.hapjava.characteristics.impl.airquality.AirQualityCharacteristic;
 import io.github.hapjava.characteristics.impl.airquality.AirQualityEnum;
+import io.github.hapjava.characteristics.impl.audio.MuteCharacteristic;
+import io.github.hapjava.characteristics.impl.base.BaseCharacteristic;
 import io.github.hapjava.characteristics.impl.base.EnumCharacteristic;
-import io.github.hapjava.characteristics.impl.battery.ChargingStateCharacteristic;
-import io.github.hapjava.characteristics.impl.battery.ChargingStateEnum;
-import io.github.hapjava.characteristics.impl.battery.StatusLowBatteryCharacteristic;
-import io.github.hapjava.characteristics.impl.battery.StatusLowBatteryEnum;
+import io.github.hapjava.characteristics.impl.battery.*;
+import io.github.hapjava.characteristics.impl.carbondioxidesensor.CarbonDioxideDetectedCharacteristic;
 import io.github.hapjava.characteristics.impl.carbondioxidesensor.CarbonDioxideDetectedEnum;
+import io.github.hapjava.characteristics.impl.carbonmonoxidesensor.CarbonMonoxideDetectedCharacteristic;
 import io.github.hapjava.characteristics.impl.carbonmonoxidesensor.CarbonMonoxideDetectedEnum;
-import io.github.hapjava.characteristics.impl.common.ActiveEnum;
-import io.github.hapjava.characteristics.impl.common.InUseCharacteristic;
-import io.github.hapjava.characteristics.impl.common.InUseEnum;
-import io.github.hapjava.characteristics.impl.common.ObstructionDetectedCharacteristic;
+import io.github.hapjava.characteristics.impl.common.*;
+import io.github.hapjava.characteristics.impl.contactsensor.ContactSensorStateCharacteristic;
 import io.github.hapjava.characteristics.impl.contactsensor.ContactStateEnum;
+import io.github.hapjava.characteristics.impl.filtermaintenance.FilterChangeIndicationCharacteristic;
 import io.github.hapjava.characteristics.impl.filtermaintenance.FilterChangeIndicationEnum;
 import io.github.hapjava.characteristics.impl.garagedoor.CurrentDoorStateCharacteristic;
 import io.github.hapjava.characteristics.impl.garagedoor.TargetDoorStateCharacteristic;
@@ -23,17 +24,29 @@ import io.github.hapjava.characteristics.impl.heatercooler.CurrentHeaterCoolerSt
 import io.github.hapjava.characteristics.impl.heatercooler.CurrentHeaterCoolerStateEnum;
 import io.github.hapjava.characteristics.impl.heatercooler.TargetHeaterCoolerStateCharacteristic;
 import io.github.hapjava.characteristics.impl.heatercooler.TargetHeaterCoolerStateEnum;
+import io.github.hapjava.characteristics.impl.humiditysensor.CurrentRelativeHumidityCharacteristic;
+import io.github.hapjava.characteristics.impl.leaksensor.LeakDetectedStateCharacteristic;
 import io.github.hapjava.characteristics.impl.leaksensor.LeakDetectedStateEnum;
+import io.github.hapjava.characteristics.impl.lightsensor.CurrentAmbientLightLevelCharacteristic;
+import io.github.hapjava.characteristics.impl.lock.LockCurrentStateCharacteristic;
 import io.github.hapjava.characteristics.impl.lock.LockCurrentStateEnum;
 import io.github.hapjava.characteristics.impl.lock.LockTargetStateCharacteristic;
 import io.github.hapjava.characteristics.impl.lock.LockTargetStateEnum;
+import io.github.hapjava.characteristics.impl.motionsensor.MotionDetectedCharacteristic;
+import io.github.hapjava.characteristics.impl.occupancysensor.OccupancyDetectedCharacteristic;
 import io.github.hapjava.characteristics.impl.occupancysensor.OccupancyDetectedEnum;
+import io.github.hapjava.characteristics.impl.outlet.OutletInUseCharacteristic;
+import io.github.hapjava.characteristics.impl.securitysystem.CurrentSecuritySystemStateCharacteristic;
 import io.github.hapjava.characteristics.impl.securitysystem.CurrentSecuritySystemStateEnum;
 import io.github.hapjava.characteristics.impl.securitysystem.TargetSecuritySystemStateCharacteristic;
 import io.github.hapjava.characteristics.impl.securitysystem.TargetSecuritySystemStateEnum;
+import io.github.hapjava.characteristics.impl.slat.CurrentSlatStateCharacteristic;
 import io.github.hapjava.characteristics.impl.slat.CurrentSlatStateEnum;
+import io.github.hapjava.characteristics.impl.slat.SlatTypeCharacteristic;
 import io.github.hapjava.characteristics.impl.slat.SlatTypeEnum;
+import io.github.hapjava.characteristics.impl.smokesensor.SmokeDetectedCharacteristic;
 import io.github.hapjava.characteristics.impl.smokesensor.SmokeDetectedStateEnum;
+import io.github.hapjava.characteristics.impl.television.CurrentMediaStateCharacteristic;
 import io.github.hapjava.characteristics.impl.television.CurrentMediaStateEnum;
 import io.github.hapjava.characteristics.impl.television.TargetMediaStateCharacteristic;
 import io.github.hapjava.characteristics.impl.television.TargetMediaStateEnum;
@@ -49,9 +62,7 @@ import org.homio.addon.homekit.HomekitCharacteristicFactory;
 import org.homio.addon.homekit.HomekitEndpointContext;
 import org.homio.addon.homekit.HomekitEndpointEntity;
 import org.homio.addon.homekit.enums.HomekitAccessoryType;
-import org.homio.api.ContextVar;
 import org.homio.api.state.DecimalType;
-import org.homio.api.state.OnOffType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -138,6 +149,11 @@ public class HomekitAccessoryFactory {
         }
 
         @Override
+        public BaseCharacteristic getMasterCharacteristic() {
+            return null;
+        }
+
+        @Override
         public Collection<Characteristic> getCharacteristics() {
             return List.of();
         }
@@ -148,46 +164,37 @@ public class HomekitAccessoryFactory {
         }
 
         @Override
-        public ContextVar.Variable getVariable() {
-            return null;
-        }
-
-        @Override
-        public Map<String, ContextVar.Variable> getExtraVariables() {
-            return Map.of();
-        }
-
-        @Override
         public int getId() {
             return groupName.hashCode();
         }
     }
 
-    private static class HomekitSwitch extends AbstractHomekitAccessory implements SwitchAccessory {
+    private static class HomekitSwitch extends AbstractHomekitAccessory<OnCharacteristic> implements SwitchAccessory {
 
         public HomekitSwitch(@NotNull HomekitEndpointContext c) {
-            super(c, c.endpoint().getOnState(), SwitchService.class);
+            super(c, OnCharacteristic.class, SwitchService.class);
         }
 
         @Override
         public CompletableFuture<Boolean> getSwitchState() {
-            return completedFuture(getVarValue(variable));
+            return masterCharacteristic.getValue();
         }
 
+        @SneakyThrows
         @Override
         public CompletableFuture<Void> setSwitchState(boolean value) {
-            updateVar(variable, value);
+            masterCharacteristic.setValue(value);
             return completedFuture(null);
         }
 
         @Override
         public void subscribeSwitchState(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeSwitchState() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
     }
 
@@ -198,79 +205,69 @@ public class HomekitAccessoryFactory {
         }
     }
 
-    private static class HomekitSmokeSensor extends AbstractHomekitAccessory implements SmokeSensorAccessory {
-
-        private final @NotNull Map<SmokeDetectedStateEnum, Object> mapping;
+    private static class HomekitSmokeSensor extends AbstractHomekitAccessory<SmokeDetectedCharacteristic> implements SmokeSensorAccessory {
 
         public HomekitSmokeSensor(@NotNull HomekitEndpointContext c) {
-            super(c, c.endpoint().getDetectedState(), SmokeSensorService.class);
-            mapping = createMapping(variable, SmokeDetectedStateEnum.class);
+            super(c, SmokeDetectedCharacteristic.class, SmokeSensorService.class);
         }
 
         @Override
         public CompletableFuture<SmokeDetectedStateEnum> getSmokeDetectedState() {
-            return completedFuture(getKeyFromMapping(variable, mapping, SmokeDetectedStateEnum.NOT_DETECTED));
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
         public void subscribeSmokeDetectedState(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeSmokeDetectedState() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
     }
 
-    private static class HomekitContactSensor extends AbstractHomekitAccessory implements ContactSensorAccessory {
-
-        private final @NotNull Map<ContactStateEnum, Object> mapping;
+    private static class HomekitContactSensor extends AbstractHomekitAccessory<ContactSensorStateCharacteristic> implements ContactSensorAccessory {
 
         public HomekitContactSensor(@NotNull HomekitEndpointContext c) {
-            super(c, c.endpoint().getDetectedState(), ContactSensorService.class);
-            mapping = createMapping(variable, ContactStateEnum.class);
+            super(c, ContactSensorStateCharacteristic.class, ContactSensorService.class);
         }
 
         @Override
         public CompletableFuture<ContactStateEnum> getCurrentState() {
-            return completedFuture(getKeyFromMapping(variable, mapping, ContactStateEnum.DETECTED));
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
         public void subscribeContactState(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeContactState() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
     }
 
-    private static class HomekitLeakSensor extends AbstractHomekitAccessory implements LeakSensorAccessory {
-
-        private final @NotNull Map<LeakDetectedStateEnum, Object> mapping;
+    private static class HomekitLeakSensor extends AbstractHomekitAccessory<LeakDetectedStateCharacteristic> implements LeakSensorAccessory {
 
         public HomekitLeakSensor(@NotNull HomekitEndpointContext c) {
-            super(c, c.endpoint().getDetectedState(), LeakSensorService.class);
-            mapping = createMapping(variable, LeakDetectedStateEnum.class);
+            super(c, LeakDetectedStateCharacteristic.class, LeakSensorService.class);
         }
 
         @Override
         public CompletableFuture<LeakDetectedStateEnum> getLeakDetected() {
-            return completedFuture(
-                    getKeyFromMapping(variable, mapping, LeakDetectedStateEnum.LEAK_NOT_DETECTED));
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
         public void subscribeLeakDetected(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeLeakDetected() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
     }
 
@@ -281,7 +278,7 @@ public class HomekitAccessoryFactory {
     }
 
     @Log4j2
-    private static class HomekitValve extends AbstractHomekitAccessory implements ValveAccessory {
+    private static class HomekitValve extends AbstractHomekitAccessory<ActiveCharacteristic> implements ValveAccessory {
         public static final String CONFIG_DEFAULT_DURATION = "homekitDefaultDuration";
         private static final String CONFIG_VALVE_TYPE = "ValveType";
         private static final String CONFIG_VALVE_TYPE_DEPRECATED = "homekitValveType";
@@ -303,7 +300,7 @@ public class HomekitAccessoryFactory {
         private ValveTypeEnum valveType;
 
         public HomekitValve(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getActiveState(), ValveService.class);
+            super(ctx, ActiveCharacteristic.class, ValveService.class);
             inUseStatusCharacteristic = getCharacteristic(InUseCharacteristic.class);
             homekitTimer = false; // getAccessoryConfigurationAsBoolean(CONFIG_TIMER, false);
 
@@ -331,7 +328,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<ActiveEnum> getValveActive() {
-            return completedFuture(getVarValue(variable) ? ActiveEnum.ACTIVE : ActiveEnum.INACTIVE);
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
@@ -372,12 +369,12 @@ public class HomekitAccessoryFactory {
 
         @Override
         public void subscribeValveActive(HomekitCharacteristicChangeCallback callback) {
-            subscribe(variable, callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeValveActive() {
-            unsubscribe(variable);
+            masterCharacteristic.unsubscribe();
         }
 
         @Override
@@ -411,65 +408,64 @@ public class HomekitAccessoryFactory {
         }
     }
 
-    private static class HomekitAirQualitySensor extends AbstractHomekitAccessory implements AirQualityAccessory {
-        private final Map<AirQualityEnum, Object> qualityStateMapping;
+    private static class HomekitAirQualitySensor extends AbstractHomekitAccessory<AirQualityCharacteristic> implements AirQualityAccessory {
 
         public HomekitAirQualitySensor(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getAirQuality(), AirQualityService.class);
-            qualityStateMapping = createMapping(variable, AirQualityEnum.class);
+            super(ctx, AirQualityCharacteristic.class, AirQualityService.class);
         }
 
         @Override
         public CompletableFuture<AirQualityEnum> getAirQuality() {
-            return completedFuture(getKeyFromMapping(variable, qualityStateMapping, AirQualityEnum.UNKNOWN));
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
         public void subscribeAirQuality(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeAirQuality() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
     }
 
-    private static class HomekitBasicFan extends AbstractHomekitAccessory implements BasicFanAccessory {
+    private static class HomekitBasicFan extends AbstractHomekitAccessory<OnCharacteristic> implements BasicFanAccessory {
         public HomekitBasicFan(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getOnState(), BasicFanService.class);
+            super(ctx, OnCharacteristic.class, BasicFanService.class);
         }
 
         @Override
         public CompletableFuture<Boolean> isOn() {
-            return completedFuture(getVarValue(variable));
+            return masterCharacteristic.getValue();
         }
 
+        @SneakyThrows
         @Override
         public CompletableFuture<Void> setOn(boolean value) {
-            updateVar(variable, value);
+            masterCharacteristic.setValue(value);
             return completedFuture(null);
         }
 
         @Override
         public void subscribeOn(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeOn() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
     }
 
-    private static class HomekitBattery extends AbstractHomekitAccessory implements BatteryAccessory {
+    private static class HomekitBattery extends AbstractHomekitAccessory<BatteryLevelCharacteristic> implements BatteryAccessory {
 
         private final int lowThreshold;
         private final Optional<StatusLowBatteryCharacteristic> statusLowBatteryCharacteristic;
         private final Optional<ChargingStateCharacteristic> chargingBatteryCharacteristic;
 
         public HomekitBattery(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getBatteryLevel(), BatteryService.class);
+            super(ctx, BatteryLevelCharacteristic.class, BatteryService.class);
             lowThreshold = getVariableValue(HomekitEndpointEntity::getBatteryLowThreshold, new DecimalType(20)).intValue();
             statusLowBatteryCharacteristic = getCharacteristicOpt(StatusLowBatteryCharacteristic.class);
             chargingBatteryCharacteristic = getCharacteristicOpt(ChargingStateCharacteristic.class);
@@ -478,7 +474,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Integer> getBatteryLevel() {
-            return completedFuture(variable.getValue().intValue(0));
+            return masterCharacteristic.getValue();
         }
 
         @Override
@@ -493,32 +489,32 @@ public class HomekitAccessoryFactory {
 
         @Override
         public void subscribeBatteryLevel(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void subscribeLowBatteryState(HomekitCharacteristicChangeCallback callback) {
-            statusLowBatteryCharacteristic.ifPresent(c -> subscribe(callback));
+            statusLowBatteryCharacteristic.ifPresent(c -> c.subscribe(callback));
         }
 
         @Override
         public void subscribeBatteryChargingState(HomekitCharacteristicChangeCallback callback) {
-            chargingBatteryCharacteristic.ifPresent(c -> subscribe(callback));
+            chargingBatteryCharacteristic.ifPresent(c -> c.subscribe(callback));
         }
 
         @Override
         public void unsubscribeBatteryLevel() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
 
         @Override
         public void unsubscribeLowBatteryState() {
-            statusLowBatteryCharacteristic.ifPresent(c -> unsubscribe());
+            statusLowBatteryCharacteristic.ifPresent(BaseCharacteristic::unsubscribe);
         }
 
         @Override
         public void unsubscribeBatteryChargingState() {
-            chargingBatteryCharacteristic.ifPresent(c -> unsubscribe());
+            chargingBatteryCharacteristic.ifPresent(BaseCharacteristic::unsubscribe);
         }
     }
 
@@ -535,9 +531,9 @@ public class HomekitAccessoryFactory {
         }
     }
 
-    private static class HomekitDoorbell extends AbstractHomekitAccessory {
+    private static class HomekitDoorbell extends AbstractHomekitAccessory<ProgrammableSwitchEventCharacteristic> {
         public HomekitDoorbell(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getStatelessProgrammableSwitch(), DoorbellService.class);
+            super(ctx, ProgrammableSwitchEventCharacteristic.class, DoorbellService.class);
         }
     }
 
@@ -547,28 +543,25 @@ public class HomekitAccessoryFactory {
         }
     }
 
-    private static class HomekitFilter extends AbstractHomekitAccessory implements FilterMaintenanceAccessory {
-        private final Map<FilterChangeIndicationEnum, Object> mapping;
+    private static class HomekitFilter extends AbstractHomekitAccessory<FilterChangeIndicationCharacteristic> implements FilterMaintenanceAccessory {
 
         public HomekitFilter(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getFilterChangeIndication(), FilterMaintenanceService.class);
-            mapping = createMapping(variable, FilterChangeIndicationEnum.class);
+            super(ctx, FilterChangeIndicationCharacteristic.class, FilterMaintenanceService.class);
         }
 
         @Override
         public CompletableFuture<FilterChangeIndicationEnum> getFilterChangeIndication() {
-            return completedFuture(
-                    getKeyFromMapping(variable, mapping, FilterChangeIndicationEnum.NO_CHANGE_NEEDED));
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
         public void subscribeFilterChangeIndication(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeFilterChangeIndication() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
     }
 
@@ -578,26 +571,27 @@ public class HomekitAccessoryFactory {
         }
     }
 
-    private static class AbstractActiveHomekitAccessory extends AbstractHomekitAccessory {
+    private static class AbstractActiveHomekitAccessory extends AbstractHomekitAccessory<StatusActiveCharacteristic> {
         public AbstractActiveHomekitAccessory(@NotNull HomekitEndpointContext ctx, @Nullable Class<? extends Service> serviceClass) {
-            super(ctx, ctx.endpoint().getActiveState(), serviceClass);
+            super(ctx, StatusActiveCharacteristic.class, serviceClass);
         }
 
         public CompletableFuture<Boolean> isActive() {
-            return completedFuture(getVarValue(variable));
+            return masterCharacteristic.getValue();
         }
 
+        @SneakyThrows
         public CompletableFuture<Void> setActive(boolean value) {
-            updateVar(variable, value);
+            masterCharacteristic.setValue(value);
             return completedFuture(null);
         }
 
         public void subscribeActive(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         public void unsubscribeActive() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
     }
 
@@ -607,164 +601,154 @@ public class HomekitAccessoryFactory {
         }
     }
 
-    private static class HomekitOccupancySensor extends AbstractHomekitAccessory implements OccupancySensorAccessory {
-        private final Map<OccupancyDetectedEnum, Object> mapping;
+    private static class HomekitOccupancySensor extends AbstractHomekitAccessory<OccupancyDetectedCharacteristic> implements OccupancySensorAccessory {
 
         public HomekitOccupancySensor(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getDetectedState(), OccupancySensorService.class);
-            mapping = createMapping(variable, OccupancyDetectedEnum.class);
+            super(ctx, OccupancyDetectedCharacteristic.class, OccupancySensorService.class);
         }
 
         @Override
         public CompletableFuture<OccupancyDetectedEnum> getOccupancyDetected() {
-            return completedFuture(getKeyFromMapping(variable, mapping, OccupancyDetectedEnum.NOT_DETECTED));
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
         public void subscribeOccupancyDetected(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeOccupancyDetected() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
     }
 
-    private static class HomekitSlat extends AbstractHomekitAccessory implements SlatAccessory {
+    private static class HomekitSlat extends AbstractHomekitAccessory<CurrentSlatStateCharacteristic> implements SlatAccessory {
 
-        private final SlatTypeEnum slatType;
-        private final Map<CurrentSlatStateEnum, Object> currentSlatStateMapping;
+        private final Optional<SlatTypeCharacteristic> slatTypeCh;
 
         public HomekitSlat(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getCurrentSlatState(), SlatService.class);
-            slatType = getVariableValue(endpoint -> ctx.endpoint().getSlatType(), OnOffType.OFF).boolValue() ? SlatTypeEnum.VERTICAL : SlatTypeEnum.HORIZONTAL;
-            currentSlatStateMapping = createMapping(variable, CurrentSlatStateEnum.class);
+            super(ctx, CurrentSlatStateCharacteristic.class, SlatService.class);
+            slatTypeCh = getCharacteristicOpt(SlatTypeCharacteristic.class);
         }
 
         @Override
         public CompletableFuture<CurrentSlatStateEnum> getSlatState() {
-            return completedFuture(
-                    getKeyFromMapping(variable, currentSlatStateMapping, CurrentSlatStateEnum.FIXED));
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
         public void subscribeSlatState(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeSlatState() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
 
         @Override
         public CompletableFuture<SlatTypeEnum> getSlatType() {
-            return completedFuture(slatType);
+            return slatTypeCh.map(EnumCharacteristic::getEnumValue).orElse(completedFuture(SlatTypeEnum.HORIZONTAL));
         }
     }
 
-    private static class HomekitMotionSensor extends AbstractHomekitAccessory implements MotionSensorAccessory {
+    private static class HomekitMotionSensor extends AbstractHomekitAccessory<MotionDetectedCharacteristic> implements MotionSensorAccessory {
         public HomekitMotionSensor(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getDetectedState(), MotionSensorService.class);
+            super(ctx, MotionDetectedCharacteristic.class, MotionSensorService.class);
         }
 
         @Override
         public CompletableFuture<Boolean> getMotionDetected() {
-            return completedFuture(getVarValue(variable));
+            return masterCharacteristic.getValue();
         }
 
         @Override
         public void subscribeMotionDetected(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeMotionDetected() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
     }
 
-    private static class HomekitHumiditySensor extends AbstractHomekitAccessory implements HumiditySensorAccessory {
+    private static class HomekitHumiditySensor extends AbstractHomekitAccessory<CurrentRelativeHumidityCharacteristic> implements HumiditySensorAccessory {
         public HomekitHumiditySensor(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getRelativeHumidity(), HumiditySensorService.class);
+            super(ctx, CurrentRelativeHumidityCharacteristic.class, HumiditySensorService.class);
         }
 
         @Override
         public CompletableFuture<Double> getCurrentRelativeHumidity() {
-            return completedFuture(variable.getValue().doubleValue());
+            return masterCharacteristic.getValue();
         }
 
         @Override
         public void subscribeCurrentRelativeHumidity(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeCurrentRelativeHumidity() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
     }
 
-    private static class HomekitGarageDoorOpener extends AbstractHomekitAccessory {
+    private static class HomekitGarageDoorOpener extends AbstractHomekitAccessory<CurrentDoorStateCharacteristic> {
         public HomekitGarageDoorOpener(@NotNull HomekitEndpointContext ctx) {
             super(ctx);
             var obstructionDetectedCharacteristic = getCharacteristicOpt(ObstructionDetectedCharacteristic.class).orElseGet(
                     () -> new ObstructionDetectedCharacteristic(() -> completedFuture(false), (cb) -> {
                     }, () -> {
                     }));
-            addService(new GarageDoorOpenerService(getCharacteristic(CurrentDoorStateCharacteristic.class),
+            addService(new GarageDoorOpenerService(
+                    getCharacteristic(CurrentDoorStateCharacteristic.class),
                     getCharacteristic(TargetDoorStateCharacteristic.class), obstructionDetectedCharacteristic));
         }
     }
 
-    private static class HomekitCarbonDioxideSensor extends AbstractHomekitAccessory implements CarbonDioxideSensorAccessory {
-        private final Map<CarbonDioxideDetectedEnum, Object> mapping;
+    private static class HomekitCarbonDioxideSensor extends AbstractHomekitAccessory<CarbonDioxideDetectedCharacteristic> implements CarbonDioxideSensorAccessory {
 
         public HomekitCarbonDioxideSensor(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getDetectedState(), CarbonDioxideSensorService.class);
-            mapping = createMapping(variable, CarbonDioxideDetectedEnum.class);
+            super(ctx, CarbonDioxideDetectedCharacteristic.class, CarbonDioxideSensorService.class);
         }
 
         @Override
         public CompletableFuture<CarbonDioxideDetectedEnum> getCarbonDioxideDetectedState() {
-            return completedFuture(
-                    getKeyFromMapping(variable, mapping, CarbonDioxideDetectedEnum.NORMAL));
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
         public void subscribeCarbonDioxideDetectedState(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeCarbonDioxideDetectedState() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
     }
 
-    private static class HomekitCarbonMonoxideSensor extends AbstractHomekitAccessory implements CarbonMonoxideSensorAccessory {
-        private final Map<CarbonMonoxideDetectedEnum, Object> mapping;
+    private static class HomekitCarbonMonoxideSensor extends AbstractHomekitAccessory<CarbonMonoxideDetectedCharacteristic> implements CarbonMonoxideSensorAccessory {
 
         public HomekitCarbonMonoxideSensor(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getDetectedState(), CarbonMonoxideSensorService.class);
-            mapping = createMapping(variable, CarbonMonoxideDetectedEnum.class);
+            super(ctx, CarbonMonoxideDetectedCharacteristic.class, CarbonMonoxideSensorService.class);
         }
 
         @Override
         public CompletableFuture<CarbonMonoxideDetectedEnum> getCarbonMonoxideDetectedState() {
-            return completedFuture(
-                    getKeyFromMapping(variable, mapping, CarbonMonoxideDetectedEnum.NORMAL));
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
         public void subscribeCarbonMonoxideDetectedState(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeCarbonMonoxideDetectedState() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
     }
 
@@ -868,78 +852,76 @@ public class HomekitAccessoryFactory {
         }
     }
 
-    private static class HomekitLightSensor extends AbstractHomekitAccessory implements LightSensorAccessory {
+    private static class HomekitLightSensor extends AbstractHomekitAccessory<CurrentAmbientLightLevelCharacteristic> implements LightSensorAccessory {
         public HomekitLightSensor(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getLightLevel(), LightSensorService.class);
+            super(ctx, CurrentAmbientLightLevelCharacteristic.class, LightSensorService.class);
         }
 
         @Override
         public CompletableFuture<Double> getCurrentAmbientLightLevel() {
-            return completedFuture(variable.getValue().doubleValue(getMinCurrentAmbientLightLevel()));
+            return masterCharacteristic.getValue();
         }
 
         @Override
         public void subscribeCurrentAmbientLightLevel(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeCurrentAmbientLightLevel() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
 
         @Override
         public double getMinCurrentAmbientLightLevel() {
-            return variable.getMinValue(0);
+            return masterCharacteristic.getMinValue();
         }
 
         @Override
         public double getMaxCurrentAmbientLightLevel() {
-            return variable.getMaxValue(120000);
+            return masterCharacteristic.getMaxValue();
         }
     }
 
-    private static class HomekitLightBulb extends AbstractHomekitAccessory implements LightbulbAccessory {
+    private static class HomekitLightBulb extends AbstractHomekitAccessory<OnCharacteristic> implements LightbulbAccessory {
         public HomekitLightBulb(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getOnState(), LightbulbService.class);
+            super(ctx, OnCharacteristic.class, LightbulbService.class);
         }
 
         @Override
         public CompletableFuture<Boolean> getLightbulbPowerState() {
-            return completedFuture(getVarValue(variable));
+            return masterCharacteristic.getValue();
         }
 
+        @SneakyThrows
         @Override
         public CompletableFuture<Void> setLightbulbPowerState(boolean value) {
-            updateVar(variable, value);
+            masterCharacteristic.setValue(value);
             return completedFuture(null);
         }
 
         @Override
-        public void subscribeLightbulbPowerState(HomekitCharacteristicChangeCallback homekitCharacteristicChangeCallback) {
-
+        public void subscribeLightbulbPowerState(HomekitCharacteristicChangeCallback callback) {
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeLightbulbPowerState() {
-
+            masterCharacteristic.unsubscribe();
         }
     }
 
-    private static class HomekitLock extends AbstractHomekitAccessory implements LockMechanismAccessory {
-        private final Map<LockCurrentStateEnum, Object> currentStateMapping;
+    private static class HomekitLock extends AbstractHomekitAccessory<LockCurrentStateCharacteristic> implements LockMechanismAccessory {
         private final LockTargetStateCharacteristic lockTargetStateCh;
 
         public HomekitLock(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getLockCurrentState(), LockMechanismService.class);
+            super(ctx, LockCurrentStateCharacteristic.class, LockMechanismService.class);
             lockTargetStateCh = getCharacteristic(LockTargetStateCharacteristic.class);
-            currentStateMapping = createMapping(variable, LockCurrentStateEnum.class);
         }
 
         @Override
         public CompletableFuture<LockCurrentStateEnum> getLockCurrentState() {
-            return completedFuture(getKeyFromMapping(variable,
-                    currentStateMapping, LockCurrentStateEnum.UNKNOWN));
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
@@ -956,12 +938,12 @@ public class HomekitAccessoryFactory {
 
         @Override
         public void subscribeLockCurrentState(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeLockCurrentState() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
 
         @Override
@@ -981,94 +963,94 @@ public class HomekitAccessoryFactory {
         }
     }
 
-    private static abstract class BaseHomekitMuteAccessory extends AbstractHomekitAccessory {
+    private static abstract class BaseHomekitMuteAccessory extends AbstractHomekitAccessory<MuteCharacteristic> {
         public BaseHomekitMuteAccessory(@NotNull HomekitEndpointContext ctx, @Nullable Class<? extends Service> serviceClass) {
-            super(ctx, ctx.endpoint().getMute(), serviceClass);
+            super(ctx, MuteCharacteristic.class, serviceClass);
         }
 
         public CompletableFuture<Boolean> isMuted() {
-            return completedFuture(getVarValue(variable));
+            return masterCharacteristic.getValue();
         }
 
+        @SneakyThrows
         public CompletableFuture<Void> setMute(boolean value) {
-            updateVar(variable, value);
+            masterCharacteristic.setValue(value);
             return completedFuture(null);
         }
 
         public void subscribeMuteState(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         public void unsubscribeMuteState() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
     }
 
-    private static class HomekitOutlet extends AbstractHomekitAccessory implements OutletAccessory {
-        private final InUseCharacteristic inUseStatusCharacteristic;
+    private static class HomekitOutlet extends AbstractHomekitAccessory<OutletInUseCharacteristic> implements OutletAccessory {
+        private final OutletInUseCharacteristic outletInUseCharacteristic;
 
         public HomekitOutlet(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getOnState(), OutletService.class);
-            inUseStatusCharacteristic = getCharacteristic(InUseCharacteristic.class);
+            super(ctx, OutletInUseCharacteristic.class, OutletService.class);
+            outletInUseCharacteristic = getCharacteristic(OutletInUseCharacteristic.class);
         }
 
         @Override
         public CompletableFuture<Boolean> getPowerState() {
-            return completedFuture(getVarValue(variable));
+            return masterCharacteristic.getValue();
         }
 
         @Override
         @SneakyThrows
         public CompletableFuture<Boolean> getOutletInUse() {
-            return completedFuture(inUseStatusCharacteristic.getEnumValue().get().equals(InUseEnum.IN_USE));
+            return outletInUseCharacteristic.getValue();
         }
 
+        @SneakyThrows
         @Override
         public CompletableFuture<Void> setPowerState(boolean value) {
-            updateVar(variable, value);
+            masterCharacteristic.setValue(value);
             return completedFuture(null);
         }
 
         @Override
         public void subscribePowerState(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void subscribeOutletInUse(HomekitCharacteristicChangeCallback callback) {
-            inUseStatusCharacteristic.subscribe(callback);
+            outletInUseCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribePowerState() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
 
         @Override
         public void unsubscribeOutletInUse() {
-            inUseStatusCharacteristic.unsubscribe();
+            outletInUseCharacteristic.unsubscribe();
         }
     }
 
-    private static class HomekitTemperatureSensor extends AbstractHomekitAccessory {
+    private static class HomekitTemperatureSensor extends AbstractHomekitAccessory<CurrentTemperatureCharacteristic> {
         public HomekitTemperatureSensor(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getCurrentTemperature(), null);
-
-            var characteristic = HomekitEndpointEntity.createCurrentTemperatureCharacteristic(ctx, variable);
-            addService(new TemperatureSensorService(characteristic));
+            super(ctx, CurrentTemperatureCharacteristic.class, null);
+            addService(new TemperatureSensorService(getCharacteristic(CurrentTemperatureCharacteristic.class)));
         }
     }
 
-    private static class HomekitThermostat extends AbstractHomekitAccessory {
+    private static class HomekitThermostat extends AbstractHomekitAccessory<CoolingThresholdTemperatureCharacteristic> {
         private @Nullable HomekitCharacteristicChangeCallback targetTemperatureCallback = null;
 
         public HomekitThermostat(@NotNull HomekitEndpointContext ctx) {
-            super(ctx);
+            super(ctx, CoolingThresholdTemperatureCharacteristic.class, null);
             var coolingThresholdTemperatureCharacteristic = getCharacteristic(
                     CoolingThresholdTemperatureCharacteristic.class);
             var heatingThresholdTemperatureCharacteristic = getCharacteristic(
                     HeatingThresholdTemperatureCharacteristic.class);
-            Optional<TargetTemperatureCharacteristic> targetTemperatureCharacteristic = getCharacteristicOpt(TargetTemperatureCharacteristic.class);
+            var targetTemperatureCharacteristic = getCharacteristicOpt(TargetTemperatureCharacteristic.class);
 
             if (coolingThresholdTemperatureCharacteristic == null
                 && heatingThresholdTemperatureCharacteristic == null
@@ -1077,7 +1059,7 @@ public class HomekitAccessoryFactory {
                         "Unable to create thermostat; at least one of TargetTemperature, CoolingThresholdTemperature, or HeatingThresholdTemperature is required.");
             }
 
-            TargetHeatingCoolingStateCharacteristic targetHeatingCoolingStateCharacteristic = getCharacteristic(TargetHeatingCoolingStateCharacteristic.class);
+            var targetHeatingCoolingStateCharacteristic = getCharacteristic(TargetHeatingCoolingStateCharacteristic.class);
 
             // TargetTemperature not provided; simulate by forwarding to HeatingThresholdTemperature and
             // CoolingThresholdTemperature
@@ -1200,32 +1182,29 @@ public class HomekitAccessoryFactory {
         }
     }
 
-    private static class HomekitSmartSpeaker extends AbstractHomekitAccessory implements SmartSpeakerAccessory {
-        private final Map<CurrentMediaStateEnum, Object> currentMediaState;
+    private static class HomekitSmartSpeaker extends AbstractHomekitAccessory<CurrentMediaStateCharacteristic> implements SmartSpeakerAccessory {
         // private final Map<TargetMediaStateEnum, Object> targetMediaState;
         private final TargetMediaStateCharacteristic targetMediaStateCh;
 
         public HomekitSmartSpeaker(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getCurrentMediaState(), SmartSpeakerService.class);
+            super(ctx, CurrentMediaStateCharacteristic.class, SmartSpeakerService.class);
             targetMediaStateCh = getCharacteristic(TargetMediaStateCharacteristic.class);
-            currentMediaState = createMapping(variable, CurrentMediaStateEnum.class);
             // targetMediaState = createMapping(targetMediaStateVar, TargetMediaStateEnum.class);
         }
 
         @Override
         public CompletableFuture<CurrentMediaStateEnum> getCurrentMediaState() {
-            return completedFuture(
-                    getKeyFromMapping(variable, currentMediaState, CurrentMediaStateEnum.UNKNOWN));
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
         public void subscribeCurrentMediaState(final HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeCurrentMediaState() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
 
         @Override
@@ -1251,69 +1230,62 @@ public class HomekitAccessoryFactory {
         }
     }
 
-    private static class HomekitSecuritySystem extends AbstractHomekitAccessory implements SecuritySystemAccessory {
-        private final Map<CurrentSecuritySystemStateEnum, Object> currentStateMapping;
+    private static class HomekitSecuritySystem extends AbstractHomekitAccessory<CurrentSecuritySystemStateCharacteristic> implements SecuritySystemAccessory {
         // private final Map<TargetSecuritySystemStateEnum, Object> targetStateMapping;
-        private final List<CurrentSecuritySystemStateEnum> customCurrentStateList = new ArrayList<>();
         private final List<TargetSecuritySystemStateEnum> customTargetStateList = new ArrayList<>();
-        private final TargetSecuritySystemStateCharacteristic targetSecuritySystemStateCh;
+        private final TargetSecuritySystemStateCharacteristic targetSecuritySystemStateCharacteristic;
 
         public HomekitSecuritySystem(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ctx.endpoint().getCurrentSecuritySystemState(), SecuritySystemService.class);
-            currentStateMapping = createMapping(variable, CurrentSecuritySystemStateEnum.class,
-                    customCurrentStateList);
-            targetSecuritySystemStateCh = getCharacteristic(TargetSecuritySystemStateCharacteristic.class);
+            super(ctx, CurrentSecuritySystemStateCharacteristic.class, SecuritySystemService.class);
+            targetSecuritySystemStateCharacteristic = getCharacteristic(TargetSecuritySystemStateCharacteristic.class);
             /*targetStateMapping = createMapping(targetSecuritySystemStateVar, TargetSecuritySystemStateEnum.class,
                     customTargetStateList);*/
         }
 
         @Override
         public CurrentSecuritySystemStateEnum[] getCurrentSecuritySystemStateValidValues() {
-            return customCurrentStateList.isEmpty()
-                    ? currentStateMapping.keySet().toArray(new CurrentSecuritySystemStateEnum[0])
-                    : customCurrentStateList.toArray(new CurrentSecuritySystemStateEnum[0]);
+            return masterCharacteristic.getValidValues();
         }
 
         @Override
         public TargetSecuritySystemStateEnum[] getTargetSecuritySystemStateValidValues() {
-            return targetSecuritySystemStateCh.getValidValues();
+            return targetSecuritySystemStateCharacteristic.getValidValues();
         }
 
         @Override
         public CompletableFuture<CurrentSecuritySystemStateEnum> getCurrentSecuritySystemState() {
-            return CompletableFuture.completedFuture(getKeyFromMapping(variable, currentStateMapping,
-                    CurrentSecuritySystemStateEnum.DISARMED));
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
         public CompletableFuture<TargetSecuritySystemStateEnum> getTargetSecuritySystemState() {
-            return targetSecuritySystemStateCh.getEnumValue();
+            return targetSecuritySystemStateCharacteristic.getEnumValue();
         }
 
         @SneakyThrows
         @Override
         public void setTargetSecuritySystemState(TargetSecuritySystemStateEnum state) {
-            targetSecuritySystemStateCh.setValue(state);
+            targetSecuritySystemStateCharacteristic.setValue(state);
         }
 
         @Override
         public void subscribeCurrentSecuritySystemState(HomekitCharacteristicChangeCallback callback) {
-            subscribe(callback);
+            masterCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeCurrentSecuritySystemState() {
-            unsubscribe();
+            masterCharacteristic.unsubscribe();
         }
 
         @Override
         public void subscribeTargetSecuritySystemState(HomekitCharacteristicChangeCallback callback) {
-            targetSecuritySystemStateCh.subscribe(callback);
+            targetSecuritySystemStateCharacteristic.subscribe(callback);
         }
 
         @Override
         public void unsubscribeTargetSecuritySystemState() {
-            targetSecuritySystemStateCh.unsubscribe();
+            targetSecuritySystemStateCharacteristic.unsubscribe();
         }
     }
 }

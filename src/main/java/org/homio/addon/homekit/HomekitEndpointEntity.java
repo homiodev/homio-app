@@ -8,14 +8,19 @@ import io.github.hapjava.characteristics.impl.airquality.*;
 import io.github.hapjava.characteristics.impl.audio.MuteCharacteristic;
 import io.github.hapjava.characteristics.impl.audio.VolumeCharacteristic;
 import io.github.hapjava.characteristics.impl.base.BaseCharacteristic;
+import io.github.hapjava.characteristics.impl.battery.BatteryLevelCharacteristic;
 import io.github.hapjava.characteristics.impl.battery.ChargingStateCharacteristic;
 import io.github.hapjava.characteristics.impl.battery.StatusLowBatteryCharacteristic;
+import io.github.hapjava.characteristics.impl.carbondioxidesensor.CarbonDioxideDetectedCharacteristic;
 import io.github.hapjava.characteristics.impl.carbondioxidesensor.CarbonDioxideLevelCharacteristic;
 import io.github.hapjava.characteristics.impl.carbondioxidesensor.CarbonDioxidePeakLevelCharacteristic;
+import io.github.hapjava.characteristics.impl.carbonmonoxidesensor.CarbonMonoxideDetectedCharacteristic;
 import io.github.hapjava.characteristics.impl.carbonmonoxidesensor.CarbonMonoxideLevelCharacteristic;
 import io.github.hapjava.characteristics.impl.carbonmonoxidesensor.CarbonMonoxidePeakLevelCharacteristic;
 import io.github.hapjava.characteristics.impl.common.*;
+import io.github.hapjava.characteristics.impl.contactsensor.ContactSensorStateCharacteristic;
 import io.github.hapjava.characteristics.impl.fan.*;
+import io.github.hapjava.characteristics.impl.filtermaintenance.FilterChangeIndicationCharacteristic;
 import io.github.hapjava.characteristics.impl.filtermaintenance.FilterLifeLevelCharacteristic;
 import io.github.hapjava.characteristics.impl.filtermaintenance.ResetFilterIndicationCharacteristic;
 import io.github.hapjava.characteristics.impl.garagedoor.CurrentDoorStateCharacteristic;
@@ -27,19 +32,25 @@ import io.github.hapjava.characteristics.impl.humiditysensor.TargetRelativeHumid
 import io.github.hapjava.characteristics.impl.inputsource.InputDeviceTypeCharacteristic;
 import io.github.hapjava.characteristics.impl.inputsource.InputSourceTypeCharacteristic;
 import io.github.hapjava.characteristics.impl.inputsource.TargetVisibilityStateCharacteristic;
+import io.github.hapjava.characteristics.impl.leaksensor.LeakDetectedStateCharacteristic;
 import io.github.hapjava.characteristics.impl.lightbulb.BrightnessCharacteristic;
 import io.github.hapjava.characteristics.impl.lightbulb.ColorTemperatureCharacteristic;
 import io.github.hapjava.characteristics.impl.lightbulb.HueCharacteristic;
 import io.github.hapjava.characteristics.impl.lightbulb.SaturationCharacteristic;
+import io.github.hapjava.characteristics.impl.lightsensor.CurrentAmbientLightLevelCharacteristic;
 import io.github.hapjava.characteristics.impl.lock.LockCurrentStateCharacteristic;
 import io.github.hapjava.characteristics.impl.lock.LockTargetStateCharacteristic;
 import io.github.hapjava.characteristics.impl.motionsensor.MotionDetectedCharacteristic;
 import io.github.hapjava.characteristics.impl.occupancysensor.OccupancyDetectedCharacteristic;
+import io.github.hapjava.characteristics.impl.outlet.OutletInUseCharacteristic;
+import io.github.hapjava.characteristics.impl.securitysystem.CurrentSecuritySystemStateCharacteristic;
 import io.github.hapjava.characteristics.impl.securitysystem.SecuritySystemAlarmTypeCharacteristic;
 import io.github.hapjava.characteristics.impl.securitysystem.TargetSecuritySystemStateCharacteristic;
+import io.github.hapjava.characteristics.impl.slat.CurrentSlatStateCharacteristic;
 import io.github.hapjava.characteristics.impl.slat.CurrentTiltAngleCharacteristic;
 import io.github.hapjava.characteristics.impl.slat.SlatTypeCharacteristic;
 import io.github.hapjava.characteristics.impl.slat.TargetTiltAngleCharacteristic;
+import io.github.hapjava.characteristics.impl.smokesensor.SmokeDetectedCharacteristic;
 import io.github.hapjava.characteristics.impl.television.*;
 import io.github.hapjava.characteristics.impl.televisionspeaker.VolumeControlTypeCharacteristic;
 import io.github.hapjava.characteristics.impl.televisionspeaker.VolumeSelectorCharacteristic;
@@ -157,7 +168,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['AirPurifier', 'Fan', 'Faucet', 'HeaterCooler', 'HumidifierDehumidifier', 'IrrigationSystem', 'Television', 'Valve'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup(value = "REQ_CHAR", order = 100, borderColor = "#8C3265")
-    @HomekitCharacteristic(value = ActiveCharacteristic.class, type = ActiveStatus)
+    @HomekitCharacteristic(value = StatusActiveCharacteristic.class, type = ActiveStatus)
     public String getActiveState() {
         return getJsonData("as");
     }
@@ -178,6 +189,11 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldGroup("REQ_CHAR")
     @HomekitCharacteristic(value = MotionDetectedCharacteristic.class, type = MotionDetectedState)
     @HomekitCharacteristic(value = OccupancyDetectedCharacteristic.class, type = OccupancyDetectedState)
+    @HomekitCharacteristic(value = SmokeDetectedCharacteristic.class, type = SmokeDetectedState)
+    @HomekitCharacteristic(value = ContactSensorStateCharacteristic.class, type = ContactSensorState)
+    @HomekitCharacteristic(value = LeakDetectedStateCharacteristic.class, type = LeakDetectedState)
+    @HomekitCharacteristic(value = CarbonDioxideDetectedCharacteristic.class, type = CarbonDioxideDetectedState)
+    @HomekitCharacteristic(value = CarbonMonoxideDetectedCharacteristic.class, type = CarbonMonoxideDetectedState)
     public String getDetectedState() {
         return getJsonData("ds");
     }
@@ -251,6 +267,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
     @HomekitCharacteristic(value = OnCharacteristic.class, type = OnState)
+    @HomekitCharacteristic(value = OutletInUseCharacteristic.class, type = OnState)
     public String getOnState() {
         return getJsonData("os");
     }
@@ -433,6 +450,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Battery'")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = BatteryLevelCharacteristic.class, type = BatteryLevel)
     public String getBatteryLevel() {
         return getJsonData("bl");
     }
@@ -486,6 +504,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("['FilterMaintenance', 'AirPurifier'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = FilterChangeIndicationCharacteristic.class, type = FilterChangeIndication)
     public String getFilterChangeIndication() {
         return getJsonData("fci");
     }
@@ -592,6 +611,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'HumiditySensor'")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = CurrentRelativeHumidityCharacteristic.class, type = CurrentRelativeHumidity)
     public String getRelativeHumidity() {
         return getJsonData("rh");
     }
@@ -627,6 +647,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightSensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value= CurrentAmbientLightLevelCharacteristic.class, type = LightLevel)
     public String getLightLevel() {
         return getJsonData("ll");
     }
@@ -680,6 +701,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'SecuritySystem'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = CurrentSecuritySystemStateCharacteristic.class, type = CurrentSecuritySystemState)
     public String getCurrentSecuritySystemState() {
         return getJsonData("sscs");
     }
@@ -715,6 +737,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Slat'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = CurrentSlatStateCharacteristic.class, type = SlatType)
     public String getCurrentSlatState() {
         return getJsonData("css");
     }
@@ -785,7 +808,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIField(order = 91, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Thermostat'")
     @UIFieldVariableSelection(varType = Float)
-    @UIFieldGroup("REQ_CHAR")
+    @UIFieldGroup("OPT_CHAR")
     @HomekitCharacteristic(value = TargetTemperatureCharacteristic.class, type = TargetTemperature,
             impl = TargetTemperatureCharacteristicSupplier.class)
     public String getTargetTemperature() {

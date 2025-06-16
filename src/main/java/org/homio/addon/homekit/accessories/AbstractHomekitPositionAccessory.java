@@ -9,28 +9,20 @@ import io.github.hapjava.services.Service;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.homekit.HomekitEndpointContext;
-import org.homio.addon.homekit.HomekitEndpointEntity;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static org.homio.addon.homekit.HomekitCharacteristicFactory.createMapping;
-import static org.homio.addon.homekit.HomekitCharacteristicFactory.getKeyFromMapping;
-import static org.homio.addon.homekit.enums.HomekitCharacteristicType.TargetPosition;
-
 @Log4j2
-public abstract class AbstractHomekitPositionAccessory extends AbstractHomekitAccessory {
+public abstract class AbstractHomekitPositionAccessory extends AbstractHomekitAccessory<PositionStateCharacteristic> {
 
     final boolean emulateState;
     final boolean emulateStopSameDirection;
     final boolean sendUpDownForExtents;
     final int closedPosition;
     final int openPosition;
-    final Map<PositionStateEnum, Object> positionStateMapping;
     private final CurrentPositionCharacteristic currentPositionCharacteristic;
     private final TargetPositionCharacteristic targetPositionCharacteristic;
-    PositionStateEnum emulatedState = PositionStateEnum.STOPPED;
 
     public AbstractHomekitPositionAccessory(@NotNull HomekitEndpointContext ctx,
                                             @NotNull Class<? extends Service> serviceClass) {
@@ -40,7 +32,6 @@ public abstract class AbstractHomekitPositionAccessory extends AbstractHomekitAc
         sendUpDownForExtents = ctx.endpoint().getSendUpDownForExtents();
         closedPosition = inverted ? 0 : 100;
         openPosition = inverted ? 100 : 0;
-        positionStateMapping = createMapping(variable, PositionStateEnum.class);
         currentPositionCharacteristic = getCharacteristic(CurrentPositionCharacteristic.class);
         targetPositionCharacteristic = getCharacteristic(TargetPositionCharacteristic.class);
         // currentDoorStateVar = getVariable("currentDoorState", HomekitEndpointEntity::getCurrentDoorState);
@@ -52,8 +43,8 @@ public abstract class AbstractHomekitPositionAccessory extends AbstractHomekitAc
     }
 
     public CompletableFuture<PositionStateEnum> getPositionState() {
-        return CompletableFuture.completedFuture(emulateState ? emulatedState
-                : getKeyFromMapping(variable, positionStateMapping, PositionStateEnum.STOPPED));
+        return emulateState ? CompletableFuture.completedFuture(PositionStateEnum.STOPPED) :
+                masterCharacteristic.getEnumValue();
     }
 
     public CompletableFuture<Integer> getTargetPosition() {
@@ -64,14 +55,13 @@ public abstract class AbstractHomekitPositionAccessory extends AbstractHomekitAc
         return setTargetPosition((Integer) value);
     }
 
-
     @SneakyThrows
     public CompletableFuture<Void> setTargetPosition(Integer value) {
         targetPositionCharacteristic.setValue(value);
-        getCharacteristic(TargetPosition).ifPresentOrElse(taggedItem -> {
-            // int targetPosition = convertPosition(value, openPosition);
-            // updateVar(targetPositionVar, targetPosition);
-            // Item item = taggedItem.getItem();
+        // getCharacteristic(TargetPosition).ifPresentOrElse(taggedItem -> {
+        // int targetPosition = convertPosition(value, openPosition);
+        // updateVar(targetPositionVar, targetPosition);
+        // Item item = taggedItem.getItem();
                 /* if (item instanceof RollershutterItem itemAsRollerShutterItem) {
                     // HomeKit home app never sends STOP. we emulate stop if we receive 100% or 0% while the blind is moving
                     if (emulateState && (targetPosition == 100 && emulatedState == PositionStateEnum.DECREASING)
@@ -119,7 +109,7 @@ public abstract class AbstractHomekitPositionAccessory extends AbstractHomekitAc
                             "Unsupported item type for characteristic {} at accessory {}. Expected Rollershutter, Dimmer or Number item, got {}",
                             TargetPosition, getName(), item.getClass());
                 }*/
-        }, () -> log.warn("Mandatory characteristic {} not found at accessory {}. ", TargetPosition, getName()));
+        //}, () -> log.warn("Mandatory characteristic {} not found at accessory {}. ", TargetPosition, getName()));
         return CompletableFuture.completedFuture(null);
     }
 
@@ -128,7 +118,7 @@ public abstract class AbstractHomekitPositionAccessory extends AbstractHomekitAc
     }
 
     public void subscribePositionState(HomekitCharacteristicChangeCallback callback) {
-        subscribe(callback);
+        masterCharacteristic.subscribe(callback);
     }
 
     public void subscribeTargetPosition(HomekitCharacteristicChangeCallback callback) {
@@ -140,7 +130,7 @@ public abstract class AbstractHomekitPositionAccessory extends AbstractHomekitAc
     }
 
     public void unsubscribePositionState() {
-        unsubscribe();
+        masterCharacteristic.unsubscribe();
     }
 
     public void unsubscribeTargetPosition() {

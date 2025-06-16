@@ -4,19 +4,14 @@ import io.github.hapjava.characteristics.Characteristic;
 import io.github.hapjava.characteristics.HomekitCharacteristicChangeCallback;
 import io.github.hapjava.characteristics.impl.base.BaseCharacteristic;
 import io.github.hapjava.characteristics.impl.common.NameCharacteristic;
-import io.github.hapjava.characteristics.impl.windowcovering.PositionStateCharacteristic;
 import io.github.hapjava.services.Service;
 import lombok.Getter;
 import org.homio.addon.homekit.HomekitEndpointContext;
 import org.homio.addon.homekit.HomekitEndpointEntity;
-import org.homio.addon.homekit.enums.HomekitCharacteristicType;
 import org.homio.api.ContextVar;
-import org.homio.api.state.DecimalType;
-import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
@@ -25,54 +20,26 @@ import java.util.function.Function;
 import static org.homio.addon.homekit.HomekitCharacteristicFactory.buildCharacteristics;
 import static org.homio.addon.homekit.HomekitCharacteristicFactory.buildInitialCharacteristics;
 
-public abstract class AbstractHomekitAccessory implements BaseHomekitAccessory {
-    @Getter
-    final ContextVar.Variable variable;
+public abstract class AbstractHomekitAccessory<T extends BaseCharacteristic<?>> implements BaseHomekitAccessory {
     final @NotNull HomekitEndpointContext ctx;
     final boolean inverted;
     @Getter
     private final @NotNull List<Service> services = new ArrayList<>();
     private final @NotNull Characteristics characteristics = new Characteristics();
-    private final BaseCharacteristic<?> masterCharacteristic;
     @Getter
-    private Map<String, ContextVar.Variable> extraVariables = new HashMap<>();
+    final @NotNull T masterCharacteristic;
 
     public AbstractHomekitAccessory(@NotNull HomekitEndpointContext ctx) {
-        this(ctx, (String)null, null);
+        this(ctx, null, null);
     }
 
     public AbstractHomekitAccessory(HomekitEndpointContext ctx,
-                                    Class<? extends BaseCharacteristic<?>> masterCharacteristicClass,
+                                    Class<T> masterCharacteristicClass,
                                     Class<? extends Service> serviceClass) {
         this.ctx = ctx;
-        this.variable = varId == null ? null : ctx.getVariable(varId);
         buildInitialCharacteristics(ctx, null, characteristics);
         buildCharacteristics(ctx, characteristics);
         masterCharacteristic = getCharacteristic(masterCharacteristicClass);
-        this.inverted = ctx.endpoint().getInverted();
-
-        if (serviceClass != null) {
-            addService(CommonUtils.newInstance(serviceClass, this));
-        }
-
-        // add information service only if this accessory not in groups
-        if (ctx.endpoint().getGroup().isEmpty()) {
-            // make sure this is the first service
-            services.addFirst(BaseHomekitAccessory.createInformationService(characteristics));
-        }
-    }
-
-    /**
-     * Gives an accessory an opportunity to populate additional characteristics after all optional
-     * characteristics have been added.
-     */
-    public AbstractHomekitAccessory(@NotNull HomekitEndpointContext ctx,
-                                    @Nullable String varId,
-                                    @Nullable Class<? extends Service> serviceClass) {
-        this.ctx = ctx;
-        this.variable = varId == null ? null : ctx.getVariable(varId);
-        buildInitialCharacteristics(ctx, null, characteristics);
-        buildCharacteristics(ctx, characteristics);
         this.inverted = ctx.endpoint().getInverted();
 
         if (serviceClass != null) {
@@ -96,14 +63,6 @@ public abstract class AbstractHomekitAccessory implements BaseHomekitAccessory {
         return inverted != value;
     }
 
-    protected void updateVar(ContextVar.Variable variable, boolean value) {
-        updateVar(variable, OnOffType.of(inverted != value));
-    }
-
-    protected void updateVar(ContextVar.Variable variable, int value) {
-        updateVar(variable, new DecimalType(value));
-    }
-
     protected void updateVar(ContextVar.Variable variable, State state) {
         variable.set(state);
         ctx.updateUI();
@@ -117,26 +76,14 @@ public abstract class AbstractHomekitAccessory implements BaseHomekitAccessory {
         });
     }
 
-    protected void subscribe(HomekitCharacteristicChangeCallback callback) {
-        subscribe(variable, callback);
-    }
-
     protected void unsubscribe(ContextVar.Variable variable) {
         String k = ctx.owner().getEntityID() + "_" + ctx.endpoint().getId() + "_" + "_sub";
         variable.removeListener(k);
     }
 
-    protected void unsubscribe() {
-        unsubscribe(variable);
-    }
-
     State getVariableValue(Function<HomekitEndpointEntity, String> supplier, State defaultValue) {
         var variable = ctx.getVariable(supplier.apply(ctx.endpoint()));
         return variable == null ? defaultValue : variable.getValue();
-    }
-
-    ContextVar.Variable getVariable(Function<HomekitEndpointEntity, String> supplier) {
-        return ctx.getVariable(supplier.apply(ctx.endpoint()));
     }
 
     public void addService(Service service) {
@@ -178,7 +125,7 @@ public abstract class AbstractHomekitAccessory implements BaseHomekitAccessory {
         return Optional.ofNullable(characteristics.get(klazz));
     }
 
-    protected <T> Optional<T> getCharacteristic(HomekitCharacteristicType type) {
+    /*protected <T> Optional<T> getCharacteristic(HomekitCharacteristicType type) {
         return Optional.ofNullable(characteristics.get(type));
-    }
+    }*/
 }

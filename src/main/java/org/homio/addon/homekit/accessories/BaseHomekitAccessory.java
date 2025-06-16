@@ -3,14 +3,13 @@ package org.homio.addon.homekit.accessories;
 import io.github.hapjava.accessories.HomekitAccessory;
 import io.github.hapjava.characteristics.Characteristic;
 import io.github.hapjava.characteristics.impl.accessoryinformation.*;
+import io.github.hapjava.characteristics.impl.base.BaseCharacteristic;
 import io.github.hapjava.characteristics.impl.common.NameCharacteristic;
 import io.github.hapjava.services.Service;
 import io.github.hapjava.services.impl.AccessoryInformationService;
-import org.homio.api.ContextVar;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public interface BaseHomekitAccessory extends HomekitAccessory {
@@ -28,6 +27,8 @@ public interface BaseHomekitAccessory extends HomekitAccessory {
                 .ifPresent(service::addOptionalCharacteristic);
         return service;
     }
+
+    BaseCharacteristic getMasterCharacteristic();
 
     Collection<Characteristic> getCharacteristics();
 
@@ -66,8 +67,4 @@ public interface BaseHomekitAccessory extends HomekitAccessory {
             // ignore
         }
     }
-
-    ContextVar.Variable getVariable();
-
-    Map<String, ContextVar.Variable> getExtraVariables();
 }
