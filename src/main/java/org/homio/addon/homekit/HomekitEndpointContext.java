@@ -8,11 +8,13 @@ import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.homekit.accessories.BaseHomekitAccessory;
 import org.homio.addon.homekit.accessories.HomekitAccessoryFactory;
+import org.homio.addon.homekit.enums.HomekitCharacteristicType;
 import org.homio.api.ContextVar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Optional;
 
 @Setter
 @RequiredArgsConstructor
@@ -46,18 +48,44 @@ public class HomekitEndpointContext {
         }
     }
 
-    public void setCharacteristic(BaseCharacteristic characteristic, ContextVar.Variable variable, String name) {
-        this.characteristics.add(new CharacteristicInfo(characteristic, variable, StringUtils.uncapitalize(name)));
+    public void setCharacteristic(BaseCharacteristic<?> characteristic,
+                                  ContextVar.Variable variable,
+                                  HomekitCharacteristicType type) {
+        this.characteristics.add(new CharacteristicInfo(characteristic, variable, type, StringUtils.uncapitalize(type.name())));
+        variable.addListener(endpoint.getEntityID(), state -> updateUI.run());
     }
 
     public void setUpdateUI(@NotNull Runnable runnable) {
         this.updateUI = runnable;
     }
 
-    public void updateUI() {
-        updateUI.run();
+    public void destroy() {
+        for (CharacteristicInfo characteristic : characteristics) {
+            characteristic.variable.removeListener(endpoint.getEntityID());
+        }
     }
 
-    public record CharacteristicInfo(BaseCharacteristic characteristic, ContextVar.Variable variable, String name) {
+    public Optional<CharacteristicInfo> characteristicsInfo(String type) {
+        for (HomekitEndpointContext.CharacteristicInfo characteristic : characteristics) {
+            if (characteristic.characteristic().getType().equals(type)) {
+                return Optional.of(characteristic);
+            }
+        }
+        return Optional.empty();
+    }
+
+    public <T extends BaseCharacteristic<?>> CharacteristicInfo getCharacteristicsInfo(Class<T> aClass) {
+        for (HomekitEndpointContext.CharacteristicInfo characteristic : characteristics) {
+            if (characteristic.characteristic.getClass().equals(aClass)) {
+                return characteristic;
+            }
+        }
+        return null;
+    }
+
+    public record CharacteristicInfo(BaseCharacteristic<?> characteristic,
+                                     ContextVar.Variable variable,
+                                     HomekitCharacteristicType type,
+                                     String name) {
     }
 }

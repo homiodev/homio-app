@@ -7,13 +7,11 @@ import io.github.hapjava.characteristics.impl.windowcovering.PositionStateEnum;
 import io.github.hapjava.characteristics.impl.windowcovering.TargetPositionCharacteristic;
 import io.github.hapjava.services.Service;
 import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
 import org.homio.addon.homekit.HomekitEndpointContext;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.CompletableFuture;
 
-@Log4j2
 public abstract class AbstractHomekitPositionAccessory extends AbstractHomekitAccessory<PositionStateCharacteristic> {
 
     final boolean emulateState;

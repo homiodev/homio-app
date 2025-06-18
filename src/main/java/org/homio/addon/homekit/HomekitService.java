@@ -49,11 +49,16 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
     }
 
     private void stopHomekitServer() {
+        log.info("[{}]: Stop homekit server", entityID);
+
         if (bridge != null) {
             bridge.stop();
         }
         if (homekitServer != null) {
             homekitServer.stop();
+        }
+        for (HomekitEndpointContext ctx : endpoints.values()) {
+            ctx.destroy();
         }
         endpoints.clear();
         homekitServer = null;
@@ -125,6 +130,7 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
             endpoints.put(code, ctx);
             String group = endpoint.getGroup();
             if (group.isEmpty()) {
+                // var accessory = new MyContactSensorAccessory(2, "My Door Sensor");
                 var accessory = HomekitAccessoryFactory.create(ctx);
                 bridge.addAccessory(accessory);
             } else {
@@ -145,17 +151,13 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
                 this.bridge.setConfigurationIndex(configurationRevision);
             }
         } catch (IOException e) {
-            log.warn("Could not update configuration revision number", e);
+            log.warn("[{}]: Could not update configuration revision number", entityID, e);
         }
         return configurationRevision;
     }
 
     public @NotNull Context getContext() {
         return context;
-    }
-
-    public void stateUpdated() {
-        context.ui().updateItem(entity);
     }
 
     private HomekitAccessoryFactory.HomekitGroup findAccessoryGroup(HomekitEndpointEntity endpoint) {

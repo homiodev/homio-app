@@ -61,7 +61,6 @@ import io.github.hapjava.characteristics.impl.windowcovering.*;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.log4j.Log4j2;
 import org.homio.addon.homekit.enums.HomekitAccessoryType;
 import org.homio.addon.homekit.enums.HomekitCharacteristicType;
 import org.homio.api.ContextVar;
@@ -88,8 +87,7 @@ import static org.homio.addon.homekit.HomekitCharacteristicFactory.*;
 import static org.homio.addon.homekit.enums.HomekitCharacteristicType.*;
 import static org.homio.api.ContextVar.VariableType.*;
 
-// Master class))
-@Log4j2
+// Master class
 @SuppressWarnings("unused")
 @Entity
 @Getter
@@ -184,16 +182,18 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Used by (Required): CarbonDioxideSensor, CarbonMonoxideSensor, ContactSensor, LeakSensor, MotionSensor, OccupancySensor, SmokeSensor.
      */
     @UIField(order = 6, required = true)
-    @UIFieldShowOnCondition("return ['CarbonDioxideSensor', 'CarbonMonoxideSensor', 'ContactSensor', 'LeakSensor', 'MotionSensor', 'OccupancySensor', 'SmokeSensor'].includes(context.get('accessoryType'))")
+    @UIFieldShowOnCondition("return ['CarbonDioxideSensor', 'CarbonMonoxideSensor', 'ContactSensor', 'LeakSensor', " +
+                            "'MotionSensor', 'OccupancySensor', 'SmokeSensor'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
-    @HomekitCharacteristic(value = MotionDetectedCharacteristic.class, type = MotionDetectedState)
-    @HomekitCharacteristic(value = OccupancyDetectedCharacteristic.class, type = OccupancyDetectedState)
-    @HomekitCharacteristic(value = SmokeDetectedCharacteristic.class, type = SmokeDetectedState)
-    @HomekitCharacteristic(value = ContactSensorStateCharacteristic.class, type = ContactSensorState)
-    @HomekitCharacteristic(value = LeakDetectedStateCharacteristic.class, type = LeakDetectedState)
-    @HomekitCharacteristic(value = CarbonDioxideDetectedCharacteristic.class, type = CarbonDioxideDetectedState)
-    @HomekitCharacteristic(value = CarbonMonoxideDetectedCharacteristic.class, type = CarbonMonoxideDetectedState)
+    @HomekitCharacteristic(value = MotionDetectedCharacteristic.class, type = MotionDetectedState, forAccessory = "MotionSensor")
+    @HomekitCharacteristic(value = OccupancyDetectedCharacteristic.class, type = OccupancyDetectedState, forAccessory = "OccupancySensor")
+    @HomekitCharacteristic(value = SmokeDetectedCharacteristic.class, type = SmokeDetectedState, forAccessory = "SmokeSensor")
+    @HomekitCharacteristic(value = ContactSensorStateCharacteristic.class, type = ContactSensorState,
+            forAccessory = "ContactSensor", defaultStringValue = "NOT_DETECTED")
+    @HomekitCharacteristic(value = LeakDetectedStateCharacteristic.class, type = LeakDetectedState, forAccessory = "LeakSensor")
+    @HomekitCharacteristic(value = CarbonDioxideDetectedCharacteristic.class, type = CarbonDioxideDetectedState, forAccessory = "CarbonDioxideSensor")
+    @HomekitCharacteristic(value = CarbonMonoxideDetectedCharacteristic.class, type = CarbonMonoxideDetectedState, forAccessory = "CarbonMonoxideSensor")
     public String getDetectedState() {
         return getJsonData("ds");
     }
@@ -266,8 +266,8 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['Outlet', 'Switch', 'LightBulb', 'BasicFan'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
-    @HomekitCharacteristic(value = OnCharacteristic.class, type = OnState)
-    @HomekitCharacteristic(value = OutletInUseCharacteristic.class, type = OnState)
+    @HomekitCharacteristic(value = OnCharacteristic.class, type = OnState, forAccessory = "!Outlet")
+    @HomekitCharacteristic(value = OutletInUseCharacteristic.class, type = OnState, forAccessory = "Outlet")
     public String getOnState() {
         return getJsonData("os");
     }
@@ -647,7 +647,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightSensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    @HomekitCharacteristic(value= CurrentAmbientLightLevelCharacteristic.class, type = LightLevel)
+    @HomekitCharacteristic(value = CurrentAmbientLightLevelCharacteristic.class, type = LightLevel)
     public String getLightLevel() {
         return getJsonData("ll");
     }
@@ -2067,7 +2067,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIField(order = 114)
     @UIFieldGroup("CMN_CHAR")
     public String getHardwareRevision() {
-        return getJsonData("hr", "none");
+        return getJsonData("hr", "");
     }
 
     public void setHardwareRevision(String value) {
@@ -2136,7 +2136,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         public static final int COLOR_TEMPERATURE_MAX_MIREDS = 556; // ~1800 K
 
         @Override
-        public BaseCharacteristic get(HomekitEndpointContext c, ContextVar.Variable v) {
+        public BaseCharacteristic<?> get(HomekitEndpointContext c, ContextVar.Variable v) {
             int minM = (int) v.getMinValue(COLOR_TEMPERATURE_MIN_MIREDS);
             int maxM = (int) v.getMaxValue(COLOR_TEMPERATURE_MAX_MIREDS);
             boolean inv = c.endpoint().getInverted();
@@ -2149,7 +2149,6 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
                 int sV = mVHk;
                 if (inv) sV = maxM - (sV - minM);
                 v.set(new DecimalType(sV));
-                c.updateUI();
             };
             return new ColorTemperatureCharacteristic(minM, maxM, getter, setter,
                     getSubscriber(v, c, ColorTemperature),
@@ -2159,13 +2158,13 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
 
     public static class HeatingThresholdTemperatureCharacteristicSupplier implements HomekitCharacteristic.CharacteristicSupplier {
         @Override
-        public BaseCharacteristic get(HomekitEndpointContext c, Variable v) {
+        public BaseCharacteristic<?> get(HomekitEndpointContext c, Variable v) {
             return new HeatingThresholdTemperatureCharacteristic(
                     v.getMinValue(0.0),
                     v.getMaxValue(25.0),
                     v.getStep(0.5),
                     getTemperatureSupplier(v, 18.0),
-                    setTemperatureConsumer(v, c),
+                    setTemperatureConsumer(v),
                     getSubscriber(v, c, HeatingThresholdTemperature),
                     getUnsubscriber(v, c, HeatingThresholdTemperature));
         }
@@ -2175,7 +2174,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         private @Nullable ProgrammableSwitchEnum lastValue = null;
 
         @Override
-        public BaseCharacteristic get(HomekitEndpointContext c, Variable v) {
+        public BaseCharacteristic<?> get(HomekitEndpointContext c, Variable v) {
             List<ProgrammableSwitchEnum> validVals = Arrays.asList(
                     ProgrammableSwitchEnum.SINGLE_PRESS,
                     ProgrammableSwitchEnum.DOUBLE_PRESS,
@@ -2210,36 +2209,36 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         }
     }
 
-    public class CurrentTemperatureCharacteristicSupplier implements HomekitCharacteristic.CharacteristicSupplier {
+    public static class CurrentTemperatureCharacteristicSupplier implements HomekitCharacteristic.CharacteristicSupplier {
         @Override
-        public BaseCharacteristic get(HomekitEndpointContext c, ContextVar.Variable v) {
+        public BaseCharacteristic<?> get(HomekitEndpointContext c, ContextVar.Variable v) {
             return createCurrentTemperatureCharacteristic(c, v);
         }
     }
 
-    public class TargetTemperatureCharacteristicSupplier implements HomekitCharacteristic.CharacteristicSupplier {
+    public static class TargetTemperatureCharacteristicSupplier implements HomekitCharacteristic.CharacteristicSupplier {
         @Override
-        public BaseCharacteristic get(HomekitEndpointContext c, Variable v) {
+        public BaseCharacteristic<?> get(HomekitEndpointContext c, Variable v) {
             return new TargetTemperatureCharacteristic(
                     v.getMinValue(10.0),
                     v.getMaxValue(38.0),
                     v.getStep(0.5),
                     getTemperatureSupplier(v, 21.0),
-                    setTemperatureConsumer(v, c),
+                    setTemperatureConsumer(v),
                     getSubscriber(v, c, TargetTemperature),
                     getUnsubscriber(v, c, TargetTemperature));
         }
     }
 
-    public class CoolingThresholdTemperatureCharacteristicSupplier implements HomekitCharacteristic.CharacteristicSupplier {
+    public static class CoolingThresholdTemperatureCharacteristicSupplier implements HomekitCharacteristic.CharacteristicSupplier {
         @Override
-        public BaseCharacteristic get(HomekitEndpointContext c, Variable v) {
+        public BaseCharacteristic<?> get(HomekitEndpointContext c, Variable v) {
             return new CoolingThresholdTemperatureCharacteristic(
                     v.getMinValue(10.0),
                     v.getMaxValue(35.0),
                     v.getStep(0.5),
                     getTemperatureSupplier(v, 25.0),
-                    setTemperatureConsumer(v, c),
+                    setTemperatureConsumer(v),
                     getSubscriber(v, c, CoolingThresholdTemperature),
                     getUnsubscriber(v, c, CoolingThresholdTemperature));
         }

@@ -1,70 +1,52 @@
 package org.homio.addon.homekit.accessories;
 
 import io.github.hapjava.accessories.HomekitAccessory;
+import io.github.hapjava.accessories.optionalcharacteristic.AccessoryWithHardwareRevision;
 import io.github.hapjava.characteristics.Characteristic;
-import io.github.hapjava.characteristics.impl.accessoryinformation.*;
 import io.github.hapjava.characteristics.impl.base.BaseCharacteristic;
-import io.github.hapjava.characteristics.impl.common.NameCharacteristic;
-import io.github.hapjava.services.Service;
-import io.github.hapjava.services.impl.AccessoryInformationService;
-import org.jetbrains.annotations.NotNull;
+import org.homio.addon.homekit.HomekitEndpointEntity;
 
-import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
-public interface BaseHomekitAccessory extends HomekitAccessory {
+public interface BaseHomekitAccessory extends HomekitAccessory, AccessoryWithHardwareRevision {
 
-    static @NotNull Service createInformationService(@NotNull Characteristics characteristics) {
-        var service = new AccessoryInformationService(
-                characteristics.get(IdentifyCharacteristic.class),
-                characteristics.get(ManufacturerCharacteristic.class),
-                characteristics.get(ModelCharacteristic.class),
-                characteristics.get(NameCharacteristic.class),
-                characteristics.get(SerialNumberCharacteristic.class),
-                characteristics.get(FirmwareRevisionCharacteristic.class));
+    BaseCharacteristic<?> getMasterCharacteristic();
 
-        characteristics.getOpt(HardwareRevisionCharacteristic.class)
-                .ifPresent(service::addOptionalCharacteristic);
-        return service;
+    <C extends Characteristic> C getCharacteristic(Class<? extends C> klazz);
+
+    @Override
+    default CompletableFuture<String> getHardwareRevision() {
+        return CompletableFuture.completedFuture(getEndpoint().getHardwareRevision());
     }
-
-    BaseCharacteristic getMasterCharacteristic();
-
-    Collection<Characteristic> getCharacteristics();
-
-    <T> T getCharacteristic(Class<? extends T> klazz);
 
     @Override
     default CompletableFuture<String> getName() {
-        return getCharacteristic(NameCharacteristic.class).getValue();
+        return CompletableFuture.completedFuture(getEndpoint().getTitle());
     }
 
     @Override
     default CompletableFuture<String> getManufacturer() {
-        return getCharacteristic(ManufacturerCharacteristic.class).getValue();
+        return CompletableFuture.completedFuture(getEndpoint().getManufacturer());
     }
 
     @Override
     default CompletableFuture<String> getModel() {
-        return getCharacteristic(ModelCharacteristic.class).getValue();
+        return CompletableFuture.completedFuture(getEndpoint().getModel());
     }
 
     @Override
     default CompletableFuture<String> getSerialNumber() {
-        return getCharacteristic(SerialNumberCharacteristic.class).getValue();
+        return CompletableFuture.completedFuture(getEndpoint().getSerialNumber());
     }
 
     @Override
     default CompletableFuture<String> getFirmwareRevision() {
-        return getCharacteristic(FirmwareRevisionCharacteristic.class).getValue();
+        return CompletableFuture.completedFuture(getEndpoint().getFirmwareRevision());
     }
 
     @Override
     default void identify() {
-        try {
-            getCharacteristic(IdentifyCharacteristic.class).setValue(true);
-        } catch (Exception e) {
-            // ignore
-        }
     }
+
+    HomekitEndpointEntity getEndpoint();
 }

@@ -4,9 +4,7 @@ import io.github.hapjava.characteristics.Characteristic;
 import io.github.hapjava.characteristics.CharacteristicEnum;
 import io.github.hapjava.characteristics.ExceptionalConsumer;
 import io.github.hapjava.characteristics.HomekitCharacteristicChangeCallback;
-import io.github.hapjava.characteristics.impl.accessoryinformation.*;
 import io.github.hapjava.characteristics.impl.base.*;
-import io.github.hapjava.characteristics.impl.common.NameCharacteristic;
 import io.github.hapjava.characteristics.impl.thermostat.TemperatureDisplayUnitCharacteristic;
 import io.github.hapjava.characteristics.impl.thermostat.TemperatureDisplayUnitEnum;
 import lombok.SneakyThrows;
@@ -36,29 +34,16 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.homio.addon.homekit.enums.HomekitCharacteristicType.*;
 import static org.homio.api.util.CommonUtils.findObjectConstructor;
 
 @Log4j2
 public class HomekitCharacteristicFactory {
 
-    public static void buildInitialCharacteristics(@NotNull HomekitEndpointContext context,
-                                                   @Nullable String name,
-                                                   @NotNull Characteristics characteristics) {
-        characteristics.addIfNotNull(Identify, createIdentifyCharacteristic(context));
-        characteristics.addIfNotNull(Manufacturer, createManufacturerCharacteristic(context));
-        characteristics.addIfNotNull(Model, createModelCharacteristic(context));
-        characteristics.addIfNotNull(SerialNumber, createSerialNumberCharacteristic(context));
-        characteristics.addIfNotNull(FirmwareRevision, createFirmwareRevisionCharacteristic(context));
-        characteristics.addIfNotNull(HardwareRevision, createHardwareRevisionCharacteristic(context));
-        characteristics.addIfNotNull(Name, createNameCharacteristic(context, name));
-    }
-
     @SneakyThrows
     public static void buildCharacteristics(@NotNull HomekitEndpointContext context, @NotNull Characteristics characteristics) {
         String accessoryType = context.endpoint().getAccessoryType().name();
         for (Method method : HomekitEndpointEntity.class.getDeclaredMethods()) {
-            var hc = method.getAnnotation(HomekitCharacteristic.class);
+            var hc = findCorrectHomekitCCharacteristic(method, context.endpoint().getAccessoryType().name());
             if (hc == null) {
                 continue;
             }
@@ -105,6 +90,26 @@ public class HomekitCharacteristicFactory {
         }
     }
 
+    private static HomekitCharacteristic findCorrectHomekitCCharacteristic(Method method, String accessoryName) {
+        var annotations = method.getAnnotationsByType(HomekitCharacteristic.class);
+        if (annotations.length == 0) {
+            return null;
+        } else if (annotations.length == 1) {
+            return annotations[0];
+        }
+        for (HomekitCharacteristic hc : annotations) {
+            boolean negative = hc.forAccessory().startsWith("!");
+            if (negative) {
+                if (!hc.forAccessory().substring(1).equals(accessoryName)) {
+                    return hc;
+                }
+            } else if (hc.forAccessory().equals(accessoryName)) {
+                return hc;
+            }
+        }
+        return null;
+    }
+
     private static Characteristic createEnumCharacteristic(HomekitEndpointContext c,
                                                            HomekitCharacteristic hc,
                                                            ContextVar.Variable v) {
@@ -120,16 +125,17 @@ public class HomekitCharacteristicFactory {
                         ? enumClass.getEnumConstants()[0]
                         : Enum.valueOf((Class<Enum>) enumClass.asSubclass(Enum.class), defValue);
 
-                BaseCharacteristic<?> characteristic = newCharacteristicInstance(hc.value(),
-                        (Supplier<CompletableFuture>) () -> completedFuture(getKeyFromMapping2(v, m, defaultEnum)),
-                        (ExceptionalConsumer) newVal -> {
-                            setHomioVariableFromEnum2(v, newVal, m, c);
+                BaseCharacteristic<?> characteristic = newCharacteristicInstance(
+                        hc.value(),
+                        (Supplier<CompletableFuture<?>>) () -> completedFuture(getKeyFromMapping2(v, m, defaultEnum)),
+                        (ExceptionalConsumer<?>) newVal -> {
+                            setHomioVariableFromEnum2(v, newVal, m);
                             // setIntConsumer(v, c),
                         },
                         getSubscriber(v, c, hc.type()),
                         getUnsubscriber(v, c, hc.type()));
 
-                c.setCharacteristic(characteristic, v, hc.type().name());
+                c.setCharacteristic(characteristic, v, hc.type());
                 return characteristic;
             }
         }
@@ -141,10 +147,10 @@ public class HomekitCharacteristicFactory {
                                                              ContextVar.Variable v) {
         var characteristic = newCharacteristicInstance(hc.value(),
                 getStringSupplier(v, hc.defaultStringValue()),
-                setStringConsumer(v, c),
+                setStringConsumer(v),
                 getSubscriber(v, c, hc.type()),
                 getUnsubscriber(v, c, hc.type()));
-        c.setCharacteristic(characteristic, v, hc.type().name());
+        c.setCharacteristic(characteristic, v, hc.type());
         return characteristic;
     }
 
@@ -153,10 +159,10 @@ public class HomekitCharacteristicFactory {
                                                             ContextVar.Variable v) {
         var characteristic = newCharacteristicInstance(hc.value(),
                 getDoubleSupplier(v, hc.defaultDoubleValue()),
-                setDoubleConsumer(v, c),
+                setDoubleConsumer(v),
                 getSubscriber(v, c, hc.type()),
                 getUnsubscriber(v, c, hc.type()));
-        c.setCharacteristic(characteristic, v, hc.type().name());
+        c.setCharacteristic(characteristic, v, hc.type());
         return characteristic;
     }
 
@@ -165,10 +171,10 @@ public class HomekitCharacteristicFactory {
                                                               ContextVar.Variable v) {
         var characteristic = newCharacteristicInstance(hc.value(),
                 getIntSupplier(v, hc.defaultIntValue()),
-                setIntConsumer(v, c),
+                setIntConsumer(v),
                 getSubscriber(v, c, hc.type()),
                 getUnsubscriber(v, c, hc.type()));
-        c.setCharacteristic(characteristic, v, hc.type().name());
+        c.setCharacteristic(characteristic, v, hc.type());
         return characteristic;
     }
 
@@ -194,7 +200,7 @@ public class HomekitCharacteristicFactory {
                                                                     ContextVar.Variable v) {
         HomekitCharacteristic.CharacteristicSupplier supplier = CommonUtils.newInstance(hc.impl());
         var characteristic = supplier.get(c, v);
-        c.setCharacteristic(characteristic, v, hc.type().name());
+        c.setCharacteristic(characteristic, v, hc.type());
         return characteristic;
     }
 
@@ -203,10 +209,10 @@ public class HomekitCharacteristicFactory {
                                                                      ContextVar.Variable v) {
         var characteristic = newCharacteristicInstance(hc.value(),
                 getBooleanSupplier(v),
-                setBooleanConsumer(v, c),
+                setBooleanConsumer(v),
                 getSubscriber(v, c, hc.type()),
                 getUnsubscriber(v, c, hc.type()));
-        c.setCharacteristic(characteristic, v, hc.type().name());
+        c.setCharacteristic(characteristic, v, hc.type());
         return characteristic;
     }
 
@@ -319,7 +325,7 @@ public class HomekitCharacteristicFactory {
         return (v == null) ? completedFuture(d) : completedFuture(getKeyFromMapping(v, m, d));
     }
 
-    public static <T extends Enum<T>> void setHomioVariableFromEnum(@Nullable ContextVar.Variable variable,
+    /*public static <T extends Enum<T>> void setHomioVariableFromEnum(@Nullable ContextVar.Variable variable,
                                                                     T enumFromHk,
                                                                     Map<T, Object> mapping,
                                                                     @NotNull HomekitEndpointContext c) {
@@ -344,12 +350,11 @@ public class HomekitCharacteristicFactory {
         } else {
             log.warn("No Homio mapping for HK enum {} on var {}", enumFromHk, variable);
         }
-    }
+    }*/
 
     public static void setHomioVariableFromEnum2(@Nullable ContextVar.Variable variable,
                                                  Object enumFromHk,
-                                                 Map<Enum, Object> mapping,
-                                                 @NotNull HomekitEndpointContext c) {
+                                                 Map<Enum, Object> mapping) {
         if (variable == null || enumFromHk == null) return;
         Object homioValueRepresentation = mapping.get(enumFromHk);
         if (homioValueRepresentation instanceof List)
@@ -364,7 +369,6 @@ public class HomekitCharacteristicFactory {
                 } else {
                     variable.set(new StringType(stringValueToSet));
                 }
-                c.updateUI();
             } catch (Exception e) {
                 log.error("Error setting Homio variable {} from HomeKit enum {}: {}", variable, enumFromHk, e.getMessage());
             }
@@ -377,55 +381,40 @@ public class HomekitCharacteristicFactory {
         return () -> completedFuture(v.getValue().boolValue());
     }
 
-    private static @NotNull ExceptionalConsumer<Boolean> setBooleanConsumer(@NotNull ContextVar.Variable v, @NotNull HomekitEndpointContext c) {
-        return val -> {
-            v.set(OnOffType.of(val));
-            c.updateUI();
-        };
+    private static @NotNull ExceptionalConsumer<Boolean> setBooleanConsumer(@NotNull ContextVar.Variable v) {
+        return val -> v.set(OnOffType.of(val));
     }
 
     private static @NotNull Supplier<CompletableFuture<Integer>> getIntSupplier(@NotNull ContextVar.Variable v, int def) {
         return () -> completedFuture(v.getValue().intValue(def));
     }
 
-    private static @NotNull ExceptionalConsumer<Integer> setIntConsumer(@NotNull ContextVar.Variable v, @NotNull HomekitEndpointContext c) {
-        return val -> {
-            v.set(new DecimalType(val));
-            c.updateUI();
-        };
+    private static @NotNull ExceptionalConsumer<Integer> setIntConsumer(@NotNull ContextVar.Variable v) {
+        return val -> v.set(new DecimalType(val));
     }
 
     private static @NotNull Supplier<CompletableFuture<Double>> getDoubleSupplier(@NotNull ContextVar.Variable v, double def) {
         return () -> completedFuture(v.getValue().doubleValue(def));
     }
 
-    private static @NotNull ExceptionalConsumer<Double> setDoubleConsumer(@NotNull ContextVar.Variable v, @NotNull HomekitEndpointContext c) {
-        return val -> {
-            v.set(new DecimalType(val));
-            c.updateUI();
-        };
+    private static @NotNull ExceptionalConsumer<Double> setDoubleConsumer(@NotNull ContextVar.Variable v) {
+        return val -> v.set(new DecimalType(val));
     }
 
     private static @NotNull Supplier<CompletableFuture<String>> getStringSupplier(@Nullable ContextVar.Variable v, String def) {
         return () -> completedFuture(v == null ? def : v.getValue().stringValue(def));
     }
 
-    private static @NotNull ExceptionalConsumer<String> setStringConsumer(@NotNull ContextVar.Variable v, @NotNull HomekitEndpointContext c) {
-        return val -> {
-            v.set(new StringType(val));
-            c.updateUI();
-        };
+    private static @NotNull ExceptionalConsumer<String> setStringConsumer(@NotNull ContextVar.Variable v) {
+        return val -> v.set(new StringType(val));
     }
 
     public static @NotNull Supplier<CompletableFuture<Double>> getTemperatureSupplier(@NotNull ContextVar.Variable v, double dC) {
         return () -> completedFuture(v.getValue().doubleValue(dC));
     }
 
-    public static @NotNull ExceptionalConsumer<Double> setTemperatureConsumer(@NotNull ContextVar.Variable v, @NotNull HomekitEndpointContext c) {
-        return valC -> {
-            v.set(new DecimalType(valC));
-            c.updateUI();
-        };
+    public static @NotNull ExceptionalConsumer<Double> setTemperatureConsumer(@NotNull ContextVar.Variable v) {
+        return valC -> v.set(new DecimalType(valC));
     }
 
     public static Consumer<HomekitCharacteristicChangeCallback> getSubscriber(
@@ -457,41 +446,6 @@ public class HomekitCharacteristicFactory {
         };
         String k = c.owner().getEntityID() + "_" + c.endpoint().getId() + "_" + t.name() + "_sub";
         return () -> v.removeListener(k);
-    }
-
-    // Accessory Info
-    private static @NotNull ManufacturerCharacteristic createManufacturerCharacteristic(@NotNull HomekitEndpointContext c) {
-        ContextVar.Variable v = c.getVariable(c.endpoint().getManufacturer());
-        return new ManufacturerCharacteristic(getStringSupplier(v, "Homio"));
-    }
-
-    private static @NotNull ModelCharacteristic createModelCharacteristic(@NotNull HomekitEndpointContext c) {
-        ContextVar.Variable v = c.getVariable(c.endpoint().getModel());
-        return new ModelCharacteristic(getStringSupplier(v, "Virtual"));
-    }
-
-    private static @NotNull SerialNumberCharacteristic createSerialNumberCharacteristic(@NotNull HomekitEndpointContext c) {
-        ContextVar.Variable v = c.getVariable(c.endpoint().getSerialNumber());
-        return new SerialNumberCharacteristic(getStringSupplier(v, c.endpoint().getSerialNumber()));
-    }
-
-    private static @NotNull FirmwareRevisionCharacteristic createFirmwareRevisionCharacteristic(@NotNull HomekitEndpointContext c) {
-        ContextVar.Variable v = c.getVariable(c.endpoint().getFirmwareRevision());
-        return new FirmwareRevisionCharacteristic(getStringSupplier(v, "1.0"));
-    }
-
-    private static @NotNull HardwareRevisionCharacteristic createHardwareRevisionCharacteristic(@NotNull HomekitEndpointContext c) {
-        ContextVar.Variable v = c.getVariable(c.endpoint().getHardwareRevision());
-        return new HardwareRevisionCharacteristic(getStringSupplier(v, "1.0"));
-    }
-
-    private static @NotNull IdentifyCharacteristic createIdentifyCharacteristic(@NotNull HomekitEndpointContext c) {
-        return new IdentifyCharacteristic((onOff) -> log.info("Identify called for: {}. Value: {}",
-                c.endpoint().getName(), onOff));
-    }
-
-    private static @NotNull NameCharacteristic createNameCharacteristic(@NotNull HomekitEndpointContext c, @Nullable String name) {
-        return new NameCharacteristic(() -> completedFuture(Objects.toString(name, c.endpoint().getTitle())));
     }
 
     public static TemperatureDisplayUnitCharacteristic createSystemTemperatureDisplayUnitCharacteristic() {

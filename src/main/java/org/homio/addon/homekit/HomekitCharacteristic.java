@@ -11,6 +11,8 @@ import java.lang.annotation.*;
 @Target({ElementType.METHOD})
 public @interface HomekitCharacteristic {
 
+    String forAccessory() default "";
+
     Class<? extends BaseCharacteristic> value();
 
     HomekitCharacteristicType type();

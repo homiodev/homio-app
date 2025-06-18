@@ -376,7 +376,7 @@ public final class WorkspaceVariable extends BaseEntity
 
     @Override
     public void addListener(@NotNull String key, @NotNull ThrowingConsumer<State, Exception> callback) {
-        context().event().addEventBehaviourListener(getEntityID(), key, state -> {
+        context().event().addEventBehaviourListener(getFullEntityID(), key, state -> {
             try {
                 callback.accept(state);
             } catch (Exception e) {

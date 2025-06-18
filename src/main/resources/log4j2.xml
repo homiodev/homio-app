@@ -129,10 +129,10 @@
         <!-- Set additivity="false" if you don't want these logs to also go to the Root logger's appenders -->
         <!-- If you want them in appLog and Console like others, keep additivity or add AppenderRefs -->
 
-        <Logger name="io.github.hapjava" level="TRACE" additivity="false">
+        <!--<Logger name="io.github.hapjava" level="TRACE" additivity="false">
             <AppenderRef ref="appLog"/>
             <AppenderRef ref="Console"/>
-        </Logger>
+        </Logger>-->
         <!-- You can also set levels for more specific HAP-Java sub-packages if needed, -->
         <!-- but the parent io.github.hapjava should cover them. -->
         <!-- Example of specific sub-packages if the above isn't enough:
@@ -144,13 +144,11 @@
             <AppenderRef ref="appLog"/>
             <AppenderRef ref="Console"/>
         </Logger>
-        <Logger name="io.github.hapjava.server.impl.connections" level="TRACE" additivity="false">
+        <Logger name="javax.jmdns" level="DEBUG" additivity="false">
             <AppenderRef ref="appLog"/>
             <AppenderRef ref="Console"/>
         </Logger>
         -->
-        <!-- HAP-Java Logging Configuration - END -->
-
 
         <Root level="info">
             <AppenderRef ref="appLog"/>

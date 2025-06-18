@@ -10,13 +10,13 @@ import io.github.hapjava.server.impl.crypto.HAPSetupCodeUtils;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
 import org.homio.addon.homekit.accessories.HomekitAccessoryFactory;
 import org.homio.api.Context;
 import org.homio.api.ContextVar;
 import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContractStub;
 import org.homio.api.entity.device.DeviceEntityAndSeries;
+import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.endpoint.BaseDeviceEndpoint;
 import org.homio.api.model.endpoint.DeviceEndpoint;
@@ -38,12 +38,12 @@ import java.util.stream.Collectors;
 
 @SuppressWarnings({"JpaAttributeTypeInspection", "unused"})
 @Entity
-@Log4j2
 @CreateSingleEntity
 @UIRouteMisc(allowCreateItem = false)
 public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEntity> implements
         EntityService<HomekitService>,
-        DeviceEndpointsBehaviourContractStub {
+        DeviceEndpointsBehaviourContractStub,
+        HasEntityLog {
 
     @Override
     @UIField(order = 10, label = "homekitName")
@@ -253,6 +253,11 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
                 .sendImage(getJsonData("qrImage"));
     }
 
+    @Override
+    public void logBuilder(@NotNull HasEntityLog.EntityLogBuilder logBuilder) {
+        logBuilder.addTopicFilterByEntityID(HomekitEntity.class);
+    }
+
     @Getter
     public static class HomekitEndpointUI extends BaseDeviceEndpoint<HomekitEntity> {
 
@@ -264,6 +269,9 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
             setIgnoreDuplicates(false);
             setEndpointEntityID(ctx.endpoint().getEntityID());
             setDevice(ctx.owner());
+            String type = ctx.accessory().getMasterCharacteristic().getType();
+            ctx.characteristicsInfo(type).ifPresent(ci -> setIcon(ci.variable().getIconModel()));
+
             setEndpointType(EndpointType.string);
             setInitialValue(getAccessoryValue());
             ctx.setUpdateUI(() -> setValue(getAccessoryValue(), true));
