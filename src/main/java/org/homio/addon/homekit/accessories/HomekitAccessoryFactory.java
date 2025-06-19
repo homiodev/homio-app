@@ -25,6 +25,7 @@ import io.github.hapjava.characteristics.impl.heatercooler.CurrentHeaterCoolerSt
 import io.github.hapjava.characteristics.impl.heatercooler.TargetHeaterCoolerStateCharacteristic;
 import io.github.hapjava.characteristics.impl.heatercooler.TargetHeaterCoolerStateEnum;
 import io.github.hapjava.characteristics.impl.humiditysensor.CurrentRelativeHumidityCharacteristic;
+import io.github.hapjava.characteristics.impl.humiditysensor.TargetRelativeHumidityCharacteristic;
 import io.github.hapjava.characteristics.impl.leaksensor.LeakDetectedStateCharacteristic;
 import io.github.hapjava.characteristics.impl.leaksensor.LeakDetectedStateEnum;
 import io.github.hapjava.characteristics.impl.lightsensor.CurrentAmbientLightLevelCharacteristic;
@@ -58,7 +59,6 @@ import io.github.hapjava.services.impl.*;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.addon.homekit.HomekitCharacteristicFactory;
 import org.homio.addon.homekit.HomekitEndpointContext;
 import org.homio.addon.homekit.HomekitEndpointEntity;
 import org.homio.addon.homekit.enums.HomekitAccessoryType;
@@ -166,8 +166,14 @@ public class HomekitAccessoryFactory {
         }
 
         @Override
-        public <C extends Characteristic> C getCharacteristic(@NotNull Class<? extends C> klazz) {
-            return characteristics.get(klazz);
+        public @NotNull <C extends Characteristic> Optional<C> getCharacteristicOpt(Class<? extends C> klazz) {
+            return Optional.ofNullable(characteristics.get(klazz));
+        }
+
+        @Override
+        public <C extends Characteristic> @NotNull C getCharacteristic(@NotNull Class<? extends C> klazz) {
+            return Objects.requireNonNull(characteristics.get(klazz),
+                    "Unable to find characteristic: " + klazz.getName() + " for " + ctx.endpoint());
         }
 
         @Override
@@ -990,10 +996,6 @@ public class HomekitAccessoryFactory {
             var service = new HeaterCoolerService(this);
 
             var temperatureDisplayUnit = getCharacteristic(TemperatureDisplayUnitCharacteristic.class);
-            if (temperatureDisplayUnit == null) {
-                service.addOptionalCharacteristic(
-                        HomekitCharacteristicFactory.createSystemTemperatureDisplayUnitCharacteristic());
-            }
 
             addService(service);
             log.debug("[{}]: {} HomekitHeaterCooler service added/configured", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
@@ -1377,132 +1379,6 @@ public class HomekitAccessoryFactory {
             log.info("[{}]: {} Created HomekitTemperatureSensor accessory", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
             addService(new TemperatureSensorService(getCharacteristic(CurrentTemperatureCharacteristic.class)));
             log.debug("[{}]: {} HomekitTemperatureSensor service added", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-        }
-    }
-
-    private static class HomekitThermostat extends AbstractHomekitAccessory<CoolingThresholdTemperatureCharacteristic> {
-        private @Nullable HomekitCharacteristicChangeCallback targetTemperatureCallback = null;
-
-        public HomekitThermostat(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, CoolingThresholdTemperatureCharacteristic.class, null);
-            log.info("[{}]: {} Created HomekitThermostat accessory", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            var coolingThresholdTemperatureCharacteristic = getCharacteristic(
-                    CoolingThresholdTemperatureCharacteristic.class);
-            var heatingThresholdTemperatureCharacteristic = getCharacteristic(
-                    HeatingThresholdTemperatureCharacteristic.class);
-            var targetTemperatureCharacteristic = getCharacteristicOpt(TargetTemperatureCharacteristic.class);
-
-            if (coolingThresholdTemperatureCharacteristic == null
-                && heatingThresholdTemperatureCharacteristic == null
-                && targetTemperatureCharacteristic.isEmpty()) {
-                log.error("[{}]: {} Unable to create thermostat; at least one of TargetTemperature, CoolingThresholdTemperature, or HeatingThresholdTemperature is required.", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-                throw new RuntimeException(
-                        "Unable to create thermostat; at least one of TargetTemperature, CoolingThresholdTemperature, or HeatingThresholdTemperature is required.");
-            }
-
-            var targetHeatingCoolingStateCharacteristic = getCharacteristic(TargetHeatingCoolingStateCharacteristic.class);
-
-            if (targetTemperatureCharacteristic.isEmpty()) {
-                log.debug("[{}]: {} TargetTemperatureCharacteristic not provided, simulating.", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-                if (Arrays.asList(targetHeatingCoolingStateCharacteristic.getValidValues()).contains(TargetHeatingCoolingStateEnum.HEAT)
-                    && heatingThresholdTemperatureCharacteristic == null) {
-                    log.error("[{}]: {} HeatingThresholdTemperature must be provided if HEAT mode is allowed and TargetTemperature is not provided.", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-                    throw new RuntimeException(
-                            "HeatingThresholdTemperature must be provided if HEAT mode is allowed and TargetTemperature is not provided.");
-                }
-                if (Arrays.asList(targetHeatingCoolingStateCharacteristic.getValidValues()).contains(TargetHeatingCoolingStateEnum.COOL)
-                    && coolingThresholdTemperatureCharacteristic == null) {
-                    log.error("[{}]: {} CoolingThresholdTemperature must be provided if COOL mode is allowed and TargetTemperature is not provided.", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-                    throw new RuntimeException(
-                            "CoolingThresholdTemperature must be provided if COOL mode is allowed and TargetTemperature is not provided.");
-                }
-
-                double minValue, maxValue, minStep;
-                if (coolingThresholdTemperatureCharacteristic != null
-                    && heatingThresholdTemperatureCharacteristic != null) {
-                    minValue = Math.min(coolingThresholdTemperatureCharacteristic.getMinValue(),
-                            heatingThresholdTemperatureCharacteristic.getMinValue());
-                    maxValue = Math.max(coolingThresholdTemperatureCharacteristic.getMaxValue(),
-                            heatingThresholdTemperatureCharacteristic.getMaxValue());
-                    minStep = Math.min(coolingThresholdTemperatureCharacteristic.getMinStep(),
-                            heatingThresholdTemperatureCharacteristic.getMinStep());
-                } else if (coolingThresholdTemperatureCharacteristic != null) {
-                    minValue = coolingThresholdTemperatureCharacteristic.getMinValue();
-                    maxValue = coolingThresholdTemperatureCharacteristic.getMaxValue();
-                    minStep = coolingThresholdTemperatureCharacteristic.getMinStep();
-                } else {
-                    minValue = heatingThresholdTemperatureCharacteristic.getMinValue();
-                    maxValue = heatingThresholdTemperatureCharacteristic.getMaxValue();
-                    minStep = heatingThresholdTemperatureCharacteristic.getMinStep();
-                }
-                targetTemperatureCharacteristic = Optional
-                        .of(new TargetTemperatureCharacteristic(minValue, maxValue, minStep, () -> {
-                            try {
-                                return switch (targetHeatingCoolingStateCharacteristic.getEnumValue().get()) {
-                                    case HEAT -> heatingThresholdTemperatureCharacteristic.getValue();
-                                    case COOL -> coolingThresholdTemperatureCharacteristic.getValue();
-                                    default -> completedFuture(
-                                            (heatingThresholdTemperatureCharacteristic.getValue().get()
-                                             + coolingThresholdTemperatureCharacteristic.getValue().get())
-                                            / 2);
-                                };
-                            } catch (InterruptedException | ExecutionException e) {
-                                log.error("[{}]: {} Error getting simulated target temperature", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), e);
-                                return null;
-                            }
-                        }, value -> {
-                            try {
-                                log.debug("[{}]: {} Setting simulated target temperature to: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), value);
-                                switch (targetHeatingCoolingStateCharacteristic.getEnumValue().get()) {
-                                    case HEAT:
-                                        heatingThresholdTemperatureCharacteristic.setValue(value);
-                                        break;
-                                    case COOL:
-                                        coolingThresholdTemperatureCharacteristic.setValue(value);
-                                        break;
-                                    default:
-                                        // ignore
-                                }
-                            } catch (InterruptedException | ExecutionException e) {
-                                log.error("[{}]: {} Error setting simulated target temperature", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), e);
-                            }
-                        }, cb -> {
-                            log.debug("[{}]: {} Subscribing to simulated target temperature", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-                            targetTemperatureCallback = cb;
-                            if (heatingThresholdTemperatureCharacteristic != null) {
-                                getCharacteristic(HeatingThresholdTemperatureCharacteristic.class);
-                            }
-                            if (coolingThresholdTemperatureCharacteristic != null) {
-                            }
-                        }, () -> {
-                            log.debug("[{}]: {} Unsubscribing from simulated target temperature", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-                            targetTemperatureCallback = null;
-                        }));
-            }
-
-            var currentHeatingCoolingStateCharacteristic = getCharacteristicOpt(CurrentHeatingCoolingStateCharacteristic.class)
-                    .orElseGet(() -> new CurrentHeatingCoolingStateCharacteristic(
-                                    new CurrentHeatingCoolingStateEnum[]{CurrentHeatingCoolingStateEnum.OFF},
-                                    () -> completedFuture(CurrentHeatingCoolingStateEnum.OFF), (cb) -> {
-                            }, () -> {
-                            })
-
-                    );
-            var displayUnitCharacteristic = getCharacteristicOpt(TemperatureDisplayUnitCharacteristic.class)
-                    .orElseGet(HomekitCharacteristicFactory::createSystemTemperatureDisplayUnitCharacteristic);
-
-            addService(
-                    new ThermostatService(currentHeatingCoolingStateCharacteristic, targetHeatingCoolingStateCharacteristic,
-                            getCharacteristic(CurrentTemperatureCharacteristic.class),
-                            targetTemperatureCharacteristic.get(), displayUnitCharacteristic));
-            log.debug("[{}]: {} HomekitThermostat service added/configured", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-        }
-
-        private void thresholdTemperatureChanged() {
-            if (targetTemperatureCallback != null) {
-                log.debug("[{}]: {} Threshold temperature changed, invoking callback", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-                targetTemperatureCallback.changed();
-            }
         }
     }
 

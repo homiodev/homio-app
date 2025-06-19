@@ -321,7 +321,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      */
     @UIField(order = 13, required = true)
     @UIFieldShowOnCondition("return ['HeaterCooler', 'TemperatureSensor', 'Thermostat'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection(varType = Float)
+    @UIFieldVariableSelection(varType = Float, requireWritable = false)
     @UIFieldGroup("REQ_CHAR")
     @HomekitCharacteristic(value = CurrentTemperatureCharacteristic.class, type = CurrentTemperature,
             impl = CurrentTemperatureCharacteristicSupplier.class)
@@ -805,7 +805,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: TargetTemperature (Celsius, typically 10-38).
      * Used by (Required): Thermostat. (One of TargetTemperature, CoolingThresholdTemperature, or HeatingThresholdTemperature must be provided for Thermostat).
      */
-    @UIField(order = 91, required = true)
+    @UIField(order = 91)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Thermostat'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1310,7 +1310,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Used by (Optional): HeaterCooler.
      */
     @UIField(order = 51)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'HeaterCooler'")
+    @UIFieldShowOnCondition("return ['Thermostat', 'HeaterCooler'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
     @HomekitCharacteristic(value = CoolingThresholdTemperatureCharacteristic.class, type = CoolingThresholdTemperature,
@@ -1329,7 +1329,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Used by (Optional): HeaterCooler.
      */
     @UIField(order = 52)
-    @UIFieldShowOnCondition("return context.get('accessoryType') == 'HeaterCooler'")
+    @UIFieldShowOnCondition("return ['Thermostat', 'HeaterCooler'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
     @HomekitCharacteristic(value = HeatingThresholdTemperatureCharacteristic.class, type = HeatingThresholdTemperature,
@@ -1340,6 +1340,18 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
 
     public void setHeatingThresholdTemperature(String value) {
         setJsonData("htt", value);
+    }
+
+    @UIField(order = 52)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Thermostat'")
+    @UIFieldGroup("OPT_CHAR")
+    @HomekitCharacteristic(value = TemperatureDisplayUnitCharacteristic.class, type = TemperatureUnit)
+    public TemperatureDisplayUnitEnum getTemperatureUnit() {
+        return getJsonDataEnum("tu", TemperatureDisplayUnitEnum.CELSIUS);
+    }
+
+    public void setTemperatureUnit(String value) {
+        setJsonData("tu", value);
     }
 
     /**
@@ -1366,7 +1378,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Used by (Optional): HeaterCooler (if it has a humidifier function), HumidifierDehumidifier.
      */
     @UIField(order = 54)
-    @UIFieldShowOnCondition("return ['HeaterCooler', 'HumidifierDehumidifier'].includes(context.get('accessoryType'))")
+    @UIFieldShowOnCondition("return ['Thermostat', 'HeaterCooler', 'HumidifierDehumidifier'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
     @HomekitCharacteristic(value = TargetRelativeHumidityCharacteristic.class, type = TargetRelativeHumidity, defaultDoubleValue = 45.0F)

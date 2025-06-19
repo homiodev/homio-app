@@ -130,7 +130,6 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
             endpoints.put(code, ctx);
             String group = endpoint.getGroup();
             if (group.isEmpty()) {
-                // var accessory = new MyContactSensorAccessory(2, "My Door Sensor");
                 var accessory = HomekitAccessoryFactory.create(ctx);
                 bridge.addAccessory(accessory);
             } else {

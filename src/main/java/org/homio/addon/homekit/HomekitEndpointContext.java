@@ -74,6 +74,10 @@ public class HomekitEndpointContext {
         return Optional.empty();
     }
 
+    public <T extends BaseCharacteristic<?>> CharacteristicInfo getCharacteristicsInfo(T characteristic) {
+        return getCharacteristicsInfo(characteristic.getClass());
+    }
+
     public <T extends BaseCharacteristic<?>> CharacteristicInfo getCharacteristicsInfo(Class<T> aClass) {
         for (HomekitEndpointContext.CharacteristicInfo characteristic : characteristics) {
             if (characteristic.characteristic.getClass().equals(aClass)) {

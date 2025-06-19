@@ -85,12 +85,14 @@ public abstract class AbstractHomekitAccessory<T extends BaseCharacteristic<?>> 
     }
 
     @Override
-    public <C extends Characteristic> C getCharacteristic(Class<? extends C> klazz) {
-        return characteristics.get(klazz);
+    public @NotNull<C extends Characteristic> C getCharacteristic(Class<? extends C> klazz) {
+        return Objects.requireNonNull(characteristics.get(klazz),
+                "Unable to find characteristic: " + klazz.getName() + " for " + ctx.endpoint());
     }
 
-    public <C extends Characteristic> Optional<C> getCharacteristicOpt(Class<? extends C> klazz) {
-        return Optional.ofNullable(getCharacteristic(klazz));
+    @Override
+    public @NotNull<C extends Characteristic> Optional<C> getCharacteristicOpt(Class<? extends C> klazz) {
+        return Optional.ofNullable(characteristics.get(klazz));
     }
 
     @Override

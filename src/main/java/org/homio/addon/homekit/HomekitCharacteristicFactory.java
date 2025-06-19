@@ -431,6 +431,7 @@ public class HomekitCharacteristicFactory {
             @Nullable Consumer<State> callback) {
         String k = c.owner().getEntityID() + "_" + c.endpoint().getId() + "_" + t.name() + "_sub";
         return cb -> {
+            log.info("[{}]: Subscribe to {} - {} changes", c.owner().getEntityID(), c.endpoint().getAccessoryType(), t);
             if (cb == null) return;
             v.addListener(k, s -> {
                 if (callback != null) {
@@ -445,17 +446,10 @@ public class HomekitCharacteristicFactory {
         if (v == null) return () -> {
         };
         String k = c.owner().getEntityID() + "_" + c.endpoint().getId() + "_" + t.name() + "_sub";
-        return () -> v.removeListener(k);
-    }
-
-    public static TemperatureDisplayUnitCharacteristic createSystemTemperatureDisplayUnitCharacteristic() {
-        return new TemperatureDisplayUnitCharacteristic(() -> CompletableFuture
-                .completedFuture(/*HomekitCharacteristicFactory.useFahrenheit() ? TemperatureDisplayUnitEnum.FAHRENHEIT
-                        : */TemperatureDisplayUnitEnum.CELSIUS),
-                (value) -> {
-                }, (cb) -> {
-        }, () -> {
-        });
+        return () -> {
+            log.info("[{}]: Unsubscribe from {} - {} changes", c.owner().getEntityID(), c.endpoint().getAccessoryType(), t);
+            v.removeListener(k);
+        };
     }
 
     private static <T extends Enum<T>> Supplier<CompletableFuture<T>> getEnum(

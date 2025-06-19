@@ -5,13 +5,16 @@ import io.github.hapjava.accessories.optionalcharacteristic.AccessoryWithHardwar
 import io.github.hapjava.characteristics.Characteristic;
 import io.github.hapjava.characteristics.impl.base.BaseCharacteristic;
 import org.homio.addon.homekit.HomekitEndpointEntity;
+import org.jetbrains.annotations.NotNull;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public interface BaseHomekitAccessory extends HomekitAccessory, AccessoryWithHardwareRevision {
 
     BaseCharacteristic<?> getMasterCharacteristic();
 
+    @NotNull
     <C extends Characteristic> C getCharacteristic(Class<? extends C> klazz);
 
     @Override
@@ -47,6 +50,8 @@ public interface BaseHomekitAccessory extends HomekitAccessory, AccessoryWithHar
     @Override
     default void identify() {
     }
+
+    @NotNull<C extends Characteristic> Optional<C> getCharacteristicOpt(Class<? extends C> klazz);
 
     HomekitEndpointEntity getEndpoint();
 }
