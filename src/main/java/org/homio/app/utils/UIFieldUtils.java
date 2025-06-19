@@ -50,7 +50,6 @@ import org.homio.app.model.var.UIFieldVariable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
-import org.springframework.core.annotation.AnnotationUtils;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
@@ -811,6 +810,7 @@ public class UIFieldUtils {
         return value ? true : null;
     }
 
+    // mosly for series
     private static Type extractSetEntityType(Object instance, UIFieldContext fieldContext, EntityUIMetaData entityUIMetaData,
                                              ParameterizedType genericType, ObjectNode jsonTypeMetadata) {
         Type typeArgument = genericType.getActualTypeArguments()[0];
@@ -822,6 +822,14 @@ public class UIFieldUtils {
             } else {
                 typeArgument = null;
             }
+        }
+        // very custom case Set<EnumValue> getEnumMultiList()
+        var ta = genericType.getActualTypeArguments()[0];
+        if (ta instanceof Class ac && ac.isEnum()) {
+            entityUIMetaData.setType(UIFieldType.SelectBox.name());
+            jsonTypeMetadata.put("type", ((Class<?>) ta).getSimpleName());
+            jsonTypeMetadata.put("multiSelect", true);
+            jsonTypeMetadata.put("actualEnum", ac.getName());
         }
         return typeArgument;
     }
@@ -921,7 +929,7 @@ public class UIFieldUtils {
                 // or it was not in the currentTypeMap, meaning it wasn't provided as an actual argument.
                 if (parameterizedCurrentType != null) { // Check direct actual arguments
                     TypeVariable<?>[] params = declaringClass.getTypeParameters();
-                    for(int i=0; i<params.length; ++i) {
+                    for (int i = 0; i < params.length; ++i) {
                         if (params[i].equals(typeVariable)) {
                             Type directActualArg = parameterizedCurrentType.getActualTypeArguments()[i];
                             if (directActualArg instanceof TypeVariable && current.typeMap != null) {
@@ -946,8 +954,6 @@ public class UIFieldUtils {
         }
         return null; // TypeVariable not resolved
     }
-
-    private record TypeContext(Type type, java.util.Map<TypeVariable<?>, Type> typeMap) {}
 
     private static <A extends Annotation> List<A> getDeclaredAnnotationsByType(Class<A> annotationClass, List<Method> methods) {
         List<A> result = new ArrayList<>();
@@ -1049,6 +1055,9 @@ public class UIFieldUtils {
     public interface ConfigureFieldsService {
 
         void configure(@NotNull List<EntityUIMetaData> result);
+    }
+
+    private record TypeContext(Type type, java.util.Map<TypeVariable<?>, Type> typeMap) {
     }
 
     @RequiredArgsConstructor

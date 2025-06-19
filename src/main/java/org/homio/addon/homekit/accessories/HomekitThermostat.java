@@ -89,50 +89,10 @@ public class HomekitThermostat extends AbstractHomekitAccessory<CurrentTemperatu
                 maxValue = heatingThresholdTemperatureCharacteristic.get().getMaxValue();
                 minStep = heatingThresholdTemperatureCharacteristic.get().getMinStep();
             }
-            targetTemperatureCharacteristic = Optional
-                    .of(new TargetTemperatureCharacteristic(minValue, maxValue, minStep, () -> {
-                        try {
-                            return switch (targetHeatingCoolingStateCharacteristic.getEnumValue().get()) {
-                                case HEAT -> heatingThresholdTemperatureCharacteristic.get().getValue();
-                                case COOL -> coolingThresholdTemperatureCharacteristic.get().getValue();
-                                default -> completedFuture(
-                                        (heatingThresholdTemperatureCharacteristic.get().getValue().get()
-                                         + coolingThresholdTemperatureCharacteristic.get().getValue().get())
-                                        / 2);
-                            };
-                        } catch (InterruptedException | ExecutionException e) {
-                            log.error("[{}]: {} Error getting simulated target temperature", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), e);
-                            return null;
-                        }
-                    }, value -> {
-                        try {
-                            log.debug("[{}]: {} Setting simulated target temperature to: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), value);
-                            switch (targetHeatingCoolingStateCharacteristic.getEnumValue().get()) {
-                                case HEAT:
-                                    heatingThresholdTemperatureCharacteristic.get().setValue(value);
-                                    break;
-                                case COOL:
-                                    coolingThresholdTemperatureCharacteristic.get().setValue(value);
-                                    break;
-                                default:
-                                    // ignore
-                            }
-                        } catch (InterruptedException | ExecutionException e) {
-                            log.error("[{}]: {} Error setting simulated target temperature", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), e);
-                        }
-                    }, cb -> {
-                        log.debug("[{}]: {} Subscribing to simulated target temperature", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-                        targetTemperatureCallback = cb;
-                        subscribeCharacteristic(heatingThresholdTemperatureCharacteristic);
-                        subscribeCharacteristic(coolingThresholdTemperatureCharacteristic);
-                        subscribeCharacteristic(Optional.of(targetHeatingCoolingStateCharacteristic));
-                    }, () -> {
-                        log.debug("[{}]: {} Unsubscribing from simulated target temperature", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-                        targetTemperatureCallback = null;
-                        unSubscribeCharacteristic(heatingThresholdTemperatureCharacteristic);
-                        unSubscribeCharacteristic(coolingThresholdTemperatureCharacteristic);
-                        unSubscribeCharacteristic(Optional.of(targetHeatingCoolingStateCharacteristic));
-                    }));
+            targetTemperatureCharacteristic = createTargetTemperatureCharacteristic(ctx, minValue, maxValue, minStep,
+                    targetHeatingCoolingStateCharacteristic,
+                    heatingThresholdTemperatureCharacteristic,
+                    coolingThresholdTemperatureCharacteristic);
         }
 
         addService(
@@ -140,6 +100,59 @@ public class HomekitThermostat extends AbstractHomekitAccessory<CurrentTemperatu
                         getCharacteristic(CurrentTemperatureCharacteristic.class),
                         targetTemperatureCharacteristic.get(), displayUnitCharacteristic));
         log.debug("[{}]: {} HomekitThermostat service added/configured", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
+    }
+
+    private @NotNull Optional<TargetTemperatureCharacteristic> createTargetTemperatureCharacteristic(
+            @NotNull HomekitEndpointContext ctx, double minValue, double maxValue, double minStep,
+            TargetHeatingCoolingStateCharacteristic targetHeatingCoolingStateCharacteristic,
+            Optional<HeatingThresholdTemperatureCharacteristic> heatingThresholdTemperatureCharacteristic,
+            Optional<CoolingThresholdTemperatureCharacteristic> coolingThresholdTemperatureCharacteristic) {
+        Optional<TargetTemperatureCharacteristic> targetTemperatureCharacteristic;
+        targetTemperatureCharacteristic = Optional
+                .of(new TargetTemperatureCharacteristic(minValue, maxValue, minStep, () -> {
+                    try {
+                        return switch (targetHeatingCoolingStateCharacteristic.getEnumValue().get()) {
+                            case HEAT -> heatingThresholdTemperatureCharacteristic.get().getValue();
+                            case COOL -> coolingThresholdTemperatureCharacteristic.get().getValue();
+                            default -> completedFuture(
+                                    (heatingThresholdTemperatureCharacteristic.get().getValue().get()
+                                     + coolingThresholdTemperatureCharacteristic.get().getValue().get())
+                                    / 2);
+                        };
+                    } catch (InterruptedException | ExecutionException e) {
+                        log.error("[{}]: {} Error getting simulated target temperature", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), e);
+                        return null;
+                    }
+                }, value -> {
+                    try {
+                        log.debug("[{}]: {} Setting simulated target temperature to: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), value);
+                        switch (targetHeatingCoolingStateCharacteristic.getEnumValue().get()) {
+                            case HEAT:
+                                heatingThresholdTemperatureCharacteristic.get().setValue(value);
+                                break;
+                            case COOL:
+                                coolingThresholdTemperatureCharacteristic.get().setValue(value);
+                                break;
+                            default:
+                                // ignore
+                        }
+                    } catch (InterruptedException | ExecutionException e) {
+                        log.error("[{}]: {} Error setting simulated target temperature", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), e);
+                    }
+                }, cb -> {
+                    log.debug("[{}]: {} Subscribing to simulated target temperature", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
+                    targetTemperatureCallback = cb;
+                    subscribeCharacteristic(heatingThresholdTemperatureCharacteristic);
+                    subscribeCharacteristic(coolingThresholdTemperatureCharacteristic);
+                    subscribeCharacteristic(Optional.of(targetHeatingCoolingStateCharacteristic));
+                }, () -> {
+                    log.debug("[{}]: {} Unsubscribing from simulated target temperature", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
+                    targetTemperatureCallback = null;
+                    unSubscribeCharacteristic(heatingThresholdTemperatureCharacteristic);
+                    unSubscribeCharacteristic(coolingThresholdTemperatureCharacteristic);
+                    unSubscribeCharacteristic(Optional.of(targetHeatingCoolingStateCharacteristic));
+                }));
+        return targetTemperatureCharacteristic;
     }
 
     private <T extends BaseCharacteristic<?>> void subscribeCharacteristic(@NotNull Optional<T> characteristic) {

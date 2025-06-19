@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
@@ -38,6 +39,7 @@ public final class UIFieldSelectionUtil {
     public static final List<? extends Class<? extends Annotation>> SELECT_ANNOTATIONS =
             Stream.of(SelectHandler.values()).map(h -> h.selectClass).collect(Collectors.toList());
 
+    @SneakyThrows
     static void handleFieldSelections(UIFieldUtils.UIFieldContext uiFieldContext, ObjectNode jsonTypeMetadata) {
         List<OptionModel> selectOptions = new ArrayList<>();
 
@@ -68,6 +70,13 @@ public final class UIFieldSelectionUtil {
         if (uiFieldContext.getType().isEnum()
             /*&& uiFieldContext.getType().getEnumConstants().length < 20*/) {
             selectOptions.addAll(OptionModel.enumList((Class<? extends Enum>) uiFieldContext.getType()));
+        }
+
+        String actualEnum = jsonTypeMetadata.path("actualEnum").asText();
+        if (StringUtils.isNotEmpty(actualEnum)) {
+            jsonTypeMetadata.remove("actualEnum");
+            Class<? extends Enum> enumClass = (Class<? extends Enum>) Class.forName(actualEnum);
+            selectOptions.addAll(OptionModel.enumList(enumClass));
         }
 
         if (!selectOptions.isEmpty()) {

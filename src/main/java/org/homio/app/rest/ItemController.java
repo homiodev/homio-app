@@ -278,6 +278,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             @PathVariable("type") String type,
             @RequestParam(value = "subType", defaultValue = "") String subType) {
         String key = type + subType;
+        itemsBootstrapContextMap.clear();
         itemsBootstrapContextMap.computeIfAbsent(key, s -> buildItemBootstrap(type, subType));
         return itemsBootstrapContextMap.get(key);
     }

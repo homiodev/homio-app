@@ -79,6 +79,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -349,6 +350,18 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
 
     public void setTargetHeatingCoolingState(String value) {
         setJsonData("thcs", value);
+    }
+
+    @UIField(order = 14, required = true)
+    @UIFieldShowOnCondition("return ['HeaterCooler', 'Thermostat'].includes(context.get('accessoryType'))")
+    @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = TargetHeatingCoolingStateCharacteristic.class, type = TargetHeatingCoolingState, defaultStringValue = "OFF")
+    public Set<TargetHeatingCoolingStateEnum> getTargetHeatingCoolingValidValues() {
+        return getJsonDataSet("thcsvv", TargetHeatingCoolingStateEnum.class, TargetHeatingCoolingStateEnum.values());
+    }
+
+    public void setTargetHeatingCoolingStateValidValues(String value) {
+        setJsonData("thcsvv", value);
     }
 
     /**

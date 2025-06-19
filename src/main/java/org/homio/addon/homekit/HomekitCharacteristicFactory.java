@@ -5,8 +5,6 @@ import io.github.hapjava.characteristics.CharacteristicEnum;
 import io.github.hapjava.characteristics.ExceptionalConsumer;
 import io.github.hapjava.characteristics.HomekitCharacteristicChangeCallback;
 import io.github.hapjava.characteristics.impl.base.*;
-import io.github.hapjava.characteristics.impl.thermostat.TemperatureDisplayUnitCharacteristic;
-import io.github.hapjava.characteristics.impl.thermostat.TemperatureDisplayUnitEnum;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.ClassUtils;
@@ -24,9 +22,7 @@ import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
+import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -188,6 +184,30 @@ public class HomekitCharacteristicFactory {
             paramList.remove(1);
             finalParameters = paramList.toArray();
             constructor = findObjectConstructor(clazz, ClassUtils.toClass(finalParameters));
+        }
+        if (constructor == null) {
+            Constructor<?>[] constructors = clazz.getConstructors();
+            if (constructors.length == 1) {
+                Constructor<?> firstConstructor = clazz.getConstructors()[0];
+                Parameter[] params = firstConstructor.getParameters();
+                if (params.length == 5) {
+                    var firstParameterType = params[0].getType();
+                    if (firstParameterType.isArray()) {
+                        Class<?> componentType = firstParameterType.getComponentType();
+                        if (componentType != null && componentType.isEnum()) {
+                            Object[] enumConstants = componentType.getEnumConstants();
+                            if (enumConstants != null) {
+                                var allValidValues = Array.newInstance(componentType, enumConstants.length);
+                                System.arraycopy(enumConstants, 0, allValidValues, 0, enumConstants.length);
+                                finalParameters = new Object[5];
+                                finalParameters[0] = allValidValues;
+                                System.arraycopy(parameters, 0, finalParameters, 1, parameters.length);
+                                constructor = findObjectConstructor(clazz, ClassUtils.toClass(finalParameters));
+                            }
+                        }
+                    }
+                }
+            }
         }
         if (constructor == null) {
             throw new RuntimeException("Unable to find constructor for object: " + clazz.getSimpleName());
