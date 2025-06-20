@@ -22,7 +22,10 @@ import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.*;
+import java.lang.reflect.Array;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -36,10 +39,11 @@ import static org.homio.api.util.CommonUtils.findObjectConstructor;
 public class HomekitCharacteristicFactory {
 
     @SneakyThrows
-    public static void buildCharacteristics(@NotNull HomekitEndpointContext context, @NotNull Characteristics characteristics) {
-        String accessoryType = context.endpoint().getAccessoryType().name();
+    public static void buildCharacteristics(@NotNull HomekitEndpointContext ctx,
+                                            @NotNull Characteristics characteristics) {
+        String accessoryType = ctx.endpoint().getAccessoryType().name();
         for (Method method : HomekitEndpointEntity.class.getDeclaredMethods()) {
-            var hc = findCorrectHomekitCCharacteristic(method, context.endpoint().getAccessoryType().name());
+            var hc = findCorrectHomekitCharacteristic(method, ctx.endpoint().getAccessoryType().name());
             if (hc == null) {
                 continue;
             }
@@ -53,7 +57,12 @@ public class HomekitCharacteristicFactory {
             if (!condition.value().contains(accessoryType)) {
                 continue;
             }
-            String varValue = (String) method.invoke(context.endpoint());
+            String varValue = null;
+            try {
+                varValue = (String) method.invoke(ctx.endpoint());
+            } catch (Exception ex) {
+                log.error("[{}]: Unable to invoke method: {}", ctx.owner().getEntityID(), method.getName());
+            }
             if (StringUtils.isEmpty(varValue)) {
                 continue;
             }
@@ -61,7 +70,7 @@ public class HomekitCharacteristicFactory {
                 continue;
             }
             var characteristicClass = hc.value();
-            ContextVar.Variable v = context.getVariable(varValue);
+            ContextVar.Variable v = ctx.getVariable(varValue);
             if (v == null) {
                 if (required) {
                     throw new RuntimeException("Missing required variable: " + varValue + " for accessory: " + accessoryType);
@@ -69,24 +78,24 @@ public class HomekitCharacteristicFactory {
                 continue;
             }
             if (!hc.impl().equals(HomekitCharacteristic.DefaultSupplier.class)) {
-                characteristics.addIfNotNull(hc.type(), createCustomCharacteristic(context, hc, v));
+                characteristics.addIfNotNull(hc.type(), createCustomCharacteristic(ctx, hc, v));
             } else if (BooleanCharacteristic.class.isAssignableFrom(characteristicClass)) {
-                characteristics.addIfNotNull(hc.type(), createBooleanCharacteristic(context, hc, v));
+                characteristics.addIfNotNull(hc.type(), createBooleanCharacteristic(ctx, hc, v));
             } else if (IntegerCharacteristic.class.isAssignableFrom(characteristicClass)) {
-                characteristics.addIfNotNull(hc.type(), createIntegerCharacteristic(context, hc, v));
+                characteristics.addIfNotNull(hc.type(), createIntegerCharacteristic(ctx, hc, v));
             } else if (EnumCharacteristic.class.isAssignableFrom(characteristicClass)) {
-                characteristics.addIfNotNull(hc.type(), createEnumCharacteristic(context, hc, v));
+                characteristics.addIfNotNull(hc.type(), createEnumCharacteristic(ctx, hc, v, method));
             } else if (FloatCharacteristic.class.isAssignableFrom(characteristicClass)) {
-                characteristics.addIfNotNull(hc.type(), createFloatCharacteristic(context, hc, v));
+                characteristics.addIfNotNull(hc.type(), createFloatCharacteristic(ctx, hc, v));
             } else if (StringCharacteristic.class.isAssignableFrom(characteristicClass)) {
-                characteristics.addIfNotNull(hc.type(), createStringCharacteristic(context, hc, v));
+                characteristics.addIfNotNull(hc.type(), createStringCharacteristic(ctx, hc, v));
             } else {
                 throw new RuntimeException("Unable to find handler for characteristic: " + characteristicClass);
             }
         }
     }
 
-    private static HomekitCharacteristic findCorrectHomekitCCharacteristic(Method method, String accessoryName) {
+    private static HomekitCharacteristic findCorrectHomekitCharacteristic(Method method, String accessoryName) {
         var annotations = method.getAnnotationsByType(HomekitCharacteristic.class);
         if (annotations.length == 0) {
             return null;
@@ -106,14 +115,21 @@ public class HomekitCharacteristicFactory {
         return null;
     }
 
-    private static Characteristic createEnumCharacteristic(HomekitEndpointContext c,
-                                                           HomekitCharacteristic hc,
-                                                           ContextVar.Variable v) {
+    private static Characteristic createEnumCharacteristic(@NotNull HomekitEndpointContext c,
+                                                           @NotNull HomekitCharacteristic hc,
+                                                           @NotNull ContextVar.Variable v,
+                                                           @NotNull Method method) {
         Type superType = hc.value().getGenericSuperclass();
         if (superType instanceof ParameterizedType) {
             Type enumType = ((ParameterizedType) superType).getActualTypeArguments()[0];
 
             if (enumType instanceof Class && ((Class<?>) enumType).isEnum()) {
+                Set<? extends Enum> validValues = null;
+                var vv = method.getDeclaredAnnotation(HomekitValidValues.class);
+                if (vv != null) {
+                    validValues = findEndpointValidValues(vv.value(), c.endpoint());
+                }
+
                 Class enumClass = (Class<?>) enumType;
                 Map<Enum, Object> m = createMapping(v, enumClass);
                 String defValue = hc.defaultStringValue();
@@ -121,15 +137,21 @@ public class HomekitCharacteristicFactory {
                         ? enumClass.getEnumConstants()[0]
                         : Enum.valueOf((Class<Enum>) enumClass.asSubclass(Enum.class), defValue);
 
-                BaseCharacteristic<?> characteristic = newCharacteristicInstance(
-                        hc.value(),
-                        (Supplier<CompletableFuture<?>>) () -> completedFuture(getKeyFromMapping2(v, m, defaultEnum)),
-                        (ExceptionalConsumer<?>) newVal -> {
-                            setHomioVariableFromEnum2(v, newVal, m);
-                            // setIntConsumer(v, c),
-                        },
-                        getSubscriber(v, c, hc.type()),
-                        getUnsubscriber(v, c, hc.type()));
+                List<Object> parameters = new ArrayList<>();
+                if (validValues != null) {
+                    Object[] allValidValues = (Object[]) Array.newInstance(enumClass, validValues.size());
+                    System.arraycopy(validValues.toArray(), 0, allValidValues, 0, validValues.size());
+                    parameters.add(allValidValues);
+                }
+                parameters.add((Supplier<CompletableFuture<?>>) () -> completedFuture(getKeyFromMapping2(v, m, defaultEnum)));
+                parameters.add((ExceptionalConsumer<?>) newVal -> {
+                    setHomioVariableFromEnum2(v, newVal, m);
+                    // setIntConsumer(v, c),
+                });
+                parameters.add(getSubscriber(v, c, hc.type()));
+                parameters.add(getUnsubscriber(v, c, hc.type()));
+
+                BaseCharacteristic<?> characteristic = newCharacteristicInstance(hc.value(), parameters.toArray());
 
                 c.setCharacteristic(characteristic, v, hc.type());
                 return characteristic;
@@ -138,9 +160,30 @@ public class HomekitCharacteristicFactory {
         return null;
     }
 
-    private static Characteristic createStringCharacteristic(HomekitEndpointContext c,
-                                                             HomekitCharacteristic hc,
-                                                             ContextVar.Variable v) {
+    @SneakyThrows
+    private static Set<? extends Enum> findEndpointValidValues(
+            @NotNull Class<? extends Enum> enumClass,
+            @NotNull HomekitEndpointEntity endpoint) {
+        //
+        for (Method method : HomekitEndpointEntity.class.getMethods()) {
+            if (Set.class.isAssignableFrom(method.getReturnType())) {
+                Type returnType = method.getGenericReturnType();
+                if (returnType instanceof ParameterizedType pt) {
+                    Type actualType = pt.getActualTypeArguments()[0];
+                    if (actualType instanceof Class && enumClass.isAssignableFrom((Class<?>) actualType)) {
+                        return (Set<? extends Enum>) method.invoke(endpoint);
+                    }
+                }
+            }
+        }
+        throw new RuntimeException("Unable to find related method for valid values: " + enumClass);
+    }
+
+    private static Characteristic createStringCharacteristic(
+            @NotNull HomekitEndpointContext c,
+            @NotNull HomekitCharacteristic hc,
+            @NotNull ContextVar.Variable v) {
+        //
         var characteristic = newCharacteristicInstance(hc.value(),
                 getStringSupplier(v, hc.defaultStringValue()),
                 setStringConsumer(v),
@@ -150,9 +193,11 @@ public class HomekitCharacteristicFactory {
         return characteristic;
     }
 
-    private static Characteristic createFloatCharacteristic(HomekitEndpointContext c,
-                                                            HomekitCharacteristic hc,
-                                                            ContextVar.Variable v) {
+    private static Characteristic createFloatCharacteristic(
+            @NotNull HomekitEndpointContext c,
+            @NotNull HomekitCharacteristic hc,
+            @NotNull ContextVar.Variable v) {
+        //
         var characteristic = newCharacteristicInstance(hc.value(),
                 getDoubleSupplier(v, hc.defaultDoubleValue()),
                 setDoubleConsumer(v),
@@ -162,9 +207,11 @@ public class HomekitCharacteristicFactory {
         return characteristic;
     }
 
-    private static Characteristic createIntegerCharacteristic(HomekitEndpointContext c,
-                                                              HomekitCharacteristic hc,
-                                                              ContextVar.Variable v) {
+    private static Characteristic createIntegerCharacteristic(
+            @NotNull HomekitEndpointContext c,
+            @NotNull HomekitCharacteristic hc,
+            @NotNull ContextVar.Variable v) {
+        //
         var characteristic = newCharacteristicInstance(hc.value(),
                 getIntSupplier(v, hc.defaultIntValue()),
                 setIntConsumer(v),
@@ -175,7 +222,10 @@ public class HomekitCharacteristicFactory {
     }
 
     @SneakyThrows
-    private static BaseCharacteristic newCharacteristicInstance(Class<? extends BaseCharacteristic> clazz, Object... parameters) {
+    private static BaseCharacteristic newCharacteristicInstance(
+            @NotNull Class<? extends BaseCharacteristic> clazz,
+            Object... parameters) {
+        //
         Object[] finalParameters = parameters;
         var constructor = findObjectConstructor(clazz, ClassUtils.toClass(parameters));
         if (constructor == null) {
@@ -185,7 +235,7 @@ public class HomekitCharacteristicFactory {
             finalParameters = paramList.toArray();
             constructor = findObjectConstructor(clazz, ClassUtils.toClass(finalParameters));
         }
-        if (constructor == null) {
+        /*if (constructor == null) {
             Constructor<?>[] constructors = clazz.getConstructors();
             if (constructors.length == 1) {
                 Constructor<?> firstConstructor = clazz.getConstructors()[0];
@@ -208,25 +258,28 @@ public class HomekitCharacteristicFactory {
                     }
                 }
             }
-        }
+        }*/
         if (constructor == null) {
             throw new RuntimeException("Unable to find constructor for object: " + clazz.getSimpleName());
         }
         return constructor.newInstance(finalParameters);
     }
 
-    private static BaseCharacteristic<?> createCustomCharacteristic(HomekitEndpointContext c,
-                                                                    HomekitCharacteristic hc,
-                                                                    ContextVar.Variable v) {
+    private static @NotNull BaseCharacteristic<?> createCustomCharacteristic(
+            @NotNull HomekitEndpointContext c,
+            @NotNull HomekitCharacteristic hc,
+            @NotNull ContextVar.Variable v) {
         HomekitCharacteristic.CharacteristicSupplier supplier = CommonUtils.newInstance(hc.impl());
         var characteristic = supplier.get(c, v);
         c.setCharacteristic(characteristic, v, hc.type());
         return characteristic;
     }
 
-    private static BaseCharacteristic<?> createBooleanCharacteristic(HomekitEndpointContext c,
-                                                                     HomekitCharacteristic hc,
-                                                                     ContextVar.Variable v) {
+    private static BaseCharacteristic<?> createBooleanCharacteristic(
+            @NotNull HomekitEndpointContext c,
+            @NotNull HomekitCharacteristic hc,
+            @NotNull ContextVar.Variable v) {
+        //
         var characteristic = newCharacteristicInstance(hc.value(),
                 getBooleanSupplier(v),
                 setBooleanConsumer(v),
@@ -237,8 +290,11 @@ public class HomekitCharacteristicFactory {
     }
 
     public static <T extends Enum<T> & CharacteristicEnum> Map<T, Object> createMapping(
-            @Nullable ContextVar.Variable variable, Class<T> klazz,
-            @Nullable List<T> customEnumList, boolean invertedDefault) {
+            @Nullable ContextVar.Variable variable,
+            @NotNull Class<T> klazz,
+            @Nullable List<T> customEnumList,
+            boolean invertedDefault) {
+        //
         EnumMap<T, Object> map = new EnumMap<>(klazz);
         if (variable == null) {
             for (var k : klazz.getEnumConstants()) {
@@ -297,7 +353,9 @@ public class HomekitCharacteristicFactory {
         return createMapping(v, k, null, i);
     }
 
-    public static <T> T getKeyFromMapping(ContextVar.Variable variable, Map<T, Object> mapping, T defaultValue) {
+    public static <T> T getKeyFromMapping(@NotNull ContextVar.Variable variable,
+                                          @NotNull Map<T, Object> mapping,
+                                          T defaultValue) {
         var state = variable.getValue();
         String valueToMatch = state.stringValue();
         for (Map.Entry<T, Object> entry : mapping.entrySet()) {
@@ -315,7 +373,9 @@ public class HomekitCharacteristicFactory {
         return defaultValue;
     }
 
-    public static Object getKeyFromMapping2(ContextVar.Variable variable, Map<Enum, Object> mapping, Object defaultValue) {
+    public static Object getKeyFromMapping2(@NotNull ContextVar.Variable variable,
+                                            @NotNull Map<Enum, Object> mapping,
+                                            Object defaultValue) {
         var state = variable.getValue();
         String valueToMatch;
         switch (state) {
@@ -372,19 +432,23 @@ public class HomekitCharacteristicFactory {
         }
     }*/
 
-    public static void setHomioVariableFromEnum2(@Nullable ContextVar.Variable variable,
-                                                 Object enumFromHk,
-                                                 Map<Enum, Object> mapping) {
-        if (variable == null || enumFromHk == null) return;
+    public static void setHomioVariableFromEnum2(
+            @NotNull ContextVar.Variable variable,
+            @Nullable Object enumFromHk,
+            @NotNull Map<Enum, Object> mapping) {
+        if (enumFromHk == null) {
+            return;
+        }
         Object homioValueRepresentation = mapping.get(enumFromHk);
         if (homioValueRepresentation instanceof List)
             homioValueRepresentation = ((List<?>) homioValueRepresentation).isEmpty() ? null : ((List<?>) homioValueRepresentation).getFirst();
         if (homioValueRepresentation != null) {
             String stringValueToSet = homioValueRepresentation.toString();
             try {
-                if (OnOffType.ON.toString().equalsIgnoreCase(stringValueToSet) || OnOffType.OFF.toString().equalsIgnoreCase(stringValueToSet)) {
-                    variable.set(OnOffType.of(stringValueToSet.toUpperCase()));
-                } else if (variable instanceof DecimalType) {
+                if (variable.getRestriction() == ContextVar.VariableType.Bool) {
+                    var value = "ON".equalsIgnoreCase(stringValueToSet) || "TRUE".equalsIgnoreCase(stringValueToSet);
+                    variable.set(value);
+                } else if (variable.getRestriction() == ContextVar.VariableType.Float) {
                     variable.set(new DecimalType(new BigDecimal(stringValueToSet)));
                 } else {
                     variable.set(new StringType(stringValueToSet));
@@ -462,9 +526,10 @@ public class HomekitCharacteristicFactory {
         };
     }
 
-    public static Runnable getUnsubscriber(@Nullable ContextVar.Variable v, HomekitEndpointContext c, HomekitCharacteristicType t) {
-        if (v == null) return () -> {
-        };
+    public static @NotNull Runnable getUnsubscriber(
+            @NotNull ContextVar.Variable v,
+            @NotNull HomekitEndpointContext c,
+            @NotNull HomekitCharacteristicType t) {
         String k = c.owner().getEntityID() + "_" + c.endpoint().getId() + "_" + t.name() + "_sub";
         return () -> {
             log.info("[{}]: Unsubscribe from {} - {} changes", c.owner().getEntityID(), c.endpoint().getAccessoryType(), t);
@@ -472,18 +537,18 @@ public class HomekitCharacteristicFactory {
         };
     }
 
-    private static <T extends Enum<T>> Supplier<CompletableFuture<T>> getEnum(
+    private static @NotNull <T extends Enum<T>> Supplier<CompletableFuture<T>> getEnum(
             Object value, Class<T> klazz) {
         T enumValue = Enum.valueOf(klazz, value.toString());
-        return () -> CompletableFuture.completedFuture(enumValue);
+        return () -> completedFuture(enumValue);
     }
 
     private static <T extends Enum<T>> Supplier<CompletableFuture<T>> getEnum(
             Object value, Class<T> klazz, T trueValue, T falseValue) {
         if (value.equals(true) || value.equals("true")) {
-            return () -> CompletableFuture.completedFuture(trueValue);
+            return () -> completedFuture(trueValue);
         } else if (value.equals(false) || value.equals("false")) {
-            return () -> CompletableFuture.completedFuture(falseValue);
+            return () -> completedFuture(falseValue);
         }
         return getEnum(value, klazz);
     }

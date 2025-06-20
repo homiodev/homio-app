@@ -100,7 +100,6 @@ public enum HomekitCharacteristicType {
     TargetTiltAngle,
     TargetVerticalTiltAngle,
     TargetVisibilityState,
-    TemperatureUnit,
     VOCDensity,
     Volume,
     VolumeControlType,

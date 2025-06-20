@@ -344,6 +344,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
     @HomekitCharacteristic(value = TargetHeatingCoolingStateCharacteristic.class, type = TargetHeatingCoolingState, defaultStringValue = "OFF")
+    @HomekitValidValues(TargetHeatingCoolingStateEnum.class)
     public String getTargetHeatingCoolingState() {
         return getJsonData("thcs");
     }
@@ -355,7 +356,6 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIField(order = 14, required = true)
     @UIFieldShowOnCondition("return ['HeaterCooler', 'Thermostat'].includes(context.get('accessoryType'))")
     @UIFieldGroup("REQ_CHAR")
-    @HomekitCharacteristic(value = TargetHeatingCoolingStateCharacteristic.class, type = TargetHeatingCoolingState, defaultStringValue = "OFF")
     public Set<TargetHeatingCoolingStateEnum> getTargetHeatingCoolingValidValues() {
         return getJsonDataSet("thcsvv", TargetHeatingCoolingStateEnum.class, TargetHeatingCoolingStateEnum.values());
     }
@@ -1358,7 +1358,6 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIField(order = 52)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Thermostat'")
     @UIFieldGroup("OPT_CHAR")
-    @HomekitCharacteristic(value = TemperatureDisplayUnitCharacteristic.class, type = TemperatureUnit)
     public TemperatureDisplayUnitEnum getTemperatureUnit() {
         return getJsonDataEnum("tu", TemperatureDisplayUnitEnum.CELSIUS);
     }

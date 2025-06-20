@@ -5,12 +5,14 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.MultiFormatWriter;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
+import io.github.hapjava.characteristics.impl.thermostat.TemperatureDisplayUnitEnum;
 import io.github.hapjava.server.impl.HomekitServer;
 import io.github.hapjava.server.impl.crypto.HAPSetupCodeUtils;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.homio.addon.homekit.accessories.HomekitAccessoryFactory;
+import org.homio.addon.homekit.accessories.HomekitThermostat;
 import org.homio.api.Context;
 import org.homio.api.ContextVar;
 import org.homio.api.entity.CreateSingleEntity;
@@ -274,6 +276,10 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
 
             setEndpointType(EndpointType.string);
             setInitialValue(getAccessoryValue());
+            if (HomekitThermostat.class.isAssignableFrom(ctx.accessory().getClass())) {
+                var unit = ctx.endpoint().getTemperatureUnit();
+                setUnit(unit == TemperatureDisplayUnitEnum.CELSIUS ? "°C" : "°F");
+            }
             ctx.setUpdateUI(() -> setValue(getAccessoryValue(), true));
         }
 
@@ -288,9 +294,11 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
 
         @Override
         public @NotNull String getName(boolean shortFormat) {
-            return "<span style=\"%s\">[%s]</span> %s".formatted(
-                    UI.Color.GREEN,
+            var masterCharacteristic = ctx.accessory().getMasterCharacteristic();
+            return "<span style=\"color:%s;font-size:11px\">[%s / ${field.%s}]</span> %s".formatted(
+                    UI.Color.PRIMARY_COLOR,
                     ctx.endpoint().getAccessoryType().name(),
+                    masterCharacteristic == null ? "" : ctx.getCharacteristicsInfo(masterCharacteristic.getClass()).name(),
                     ctx.endpoint().getTitle());
         }
 
@@ -299,24 +307,27 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
             var endpoint = ctx.endpoint();
             var accessory = ctx.accessory();
             List<Item> items = new ArrayList<>();
-            ctx.characteristics().forEach(ch -> items.add(new Item(ch.name(), ch.variable())));
+            var masterCharacteristic = ctx.accessory().getMasterCharacteristic();
+            ctx.characteristics().stream()
+                    .filter(ch -> masterCharacteristic == null || !masterCharacteristic.getType().equals(ch.characteristic().getType()))
+                    .forEach(ch -> items.add(new Item(ch.name(), ch.variable())));
 
             items.sort(Comparator.comparingInt(i -> i.name.length()));
             StringBuilder value = new StringBuilder();
 
             value.append("<table>");
-            for (int i = 0; i < items.size(); i += 3) {
+            for (int i = 0; i < items.size(); i += 2) {
                 value.append("<tr>");
-                for (int j = 0; j < 3; j++) {
+                for (int j = 0; j < 2; j++) {
                     if (i + j < items.size()) {
                         var item = items.get(i + j);
                         value.append("""
                                 <td style="padding:0;">
                                     <span style="color:%s;">
                                         <i class="fa-fw %s" style="margin-right: 2px;"></i>${field.%s}
-                                    </span>: %s
+                                    </span>: %s%s
                                 </td>
-                                """.formatted(item.color, item.icon, item.name, item.value));
+                                """.formatted(item.color, item.icon, item.name, item.value, item.unit));
                     } else {
                         value.append("<td style=\"padding:0;\"></td>");
                     }
@@ -329,9 +340,9 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
         }
     }
 
-    record Item(String name, String value, String icon, String color) {
+    record Item(String name, String value, String icon, String color, String unit) {
         Item(String name, ContextVar.Variable v) {
-            this(name, v.getValue().stringValue("N/A"), v.getIcon(), v.getIconColor());
+            this(name, v.getValue().stringValue("N/A"), v.getIcon(), v.getIconColor(), v.getUnit());
         }
     }
 }

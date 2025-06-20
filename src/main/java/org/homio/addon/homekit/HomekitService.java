@@ -74,7 +74,11 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
         bridge.batchUpdate();
 
         for (HomekitEndpointEntity endpoint : entity.getSeries()) {
-            addEndpoint(endpoint);
+            try {
+                addEndpoint(endpoint);
+            } catch (Exception ex) {
+                log.error("Unable to create homekit endpoint: {}", endpoint.getTitle(), ex);
+            }
         }
         bridge.setConfigurationIndex(makeNewConfigurationRevision());
         bridge.completeUpdateBatch();

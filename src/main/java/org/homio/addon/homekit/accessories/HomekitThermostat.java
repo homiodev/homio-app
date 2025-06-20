@@ -31,8 +31,11 @@ public class HomekitThermostat extends AbstractHomekitAccessory<CurrentTemperatu
                 CurrentRelativeHumidityCharacteristic.class);
         var targetRelativeHumidity = getCharacteristic(
                 TargetRelativeHumidityCharacteristic.class);*/
-        var displayUnitCharacteristic = getCharacteristic(
-                TemperatureDisplayUnitCharacteristic.class);
+        var displayUnitCharacteristic = new TemperatureDisplayUnitCharacteristic(
+                () -> completedFuture(ctx.endpoint().getTemperatureUnit()),
+                value -> log.error("TemperatureDisplayUnit changed to: {}", value), callback -> {
+        }, () -> {
+        });
         var targetHeatingCoolingStateCharacteristic = getCharacteristic(
                 TargetHeatingCoolingStateCharacteristic.class);
         var targetTemperatureCharacteristic = getCharacteristicOpt(

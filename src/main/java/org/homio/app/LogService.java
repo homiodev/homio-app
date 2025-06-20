@@ -342,7 +342,12 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
 
         // keep all logs in memory until we switch strategy via setContext(...) method
         private List<LogWrapper> bufferedLogEvents = new CopyOnWriteArrayList<>();
-        protected Consumer<LogWrapper> logStrategy = event -> bufferedLogEvents.add(event);
+        protected Consumer<LogWrapper> logStrategy = event -> {
+            var ble = bufferedLogEvents;
+            if (ble != null) {
+                ble.add(event);
+            }
+        };
 
         GlobalAppender() {
             super("Global", null);

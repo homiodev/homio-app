@@ -37,9 +37,6 @@ public abstract class AbstractHomekitAccessory<T extends BaseCharacteristic<?>> 
         this.ctx = ctx;
         buildCharacteristics(ctx, characteristics);
         masterCharacteristic = getCharacteristic(masterCharacteristicClass);
-        if (masterCharacteristic == null) {
-            throw new IllegalArgumentException("Master characteristic cannot be null");
-        }
         this.type = ctx.getCharacteristicsInfo(masterCharacteristicClass).type();
         this.inverted = ctx.endpoint().getInverted();
 
@@ -85,13 +82,13 @@ public abstract class AbstractHomekitAccessory<T extends BaseCharacteristic<?>> 
     }
 
     @Override
-    public @NotNull<C extends Characteristic> C getCharacteristic(Class<? extends C> klazz) {
+    public @NotNull <C extends Characteristic> C getCharacteristic(Class<? extends C> klazz) {
         return Objects.requireNonNull(characteristics.get(klazz),
                 "Unable to find characteristic: " + klazz.getName() + " for " + ctx.endpoint());
     }
 
     @Override
-    public @NotNull<C extends Characteristic> Optional<C> getCharacteristicOpt(Class<? extends C> klazz) {
+    public @NotNull <C extends Characteristic> Optional<C> getCharacteristicOpt(Class<? extends C> klazz) {
         return Optional.ofNullable(characteristics.get(klazz));
     }
 
