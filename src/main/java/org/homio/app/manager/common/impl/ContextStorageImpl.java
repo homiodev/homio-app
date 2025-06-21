@@ -182,7 +182,10 @@ public class ContextStorageImpl implements ContextStorage {
             guest.assertEditAccess(entity);
         }
         if (entity.getCreationTime() != null && entity.isDisableEdit() && !context.user().isSuperAdmin()) {
-            throw new IllegalAccessException("User is unable to persist/update entity");
+            // eventually allow to edit if it's primary user
+            if (user == null || !"dvc_user-admin_primary".equals(user.getEntityID())) {
+                throw new IllegalAccessException("User is unable to update entity");
+            }
         }
         if (entity.getCreationTime() == null) {
             if (StringUtils.isEmpty(entity.getName())) {

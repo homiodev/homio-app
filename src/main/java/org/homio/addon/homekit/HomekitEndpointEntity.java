@@ -71,13 +71,11 @@ import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldNoReadDefaultValue;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
-import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
-import org.homio.api.ui.field.selection.UIFieldVariableBroadcastSelection;
 import org.homio.api.ui.field.selection.UIFieldVariableSelection;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -303,16 +301,40 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      */
     @UIField(order = 12, required = true)
     @UIFieldShowOnCondition("return ['Doorbell', 'StatelessProgrammableSwitch'].includes(context.get('accessoryType'))")
-    @UIFieldVariableBroadcastSelection
+    @UIFieldVariableSelection(varType = Broadcast)
     @UIFieldGroup("REQ_CHAR")
-    @HomekitCharacteristic(value = ProgrammableSwitchEventCharacteristic.class, type = ProgrammableSwitchEvent,
-            impl = ProgrammableSwitchEventCharacteristicSupplier.class)
-    public String getStatelessProgrammableSwitch() {
-        return getJsonData("pse");
+    /*@HomekitCharacteristic(value = ProgrammableSwitchEventCharacteristic.class, type = ProgrammableSwitchEvent,
+            impl = ProgrammableSwitchEventCharacteristicSupplier.class)*/
+    public String getSingleClickBroadcastEvent() {
+        return getJsonData("scbe");
     }
 
-    public void setStatelessProgrammableSwitch(String value) {
-        setJsonData("pse", value);
+    public void setSingleClickBroadcastEvent(String value) {
+        setJsonData("scbe", value);
+    }
+
+    @UIField(order = 12)
+    @UIFieldShowOnCondition("return ['Doorbell', 'StatelessProgrammableSwitch'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Broadcast)
+    @UIFieldGroup("OPT_CHAR")
+    public String getDoubleClickBroadcastEvent() {
+        return getJsonData("dcbe");
+    }
+
+    public void setDoubleClickBroadcastEvent(String value) {
+        setJsonData("dcbe", value);
+    }
+
+    @UIField(order = 12)
+    @UIFieldShowOnCondition("return ['Doorbell', 'StatelessProgrammableSwitch'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Broadcast)
+    @UIFieldGroup("OPT_CHAR")
+    public String getLongPressBroadcastEvent() {
+        return getJsonData("lpbe");
+    }
+
+    public void setLongPressBroadcastEvent(String value) {
+        setJsonData("lpbe", value);
     }
 
     /**
@@ -480,7 +502,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIField(order = 33, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Battery'")
     @UIFieldVariableSelection(varType = Float)
-    @UIFieldGroup("OPT_CHAR")
+    @UIFieldGroup("REQ_CHAR")
     @HomekitCharacteristic(value = ChargingStateCharacteristic.class, type = BatteryChargingState)
     public String getBatteryChargingState() {
         return getJsonData("bcs");
@@ -1508,6 +1530,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         setJsonData("br", value);
     }
 
+
     /**
      * Hue of the light color.
      * Characteristic: Hue (degrees 0-360).
@@ -1515,7 +1538,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      */
     @UIField(order = 66)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightBulb'")
-    @UIFieldEntityByClassSelection(value = Variable.class)
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
     @HomekitCharacteristic(value = HueCharacteristic.class, type = Hue)
     public String getHue() {
@@ -1533,7 +1556,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      */
     @UIField(order = 67)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightBulb'")
-    @UIFieldEntityByClassSelection(value = Variable.class)
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
     @HomekitCharacteristic(value = SaturationCharacteristic.class, type = Saturation)
     public String getSaturation() {
@@ -1551,7 +1574,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      */
     @UIField(order = 68)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightBulb'")
-    @UIFieldEntityByClassSelection(value = Variable.class)
+    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
     @HomekitCharacteristic(value = ColorTemperatureCharacteristic.class, type = ColorTemperature,
             impl = ColorTemperatureCharacteristicSupplier.class)
@@ -1561,6 +1584,23 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
 
     public void setColorTemperature(String value) {
         setJsonData("ctemp", value);
+    }
+
+    /**
+     * Hue of the light color.
+     * Characteristic: Hue (degrees 0-360).
+     * Used by (Optional): LightBulb (for color lights).
+     */
+    @UIField(order = 66)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightBulb'")
+    @UIFieldVariableSelection(varType = Color)
+    @UIFieldGroup(value = "OPT2_CHAR", borderColor = "#3ABA4F", order = 155)
+    public String getCombinedColor() {
+        return getJsonData("cmdc");
+    }
+
+    public void setCombinedColor(String value) {
+        setJsonData("cmdc", value);
     }
 
     /**
@@ -2195,15 +2235,20 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     }
 
     public static class ProgrammableSwitchEventCharacteristicSupplier implements HomekitCharacteristic.CharacteristicSupplier {
-        private @Nullable ProgrammableSwitchEnum lastValue = null;
+        private @Nullable ProgrammableSwitchEnum lastValue;
 
         @Override
         public BaseCharacteristic<?> get(HomekitEndpointContext c, Variable v) {
-            List<ProgrammableSwitchEnum> validVals = Arrays.asList(
-                    ProgrammableSwitchEnum.SINGLE_PRESS,
-                    ProgrammableSwitchEnum.DOUBLE_PRESS,
-                    ProgrammableSwitchEnum.LONG_PRESS
-            );
+            List<ProgrammableSwitchEnum> validValues = new ArrayList<>();
+            validValues.add(ProgrammableSwitchEnum.SINGLE_PRESS);
+            Variable dcv = c.getVariable(c.endpoint().getDoubleClickBroadcastEvent());
+            if (dcv != null) {
+                validValues.add(ProgrammableSwitchEnum.DOUBLE_PRESS);
+            }
+            Variable lpv = c.getVariable(c.endpoint().getLongPressBroadcastEvent());
+            if (lpv != null) {
+                validValues.add(ProgrammableSwitchEnum.LONG_PRESS);
+            }
 
             /*v.addListener(listenerKey, newState -> {
                 if (newState != null) {
@@ -2222,14 +2267,19 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
                     }
                 }
             });*/
-            var map = createMapping(v, ProgrammableSwitchEnum.class);
-            ProgrammableSwitchEnum[] switchEnums = validVals.toArray(new ProgrammableSwitchEnum[0]);
+            var switchEnums = validValues.toArray(new ProgrammableSwitchEnum[0]);
             return new ProgrammableSwitchEventCharacteristic(switchEnums,
                     () -> CompletableFuture.completedFuture(lastValue),
-                    getSubscriber(v, c, ProgrammableSwitchEvent, state -> {
-                        //
-                    }),
-                    getUnsubscriber(v, c, ProgrammableSwitchEvent));
+                    callback -> {
+                        /*getSubscriber(v, c, ProgrammableSwitchEvent, i -> lastValue = ProgrammableSwitchEnum.SINGLE_PRESS);
+                        getSubscriber(dcv, c, ProgrammableSwitchEvent, i -> lastValue = ProgrammableSwitchEnum.DOUBLE_PRESS);
+                        getSubscriber(lpv, c, ProgrammableSwitchEvent, i -> lastValue = ProgrammableSwitchEnum.LONG_PRESS);*/
+                    },
+                    () -> {
+                        /*getUnsubscriber(v, c, ProgrammableSwitchEvent);
+                        getUnsubscriber(dcv, c, ProgrammableSwitchEvent);
+                        getUnsubscriber(lpv, c, ProgrammableSwitchEvent);*/
+                    });
         }
     }
 

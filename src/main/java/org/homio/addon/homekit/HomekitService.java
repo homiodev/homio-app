@@ -11,6 +11,7 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.addon.homekit.accessories.HomekitAccessoryFactory;
 import org.homio.api.Context;
 import org.homio.api.service.EntityService;
+import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -74,11 +75,7 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
         bridge.batchUpdate();
 
         for (HomekitEndpointEntity endpoint : entity.getSeries()) {
-            try {
-                addEndpoint(endpoint);
-            } catch (Exception ex) {
-                log.error("Unable to create homekit endpoint: {}", endpoint.getTitle(), ex);
-            }
+            addEndpoint(endpoint);
         }
         bridge.setConfigurationIndex(makeNewConfigurationRevision());
         bridge.completeUpdateBatch();
@@ -131,18 +128,24 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
         long code = endpoint.getEntityHashCode();
         if (!endpoints.containsKey(code)) {
             var ctx = new HomekitEndpointContext(endpoint, entity, this);
+            ctx.error(null);
             endpoints.put(code, ctx);
             String group = endpoint.getGroup();
-            if (group.isEmpty()) {
-                var accessory = HomekitAccessoryFactory.create(ctx);
-                bridge.addAccessory(accessory);
-            } else {
-                var accessoryGroup = findAccessoryGroup(endpoint);
-                if (accessoryGroup == null) {
-                    accessoryGroup = new HomekitAccessoryFactory.HomekitGroup(ctx);
-                    bridge.addAccessory(accessoryGroup);
+            try {
+                if (group.isEmpty()) {
+                    var accessory = HomekitAccessoryFactory.create(ctx);
+                    bridge.addAccessory(accessory);
+                } else {
+                    var accessoryGroup = findAccessoryGroup(endpoint);
+                    if (accessoryGroup == null) {
+                        accessoryGroup = new HomekitAccessoryFactory.HomekitGroup(ctx);
+                        bridge.addAccessory(accessoryGroup);
+                    }
+                    accessoryGroup.addService(ctx);
                 }
-                accessoryGroup.addService(ctx);
+            } catch (Exception ex) {
+                ctx.error(CommonUtils.getErrorMessage(ex));
+                log.error("Unable to create homekit endpoint: {}", endpoint.getTitle(), ex);
             }
         }
     }

@@ -28,10 +28,7 @@ import org.homio.api.model.OptionModel;
 import org.homio.api.state.State;
 import org.homio.api.storage.SourceHistory;
 import org.homio.api.storage.SourceHistoryItem;
-import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldProgress;
-import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.*;
 import org.homio.api.ui.field.color.UIFieldColorRef;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.api.ui.field.selection.SelectionConfiguration;
@@ -85,6 +82,18 @@ public final class WorkspaceVariable extends BaseEntity
     @UIField(order = 25)
     @UIFieldSlider(min = 500, max = 100000, step = 500)
     private int quota = 1000;
+
+    @UIField(order = 30)
+    @UIFieldIconPicker(allowSize = false, allowSpin = false)
+    private String icon;
+
+    @UIField(order = 35)
+    @UIFieldColorPicker
+    private String iconColor;
+
+    @UIField(order = 40)
+    private String unit;
+
     /**
      * Is it possible to write to variable from UI?
      */
@@ -100,12 +109,6 @@ public final class WorkspaceVariable extends BaseEntity
     @UIField(order = 2)
     @UIFieldGroup("BACKUP")
     private boolean backupAggregateValues = true;
-
-    private String icon;
-
-    private String iconColor;
-
-    private String unit;
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY, targetEntity = WorkspaceGroup.class)
@@ -337,7 +340,7 @@ public final class WorkspaceVariable extends BaseEntity
     }
 
     @Override
-    public String getId() {
+    public @NotNull String getId() {
         return getEntityID();
     }
 

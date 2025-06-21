@@ -34,6 +34,7 @@ import java.util.function.Supplier;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.homio.api.util.CommonUtils.findObjectConstructor;
+import static org.homio.api.util.CommonUtils.getMethodTrimName;
 
 @Log4j2
 public class HomekitCharacteristicFactory {
@@ -73,7 +74,7 @@ public class HomekitCharacteristicFactory {
             ContextVar.Variable v = ctx.getVariable(varValue);
             if (v == null) {
                 if (required) {
-                    throw new RuntimeException("Missing required variable: " + varValue + " for accessory: " + accessoryType);
+                    throw new RuntimeException("Missing required variable: '" + getMethodTrimName(method) + "' for accessory: " + accessoryType);
                 }
                 continue;
             }
@@ -502,17 +503,22 @@ public class HomekitCharacteristicFactory {
     }
 
     public static Consumer<HomekitCharacteristicChangeCallback> getSubscriber(
-            @NotNull ContextVar.Variable v,
+            @Nullable ContextVar.Variable v,
             @NotNull HomekitEndpointContext c,
             @NotNull HomekitCharacteristicType t) {
         return getSubscriber(v, c, t, null);
     }
 
     public static Consumer<HomekitCharacteristicChangeCallback> getSubscriber(
-            @NotNull ContextVar.Variable v,
+            @Nullable ContextVar.Variable v,
             @NotNull HomekitEndpointContext c,
             @NotNull HomekitCharacteristicType t,
             @Nullable Consumer<State> callback) {
+        if (v == null) {
+            return ignored -> {
+
+            };
+        }
         String k = c.owner().getEntityID() + "_" + c.endpoint().getId() + "_" + t.name() + "_sub";
         return cb -> {
             log.info("[{}]: Subscribe to {} - {} changes", c.owner().getEntityID(), c.endpoint().getAccessoryType(), t);
@@ -527,9 +533,13 @@ public class HomekitCharacteristicFactory {
     }
 
     public static @NotNull Runnable getUnsubscriber(
-            @NotNull ContextVar.Variable v,
+            @Nullable ContextVar.Variable v,
             @NotNull HomekitEndpointContext c,
             @NotNull HomekitCharacteristicType t) {
+        if (v == null) {
+            return () -> {
+            };
+        }
         String k = c.owner().getEntityID() + "_" + c.endpoint().getId() + "_" + t.name() + "_sub";
         return () -> {
             log.info("[{}]: Unsubscribe from {} - {} changes", c.owner().getEntityID(), c.endpoint().getAccessoryType(), t);

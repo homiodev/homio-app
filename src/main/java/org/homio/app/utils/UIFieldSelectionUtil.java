@@ -24,13 +24,15 @@ import org.homio.app.utils.OptionUtil.LoadOptionsParameters;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.annotation.Annotation;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.util.stream.Collectors.groupingBy;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 @Log4j2
@@ -94,12 +96,6 @@ public final class UIFieldSelectionUtil {
                 // TODO: not tested
                 meta.set("depFields", OBJECT_MAPPER.valueToTree(selection.dependencyFields()));
             }
-        }
-
-        var variableBroadcastSelection = uiFieldContext.getDeclaredAnnotation(UIFieldVariableBroadcastSelection.class);
-        if (variableBroadcastSelection != null) {
-            ObjectNode meta = getSelectBoxList(jsonTypeMetadata);
-            meta.put("selectType", SelectHandler.variableBroadcast.name());
         }
 
         var variableSelection = uiFieldContext.getDeclaredAnnotation(UIFieldVariableSelection.class);
@@ -194,24 +190,10 @@ public final class UIFieldSelectionUtil {
         return subMeta;
     }
 
-    private static void filterResultOptions(OptionModel parent, Collection<OptionModel> options) {
-        var groupByKeyModels = options.stream().collect(groupingBy(OptionModel::getKey));
-        for (OptionModel optionModel : options) {
-            if (optionModel.getChildren() != null) {
-                filterResultOptions(optionModel, optionModel.getChildren());
-            }
-        }
-        List<OptionModel> children = parent.getChildren();
-        if (children != null) {
-            children.clear();
-            children.addAll(groupByKeyModels.values().stream().flatMap(Collection::stream).toList());
-        }
-    }
-
     private static @NotNull Predicate<BaseEntity> filterVariable(UIFieldVariableSelection item) {
         return baseEntity -> {
             WorkspaceVariable variable = (WorkspaceVariable) baseEntity;
-            if (item.requireWritable() && variable.isReadOnly()) {
+            if (item.varType() != ContextVar.VariableType.Broadcast && item.requireWritable() && variable.isReadOnly()) {
                 return false;
             }
 
@@ -277,17 +259,6 @@ public final class UIFieldSelectionUtil {
                 items = items.stream().filter(filter).collect(Collectors.toList());
                 OptionUtil.assembleItemsToOptions(list, WorkspaceVariable.class, items, params.context, params.classEntityForDynamicOptionLoader);
             }
-            return list;
-        }),
-        variableBroadcast(UIFieldVariableBroadcastSelection.class, params -> {
-            List<OptionModel> list = new ArrayList<>();
-            Predicate<BaseEntity> filter = entity -> {
-                WorkspaceVariable variable = (WorkspaceVariable) entity;
-                return "broadcast".equals(variable.getParentId());
-            };
-            List<WorkspaceVariable> items = params.context.db().findAll(WorkspaceVariable.class);
-            items = items.stream().filter(filter).collect(Collectors.toList());
-            OptionUtil.assembleItemsToOptions(list, WorkspaceVariable.class, items, params.context, params.classEntityForDynamicOptionLoader);
             return list;
         }),
         entityByClass(UIFieldEntityByClassSelection.class, params -> {

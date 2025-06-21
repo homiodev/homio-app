@@ -25,7 +25,6 @@ import io.github.hapjava.characteristics.impl.heatercooler.CurrentHeaterCoolerSt
 import io.github.hapjava.characteristics.impl.heatercooler.TargetHeaterCoolerStateCharacteristic;
 import io.github.hapjava.characteristics.impl.heatercooler.TargetHeaterCoolerStateEnum;
 import io.github.hapjava.characteristics.impl.humiditysensor.CurrentRelativeHumidityCharacteristic;
-import io.github.hapjava.characteristics.impl.humiditysensor.TargetRelativeHumidityCharacteristic;
 import io.github.hapjava.characteristics.impl.leaksensor.LeakDetectedStateCharacteristic;
 import io.github.hapjava.characteristics.impl.leaksensor.LeakDetectedStateEnum;
 import io.github.hapjava.characteristics.impl.lightsensor.CurrentAmbientLightLevelCharacteristic;
@@ -51,7 +50,8 @@ import io.github.hapjava.characteristics.impl.television.CurrentMediaStateCharac
 import io.github.hapjava.characteristics.impl.television.CurrentMediaStateEnum;
 import io.github.hapjava.characteristics.impl.television.TargetMediaStateCharacteristic;
 import io.github.hapjava.characteristics.impl.television.TargetMediaStateEnum;
-import io.github.hapjava.characteristics.impl.thermostat.*;
+import io.github.hapjava.characteristics.impl.thermostat.CurrentTemperatureCharacteristic;
+import io.github.hapjava.characteristics.impl.thermostat.TemperatureDisplayUnitCharacteristic;
 import io.github.hapjava.characteristics.impl.valve.RemainingDurationCharacteristic;
 import io.github.hapjava.characteristics.impl.valve.ValveTypeEnum;
 import io.github.hapjava.services.Service;
@@ -67,7 +67,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.function.Function;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -630,10 +633,28 @@ public class HomekitAccessoryFactory {
         }
     }
 
-    private static class HomekitStatelessProgrammableSwitch extends AbstractHomekitAccessory<ProgrammableSwitchEventCharacteristic> {
+    private static class HomekitStatelessProgrammableSwitch extends AbstractHomekitAccessory<ProgrammableSwitchEventCharacteristic>
+            implements StatelessProgrammableSwitchAccessory {
         public HomekitStatelessProgrammableSwitch(@NotNull HomekitEndpointContext ctx) {
             super(ctx, ProgrammableSwitchEventCharacteristic.class, null);
+            addService(new StatelessProgrammableSwitchService(
+                    getCharacteristic(ProgrammableSwitchEventCharacteristic.class)));
             log.info("[{}]: {} Created HomekitStatelessProgrammableSwitch accessory", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
+        }
+
+        @Override
+        public CompletableFuture<ProgrammableSwitchEnum> getSwitchEvent() {
+            return completedFuture(ProgrammableSwitchEnum.DOUBLE_PRESS);
+        }
+
+        @Override
+        public void subscribeSwitchEvent(HomekitCharacteristicChangeCallback callback) {
+            System.out.println("");
+        }
+
+        @Override
+        public void unsubscribeSwitchEvent() {
+            System.out.println("");
         }
     }
 
@@ -647,7 +668,8 @@ public class HomekitAccessoryFactory {
 
     private static class HomekitDoorbell extends AbstractHomekitAccessory<ProgrammableSwitchEventCharacteristic> {
         public HomekitDoorbell(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, ProgrammableSwitchEventCharacteristic.class, DoorbellService.class);
+            super(ctx, ProgrammableSwitchEventCharacteristic.class);
+            addService(new DoorbellService(getCharacteristic(ProgrammableSwitchEventCharacteristic.class)));
             log.info("[{}]: {} Created HomekitDoorbell accessory", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
         }
     }
@@ -1144,47 +1166,6 @@ public class HomekitAccessoryFactory {
             double maxValue = masterCharacteristic.getMaxValue();
             log.debug("[{}]: {} Getting max current ambient light level: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), maxValue);
             return maxValue;
-        }
-    }
-
-    private static class HomekitLightBulb extends AbstractHomekitAccessory<OnCharacteristic> implements LightbulbAccessory {
-        public HomekitLightBulb(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, OnCharacteristic.class, LightbulbService.class);
-            log.info("[{}]: {} Created HomekitLightBulb accessory", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-        }
-
-        @Override
-        public CompletableFuture<Boolean> getLightbulbPowerState() {
-            log.debug("[{}]: {} Getting lightbulb power state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<Boolean> future = masterCharacteristic.getValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get lightbulb power state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Lightbulb power state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
-        }
-
-        @SneakyThrows
-        @Override
-        public CompletableFuture<Void> setLightbulbPowerState(boolean value) {
-            log.info("[{}]: {} Setting lightbulb power state to: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), value);
-            masterCharacteristic.setValue(value);
-            return completedFuture(null);
-        }
-
-        @Override
-        public void subscribeLightbulbPowerState(HomekitCharacteristicChangeCallback callback) {
-            log.info("[{}]: {} Subscribing to lightbulb power state changes", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            masterCharacteristic.subscribe(callback);
-        }
-
-        @Override
-        public void unsubscribeLightbulbPowerState() {
-            log.info("[{}]: {} Unsubscribing from lightbulb power state changes", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            masterCharacteristic.unsubscribe();
         }
     }
 

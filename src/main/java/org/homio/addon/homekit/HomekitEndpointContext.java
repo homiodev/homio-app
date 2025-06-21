@@ -36,6 +36,8 @@ public class HomekitEndpointContext {
     // keep all characteristics
     @Getter
     private @NotNull ArrayList<CharacteristicInfo> characteristics = new ArrayList<>();
+    @Getter
+    private String error;
 
     public ContextVar.Variable getVariable(String variableId) {
         if (variableId == null || variableId.isEmpty()) {

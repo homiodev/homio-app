@@ -71,7 +71,7 @@ public enum HomekitCharacteristicType {
     PositionState,
     PowerMode,
     ProgramMode,
-    ProgrammableSwitchEvent,
+    // ProgrammableSwitchEvent, :this programmable switch event not works for some reason
     RelativeHumidity,
     RemainingDuration,
     RemoteKey,

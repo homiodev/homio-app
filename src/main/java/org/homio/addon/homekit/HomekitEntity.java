@@ -5,6 +5,7 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.MultiFormatWriter;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
+import io.github.hapjava.characteristics.impl.base.EnumCharacteristic;
 import io.github.hapjava.characteristics.impl.thermostat.TemperatureDisplayUnitEnum;
 import io.github.hapjava.server.impl.HomekitServer;
 import io.github.hapjava.server.impl.crypto.HAPSetupCodeUtils;
@@ -184,6 +185,7 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
             value = "CLEAR_HOMEKIT_PAIRINGS",
             icon = "fas fa-soap",
             iconColor = UI.Color.RED,
+            confirmMessageDialogColor = UI.Color.RED,
             confirmMessage = "W.CONFIRM.CLEAR_HOMEKIT_PAIRINGS")
     public ActionResponseModel clearHomekitPairings() {
         getService().clearHomekitPairings();
@@ -222,8 +224,7 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
     public @NotNull Map<String, ? extends DeviceEndpoint> getDeviceEndpoints() {
         return getService().getEndpoints().values()
                 .stream()
-                .filter(e -> e.accessory() != null)
-                .filter(e -> !(e.accessory() instanceof HomekitAccessoryFactory.HomekitGroup))
+                .filter(e -> e.accessory() == null || !(e.accessory() instanceof HomekitAccessoryFactory.HomekitGroup))
                 .map(HomekitEndpointUI::new)
                 .collect(Collectors.toMap(HomekitEndpointUI::getEndpointEntityID, e -> e));
     }
@@ -271,10 +272,13 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
             setIgnoreDuplicates(false);
             setEndpointEntityID(ctx.endpoint().getEntityID());
             setDevice(ctx.owner());
+            setEndpointType(EndpointType.string);
+            if (ctx.accessory() == null) {
+                return;
+            }
             String type = ctx.accessory().getMasterCharacteristic().getType();
             ctx.characteristicsInfo(type).ifPresent(ci -> setIcon(ci.variable().getIconModel()));
 
-            setEndpointType(EndpointType.string);
             setInitialValue(getAccessoryValue());
             if (HomekitThermostat.class.isAssignableFrom(ctx.accessory().getClass())) {
                 var unit = ctx.endpoint().getTemperatureUnit();
@@ -283,39 +287,8 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
             ctx.setUpdateUI(() -> setValue(getAccessoryValue(), true));
         }
 
-        private State getAccessoryValue() {
-            try {
-                var masterCharacteristic = ctx.accessory().getMasterCharacteristic();
-                return masterCharacteristic == null ? State.empty : State.of(masterCharacteristic.getValue().get());
-            } catch (Exception e) {
-                return State.empty;
-            }
-        }
-
-        @Override
-        public @NotNull String getName(boolean shortFormat) {
-            var masterCharacteristic = ctx.accessory().getMasterCharacteristic();
-            return "<span style=\"color:%s;font-size:11px\">[%s / ${field.%s}]</span> %s".formatted(
-                    UI.Color.PRIMARY_COLOR,
-                    ctx.endpoint().getAccessoryType().name(),
-                    masterCharacteristic == null ? "" : ctx.getCharacteristicsInfo(masterCharacteristic.getClass()).name(),
-                    ctx.endpoint().getTitle());
-        }
-
-        @Override
-        public @Nullable String getDescription() {
-            var endpoint = ctx.endpoint();
-            var accessory = ctx.accessory();
-            List<Item> items = new ArrayList<>();
-            var masterCharacteristic = ctx.accessory().getMasterCharacteristic();
-            ctx.characteristics().stream()
-                    .filter(ch -> masterCharacteristic == null || !masterCharacteristic.getType().equals(ch.characteristic().getType()))
-                    .forEach(ch -> items.add(new Item(ch.name(), ch.variable())));
-
-            items.sort(Comparator.comparingInt(i -> i.name.length()));
-            StringBuilder value = new StringBuilder();
-
-            value.append("<table>");
+        private static @NotNull StringBuilder buildVariablesDescription(List<Item> items) {
+            StringBuilder value = new StringBuilder("<table>");
             for (int i = 0; i < items.size(); i += 2) {
                 value.append("<tr>");
                 for (int j = 0; j < 2; j++) {
@@ -336,13 +309,52 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
             }
 
             value.append("</table>");
-            return value.toString();
+            return value;
+        }
+
+        private State getAccessoryValue() {
+            try {
+                var masterCharacteristic = ctx.accessory().getMasterCharacteristic();
+                if (masterCharacteristic == null) return State.empty;
+                if (masterCharacteristic instanceof EnumCharacteristic<?> ec) {
+                    return State.of(ec.getEnumValue().get() + "(" + ec.getValue().get() + ")");
+                }
+                return State.of(masterCharacteristic.getValue().get());
+            } catch (Exception e) {
+                return State.empty;
+            }
+        }
+
+        @Override
+        public @NotNull String getName(boolean shortFormat) {
+            var masterCharacteristic = ctx.accessory() == null ? null : ctx.accessory().getMasterCharacteristic();
+            return "<span style=\"color:%s;font-size:11px\">[%s%s]</span> %s".formatted(
+                    UI.Color.PRIMARY_COLOR,
+                    ctx.endpoint().getAccessoryType().name(),
+                    masterCharacteristic == null ? "" : " / ${field.%s}".formatted(ctx.getCharacteristicsInfo(masterCharacteristic.getClass()).name()),
+                    ctx.endpoint().getTitle());
+        }
+
+        @Override
+        public @Nullable String getDescription() {
+            if (ctx.error() != null) {
+                return "<span class=\"error\">" + ctx.error() + "</span>";
+            }
+
+            List<Item> items = new ArrayList<>();
+            var masterCharacteristic = ctx.accessory().getMasterCharacteristic();
+            ctx.characteristics().stream()
+                    .filter(ch -> masterCharacteristic == null || !masterCharacteristic.getType().equals(ch.characteristic().getType()))
+                    .forEach(ch -> items.add(new Item(ch.name(), ch.variable())));
+
+            items.sort(Comparator.comparingInt(i -> i.name.length()));
+            return buildVariablesDescription(items).toString();
         }
     }
 
     record Item(String name, String value, String icon, String color, String unit) {
         Item(String name, ContextVar.Variable v) {
-            this(name, v.getValue().stringValue("N/A"), v.getIcon(), v.getIconColor(), v.getUnit());
+            this(name, v.getValue().stringValue("N/A"), v.getIcon(), v.getIconColor(), Objects.toString(v.getUnit(), ""));
         }
     }
 }
