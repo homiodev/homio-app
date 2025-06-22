@@ -10,6 +10,8 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.homekit.accessories.Characteristics;
+import org.homio.addon.homekit.annotations.HomekitCharacteristic;
+import org.homio.addon.homekit.annotations.HomekitValidValues;
 import org.homio.addon.homekit.enums.HomekitCharacteristicType;
 import org.homio.api.ContextVar;
 import org.homio.api.state.DecimalType;
@@ -126,11 +128,11 @@ public class HomekitCharacteristicFactory {
 
             if (enumType instanceof Class && ((Class<?>) enumType).isEnum()) {
                 Set<? extends Enum> validValues = null;
-                var vv = method.getDeclaredAnnotation(HomekitValidValues.class);
-                if (vv != null) {
-                    validValues = findEndpointValidValues(vv.value(), c.endpoint());
+                for (HomekitValidValues vv : method.getAnnotationsByType(HomekitValidValues.class)) {
+                    if (vv.value().equals(enumType)) {
+                        validValues = findEndpointValidValues(vv.value(), c.endpoint());
+                    }
                 }
-
                 Class enumClass = (Class<?>) enumType;
                 Map<Enum, Object> m = createMapping(v, enumClass);
                 String defValue = hc.defaultStringValue();
@@ -232,7 +234,7 @@ public class HomekitCharacteristicFactory {
         if (constructor == null) {
             // without setter
             List<Object> paramList = new ArrayList<>(Arrays.asList(parameters));
-            paramList.remove(1);
+            paramList.remove(paramList.size() == 4 ? 1 : 2);
             finalParameters = paramList.toArray();
             constructor = findObjectConstructor(clazz, ClassUtils.toClass(finalParameters));
         }

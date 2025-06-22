@@ -51,7 +51,6 @@ import io.github.hapjava.characteristics.impl.television.CurrentMediaStateEnum;
 import io.github.hapjava.characteristics.impl.television.TargetMediaStateCharacteristic;
 import io.github.hapjava.characteristics.impl.television.TargetMediaStateEnum;
 import io.github.hapjava.characteristics.impl.thermostat.CurrentTemperatureCharacteristic;
-import io.github.hapjava.characteristics.impl.thermostat.TemperatureDisplayUnitCharacteristic;
 import io.github.hapjava.characteristics.impl.valve.RemainingDurationCharacteristic;
 import io.github.hapjava.characteristics.impl.valve.ValveTypeEnum;
 import io.github.hapjava.services.Service;
@@ -725,7 +724,6 @@ public class HomekitAccessoryFactory {
     private static class AbstractActiveHomekitAccessory extends AbstractHomekitAccessory<StatusActiveCharacteristic> {
         public AbstractActiveHomekitAccessory(@NotNull HomekitEndpointContext ctx, @Nullable Class<? extends Service> serviceClass) {
             super(ctx, StatusActiveCharacteristic.class, serviceClass);
-            log.info("[{}]: {} Created AbstractActiveHomekitAccessory (or subclass)", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
         }
 
         public CompletableFuture<Boolean> isActive() {
@@ -1009,17 +1007,17 @@ public class HomekitAccessoryFactory {
         private final TargetHeaterCoolerStateCharacteristic targetHeaterCoolerStateCh;
 
         public HomekitHeaterCooler(@NotNull HomekitEndpointContext ctx) {
-            super(ctx, null);
+            super(ctx, HeaterCoolerService.class);
             log.info("[{}]: {} Created HomekitHeaterCooler accessory", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
             currentTemperatureCh = getCharacteristic(CurrentTemperatureCharacteristic.class);
             currentHeaterCoolerStateCh = getCharacteristic(CurrentHeaterCoolerStateCharacteristic.class);
             targetHeaterCoolerStateCh = getCharacteristic(TargetHeaterCoolerStateCharacteristic.class);
 
-            var service = new HeaterCoolerService(this);
-
-            var temperatureDisplayUnit = getCharacteristic(TemperatureDisplayUnitCharacteristic.class);
-
-            addService(service);
+            /*var displayUnitCharacteristic = new TemperatureDisplayUnitCharacteristic(
+                    () -> completedFuture(ctx.endpoint().getTemperatureUnit()),
+                    value -> log.error("TemperatureDisplayUnit changed to: {}", value), callback -> {
+            }, () -> {
+            });*/
             log.debug("[{}]: {} HomekitHeaterCooler service added/configured", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
         }
 

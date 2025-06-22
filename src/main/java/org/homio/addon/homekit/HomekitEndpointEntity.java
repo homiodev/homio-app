@@ -26,6 +26,9 @@ import io.github.hapjava.characteristics.impl.filtermaintenance.ResetFilterIndic
 import io.github.hapjava.characteristics.impl.garagedoor.CurrentDoorStateCharacteristic;
 import io.github.hapjava.characteristics.impl.garagedoor.TargetDoorStateCharacteristic;
 import io.github.hapjava.characteristics.impl.heatercooler.CurrentHeaterCoolerStateCharacteristic;
+import io.github.hapjava.characteristics.impl.heatercooler.CurrentHeaterCoolerStateEnum;
+import io.github.hapjava.characteristics.impl.heatercooler.TargetHeaterCoolerStateCharacteristic;
+import io.github.hapjava.characteristics.impl.heatercooler.TargetHeaterCoolerStateEnum;
 import io.github.hapjava.characteristics.impl.humidifier.TargetHumidifierDehumidifierStateCharacteristic;
 import io.github.hapjava.characteristics.impl.humiditysensor.CurrentRelativeHumidityCharacteristic;
 import io.github.hapjava.characteristics.impl.humiditysensor.TargetRelativeHumidityCharacteristic;
@@ -61,6 +64,8 @@ import io.github.hapjava.characteristics.impl.windowcovering.*;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.Setter;
+import org.homio.addon.homekit.annotations.HomekitCharacteristic;
+import org.homio.addon.homekit.annotations.HomekitValidValues;
 import org.homio.addon.homekit.enums.HomekitAccessoryType;
 import org.homio.addon.homekit.enums.HomekitCharacteristicType;
 import org.homio.api.ContextVar;
@@ -365,8 +370,12 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldShowOnCondition("return ['HeaterCooler', 'Thermostat'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    @HomekitCharacteristic(value = TargetHeatingCoolingStateCharacteristic.class, type = TargetHeatingCoolingState, defaultStringValue = "OFF")
+    @HomekitCharacteristic(value = TargetHeatingCoolingStateCharacteristic.class, type = TargetHeatingCoolingState,
+            defaultStringValue = "OFF", forAccessory = "Thermostat")
+    @HomekitCharacteristic(value = TargetHeaterCoolerStateCharacteristic.class, type = TargetHeatingCoolingState,
+            defaultStringValue = "AUTO", forAccessory = "HeaterCooler")
     @HomekitValidValues(TargetHeatingCoolingStateEnum.class)
+    @HomekitValidValues(TargetHeaterCoolerStateEnum.class)
     public String getTargetHeatingCoolingState() {
         return getJsonData("thcs");
     }
@@ -376,7 +385,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     }
 
     @UIField(order = 14, required = true)
-    @UIFieldShowOnCondition("return ['HeaterCooler', 'Thermostat'].includes(context.get('accessoryType'))")
+    @UIFieldShowOnCondition("return ['Thermostat'].includes(context.get('accessoryType'))")
     @UIFieldGroup("REQ_CHAR")
     public Set<TargetHeatingCoolingStateEnum> getTargetHeatingCoolingValidValues() {
         return getJsonDataSet("thcsvv", TargetHeatingCoolingStateEnum.class, TargetHeatingCoolingStateEnum.values());
@@ -384,6 +393,17 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
 
     public void setTargetHeatingCoolingStateValidValues(String value) {
         setJsonData("thcsvv", value);
+    }
+
+    @UIField(order = 14, required = true)
+    @UIFieldShowOnCondition("return ['HeaterCooler'].includes(context.get('accessoryType'))")
+    @UIFieldGroup("REQ_CHAR")
+    public Set<TargetHeaterCoolerStateEnum> getTargetHeaterCoolingValidValues() {
+        return getJsonDataSet("thicsvv", TargetHeaterCoolerStateEnum.class, TargetHeaterCoolerStateEnum.values());
+    }
+
+    public void setTargetHeaterCoolingValidValues(String value) {
+        setJsonData("thicsvv", value);
     }
 
     /**
@@ -396,12 +416,24 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
     @HomekitCharacteristic(value = CurrentHeatingCoolingStateCharacteristic.class, type = CurrentHeatingCoolingState, defaultStringValue = "OFF")
+    @HomekitValidValues(CurrentHeatingCoolingStateEnum.class)
     public String getCurrentHeatingCoolingState() {
         return getJsonData("chcs");
     }
 
     public void setCurrentHeatingCoolingState(String value) {
         setJsonData("chcs", value);
+    }
+
+    @UIField(order = 50, required = true)
+    @UIFieldShowOnCondition("return ['HeaterCooler'].includes(context.get('accessoryType'))")
+    @UIFieldGroup("REQ_CHAR")
+    public Set<CurrentHeatingCoolingStateEnum> getCurrentHeatingCoolingValidValues() {
+        return getJsonDataSet("chcvv", CurrentHeatingCoolingStateEnum.class, CurrentHeatingCoolingStateEnum.values());
+    }
+
+    public void setCurrentHeatingCoolingValidValues(String value) {
+        setJsonData("chcvv", value);
     }
 
     /**
@@ -594,12 +626,24 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
     @HomekitCharacteristic(value = CurrentHeaterCoolerStateCharacteristic.class, type = CurrentHeaterCoolerState)
+    @HomekitValidValues(CurrentHeaterCoolerStateEnum.class)
     public String getCurrentHeaterCoolerState() {
         return getJsonData("chcshc");
     }
 
     public void setCurrentHeaterCoolerState(String value) {
         setJsonData("chcshc", value);
+    }
+
+    @UIField(order = 49, required = true)
+    @UIFieldShowOnCondition("return ['HeaterCooler'].includes(context.get('accessoryType'))")
+    @UIFieldGroup("REQ_CHAR")
+    public Set<CurrentHeaterCoolerStateEnum> getCurrentHeaterCoolerValidValues() {
+        return getJsonDataSet("chicvv", CurrentHeaterCoolerStateEnum.class, CurrentHeaterCoolerStateEnum.values());
+    }
+
+    public void setCurrentHeaterCoolerValidValues(String value) {
+        setJsonData("chicvv", value);
     }
 
     /**

@@ -1,4 +1,4 @@
-package org.homio.addon.homekit;
+package org.homio.addon.homekit.annotations;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,6 +7,6 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
-public @interface HomekitCharacteristics {
+public @interface HomekitCharacteristicList {
     HomekitCharacteristic[] value();
 }

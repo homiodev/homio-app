@@ -30,6 +30,7 @@ public abstract class AbstractHomekitAccessory<T extends BaseCharacteristic<?>> 
     private final @NotNull Characteristics characteristics = new Characteristics();
     @Getter
     private final @NotNull HomekitCharacteristicType type;
+    private final Class<? extends Service> serviceClass;
 
     public AbstractHomekitAccessory(@NotNull HomekitEndpointContext ctx,
                                     @NotNull Class<T> masterCharacteristicClass) {
@@ -40,17 +41,11 @@ public abstract class AbstractHomekitAccessory<T extends BaseCharacteristic<?>> 
                                     @NotNull Class<T> masterCharacteristicClass,
                                     @Nullable Class<? extends Service> serviceClass) {
         this.ctx = ctx;
+        this.serviceClass = serviceClass;
         buildCharacteristics(ctx, characteristics);
         masterCharacteristic = getCharacteristic(masterCharacteristicClass);
         this.type = ctx.getCharacteristicsInfo(masterCharacteristicClass).type();
         this.inverted = ctx.endpoint().getInverted();
-
-        if (ctx.endpoint().getGroup().isEmpty()) {
-            services.add(new AccessoryInformationService(this));
-        }
-        if (serviceClass != null) {
-            addService(CommonUtils.newInstance(serviceClass, this));
-        }
     }
 
     protected void addCharacteristic(@NotNull HomekitCharacteristicType type,
@@ -63,6 +58,15 @@ public abstract class AbstractHomekitAccessory<T extends BaseCharacteristic<?>> 
 
     @Override
     public @NotNull Collection<Service> getServices() {
+        // delay init services
+        if (services.isEmpty()) {
+            if (ctx.endpoint().getGroup().isEmpty()) {
+                services.add(new AccessoryInformationService(this));
+            }
+            if (serviceClass != null) {
+                addService(CommonUtils.newInstance(serviceClass, this));
+            }
+        }
         return services;
     }
 

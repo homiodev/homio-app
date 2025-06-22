@@ -1,12 +1,13 @@
-package org.homio.addon.homekit;
+package org.homio.addon.homekit.annotations;
 
 import io.github.hapjava.characteristics.impl.base.BaseCharacteristic;
+import org.homio.addon.homekit.HomekitEndpointContext;
 import org.homio.addon.homekit.enums.HomekitCharacteristicType;
 import org.homio.api.ContextVar;
 
 import java.lang.annotation.*;
 
-@Repeatable(HomekitCharacteristics.class)
+@Repeatable(HomekitCharacteristicList.class)
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
 public @interface HomekitCharacteristic {
