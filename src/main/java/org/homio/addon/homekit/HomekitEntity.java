@@ -12,6 +12,7 @@ import io.github.hapjava.server.impl.crypto.HAPSetupCodeUtils;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.homekit.accessories.HomekitAccessoryFactory;
 import org.homio.addon.homekit.accessories.HomekitThermostat;
 import org.homio.api.Context;
@@ -294,20 +295,29 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
                 for (int j = 0; j < 2; j++) {
                     if (i + j < items.size()) {
                         var item = items.get(i + j);
+                        String displayValue;
+
+                        if (item.value != null && item.value.matches("#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?")) {
+                            displayValue = String.format(
+                                    "<span style=\"padding:2px 2px 2px 12px;background:%s;\">%s</span>",
+                                    item.value, item.value);
+                        } else {
+                            displayValue = item.value + item.unit;
+                        }
+
                         value.append("""
-                                <td style="padding:0;">
-                                    <span style="color:%s;">
-                                        <i class="fa-fw %s" style="margin-right: 2px;"></i>${field.%s}
-                                    </span>: %s%s
-                                </td>
-                                """.formatted(item.color, item.icon, item.name, item.value, item.unit));
+                        <td style="padding:0;">
+                            <span style="color:%s;">
+                                <i class="fa-fw %s" style="margin-right: 2px;"></i>${field.%s}
+                            </span>: %s
+                        </td>
+                        """.formatted(item.color, item.icon, item.name, displayValue));
                     } else {
                         value.append("<td style=\"padding:0;\"></td>");
                     }
                 }
                 value.append("</tr>");
             }
-
             value.append("</table>");
             return value;
         }
@@ -345,7 +355,12 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
             var masterCharacteristic = ctx.accessory().getMasterCharacteristic();
             ctx.characteristics().stream()
                     .filter(ch -> masterCharacteristic == null || !masterCharacteristic.getType().equals(ch.characteristic().getType()))
-                    .forEach(ch -> items.add(new Item(ch.name(), ch.variable())));
+                    .forEach(ch -> {
+                        try {
+                            items.add(new Item(ch.name(), ch.variable(), ch.characteristic().getValue().get()));
+                        } catch (Exception ignored) {
+                        }
+                    });
 
             items.sort(Comparator.comparingInt(i -> i.name.length()));
             return buildVariablesDescription(items).toString();
@@ -353,8 +368,8 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
     }
 
     record Item(String name, String value, String icon, String color, String unit) {
-        Item(String name, ContextVar.Variable v) {
-            this(name, v.getValue().stringValue("N/A"), v.getIcon(), v.getIconColor(), Objects.toString(v.getUnit(), ""));
+        Item(String name, ContextVar.Variable v, Object value) {
+            this(name, StringUtils.defaultIfEmpty(Objects.toString(value, ""), "N/A"), v.getIcon(), v.getIconColor(), Objects.toString(v.getUnit(), ""));
         }
     }
 }

@@ -2,6 +2,8 @@ package org.homio.addon.homekit.accessories;
 
 import io.github.hapjava.accessories.LightbulbAccessory;
 import io.github.hapjava.characteristics.HomekitCharacteristicChangeCallback;
+import io.github.hapjava.characteristics.impl.base.BaseCharacteristic;
+import io.github.hapjava.characteristics.impl.base.StringCharacteristic;
 import io.github.hapjava.characteristics.impl.common.OnCharacteristic;
 import io.github.hapjava.characteristics.impl.lightbulb.BrightnessCharacteristic;
 import io.github.hapjava.characteristics.impl.lightbulb.HueCharacteristic;
@@ -9,15 +11,17 @@ import io.github.hapjava.characteristics.impl.lightbulb.SaturationCharacteristic
 import io.github.hapjava.services.impl.LightbulbService;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.homekit.HomekitEndpointContext;
 import org.homio.api.ContextVar;
 import org.homio.api.state.StringType;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.homio.addon.homekit.enums.HomekitCharacteristicType.Hue;
+import static org.homio.addon.homekit.enums.HomekitCharacteristicType.*;
 
 @Log4j2
 public class HomekitLightBulb extends AbstractHomekitAccessory<OnCharacteristic> implements LightbulbAccessory {
@@ -29,11 +33,23 @@ public class HomekitLightBulb extends AbstractHomekitAccessory<OnCharacteristic>
         String combinedColor = getEndpoint().getCombinedColor();
         if (hue.isEmpty() && saturation.isEmpty() && brightness.isEmpty() && !combinedColor.isEmpty()) {
             var v = ctx.getVariable(combinedColor);
+            addCharacteristic(ActiveStatus, createColorCharacteristic(v), v);
             addCharacteristic(Hue, createHueCharacteristic(ctx, v), v);
-            addCharacteristic(Hue, createSaturationCharacteristic(ctx, v), v);
-            addCharacteristic(Hue, createBrightnessCharacteristic(ctx, v), v);
+            addCharacteristic(Saturation, createSaturationCharacteristic(ctx, v), v);
+            addCharacteristic(Brightness, createBrightnessCharacteristic(ctx, v), v);
         }
         log.info("[{}]: {} Created HomekitLightBulb accessory", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
+    }
+
+    // FOR UI ONLY
+    private @NotNull BaseCharacteristic<?> createColorCharacteristic(ContextVar.Variable v) {
+        return new StringCharacteristic(
+                "00000000-0000-0000-0000-000000000000",
+                "Color",
+                Optional.of(() -> completedFuture(v.getValue().stringValue())),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty());
     }
 
     private static @NotNull HueCharacteristic createHueCharacteristic(HomekitEndpointContext c, ContextVar.Variable v) {
@@ -90,6 +106,9 @@ public class HomekitLightBulb extends AbstractHomekitAccessory<OnCharacteristic>
     }
 
     private static float[] getHsbValuesFromHex(String hexColor) {
+        if (StringUtils.isEmpty(hexColor)) {
+            hexColor = "#FFFFFF";
+        }
         var color = java.awt.Color.decode(hexColor);
         int r = color.getRed();
         int g = color.getGreen();
