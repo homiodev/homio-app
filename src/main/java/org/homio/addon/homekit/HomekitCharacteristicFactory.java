@@ -148,7 +148,7 @@ public class HomekitCharacteristicFactory {
                 }
                 parameters.add((Supplier<CompletableFuture<?>>) () -> completedFuture(getKeyFromMapping2(v, m, defaultEnum)));
                 parameters.add((ExceptionalConsumer<?>) newVal -> {
-                    setHomioVariableFromEnum2(v, newVal, m);
+                    setHomioVariableFromEnum2(c, hc, v, newVal, m);
                     // setIntConsumer(v, c),
                 });
                 parameters.add(getSubscriber(v, c, hc.type()));
@@ -189,7 +189,7 @@ public class HomekitCharacteristicFactory {
         //
         var characteristic = newCharacteristicInstance(hc.value(),
                 getStringSupplier(v, hc.defaultStringValue()),
-                setStringConsumer(v),
+                setStringConsumer(c, hc, v),
                 getSubscriber(v, c, hc.type()),
                 getUnsubscriber(v, c, hc.type()));
         c.setCharacteristic(characteristic, v, hc.type());
@@ -203,7 +203,7 @@ public class HomekitCharacteristicFactory {
         //
         var characteristic = newCharacteristicInstance(hc.value(),
                 getDoubleSupplier(v, hc.defaultDoubleValue()),
-                setDoubleConsumer(v),
+                setDoubleConsumer(c, hc, v),
                 getSubscriber(v, c, hc.type()),
                 getUnsubscriber(v, c, hc.type()));
         c.setCharacteristic(characteristic, v, hc.type());
@@ -217,7 +217,7 @@ public class HomekitCharacteristicFactory {
         //
         var characteristic = newCharacteristicInstance(hc.value(),
                 getIntSupplier(v, hc.defaultIntValue()),
-                setIntConsumer(v),
+                setIntConsumer(c, hc, v),
                 getSubscriber(v, c, hc.type()),
                 getUnsubscriber(v, c, hc.type()));
         c.setCharacteristic(characteristic, v, hc.type());
@@ -285,7 +285,7 @@ public class HomekitCharacteristicFactory {
         //
         var characteristic = newCharacteristicInstance(hc.value(),
                 getBooleanSupplier(v),
-                setBooleanConsumer(v),
+                setBooleanConsumer(c, hc, v),
                 getSubscriber(v, c, hc.type()),
                 getUnsubscriber(v, c, hc.type()));
         c.setCharacteristic(characteristic, v, hc.type());
@@ -436,6 +436,8 @@ public class HomekitCharacteristicFactory {
     }*/
 
     public static void setHomioVariableFromEnum2(
+            @NotNull HomekitEndpointContext c,
+            @NotNull HomekitCharacteristic hc,
             @NotNull ContextVar.Variable variable,
             @Nullable Object enumFromHk,
             @NotNull Map<Enum, Object> mapping) {
@@ -443,18 +445,27 @@ public class HomekitCharacteristicFactory {
             return;
         }
         Object homioValueRepresentation = mapping.get(enumFromHk);
-        if (homioValueRepresentation instanceof List)
+        if (homioValueRepresentation instanceof List) {
             homioValueRepresentation = ((List<?>) homioValueRepresentation).isEmpty() ? null : ((List<?>) homioValueRepresentation).getFirst();
+        }
         if (homioValueRepresentation != null) {
             String stringValueToSet = homioValueRepresentation.toString();
             try {
                 if (variable.getRestriction() == ContextVar.VariableType.Bool) {
-                    var value = "ON".equalsIgnoreCase(stringValueToSet) || "TRUE".equalsIgnoreCase(stringValueToSet);
+                    var value = "ON".equalsIgnoreCase(stringValueToSet) || "TRUE".equalsIgnoreCase(stringValueToSet)
+                                || "1".equalsIgnoreCase(stringValueToSet) || "YES".equalsIgnoreCase(stringValueToSet);
+                    log.info("[{}]: Set homekit enum value: {} to {} - {}", c.owner().getEntityID(), value, c.endpoint().getAccessoryType(),
+                            hc.type());
                     variable.set(value);
                 } else if (variable.getRestriction() == ContextVar.VariableType.Float) {
-                    variable.set(new DecimalType(new BigDecimal(stringValueToSet)));
+                    BigDecimal value = new BigDecimal(stringValueToSet);
+                    variable.set(new DecimalType(value));
+                    log.info("[{}]: Set homekit decimal value: {} to {} - {}", c.owner().getEntityID(), value, c.endpoint().getAccessoryType(),
+                            hc.type());
                 } else {
                     variable.set(new StringType(stringValueToSet));
+                    log.info("[{}]: Set homekit str value: {} to {} - {}", c.owner().getEntityID(), stringValueToSet, c.endpoint().getAccessoryType(),
+                            hc.type());
                 }
             } catch (Exception e) {
                 log.error("Error setting Homio variable {} from HomeKit enum {}: {}", variable, enumFromHk, e.getMessage());
@@ -468,40 +479,59 @@ public class HomekitCharacteristicFactory {
         return () -> completedFuture(v.getValue().boolValue());
     }
 
-    private static @NotNull ExceptionalConsumer<Boolean> setBooleanConsumer(@NotNull ContextVar.Variable v) {
-        return val -> v.set(OnOffType.of(val));
+    private static @NotNull ExceptionalConsumer<Boolean> setBooleanConsumer(@NotNull HomekitEndpointContext c, @NotNull HomekitCharacteristic hc, @NotNull ContextVar.Variable v) {
+        return val -> {
+            log.info("[{}]: Set homekit bool value: {} to {} - {}", c.owner().getEntityID(), val, c.endpoint().getAccessoryType(),
+                    hc.type());
+            v.set(OnOffType.of(val));
+        };
     }
 
     private static @NotNull Supplier<CompletableFuture<Integer>> getIntSupplier(@NotNull ContextVar.Variable v, int def) {
         return () -> completedFuture(v.getValue().intValue(def));
     }
 
-    private static @NotNull ExceptionalConsumer<Integer> setIntConsumer(@NotNull ContextVar.Variable v) {
-        return val -> v.set(new DecimalType(val));
+    private static @NotNull ExceptionalConsumer<Integer> setIntConsumer(@NotNull HomekitEndpointContext c, @NotNull HomekitCharacteristic hc, @NotNull ContextVar.Variable v) {
+        return val -> {
+            log.info("[{}]: Set homekit int value: {} to {} - {}", c.owner().getEntityID(), val, c.endpoint().getAccessoryType(),
+                    hc.type());
+            v.set(new DecimalType(val));
+        };
     }
 
     private static @NotNull Supplier<CompletableFuture<Double>> getDoubleSupplier(@NotNull ContextVar.Variable v, double def) {
         return () -> completedFuture(v.getValue().doubleValue(def));
     }
 
-    private static @NotNull ExceptionalConsumer<Double> setDoubleConsumer(@NotNull ContextVar.Variable v) {
-        return val -> v.set(new DecimalType(val));
+    private static @NotNull ExceptionalConsumer<Double> setDoubleConsumer(@NotNull HomekitEndpointContext c, @NotNull HomekitCharacteristic hc, @NotNull ContextVar.Variable v) {
+        return val -> {
+            log.info("[{}]: Set homekit double value: {} to {} - {}", c.owner().getEntityID(), val, c.endpoint().getAccessoryType(),
+                    hc.type());
+            v.set(new DecimalType(val));
+        };
     }
 
     private static @NotNull Supplier<CompletableFuture<String>> getStringSupplier(@Nullable ContextVar.Variable v, String def) {
         return () -> completedFuture(v == null ? def : v.getValue().stringValue(def));
     }
 
-    private static @NotNull ExceptionalConsumer<String> setStringConsumer(@NotNull ContextVar.Variable v) {
-        return val -> v.set(new StringType(val));
+    private static @NotNull ExceptionalConsumer<String> setStringConsumer(@NotNull HomekitEndpointContext c, @NotNull HomekitCharacteristic hc, @NotNull ContextVar.Variable v) {
+        return val -> {
+            log.info("[{}]: Set homekit str value: {} to {} - {}", c.owner().getEntityID(), val, c.endpoint().getAccessoryType(),
+                    hc.type());
+            v.set(new StringType(val));
+        };
     }
 
     public static @NotNull Supplier<CompletableFuture<Double>> getTemperatureSupplier(@NotNull ContextVar.Variable v, double dC) {
         return () -> completedFuture(v.getValue().doubleValue(dC));
     }
 
-    public static @NotNull ExceptionalConsumer<Double> setTemperatureConsumer(@NotNull ContextVar.Variable v) {
-        return valC -> v.set(new DecimalType(valC));
+    public static @NotNull ExceptionalConsumer<Double> setTemperatureConsumer(HomekitEndpointContext c, @NotNull ContextVar.Variable v) {
+        return valC -> {
+            log.info("[{}]: Set homekit temperature value: {} to {}", c.owner().getEntityID(), valC, c.endpoint().getAccessoryType());
+            v.set(new DecimalType(valC));
+        };
     }
 
     public static Consumer<HomekitCharacteristicChangeCallback> getSubscriber(

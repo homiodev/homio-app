@@ -306,12 +306,12 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
                         }
 
                         value.append("""
-                        <td style="padding:0;">
-                            <span style="color:%s;">
-                                <i class="fa-fw %s" style="margin-right: 2px;"></i>${field.%s}
-                            </span>: %s
-                        </td>
-                        """.formatted(item.color, item.icon, item.name, displayValue));
+                                <td style="padding:0;">
+                                    <span style="color:%s;">
+                                        <i class="fa-fw %s" style="margin-right: 2px;"></i>${field.%s}
+                                    </span>: %s
+                                </td>
+                                """.formatted(item.color, item.icon, item.name, displayValue));
                     } else {
                         value.append("<td style=\"padding:0;\"></td>");
                     }
@@ -357,7 +357,12 @@ public final class HomekitEntity extends DeviceEntityAndSeries<HomekitEndpointEn
                     .filter(ch -> masterCharacteristic == null || !masterCharacteristic.getType().equals(ch.characteristic().getType()))
                     .forEach(ch -> {
                         try {
-                            items.add(new Item(ch.name(), ch.variable(), ch.characteristic().getValue().get()));
+                            var c = ch.characteristic();
+                            Object value = c.getValue().get();
+                            if (c instanceof EnumCharacteristic<?> ec) {
+                                value = ec.getEnumValue().get() + "(" + ec.getValue().get() + ")";
+                            }
+                            items.add(new Item(ch.name(), ch.variable(), value));
                         } catch (Exception ignored) {
                         }
                     });

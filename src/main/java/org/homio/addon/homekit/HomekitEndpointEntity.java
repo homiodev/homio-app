@@ -60,6 +60,7 @@ import io.github.hapjava.characteristics.impl.televisionspeaker.VolumeSelectorCh
 import io.github.hapjava.characteristics.impl.thermostat.*;
 import io.github.hapjava.characteristics.impl.valve.RemainingDurationCharacteristic;
 import io.github.hapjava.characteristics.impl.valve.SetDurationCharacteristic;
+import io.github.hapjava.characteristics.impl.valve.ValveTypeEnum;
 import io.github.hapjava.characteristics.impl.windowcovering.*;
 import jakarta.persistence.Entity;
 import lombok.Getter;
@@ -167,10 +168,23 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Used by (Required): AirPurifier, Fan, Faucet, HeaterCooler, HumidifierDehumidifier, IrrigationSystem, Television, Valve.
      */
     @UIField(order = 5, required = true)
-    @UIFieldShowOnCondition("return ['AirPurifier', 'Fan', 'Faucet', 'HeaterCooler', 'HumidifierDehumidifier', 'IrrigationSystem', 'Television', 'Valve'].includes(context.get('accessoryType'))")
+    @UIFieldShowOnCondition("return ['AirPurifier', 'Fan', 'Faucet', 'HeaterCooler', 'HumidifierDehumidifier', 'IrrigationSystem', 'Television'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup(value = "REQ_CHAR", order = 100, borderColor = "#8C3265")
     @HomekitCharacteristic(value = StatusActiveCharacteristic.class, type = ActiveStatus)
+    public String getStatusActiveState() {
+        return getJsonData("sas");
+    }
+
+    public void setStatusActiveState(String value) {
+        setJsonData("sas", value);
+    }
+
+    @UIField(order = 5, required = true)
+    @UIFieldShowOnCondition("return ['Valve'].includes(context.get('accessoryType'))")
+    @UIFieldVariableSelection(varType = Bool)
+    @UIFieldGroup("REQ_CHAR")
+    @HomekitCharacteristic(value = ActiveCharacteristic.class, type = Active)
     public String getActiveState() {
         return getJsonData("as");
     }
@@ -178,6 +192,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     public void setActiveState(String value) {
         setJsonData("as", value);
     }
+
 
     /**
      * Represents the detected state for various binary sensors.
@@ -564,11 +579,11 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
     /**
      * Indicates if the filter needs to be changed.
      * Characteristic: FilterChangeIndication (0 = OK, 1 = Change).
-     * Used by (Required): FilterMaintenance. (Optional for AirPurifier, handled by showing in OPT_CHAR for it if also shown there).
+     * Used by (Required): Filter. (Optional for AirPurifier, handled by showing in OPT_CHAR for it if also shown there).
      */
     @UIField(order = 42, required = true)
-    // Show for FilterMaintenance (required) and AirPurifier (where it's optional but often present)
-    @UIFieldShowOnCondition("['FilterMaintenance', 'AirPurifier'].includes(context.get('accessoryType'))")
+    // Show for Filter (required) and AirPurifier (where it's optional but often present)
+    @UIFieldShowOnCondition("['Filter', 'AirPurifier'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
     @HomekitCharacteristic(value = FilterChangeIndicationCharacteristic.class, type = FilterChangeIndication)
@@ -586,7 +601,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Used by (Required): GarageDoorOpener.
      */
     @UIField(order = 45, required = true)
-    @UIFieldShowOnCondition("['GarageDoorOpener'].includes(context.get('accessoryType'))")
+    @UIFieldShowOnCondition("[return context.get('accessoryType') == 'GarageDoorOpener'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
     @HomekitCharacteristic(value = CurrentDoorStateCharacteristic.class, type = CurrentDoorState, defaultStringValue = "CLOSED")
@@ -910,14 +925,13 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      */
     @UIField(order = 95, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Valve'")
-    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
-    public String getValveType() {
-        return getJsonData("vt");
+    public ValveTypeEnum getValveType() {
+        return getJsonDataEnum("vt", ValveTypeEnum.GENERIC);
     }
 
-    public void setValveType(String value) {
-        setJsonData("vt", value);
+    public void setValveType(ValveTypeEnum value) {
+        setJsonDataEnum("vt", value);
     }
 
     /**
@@ -1526,8 +1540,8 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Used by (Optional): IrrigationSystem, Valve.
      */
     @UIField(order = 62)
-    @UIFieldShowOnCondition("return ['IrrigationSystem', 'Valve'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection(varType = Float)
+    @UIFieldShowOnCondition("return ['IrrigationSystem', 'Valve'].includes(context.get('accessoryType')) && !context.get('configurationTimer')")
+    @UIFieldVariableSelection(varType = Float, requireWritable = false)
     @UIFieldGroup("OPT_CHAR")
     @HomekitCharacteristic(value = RemainingDurationCharacteristic.class, type = RemainingDuration)
     public String getRemainingDuration() {
@@ -1538,6 +1552,17 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         setJsonData("rdur", value);
     }
 
+    @UIField(order = 62)
+    @UIFieldShowOnCondition("return ['Valve'].includes(context.get('accessoryType'))")
+    @UIFieldGroup("OPT_CHAR")
+    public boolean isConfigurationTimer() {
+        return getJsonData("cnft", true);
+    }
+
+    public void setConfigurationTimer(boolean value) {
+        setJsonData("cnft", value);
+    }
+
     /**
      * Set the duration for a valve's operation.
      * Characteristic: SetDuration (seconds). Writeable.
@@ -1545,8 +1570,8 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      */
     @UIField(order = 63)
     @UIFieldShowOnCondition("return ['IrrigationSystem', 'Valve'].includes(context.get('accessoryType'))")
-    @UIFieldVariableSelection(varType = Float, rawInput = true)
     @UIFieldGroup("OPT_CHAR")
+    @UIFieldVariableSelection(varType = Float)
     @HomekitCharacteristic(value = SetDurationCharacteristic.class, type = Duration)
     public String getSetDuration() {
         return getJsonData("sdur");
@@ -2272,7 +2297,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
                     v.getMaxValue(25.0),
                     v.getStep(0.5),
                     getTemperatureSupplier(v, 18.0),
-                    setTemperatureConsumer(v),
+                    setTemperatureConsumer(c, v),
                     getSubscriber(v, c, HeatingThresholdTemperature),
                     getUnsubscriber(v, c, HeatingThresholdTemperature));
         }
@@ -2342,7 +2367,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
                     v.getMaxValue(38.0),
                     v.getStep(0.5),
                     getTemperatureSupplier(v, 21.0),
-                    setTemperatureConsumer(v),
+                    setTemperatureConsumer(c, v),
                     getSubscriber(v, c, TargetTemperature),
                     getUnsubscriber(v, c, TargetTemperature));
         }
@@ -2356,7 +2381,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
                     v.getMaxValue(35.0),
                     v.getStep(0.5),
                     getTemperatureSupplier(v, 25.0),
-                    setTemperatureConsumer(v),
+                    setTemperatureConsumer(c, v),
                     getSubscriber(v, c, CoolingThresholdTemperature),
                     getUnsubscriber(v, c, CoolingThresholdTemperature));
         }

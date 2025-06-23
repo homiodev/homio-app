@@ -8,6 +8,7 @@ public enum HomekitCharacteristicType {
     Empty,
 
     ActiveIdentifier,
+    Active,
     ActiveStatus,
     AirQuality,
     BatteryChargingState,

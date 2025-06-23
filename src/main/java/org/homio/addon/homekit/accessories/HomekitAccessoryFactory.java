@@ -51,7 +51,9 @@ import io.github.hapjava.characteristics.impl.television.CurrentMediaStateEnum;
 import io.github.hapjava.characteristics.impl.television.TargetMediaStateCharacteristic;
 import io.github.hapjava.characteristics.impl.television.TargetMediaStateEnum;
 import io.github.hapjava.characteristics.impl.thermostat.CurrentTemperatureCharacteristic;
+import io.github.hapjava.characteristics.impl.thermostat.TemperatureDisplayUnitCharacteristic;
 import io.github.hapjava.characteristics.impl.valve.RemainingDurationCharacteristic;
+import io.github.hapjava.characteristics.impl.valve.SetDurationCharacteristic;
 import io.github.hapjava.characteristics.impl.valve.ValveTypeEnum;
 import io.github.hapjava.services.Service;
 import io.github.hapjava.services.impl.*;
@@ -66,10 +68,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.*;
 import java.util.function.Function;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -193,16 +192,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Boolean> getSwitchState() {
-            log.debug("[{}]: {} Getting switch state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<Boolean> future = masterCharacteristic.getValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get switch state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Switch state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return masterCharacteristic.getValue();
         }
 
         @SneakyThrows
@@ -243,16 +233,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<SmokeDetectedStateEnum> getSmokeDetectedState() {
-            log.debug("[{}]: {} Getting smoke detected state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<SmokeDetectedStateEnum> future = masterCharacteristic.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get smoke detected state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Smoke detected state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
@@ -277,16 +258,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<ContactStateEnum> getCurrentState() {
-            log.info("[{}]: {} Getting current contact state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<ContactStateEnum> future = masterCharacteristic.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get current contact state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Current contact state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
@@ -311,16 +283,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<LeakDetectedStateEnum> getLeakDetected() {
-            log.debug("[{}]: {} Getting leak detected state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<LeakDetectedStateEnum> future = masterCharacteristic.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get leak detected state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Leak detected state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
@@ -345,58 +308,75 @@ public class HomekitAccessoryFactory {
 
     @Log4j2
     private static class HomekitValve extends AbstractHomekitAccessory<ActiveCharacteristic> implements ValveAccessory {
-        public static final String CONFIG_DEFAULT_DURATION = "homekitDefaultDuration";
-        private static final String CONFIG_VALVE_TYPE = "ValveType";
-        private static final String CONFIG_VALVE_TYPE_DEPRECATED = "homekitValveType";
-        private static final String CONFIG_TIMER = "homekitTimer";
 
-        private static final Map<String, ValveTypeEnum> CONFIG_VALVE_TYPE_MAPPING = new HashMap<>() {
-            {
-                put("GENERIC", ValveTypeEnum.GENERIC);
-                put("IRRIGATION", ValveTypeEnum.IRRIGATION);
-                put("SHOWER", ValveTypeEnum.SHOWER);
-                put("FAUCET", ValveTypeEnum.WATER_FAUCET);
-            }
-        };
         private final ScheduledExecutorService timerService = Executors.newSingleThreadScheduledExecutor();
         private final boolean homekitTimer;
         private final InUseCharacteristic inUseStatusCharacteristic;
-        private final Optional<RemainingDurationCharacteristic> remainingDurationCharacteristic;
+        private final ValveTypeEnum valveType;
         private ScheduledFuture<?> valveTimer;
-        private ValveTypeEnum valveType;
 
         public HomekitValve(@NotNull HomekitEndpointContext ctx) {
             super(ctx, ActiveCharacteristic.class, ValveService.class);
             log.info("[{}]: {} Created HomekitValve accessory", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
             inUseStatusCharacteristic = getCharacteristic(InUseCharacteristic.class);
-            homekitTimer = false; // getAccessoryConfigurationAsBoolean(CONFIG_TIMER, false);
+            homekitTimer = ctx.endpoint().isConfigurationTimer();
 
-            String valveTypeConfig = "GENERIC"; // getAccessoryConfiguration(CONFIG_VALVE_TYPE, "GENERIC");
-            valveTypeConfig = valveTypeConfig; // getAccessoryConfiguration(CONFIG_VALVE_TYPE_DEPRECATED, valveTypeConfig);
-            var valveType = CONFIG_VALVE_TYPE_MAPPING.get(valveTypeConfig.toUpperCase());
-            this.valveType = valveType != null ? valveType : ValveTypeEnum.GENERIC;
-            remainingDurationCharacteristic = getCharacteristicOpt(RemainingDurationCharacteristic.class);
+            valveType = ctx.endpoint().getValveType();
+            var remainingDurationCharacteristic = getCharacteristicOpt(RemainingDurationCharacteristic.class);
+            if (homekitTimer && remainingDurationCharacteristic.isEmpty()) {
+                addRemainingDurationCharacteristic();
+            }
             log.debug("[{}]: {} HomekitValve configured with type: {}, timer enabled: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), this.valveType, homekitTimer);
         }
 
-        @Override
-        public CompletableFuture<ActiveEnum> getValveActive() {
-            log.debug("[{}]: {} Getting valve active state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<ActiveEnum> future = masterCharacteristic.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get valve active state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Valve active state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
+        private void addRemainingDurationCharacteristic() {
+            addCharacteristicToService(new RemainingDurationCharacteristic(() -> {
+                int remainingTime = 0;
+                ScheduledFuture<?> future = valveTimer;
+                if (future != null && !future.isDone()) {
+                    remainingTime = Math.toIntExact(future.getDelay(TimeUnit.SECONDS));
                 }
-            });
-            return future;
+                return CompletableFuture.completedFuture(remainingTime);
+            }, callback -> {
+            }, () -> {
+            }));
         }
 
+        @SneakyThrows
         @Override
-        public CompletableFuture<Void> setValveActive(ActiveEnum activeEnum) {
-            log.info("[{}]: {} Setting valve active state to: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), activeEnum);
+        public CompletableFuture<ActiveEnum> getValveActive() {
+            return masterCharacteristic.getEnumValue();
+        }
+
+        @SneakyThrows
+        @Override
+        public CompletableFuture<Void> setValveActive(ActiveEnum value) {
+            masterCharacteristic.setValue(value);
+            log.info("[{}]: {} Setting valve active state to: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), value);
+            if (homekitTimer) {
+                if (value == ActiveEnum.ACTIVE) {
+                    startTimer();
+                } else {
+                    stopTimer();
+                }
+            }
             return completedFuture(null);
+        }
+
+        @SneakyThrows
+        private void startTimer() {
+            int duration = getCharacteristic(SetDurationCharacteristic.class).getValue().get();
+            if (duration > 0) {
+                stopTimer();
+                log.info("[{}]: Starting timer for: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
+                valveTimer = timerService.schedule(() -> {
+                    try {
+                        log.info("[{}]: Turn off valve for: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
+                        getCharacteristic(ActiveCharacteristic.class).setValue(ActiveEnum.INACTIVE);
+                    } catch (Exception ignore) {
+                    }
+                }, duration, TimeUnit.SECONDS);
+            }
         }
 
         private void stopTimer() {
@@ -421,16 +401,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<InUseEnum> getValveInUse() {
-            log.debug("[{}]: {} Getting valve in-use state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<InUseEnum> future = inUseStatusCharacteristic.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get valve in-use state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Valve in-use state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return inUseStatusCharacteristic.getEnumValue();
         }
 
         @Override
@@ -447,8 +418,6 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<ValveTypeEnum> getValveType() {
-            log.debug("[{}]: {} Getting valve type", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            log.info("[{}]: {} Valve type: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), valveType);
             return completedFuture(valveType);
         }
 
@@ -472,16 +441,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<AirQualityEnum> getAirQuality() {
-            log.debug("[{}]: {} Getting air quality state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<AirQualityEnum> future = masterCharacteristic.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get air quality state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Air quality state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
@@ -505,16 +465,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Boolean> isOn() {
-            log.debug("[{}]: {} Getting fan on state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<Boolean> future = masterCharacteristic.getValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get fan on state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Fan on state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return masterCharacteristic.getValue();
         }
 
         @SneakyThrows
@@ -540,14 +491,13 @@ public class HomekitAccessoryFactory {
 
     private static class HomekitBattery extends AbstractHomekitAccessory<BatteryLevelCharacteristic> implements BatteryAccessory {
 
-        private final int lowThreshold;
         private final Optional<StatusLowBatteryCharacteristic> statusLowBatteryCharacteristic;
         private final Optional<ChargingStateCharacteristic> chargingBatteryCharacteristic;
 
         public HomekitBattery(@NotNull HomekitEndpointContext ctx) {
             super(ctx, BatteryLevelCharacteristic.class, BatteryService.class);
             log.info("[{}]: {} Created HomekitBattery accessory", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            lowThreshold = getVariableValue(HomekitEndpointEntity::getBatteryLowThreshold, new DecimalType(20)).intValue();
+            var lowThreshold = getVariableValue(HomekitEndpointEntity::getBatteryLowThreshold, new DecimalType(20)).intValue();
             statusLowBatteryCharacteristic = getCharacteristicOpt(StatusLowBatteryCharacteristic.class);
             chargingBatteryCharacteristic = getCharacteristicOpt(ChargingStateCharacteristic.class);
             log.debug("[{}]: {} HomekitBattery configured with lowThreshold: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), lowThreshold);
@@ -555,44 +505,17 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Integer> getBatteryLevel() {
-            log.debug("[{}]: {} Getting battery level", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<Integer> future = masterCharacteristic.getValue();
-            future.whenComplete((level, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get battery level", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Battery level: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), level);
-                }
-            });
-            return future;
+            return masterCharacteristic.getValue();
         }
 
         @Override
         public CompletableFuture<StatusLowBatteryEnum> getLowBatteryState() {
-            log.debug("[{}]: {} Getting low battery state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<StatusLowBatteryEnum> future = statusLowBatteryCharacteristic.map(EnumCharacteristic::getEnumValue).orElse(completedFuture(StatusLowBatteryEnum.NORMAL));
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get low battery state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Low battery state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return statusLowBatteryCharacteristic.map(EnumCharacteristic::getEnumValue).orElse(completedFuture(StatusLowBatteryEnum.NORMAL));
         }
 
         @Override
         public CompletableFuture<ChargingStateEnum> getChargingState() {
-            log.debug("[{}]: {} Getting charging state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<ChargingStateEnum> future = chargingBatteryCharacteristic.map(EnumCharacteristic::getEnumValue).orElse(completedFuture(ChargingStateEnum.NOT_CHARABLE));
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get charging state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Charging state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return chargingBatteryCharacteristic.map(EnumCharacteristic::getEnumValue).orElse(completedFuture(ChargingStateEnum.NOT_CHARABLE));
         }
 
         @Override
@@ -648,12 +571,12 @@ public class HomekitAccessoryFactory {
 
         @Override
         public void subscribeSwitchEvent(HomekitCharacteristicChangeCallback callback) {
-            System.out.println("");
+            System.out.println();
         }
 
         @Override
         public void unsubscribeSwitchEvent() {
-            System.out.println("");
+            System.out.println();
         }
     }
 
@@ -689,16 +612,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<FilterChangeIndicationEnum> getFilterChangeIndication() {
-            log.debug("[{}]: {} Getting filter change indication", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<FilterChangeIndicationEnum> future = masterCharacteristic.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get filter change indication", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Filter change indication: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
@@ -728,15 +642,7 @@ public class HomekitAccessoryFactory {
 
         public CompletableFuture<Boolean> isActive() {
             log.debug("[{}]: {} Getting active state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<Boolean> future = masterCharacteristic.getValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get active state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Active state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return masterCharacteristic.getValue();
         }
 
         @SneakyThrows
@@ -773,16 +679,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<OccupancyDetectedEnum> getOccupancyDetected() {
-            log.debug("[{}]: {} Getting occupancy detected state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<OccupancyDetectedEnum> future = masterCharacteristic.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get occupancy detected state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Occupancy detected state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
@@ -810,16 +707,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<CurrentSlatStateEnum> getSlatState() {
-            log.debug("[{}]: {} Getting slat state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<CurrentSlatStateEnum> future = masterCharacteristic.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get slat state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Slat state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
@@ -836,16 +724,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<SlatTypeEnum> getSlatType() {
-            log.debug("[{}]: {} Getting slat type", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<SlatTypeEnum> future = slatTypeCh.map(EnumCharacteristic::getEnumValue).orElse(completedFuture(SlatTypeEnum.HORIZONTAL));
-            future.whenComplete((type, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get slat type", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Slat type: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), type);
-                }
-            });
-            return future;
+            return slatTypeCh.map(EnumCharacteristic::getEnumValue).orElse(completedFuture(SlatTypeEnum.HORIZONTAL));
         }
     }
 
@@ -857,16 +736,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Boolean> getMotionDetected() {
-            log.debug("[{}]: {} Getting motion detected state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<Boolean> future = masterCharacteristic.getValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get motion detected state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Motion detected state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return masterCharacteristic.getValue();
         }
 
         @Override
@@ -890,16 +760,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Double> getCurrentRelativeHumidity() {
-            log.debug("[{}]: {} Getting current relative humidity", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<Double> future = masterCharacteristic.getValue();
-            future.whenComplete((humidity, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get current relative humidity", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Current relative humidity: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), humidity);
-                }
-            });
-            return future;
+            return masterCharacteristic.getValue();
         }
 
         @Override
@@ -939,16 +800,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<CarbonDioxideDetectedEnum> getCarbonDioxideDetectedState() {
-            log.debug("[{}]: {} Getting carbon dioxide detected state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<CarbonDioxideDetectedEnum> future = masterCharacteristic.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get carbon dioxide detected state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Carbon dioxide detected state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
@@ -973,16 +825,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<CarbonMonoxideDetectedEnum> getCarbonMonoxideDetectedState() {
-            log.debug("[{}]: {} Getting carbon monoxide detected state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<CarbonMonoxideDetectedEnum> future = masterCharacteristic.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get carbon monoxide detected state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Carbon monoxide detected state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
@@ -1013,11 +856,12 @@ public class HomekitAccessoryFactory {
             currentHeaterCoolerStateCh = getCharacteristic(CurrentHeaterCoolerStateCharacteristic.class);
             targetHeaterCoolerStateCh = getCharacteristic(TargetHeaterCoolerStateCharacteristic.class);
 
-            /*var displayUnitCharacteristic = new TemperatureDisplayUnitCharacteristic(
+            var displayUnitCharacteristic = new TemperatureDisplayUnitCharacteristic(
                     () -> completedFuture(ctx.endpoint().getTemperatureUnit()),
                     value -> log.error("TemperatureDisplayUnit changed to: {}", value), callback -> {
             }, () -> {
-            });*/
+            });
+            addCharacteristicToService(displayUnitCharacteristic);
             log.debug("[{}]: {} HomekitHeaterCooler service added/configured", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
         }
 
@@ -1035,44 +879,17 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Double> getCurrentTemperature() {
-            log.debug("[{}]: {} Getting current temperature", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<Double> future = currentTemperatureCh.getValue();
-            future.whenComplete((temp, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get current temperature", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Current temperature: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), temp);
-                }
-            });
-            return future;
+            return currentTemperatureCh.getValue();
         }
 
         @Override
         public CompletableFuture<CurrentHeaterCoolerStateEnum> getCurrentHeaterCoolerState() {
-            log.debug("[{}]: {} Getting current heater/cooler state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<CurrentHeaterCoolerStateEnum> future = currentHeaterCoolerStateCh.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get current heater/cooler state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Current heater/cooler state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return currentHeaterCoolerStateCh.getEnumValue();
         }
 
         @Override
         public CompletableFuture<TargetHeaterCoolerStateEnum> getTargetHeaterCoolerState() {
-            log.debug("[{}]: {} Getting target heater/cooler state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<TargetHeaterCoolerStateEnum> future = targetHeaterCoolerStateCh.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get target heater/cooler state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Target heater/cooler state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return targetHeaterCoolerStateCh.getEnumValue();
         }
 
         @SneakyThrows
@@ -1128,16 +945,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Double> getCurrentAmbientLightLevel() {
-            log.debug("[{}]: {} Getting current ambient light level", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<Double> future = masterCharacteristic.getValue();
-            future.whenComplete((level, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get current ambient light level", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Current ambient light level: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), level);
-                }
-            });
-            return future;
+            return masterCharacteristic.getValue();
         }
 
         @Override
@@ -1178,30 +986,12 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<LockCurrentStateEnum> getLockCurrentState() {
-            log.debug("[{}]: {} Getting lock current state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<LockCurrentStateEnum> future = masterCharacteristic.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get lock current state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Lock current state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
         public CompletableFuture<LockTargetStateEnum> getLockTargetState() {
-            log.debug("[{}]: {} Getting lock target state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<LockTargetStateEnum> future = lockTargetStateCh.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get lock target state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Lock target state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return lockTargetStateCh.getEnumValue();
         }
 
         @SneakyThrows
@@ -1251,16 +1041,7 @@ public class HomekitAccessoryFactory {
         }
 
         public CompletableFuture<Boolean> isMuted() {
-            log.debug("[{}]: {} Getting mute state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<Boolean> future = masterCharacteristic.getValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get mute state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Mute state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return masterCharacteristic.getValue();
         }
 
         @SneakyThrows
@@ -1292,31 +1073,13 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<Boolean> getPowerState() {
-            log.debug("[{}]: {} Getting outlet power state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<Boolean> future = masterCharacteristic.getValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get outlet power state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Outlet power state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return masterCharacteristic.getValue();
         }
 
         @Override
         @SneakyThrows
         public CompletableFuture<Boolean> getOutletInUse() {
-            log.debug("[{}]: {} Getting outlet in-use state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<Boolean> future = outletInUseCharacteristic.getValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get outlet in-use state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Outlet in-use state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return outletInUseCharacteristic.getValue();
         }
 
         @SneakyThrows
@@ -1372,16 +1135,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<CurrentMediaStateEnum> getCurrentMediaState() {
-            log.debug("[{}]: {} Getting current media state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<CurrentMediaStateEnum> future = masterCharacteristic.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get current media state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Current media state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
@@ -1398,16 +1152,7 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<TargetMediaStateEnum> getTargetMediaState() {
-            log.debug("[{}]: {} Getting target media state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<TargetMediaStateEnum> future = targetMediaStateCh.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get target media state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Target media state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return targetMediaStateCh.getEnumValue();
         }
 
         @SneakyThrows
@@ -1455,30 +1200,12 @@ public class HomekitAccessoryFactory {
 
         @Override
         public CompletableFuture<CurrentSecuritySystemStateEnum> getCurrentSecuritySystemState() {
-            log.debug("[{}]: {} Getting current security system state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<CurrentSecuritySystemStateEnum> future = masterCharacteristic.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get current security system state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Current security system state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return masterCharacteristic.getEnumValue();
         }
 
         @Override
         public CompletableFuture<TargetSecuritySystemStateEnum> getTargetSecuritySystemState() {
-            log.debug("[{}]: {} Getting target security system state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            CompletableFuture<TargetSecuritySystemStateEnum> future = targetSecuritySystemStateCharacteristic.getEnumValue();
-            future.whenComplete((state, ex) -> {
-                if (ex != null) {
-                    log.error("[{}]: {} Failed to get target security system state", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), ex);
-                } else {
-                    log.info("[{}]: {} Target security system state: {}", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType(), state);
-                }
-            });
-            return future;
+            return targetSecuritySystemStateCharacteristic.getEnumValue();
         }
 
         @SneakyThrows

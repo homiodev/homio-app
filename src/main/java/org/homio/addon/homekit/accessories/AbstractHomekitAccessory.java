@@ -89,17 +89,22 @@ public abstract class AbstractHomekitAccessory<T extends BaseCharacteristic<?>> 
                 .forEach(this::addCharacteristicToService);
     }
 
-    private void addCharacteristicToService(@NotNull Characteristic c) {
-        Service service = services.getLast();
-        var serviceClass = service.getClass();
+    public void addCharacteristicToService(@NotNull Characteristic c) {
+        Service service = null;
+        for (Service s : getServices()) {
+            service = s;
+        }
+        if (service == null) {
+            throw new IllegalStateException("No service found for accessory: " + ctx.endpoint().getAccessoryType());
+        }
         try {
             // if the service supports adding this characteristic as optional, add it!
-            serviceClass
+            service.getClass()
                     .getMethod("addOptionalCharacteristic", c.getClass())
                     .invoke(service, c);
         } catch (Exception e) {
             log.debug("Unable to add characteristic: {} to service: {}",
-                    c.getClass().getSimpleName(), serviceClass.getSimpleName());
+                    c.getClass().getSimpleName(), service.getClass().getSimpleName());
             // the service doesn't support this optional characteristic; ignore it
         }
     }
