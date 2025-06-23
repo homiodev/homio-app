@@ -22,6 +22,7 @@ import java.util.Base64;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
 
@@ -74,9 +75,8 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
         startHomekitServer();
         bridge.batchUpdate();
 
-        for (HomekitEndpointEntity endpoint : entity.getSeries()) {
-            addEndpoint(endpoint);
-        }
+        entity.getSeries().stream().filter(s -> s.getAsLinkedAccessory().isEmpty()).forEach(this::addEndpoint);
+        entity.getSeries().stream().filter(s -> !s.getAsLinkedAccessory().isEmpty()).forEach(this::addAsLinkedEndpoint);
         bridge.setConfigurationIndex(makeNewConfigurationRevision());
         bridge.completeUpdateBatch();
     }
@@ -116,12 +116,35 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
     }
 
     private @NotNull HomekitServer createHomekitServer() throws IOException {
-        /*var mdns = ((ContextNetworkImpl) context.network()).getPrimaryMDNS(null);
+        var mdns = context.network().getPrimaryMDNS(null);
         if (mdns != null) {
             return new HomekitServer(mdns, entity.getPort());
-        } else {*/
-        return new HomekitServer(networkInterface, entity.getPort());
-        //}
+        } else {
+            return new HomekitServer(networkInterface, entity.getPort());
+        }
+    }
+
+    private void addAsLinkedEndpoint(HomekitEndpointEntity endpoint) {
+        long code = endpoint.getEntityHashCode();
+        if (!endpoints.containsKey(code)) {
+            var ctx = new HomekitEndpointContext(endpoint, entity, this);
+            ctx.error(null);
+            endpoints.put(code, ctx);
+            try {
+                String ownerAccessory = ctx.endpoint().getAsLinkedAccessory();
+                var owner = endpoints.values().stream()
+                        .filter(e -> ownerAccessory.equals(e.endpoint().getName()))
+                        .findAny()
+                        .orElseThrow((Supplier<Throwable>) () -> new RuntimeException("Unable to find owner accessory with name: " + ownerAccessory +
+                                                                                      ". Please, fix accessory: " + ctx.endpoint().getName() + "'s asLinkedService"));
+                var accessory = HomekitAccessoryFactory.create(ctx);
+                owner.accessory().getPrimaryService().addLinkedService(accessory.getPrimaryService());
+                bridge.addAccessory(accessory);
+            } catch (Throwable ex) {
+                ctx.error(CommonUtils.getErrorMessage(ex));
+                log.error("Unable to create homekit linked endpoint: {}", endpoint.getTitle(), ex);
+            }
+        }
     }
 
     public void addEndpoint(HomekitEndpointEntity endpoint) {
@@ -141,7 +164,7 @@ public class HomekitService extends EntityService.ServiceInstance<HomekitEntity>
                         accessoryGroup = new HomekitAccessoryFactory.HomekitGroup(ctx);
                         bridge.addAccessory(accessoryGroup);
                     }
-                    accessoryGroup.addService(ctx);
+                    accessoryGroup.addServiceGroup(ctx);
                 }
             } catch (Exception ex) {
                 ctx.error(CommonUtils.getErrorMessage(ex));

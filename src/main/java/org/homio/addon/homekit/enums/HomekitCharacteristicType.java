@@ -82,8 +82,6 @@ public enum HomekitCharacteristicType {
     SecuritySystemAlarmType,
     SecuritySystemCurrentState,
     SecuritySystemTargetState,
-    ServiceIndex,
-    ServiceLabel,
     SleepDiscoveryMode,
     SmokeDetectedState,
     SulphurDioxideDensity,

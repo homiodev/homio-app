@@ -58,13 +58,15 @@ public abstract class AbstractHomekitAccessory<T extends BaseCharacteristic<?>> 
 
     @Override
     public @NotNull Collection<Service> getServices() {
-        // delay init services
         if (services.isEmpty()) {
-            if (ctx.endpoint().getGroup().isEmpty()) {
-                services.add(new AccessoryInformationService(this));
-            }
             if (serviceClass != null) {
-                addService(CommonUtils.newInstance(serviceClass, this));
+                addService(CommonUtils.newInstance(serviceClass, this), true);
+            }
+        }
+        if (ctx.endpoint().getGroup().isEmpty()) {
+            var ais = services.stream().filter(s -> s instanceof AccessoryInformationService).findAny().orElse(null);
+            if (ais == null) {
+                services.addFirst(new AccessoryInformationService(this));
             }
         }
         return services;
@@ -81,12 +83,19 @@ public abstract class AbstractHomekitAccessory<T extends BaseCharacteristic<?>> 
         return variable == null ? defaultValue : variable.getValue();
     }
 
-    public void addService(@NotNull Service service) {
-        services.add(service);
-
-        characteristics.values().stream()
-                .sorted(Comparator.comparing(Characteristic::getType))
-                .forEach(this::addCharacteristicToService);
+    // the primary service has to be the last service
+    public void addService(@NotNull Service service, boolean isPrimaryService) {
+        if (isPrimaryService) {
+            services.add(service);
+        } else {
+            int index = services.isEmpty() ? 0 : services.size() - 1;
+            services.add(index, service);
+        }
+        if (isPrimaryService) {
+            characteristics.values().stream()
+                    .sorted(Comparator.comparing(Characteristic::getType))
+                    .forEach(this::addCharacteristicToService);
+        }
     }
 
     public void addCharacteristicToService(@NotNull Characteristic c) {

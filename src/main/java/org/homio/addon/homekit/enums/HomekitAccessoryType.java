@@ -21,6 +21,7 @@ public enum HomekitAccessoryType {
     HeaterCooler,
     HumiditySensor,
     //InputSource,
+    IrrigationSystem,
     LeakSensor,
     LightSensor,
     LightBulb,

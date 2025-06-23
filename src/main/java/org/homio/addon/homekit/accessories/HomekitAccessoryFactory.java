@@ -93,6 +93,7 @@ public class HomekitAccessoryFactory {
             put(GarageDoorOpener, HomekitGarageDoorOpener::new);
             put(HeaterCooler, HomekitHeaterCooler::new);
             put(HumiditySensor, HomekitHumiditySensor::new);
+            put(IrrigationSystem, HomekitIrrigationSystem::new);
             // put(InputSource, HomekitInputSource::new);
             put(LeakSensor, HomekitLeakSensor::new);
             put(LightSensor, HomekitLightSensor::new);
@@ -152,7 +153,7 @@ public class HomekitAccessoryFactory {
             return ctx.endpoint();
         }
 
-        public void addService(@NotNull HomekitEndpointContext ctx) {
+        public void addServiceGroup(@NotNull HomekitEndpointContext ctx) {
             log.info("[{}] [Group: {}] Adding service for endpoint: {}", this.ctx.owner().getEntityID(), groupName, ctx.endpoint().getName());
             var accessory = HomekitAccessoryFactory.create(ctx);
             ctx.accessory(accessory);
@@ -320,6 +321,8 @@ public class HomekitAccessoryFactory {
             log.info("[{}]: {} Created HomekitValve accessory", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
             inUseStatusCharacteristic = getCharacteristic(InUseCharacteristic.class);
             homekitTimer = ctx.endpoint().isConfigurationTimer();
+            addCharacteristicToService(new ServiceLabelIndexCharacteristic(
+                    () -> completedFuture(ctx.endpoint().getServiceIndex())));
 
             valveType = ctx.endpoint().getValveType();
             var remainingDurationCharacteristic = getCharacteristicOpt(RemainingDurationCharacteristic.class);
@@ -560,7 +563,7 @@ public class HomekitAccessoryFactory {
         public HomekitStatelessProgrammableSwitch(@NotNull HomekitEndpointContext ctx) {
             super(ctx, ProgrammableSwitchEventCharacteristic.class, null);
             addService(new StatelessProgrammableSwitchService(
-                    getCharacteristic(ProgrammableSwitchEventCharacteristic.class)));
+                    getCharacteristic(ProgrammableSwitchEventCharacteristic.class)), true);
             log.info("[{}]: {} Created HomekitStatelessProgrammableSwitch accessory", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
         }
 
@@ -591,12 +594,12 @@ public class HomekitAccessoryFactory {
     private static class HomekitDoorbell extends AbstractHomekitAccessory<ProgrammableSwitchEventCharacteristic> {
         public HomekitDoorbell(@NotNull HomekitEndpointContext ctx) {
             super(ctx, ProgrammableSwitchEventCharacteristic.class);
-            addService(new DoorbellService(getCharacteristic(ProgrammableSwitchEventCharacteristic.class)));
+            addService(new DoorbellService(getCharacteristic(ProgrammableSwitchEventCharacteristic.class)), true);
             log.info("[{}]: {} Created HomekitDoorbell accessory", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
         }
     }
 
-    private static class HomekitFaucet extends AbstractActiveHomekitAccessory implements FaucetAccessory {
+    private static class HomekitFaucet extends AbstractStatusActiveHomekitAccessory implements FaucetAccessory {
         public HomekitFaucet(@NotNull HomekitEndpointContext ctx) {
             super(ctx, FaucetService.class);
             log.info("[{}]: {} Created HomekitFaucet accessory", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
@@ -628,15 +631,15 @@ public class HomekitAccessoryFactory {
         }
     }
 
-    private static class HomekitFan extends AbstractActiveHomekitAccessory implements FanAccessory {
+    private static class HomekitFan extends AbstractStatusActiveHomekitAccessory implements FanAccessory {
         public HomekitFan(@NotNull HomekitEndpointContext ctx) {
             super(ctx, FanService.class);
             log.info("[{}]: {} Created HomekitFan accessory", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
         }
     }
 
-    private static class AbstractActiveHomekitAccessory extends AbstractHomekitAccessory<StatusActiveCharacteristic> {
-        public AbstractActiveHomekitAccessory(@NotNull HomekitEndpointContext ctx, @Nullable Class<? extends Service> serviceClass) {
+    private static class AbstractStatusActiveHomekitAccessory extends AbstractHomekitAccessory<StatusActiveCharacteristic> {
+        public AbstractStatusActiveHomekitAccessory(@NotNull HomekitEndpointContext ctx, @Nullable Class<? extends Service> serviceClass) {
             super(ctx, StatusActiveCharacteristic.class, serviceClass);
         }
 
@@ -752,6 +755,73 @@ public class HomekitAccessoryFactory {
         }
     }
 
+    private static class HomekitIrrigationSystem extends AbstractHomekitAccessory<ActiveCharacteristic> implements IrrigationSystemAccessory {
+
+        private final InUseCharacteristic inUseStatusCharacteristic;
+        private final ProgramModeCharacteristic programModeCharacteristic;
+
+        public HomekitIrrigationSystem(@NotNull HomekitEndpointContext ctx) {
+            super(ctx, ActiveCharacteristic.class, IrrigationSystemService.class);
+            inUseStatusCharacteristic = getCharacteristic(InUseCharacteristic.class);
+            programModeCharacteristic = getCharacteristic(ProgramModeCharacteristic.class);
+
+            var serviceLabelNamespace = new ServiceLabelNamespaceCharacteristic(
+                    () -> CompletableFuture.completedFuture(ServiceLabelNamespaceEnum.ARABIC_NUMERALS));
+            addService(new ServiceLabelService(serviceLabelNamespace), false);
+        }
+
+        @Override
+        public CompletableFuture<ActiveEnum> getActive() {
+            return masterCharacteristic.getEnumValue();
+        }
+
+        @Override
+        public CompletableFuture<Void> setActive(ActiveEnum value) throws Exception {
+            masterCharacteristic.setValue(value);
+            return completedFuture(null);
+        }
+
+        @Override
+        public void subscribeActive(HomekitCharacteristicChangeCallback callback) {
+            masterCharacteristic.subscribe(callback);
+        }
+
+        @Override
+        public void unsubscribeActive() {
+            masterCharacteristic.unsubscribe();
+        }
+
+        @Override
+        public CompletableFuture<ProgramModeEnum> getProgramMode() {
+            return programModeCharacteristic.getEnumValue();
+        }
+
+        @Override
+        public CompletableFuture<InUseEnum> getInUse() {
+            return inUseStatusCharacteristic.getEnumValue();
+        }
+
+        @Override
+        public void subscribeInUse(HomekitCharacteristicChangeCallback callback) {
+            inUseStatusCharacteristic.subscribe(callback);
+        }
+
+        @Override
+        public void unsubscribeInUse() {
+            inUseStatusCharacteristic.unsubscribe();
+        }
+
+        @Override
+        public void subscribeProgramMode(HomekitCharacteristicChangeCallback callback) {
+            programModeCharacteristic.subscribe(callback);
+        }
+
+        @Override
+        public void unsubscribeProgramMode() {
+            programModeCharacteristic.unsubscribe();
+        }
+    }
+
     private static class HomekitHumiditySensor extends AbstractHomekitAccessory<CurrentRelativeHumidityCharacteristic> implements HumiditySensorAccessory {
         public HomekitHumiditySensor(@NotNull HomekitEndpointContext ctx) {
             super(ctx, CurrentRelativeHumidityCharacteristic.class, HumiditySensorService.class);
@@ -786,7 +856,7 @@ public class HomekitAccessoryFactory {
                     }));
             addService(new GarageDoorOpenerService(
                     getCharacteristic(CurrentDoorStateCharacteristic.class),
-                    getCharacteristic(TargetDoorStateCharacteristic.class), obstructionDetectedCharacteristic));
+                    getCharacteristic(TargetDoorStateCharacteristic.class), obstructionDetectedCharacteristic), true);
             log.debug("[{}]: {} HomekitGarageDoorOpener service added", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
         }
     }
@@ -841,9 +911,7 @@ public class HomekitAccessoryFactory {
         }
     }
 
-    private static class HomekitHeaterCooler extends AbstractActiveHomekitAccessory implements HeaterCoolerAccessory {
-        private final List<CurrentHeaterCoolerStateEnum> customCurrentStateList = new ArrayList<>();
-        private final List<TargetHeaterCoolerStateEnum> customTargetStateList = new ArrayList<>();
+    private static class HomekitHeaterCooler extends AbstractStatusActiveHomekitAccessory implements HeaterCoolerAccessory {
 
         private final CurrentTemperatureCharacteristic currentTemperatureCh;
         private final CurrentHeaterCoolerStateCharacteristic currentHeaterCoolerStateCh;
@@ -1119,7 +1187,7 @@ public class HomekitAccessoryFactory {
         public HomekitTemperatureSensor(@NotNull HomekitEndpointContext ctx) {
             super(ctx, CurrentTemperatureCharacteristic.class, null);
             log.info("[{}]: {} Created HomekitTemperatureSensor accessory", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
-            addService(new TemperatureSensorService(getCharacteristic(CurrentTemperatureCharacteristic.class)));
+            addService(new TemperatureSensorService(getCharacteristic(CurrentTemperatureCharacteristic.class)), true);
             log.debug("[{}]: {} HomekitTemperatureSensor service added", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
         }
     }
@@ -1177,7 +1245,6 @@ public class HomekitAccessoryFactory {
     }
 
     private static class HomekitSecuritySystem extends AbstractHomekitAccessory<CurrentSecuritySystemStateCharacteristic> implements SecuritySystemAccessory {
-        private final List<TargetSecuritySystemStateEnum> customTargetStateList = new ArrayList<>();
         private final TargetSecuritySystemStateCharacteristic targetSecuritySystemStateCharacteristic;
 
         public HomekitSecuritySystem(@NotNull HomekitEndpointContext ctx) {

@@ -101,7 +101,7 @@ public class HomekitThermostat extends AbstractHomekitAccessory<CurrentTemperatu
         addService(
                 new ThermostatService(currentHeatingCoolingStateCharacteristic, targetHeatingCoolingStateCharacteristic,
                         getCharacteristic(CurrentTemperatureCharacteristic.class),
-                        targetTemperatureCharacteristic.get(), displayUnitCharacteristic));
+                        targetTemperatureCharacteristic.get(), displayUnitCharacteristic), true);
         log.debug("[{}]: {} HomekitThermostat service added/configured", ctx.owner().getEntityID(), ctx.endpoint().getAccessoryType());
     }
 

@@ -132,7 +132,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         return super.getName();
     }
 
-    @UIField(order = 2, label = "homekitGroup")
+    @UIField(order = 5, label = "homekitGroup")
     @UIFieldGroup("GENERAL")
     public String getGroup() {
         return getJsonData("group");
@@ -151,7 +151,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Determines which characteristics are available and how the device behaves in HomeKit.
      * Used by: All accessory types (defines the entity's fundamental type).
      */
-    @UIField(order = 3, required = true)
+    @UIField(order = 10, required = true)
     @UIFieldGroup("GENERAL")
     @UIFieldNoReadDefaultValue
     public @NotNull HomekitAccessoryType getAccessoryType() {
@@ -162,13 +162,24 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         setJsonDataEnum("at", value);
     }
 
+    @UIField(order = 15)
+    @UIFieldGroup("GENERAL")
+    @UIFieldNoReadDefaultValue
+    public @NotNull String getAsLinkedAccessory() {
+        return getJsonData("la");
+    }
+
+    public void setAsLinkedAccessory(String value) {
+        setJsonData("la", value);
+    }
+
     /**
      * Represents the active state of an accessory.
      * Characteristic: Active (0 = Inactive, 1 = Active).
      * Used by (Required): AirPurifier, Fan, Faucet, HeaterCooler, HumidifierDehumidifier, IrrigationSystem, Television, Valve.
      */
-    @UIField(order = 5, required = true)
-    @UIFieldShowOnCondition("return ['AirPurifier', 'Fan', 'Faucet', 'HeaterCooler', 'HumidifierDehumidifier', 'IrrigationSystem', 'Television'].includes(context.get('accessoryType'))")
+    @UIField(order = 20, required = true)
+    @UIFieldShowOnCondition("return ['AirPurifier', 'Fan', 'Faucet', 'HeaterCooler', 'HumidifierDehumidifier', 'Television'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup(value = "REQ_CHAR", order = 100, borderColor = "#8C3265")
     @HomekitCharacteristic(value = StatusActiveCharacteristic.class, type = ActiveStatus)
@@ -180,8 +191,8 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         setJsonData("sas", value);
     }
 
-    @UIField(order = 5, required = true)
-    @UIFieldShowOnCondition("return ['Valve'].includes(context.get('accessoryType'))")
+    @UIField(order = 25, required = true)
+    @UIFieldShowOnCondition("return ['IrrigationSystem', 'Valve'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
     @HomekitCharacteristic(value = ActiveCharacteristic.class, type = Active)
@@ -200,7 +211,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Values are typically 0 (Not Detected) or 1 (Detected).
      * Used by (Required): CarbonDioxideSensor, CarbonMonoxideSensor, ContactSensor, LeakSensor, MotionSensor, OccupancySensor, SmokeSensor.
      */
-    @UIField(order = 6, required = true)
+    @UIField(order = 30, required = true)
     @UIFieldShowOnCondition("return ['CarbonDioxideSensor', 'CarbonMonoxideSensor', 'ContactSensor', 'LeakSensor', " +
                             "'MotionSensor', 'OccupancySensor', 'SmokeSensor'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
@@ -226,7 +237,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: TargetPosition (0-100%).
      * Used by (Required): Door, Window, WindowCovering. (GarageDoorOpener uses TargetDoorState)
      */
-    @UIField(order = 7, required = true)
+    @UIField(order = 35, required = true)
     @UIFieldShowOnCondition("return ['Door', 'Window', 'WindowCovering'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("REQ_CHAR")
@@ -244,7 +255,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CurrentPosition (0-100%).
      * Used by (Required): Door, Window, WindowCovering. (GarageDoorOpener uses CurrentDoorState)
      */
-    @UIField(order = 8, required = true)
+    @UIField(order = 40, required = true)
     @UIFieldShowOnCondition("return ['Door', 'Window', 'WindowCovering'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("REQ_CHAR")
@@ -263,7 +274,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Used by (Required): Door, Window, WindowCovering.
      * (GarageDoorOpener uses CurrentDoorState/TargetDoorState, which implies movement).
      */
-    @UIField(order = 9, required = true)
+    @UIField(order = 45, required = true)
     @UIFieldShowOnCondition("return ['Door', 'Window', 'WindowCovering'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
@@ -281,7 +292,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: On (true/false or 1/0).
      * Used by (Required): Outlet, Switch, LightBulb, BasicFan.
      */
-    @UIField(order = 10, required = true)
+    @UIField(order = 50, required = true)
     @UIFieldShowOnCondition("return ['Outlet', 'Switch', 'LightBulb', 'BasicFan'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
@@ -301,7 +312,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Used by (Required): Microphone, Speaker, SmartSpeaker, TelevisionSpeaker.
      * Note: Table indicates Mute is optional for SmartSpeaker, but it's often essential for usability. Kept as required here.
      */
-    @UIField(order = 11, required = true)
+    @UIField(order = 55, required = true)
     @UIFieldShowOnCondition("return ['TelevisionSpeaker', 'Speaker', 'Microphone', 'SmartSpeaker'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
@@ -319,7 +330,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: ProgrammableSwitchEvent (0 = Single Press, 1 = Double Press, 2 = Long Press). This is for stateless switches.
      * Used by (Required): Doorbell, StatelessProgrammableSwitch.
      */
-    @UIField(order = 12, required = true)
+    @UIField(order = 60, required = true)
     @UIFieldShowOnCondition("return ['Doorbell', 'StatelessProgrammableSwitch'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Broadcast)
     @UIFieldGroup("REQ_CHAR")
@@ -333,7 +344,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         setJsonData("scbe", value);
     }
 
-    @UIField(order = 12)
+    @UIField(order = 65)
     @UIFieldShowOnCondition("return ['Doorbell', 'StatelessProgrammableSwitch'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Broadcast)
     @UIFieldGroup("OPT_CHAR")
@@ -345,7 +356,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         setJsonData("dcbe", value);
     }
 
-    @UIField(order = 12)
+    @UIField(order = 70)
     @UIFieldShowOnCondition("return ['Doorbell', 'StatelessProgrammableSwitch'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Broadcast)
     @UIFieldGroup("OPT_CHAR")
@@ -362,7 +373,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CurrentTemperature (Celsius).
      * Used by (Required): HeaterCooler, TemperatureSensor, Thermostat.
      */
-    @UIField(order = 13, required = true)
+    @UIField(order = 75, required = true)
     @UIFieldShowOnCondition("return ['HeaterCooler', 'TemperatureSensor', 'Thermostat'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float, requireWritable = false)
     @UIFieldGroup("REQ_CHAR")
@@ -381,7 +392,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: TargetHeatingCoolingState (0 = Off, 1 = Heat, 2 = Cool, 3 = Auto).
      * Used by (Required): HeaterCooler, Thermostat.
      */
-    @UIField(order = 14, required = true)
+    @UIField(order = 80, required = true)
     @UIFieldShowOnCondition("return ['HeaterCooler', 'Thermostat'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
@@ -399,7 +410,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         setJsonData("thcs", value);
     }
 
-    @UIField(order = 14, required = true)
+    @UIField(order = 85, required = true)
     @UIFieldShowOnCondition("return ['Thermostat'].includes(context.get('accessoryType'))")
     @UIFieldGroup("REQ_CHAR")
     public Set<TargetHeatingCoolingStateEnum> getTargetHeatingCoolingValidValues() {
@@ -410,7 +421,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         setJsonData("thcsvv", value);
     }
 
-    @UIField(order = 14, required = true)
+    @UIField(order = 90, required = true)
     @UIFieldShowOnCondition("return ['HeaterCooler'].includes(context.get('accessoryType'))")
     @UIFieldGroup("REQ_CHAR")
     public Set<TargetHeaterCoolerStateEnum> getTargetHeaterCoolingValidValues() {
@@ -426,7 +437,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CurrentHeatingCoolingState (0 = Off, 1 = Heat, 2 = Cool).
      * Used by (Required): HeaterCooler. (For Thermostat, this characteristic is optional, see separate field)
      */
-    @UIField(order = 15, required = true)
+    @UIField(order = 95, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'HeaterCooler'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
@@ -440,7 +451,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         setJsonData("chcs", value);
     }
 
-    @UIField(order = 50, required = true)
+    @UIField(order = 101, required = true)
     @UIFieldShowOnCondition("return ['HeaterCooler'].includes(context.get('accessoryType'))")
     @UIFieldGroup("REQ_CHAR")
     public Set<CurrentHeatingCoolingStateEnum> getCurrentHeatingCoolingValidValues() {
@@ -456,7 +467,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: InUse (0 = Not In Uses, 1 = In Use).
      * Used by (Required): Valve, Outlet, IrrigationSystem, Faucet.
      */
-    @UIField(order = 16, required = true)
+    @UIField(order = 106, required = true)
     @UIFieldShowOnCondition("return ['Valve', 'Outlet', 'IrrigationSystem', 'Faucet'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
@@ -474,7 +485,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CurrentAirPurifierState (0 = Inactive, 1 = Idle, 2 = Purifying Air).
      * Used by (Required): AirPurifier.
      */
-    @UIField(order = 20, required = true)
+    @UIField(order = 110, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirPurifier'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
@@ -492,7 +503,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: TargetAirPurifierState (0 = Manual, 1 = Auto).
      * Used by (Required): AirPurifier.
      */
-    @UIField(order = 21, required = true)
+    @UIField(order = 115, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirPurifier'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
@@ -510,7 +521,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: AirQuality (0 = Unknown, 1 = Excellent, 2 = Good, 3 = Fair, 4 = Inferior, 5 = Poor).
      * Used by (Required): AirQualitySensor.
      */
-    @UIField(order = 25, required = true)
+    @UIField(order = 120, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
@@ -528,7 +539,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: BatteryLevel (percentage 0-100).
      * Used by (Required): Battery.
      */
-    @UIField(order = 32, required = true)
+    @UIField(order = 125, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Battery'")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("REQ_CHAR")
@@ -546,7 +557,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: ChargingState (0 = Not Charging, 1 = Charging, 2 = Not Chargeable).
      * Used by (Required): Battery (especially if chargeable).
      */
-    @UIField(order = 33, required = true)
+    @UIField(order = 130, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Battery'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
@@ -564,7 +575,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: StatusLowBattery (0 = Normal, 1 = Low).
      * Used by (Required): Battery.
      */
-    @UIField(order = 33, required = true)
+    @UIField(order = 135, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Battery'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
@@ -581,7 +592,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: FilterChangeIndication (0 = OK, 1 = Change).
      * Used by (Required): Filter. (Optional for AirPurifier, handled by showing in OPT_CHAR for it if also shown there).
      */
-    @UIField(order = 42, required = true)
+    @UIField(order = 140, required = true)
     // Show for Filter (required) and AirPurifier (where it's optional but often present)
     @UIFieldShowOnCondition("['Filter', 'AirPurifier'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
@@ -600,8 +611,8 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CurrentDoorState (0 = Open, 1 = Closed, 2 = Opening, 3 = Closing, 4 = Stopped).
      * Used by (Required): GarageDoorOpener.
      */
-    @UIField(order = 45, required = true)
-    @UIFieldShowOnCondition("[return context.get('accessoryType') == 'GarageDoorOpener'")
+    @UIField(order = 145, required = true)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'GarageDoorOpener'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
     @HomekitCharacteristic(value = CurrentDoorStateCharacteristic.class, type = CurrentDoorState, defaultStringValue = "CLOSED")
@@ -618,7 +629,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: TargetDoorState (0 = Open, 1 = Closed).
      * Used by (Required): GarageDoorOpener.
      */
-    @UIField(order = 46, required = true)
+    @UIField(order = 150, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'GarageDoorOpener'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
@@ -636,7 +647,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CurrentHeaterCoolerState (0 = Inactive, 1 = Idle, 2 = Heating, 3 = Cooling).
      * Used by (Required): HeaterCooler.
      */
-    @UIField(order = 49, required = true)
+    @UIField(order = 155, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'HeaterCooler'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
@@ -650,7 +661,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         setJsonData("chcshc", value);
     }
 
-    @UIField(order = 49, required = true)
+    @UIField(order = 160, required = true)
     @UIFieldShowOnCondition("return ['HeaterCooler'].includes(context.get('accessoryType'))")
     @UIFieldGroup("REQ_CHAR")
     public Set<CurrentHeaterCoolerStateEnum> getCurrentHeaterCoolerValidValues() {
@@ -666,7 +677,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CurrentHumidifierDehumidifierState (0 = Inactive, 1 = Idle, 2 = Humidifying, 3 = Dehumidifying).
      * Used by (Required): HumidifierDehumidifier.
      */
-    @UIField(order = 55, required = true)
+    @UIField(order = 165, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'HumidifierDehumidifier'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
@@ -683,7 +694,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: TargetHumidifierDehumidifierState (0 = Auto, 1 = Humidify, 2 = Dehumidify).
      * Used by (Required): HumidifierDehumidifier.
      */
-    @UIField(order = 56, required = true)
+    @UIField(order = 170, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'HumidifierDehumidifier'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
@@ -701,7 +712,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CurrentRelativeHumidity (percentage 0-100).
      * Used by (Required): HumiditySensor.
      */
-    @UIField(order = 60, required = true)
+    @UIField(order = 175, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'HumiditySensor'")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("REQ_CHAR")
@@ -719,10 +730,10 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: ProgramMode (0 = No Program Scheduled, 1 = Program Scheduled, 2 = Program Scheduled, Manual Mode).
      * Used by (Required): IrrigationSystem.
      */
-    @UIField(order = 61, required = true)
+    @UIField(order = 180, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'IrrigationSystem'")
     @UIFieldVariableSelection(varType = Float)
-    @UIFieldGroup("OPT_CHAR")
+    @UIFieldGroup("REQ_CHAR")
     @HomekitCharacteristic(value = ProgramModeCharacteristic.class, type = ProgramMode)
     public String getProgramMode() {
         return getJsonData("pm");
@@ -737,7 +748,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CurrentAmbientLightLevel (lux, 0.0001 to 100000).
      * Used by (Required): LightSensor.
      */
-    @UIField(order = 64, required = true)
+    @UIField(order = 185, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightSensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
@@ -755,7 +766,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: LockCurrentState (0 = Unsecured, 1 = Secured, 2 = Jammed, 3 = Unknown).
      * Used by (Required): Lock.
      */
-    @UIField(order = 70, required = true)
+    @UIField(order = 190, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Lock'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
@@ -773,7 +784,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: LockTargetState (0 = Unsecured, 1 = Secured).
      * Used by (Required): Lock.
      */
-    @UIField(order = 71, required = true)
+    @UIField(order = 195, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Lock'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("REQ_CHAR")
@@ -791,7 +802,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: SecuritySystemCurrentState (0 = Stay Arm, 1 = Away Arm, 2 = Night Arm, 3 = Disarmed, 4 = Alarm Triggered).
      * Used by (Required): SecuritySystem.
      */
-    @UIField(order = 72, required = true)
+    @UIField(order = 201, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'SecuritySystem'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
@@ -809,7 +820,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: SecuritySystemTargetState (0 = Stay Arm, 1 = Away Arm, 2 = Night Arm, 3 = Disarm).
      * Used by (Required): SecuritySystem.
      */
-    @UIField(order = 73, required = true)
+    @UIField(order = 206, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'SecuritySystem'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
@@ -827,7 +838,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CurrentSlatState (0 = Fixed, 1 = Jammed, 2 = Swinging).
      * Used by (Required): Slat.
      */
-    @UIField(order = 76, required = true)
+    @UIField(order = 210, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Slat'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
@@ -845,7 +856,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CurrentMediaState (0=Play, 1=Pause, 2=Stop, 3=Loading, 4=Interrupted – HAP specific values).
      * Used by (Required): SmartSpeaker.
      */
-    @UIField(order = 81, required = true)
+    @UIField(order = 215, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'SmartSpeaker'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
@@ -863,7 +874,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: TargetMediaState (0=Play, 1=Pause, 2=Stop – HAP specific values).
      * Used by (Required): SmartSpeaker.
      */
-    @UIField(order = 82, required = true)
+    @UIField(order = 220, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'SmartSpeaker'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
@@ -881,7 +892,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: ActiveIdentifier (UInt32, matches Identifier of an InputSource service).
      * Used by (Required): Television.
      */
-    @UIField(order = 83, required = true)
+    @UIField(order = 225, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("REQ_CHAR")
@@ -899,7 +910,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: TargetTemperature (Celsius, typically 10-38).
      * Used by (Required): Thermostat. (One of TargetTemperature, CoolingThresholdTemperature, or HeatingThresholdTemperature must be provided for Thermostat).
      */
-    @UIField(order = 91)
+    @UIField(order = 230)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Thermostat'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -923,7 +934,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: ValveType (0 = Generic, 1 = Irrigation, 2 = Shower Head, 3 = Water Faucet).
      * Used by (Required): Valve.
      */
-    @UIField(order = 95, required = true)
+    @UIField(order = 235, required = true)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Valve'")
     @UIFieldGroup("REQ_CHAR")
     public ValveTypeEnum getValveType() {
@@ -940,7 +951,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Used by (Optional): Many battery-powered sensors. (For Battery accessory type, this is required and handled by a separate field).
      * (AirQualitySensor, CarbonDioxideSensor, CarbonMonoxideSensor, ContactSensor, HumiditySensor, LeakSensor, LightSensor, MotionSensor, OccupancySensor, SmokeSensor, TemperatureSensor).
      */
-    @UIField(order = 17)
+    @UIField(order = 240)
     @UIFieldShowOnCondition("return ['AirQualitySensor', 'CarbonDioxideSensor', 'CarbonMonoxideSensor', 'ContactSensor', 'HumiditySensor', 'LeakSensor', 'LightSensor', 'MotionSensor', 'OccupancySensor', 'SmokeSensor', 'TemperatureSensor'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup(value = "OPT_CHAR", order = 150, borderColor = "#649639")
@@ -953,8 +964,8 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         setJsonData("slb", value);
     }
 
-    @UIField(order = 18)
-    @UIFieldShowOnCondition("return ['Battery'].includes(context.get('accessoryType'))")
+    @UIField(order = 245)
+    @UIFieldShowOnCondition("return context.get('accessoryType') == 'Battery'")
     @UIFieldVariableSelection(varType = Float, rawInput = true)
     @UIFieldGroup("OPT_CHAR")
     public String getBatteryLowThreshold() {
@@ -971,7 +982,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Used by (Optional): Security-sensitive devices and sensors.
      * (AirQualitySensor, CarbonDioxideSensor, CarbonMonoxideSensor, ContactSensor, HumiditySensor, LeakSensor, LightSensor, MotionSensor, OccupancySensor, SmokeSensor, TemperatureSensor, Window, Door, GarageDoorOpener, SecuritySystem).
      */
-    @UIField(order = 19)
+    @UIField(order = 250)
     @UIFieldShowOnCondition("return ['SecuritySystem', 'AirQualitySensor', 'CarbonDioxideSensor', 'CarbonMonoxideSensor', 'ContactSensor', 'HumiditySensor', 'LeakSensor', 'LightSensor', 'MotionSensor', 'OccupancySensor', 'SmokeSensor', 'TemperatureSensor', 'Window', 'Door', 'GarageDoorOpener', 'SecuritySystem'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
@@ -989,7 +1000,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Used by (Optional): Many sensors and complex devices.
      * (AirQualitySensor, CarbonDioxideSensor, CarbonMonoxideSensor, ContactSensor, HumiditySensor, LeakSensor, LightSensor, MotionSensor, OccupancySensor, SmokeSensor, TemperatureSensor).
      */
-    @UIField(order = 19)
+    @UIField(order = 255)
     @UIFieldShowOnCondition("return ['AirQualitySensor', 'CarbonDioxideSensor', 'CarbonMonoxideSensor', 'ContactSensor', 'HumiditySensor', 'LeakSensor', 'LightSensor', 'MotionSensor', 'OccupancySensor', 'SmokeSensor', 'TemperatureSensor'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
@@ -1007,7 +1018,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: SwingMode (0 = Disabled, 1 = Enabled).
      * Used by (Optional): AirPurifier.
      */
-    @UIField(order = 22)
+    @UIField(order = 260)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirPurifier'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
@@ -1024,7 +1035,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: RotationSpeed (percentage 0-100).
      * Used by (Optional): AirPurifier, Fan.
      */
-    @UIField(order = 23)
+    @UIField(order = 265)
     @UIFieldShowOnCondition("return ['AirPurifier', 'Fan'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
@@ -1042,7 +1053,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: LockPhysicalControls (0 = Unlocked, 1 = Locked).
      * Used by (Optional): AirPurifier, HeaterCooler, Fan (as LockControl).
      */
-    @UIField(order = 24)
+    @UIField(order = 270)
     @UIFieldShowOnCondition("return ['AirPurifier', 'HeaterCooler', 'Fan'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
@@ -1060,7 +1071,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: OzoneDensity (ppb, 0-1000).
      * Used by (Optional): AirQualitySensor.
      */
-    @UIField(order = 26)
+    @UIField(order = 275)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1078,7 +1089,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: NitrogenDioxideDensity (ppb, 0-1000).
      * Used by (Optional): AirQualitySensor.
      */
-    @UIField(order = 27)
+    @UIField(order = 280)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1096,7 +1107,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: SulphurDioxideDensity (ppb, 0-1000).
      * Used by (Optional): AirQualitySensor.
      */
-    @UIField(order = 28)
+    @UIField(order = 285)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1114,7 +1125,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: PM2_5Density (µg/m³, 0-1000).
      * Used by (Optional): AirQualitySensor.
      */
-    @UIField(order = 29)
+    @UIField(order = 290)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1132,7 +1143,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: PM10Density (µg/m³, 0-1000).
      * Used by (Optional): AirQualitySensor.
      */
-    @UIField(order = 30)
+    @UIField(order = 295)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1150,7 +1161,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: VOCDensity (µg/m³, 0-1000).
      * Used by (Optional): AirQualitySensor.
      */
-    @UIField(order = 31)
+    @UIField(order = 300)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'AirQualitySensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1168,7 +1179,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CarbonDioxideLevel (ppm, 0-100000).
      * Used by (Optional): CarbonDioxideSensor. ('detectedState' is the required characteristic).
      */
-    @UIField(order = 34)
+    @UIField(order = 305)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'CarbonDioxideSensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1186,7 +1197,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CarbonDioxidePeakLevel (ppm, 0-100000).
      * Used by (Optional): CarbonDioxideSensor.
      */
-    @UIField(order = 35)
+    @UIField(order = 310)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'CarbonDioxideSensor'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1204,7 +1215,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CarbonMonoxideLevel (ppm, 0-100).
      * Used by (Optional): CarbonMonoxideSensor. ('detectedState' is the required characteristic).
      */
-    @UIField(order = 36)
+    @UIField(order = 315)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'CarbonMonoxideSensor'")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
@@ -1222,7 +1233,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CarbonMonoxidePeakLevel (ppm, 0-100).
      * Used by (Optional): CarbonMonoxideSensor.
      */
-    @UIField(order = 37)
+    @UIField(order = 320)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'CarbonMonoxideSensor'")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
@@ -1240,7 +1251,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: ObstructionDetected (true/false or 1/0).
      * Used by (Optional): Door, Window, WindowCovering, GarageDoorOpener.
      */
-    @UIField(order = 38)
+    @UIField(order = 325)
     @UIFieldShowOnCondition("return ['Door', 'Window', 'WindowCovering', 'GarageDoorOpener'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
@@ -1258,7 +1269,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CurrentFanState (0 = Inactive, 1 = Idle, 2 = Blowing Air).
      * Used by (Optional): Fan. 'activeState' is required.
      */
-    @UIField(order = 39)
+    @UIField(order = 330)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Fan'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1276,7 +1287,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: RotationDirection (0 = Clockwise, 1 = Counter-Clockwise).
      * Used by (Optional): Fan, BasicFan.
      */
-    @UIField(order = 39)
+    @UIField(order = 335)
     @UIFieldShowOnCondition("return ['Fan', 'BasicFan'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
@@ -1294,7 +1305,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: TargetFanState (0 = Manual, 1 = Auto).
      * Used by (Optional): Fan.
      */
-    @UIField(order = 40)
+    @UIField(order = 340)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Fan'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
@@ -1312,7 +1323,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: SwingMode (0 = Swing Disabled, 1 = Swing Enabled). (Same as AirPurifier's SwingMode).
      * Used by (Optional): Fan.
      */
-    @UIField(order = 41)
+    @UIField(order = 345)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Fan'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
@@ -1330,7 +1341,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: FilterLifeLevel (percentage 0-100).
      * Used by (Optional): FilterMaintenance, AirPurifier.
      */
-    @UIField(order = 43)
+    @UIField(order = 350)
     @UIFieldShowOnCondition("return ['FilterMaintenance', 'AirPurifier'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
@@ -1348,7 +1359,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: ResetFilterIndication (Write a value, typically 1, to reset).
      * Used by (Optional): FilterMaintenance, AirPurifier.
      */
-    @UIField(order = 44)
+    @UIField(order = 355)
     @UIFieldShowOnCondition("return ['FilterMaintenance', 'AirPurifier'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1366,7 +1377,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: LockCurrentState (0 = Unsecured, 1 = Secured, 2 = Jammed, 3 = Unknown).
      * Used by (Optional): GarageDoorOpener.
      */
-    @UIField(order = 47)
+    @UIField(order = 360)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'GarageDoorOpener'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1384,7 +1395,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: LockTargetState (0 = Unsecured, 1 = Secured).
      * Used by (Optional): GarageDoorOpener.
      */
-    @UIField(order = 48)
+    @UIField(order = 365)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'GarageDoorOpener'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
@@ -1402,7 +1413,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CoolingThresholdTemperature (Celsius, typically 10-35).
      * Used by (Optional): HeaterCooler.
      */
-    @UIField(order = 51)
+    @UIField(order = 370)
     @UIFieldShowOnCondition("return ['Thermostat', 'HeaterCooler'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1421,7 +1432,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: HeatingThresholdTemperature (Celsius, typically 0-25).
      * Used by (Optional): HeaterCooler.
      */
-    @UIField(order = 52)
+    @UIField(order = 375)
     @UIFieldShowOnCondition("return ['Thermostat', 'HeaterCooler'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1435,7 +1446,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         setJsonData("htt", value);
     }
 
-    @UIField(order = 52)
+    @UIField(order = 380)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Thermostat'")
     @UIFieldGroup("OPT_CHAR")
     public TemperatureDisplayUnitEnum getTemperatureUnit() {
@@ -1451,7 +1462,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CurrentRelativeHumidity (percentage 0-100).
      * Used by (Optional): HeaterCooler, HumidifierDehumidifier.
      */
-    @UIField(order = 53)
+    @UIField(order = 385)
     @UIFieldShowOnCondition("return ['HeaterCooler', 'HumidifierDehumidifier'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
@@ -1469,7 +1480,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: TargetRelativeHumidity (percentage 0-100).
      * Used by (Optional): HeaterCooler (if it has a humidifier function), HumidifierDehumidifier.
      */
-    @UIField(order = 54)
+    @UIField(order = 390)
     @UIFieldShowOnCondition("return ['Thermostat', 'HeaterCooler', 'HumidifierDehumidifier'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
@@ -1487,7 +1498,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: RelativeHumidityDehumidifierThreshold (percentage 0-100).
      * Used by (Optional): HumidifierDehumidifier.
      */
-    @UIField(order = 57)
+    @UIField(order = 395)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'HumidifierDehumidifier'")
     @UIFieldVariableSelection(varType = Percentage, rawInput = true)
     @UIFieldGroup("REQ_CHAR")
@@ -1504,7 +1515,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: RelativeHumidityHumidifierThreshold (percentage 0-100).
      * Used by (Optional): HumidifierDehumidifier.
      */
-    @UIField(order = 58)
+    @UIField(order = 400)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'HumidifierDehumidifier'")
     @UIFieldVariableSelection(varType = Percentage, rawInput = true)
     @UIFieldGroup("REQ_CHAR")
@@ -1521,7 +1532,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: WaterLevel (percentage 0-100).
      * Used by (Optional): HumidifierDehumidifier, Faucet, Valve (e.g., for a tank).
      */
-    @UIField(order = 59)
+    @UIField(order = 405)
     @UIFieldShowOnCondition("return ['Valve', 'Faucet', 'HumidifierDehumidifier'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
@@ -1539,7 +1550,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: RemainingDuration (seconds). Read-only.
      * Used by (Optional): IrrigationSystem, Valve.
      */
-    @UIField(order = 62)
+    @UIField(order = 410)
     @UIFieldShowOnCondition("return ['IrrigationSystem', 'Valve'].includes(context.get('accessoryType')) && !context.get('configurationTimer')")
     @UIFieldVariableSelection(varType = Float, requireWritable = false)
     @UIFieldGroup("OPT_CHAR")
@@ -1552,7 +1563,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         setJsonData("rdur", value);
     }
 
-    @UIField(order = 62)
+    @UIField(order = 415)
     @UIFieldShowOnCondition("return ['Valve'].includes(context.get('accessoryType'))")
     @UIFieldGroup("OPT_CHAR")
     public boolean isConfigurationTimer() {
@@ -1568,7 +1579,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: SetDuration (seconds). Writeable.
      * Used by (Optional): IrrigationSystem (for individual zones/valves), Valve. (Table uses "Duration" for Valve)
      */
-    @UIField(order = 63)
+    @UIField(order = 420)
     @UIFieldShowOnCondition("return ['IrrigationSystem', 'Valve'].includes(context.get('accessoryType'))")
     @UIFieldGroup("OPT_CHAR")
     @UIFieldVariableSelection(varType = Float)
@@ -1586,7 +1597,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: Brightness (percentage 0-100).
      * Used by (Optional): LightBulb. 'onState' is required.
      */
-    @UIField(order = 65)
+    @UIField(order = 425)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightBulb'")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
@@ -1605,7 +1616,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: Hue (degrees 0-360).
      * Used by (Optional): LightBulb (for color lights).
      */
-    @UIField(order = 66)
+    @UIField(order = 430)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightBulb'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1623,7 +1634,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: Saturation (percentage 0-100).
      * Used by (Optional): LightBulb (for color lights).
      */
-    @UIField(order = 67)
+    @UIField(order = 435)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightBulb'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1641,7 +1652,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: ColorTemperature (Mireds, typically 50-400).
      * Used by (Optional): LightBulb (for tunable white lights).
      */
-    @UIField(order = 68)
+    @UIField(order = 440)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightBulb'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1660,7 +1671,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: Hue (degrees 0-360).
      * Used by (Optional): LightBulb (for color lights).
      */
-    @UIField(order = 66)
+    @UIField(order = 445)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'LightBulb'")
     @UIFieldVariableSelection(varType = Color)
     @UIFieldGroup(value = "OPT2_CHAR", borderColor = "#3ABA4F", order = 155)
@@ -1677,7 +1688,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: SecuritySystemAlarmType (0 = No Alarm, 1 = Unknown).
      * Used by (Optional): SecuritySystem.
      */
-    @UIField(order = 75)
+    @UIField(order = 450)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'SecuritySystem'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
@@ -1695,7 +1706,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: SlatType (0 = Horizontal, 1 = Vertical).
      * Used by (Optional): Slat. (This is often a configuration rather than dynamic characteristic)
      */
-    @UIField(order = 77)
+    @UIField(order = 455)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Slat'")
     @UIFieldVariableSelection(varType = Bool, rawInput = true)
     @UIFieldGroup("OPT_CHAR")
@@ -1713,7 +1724,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CurrentTiltAngle (degrees, -90 to 90).
      * Used by (Optional): Slat, WindowCovering (if it has tiltable slats).
      */
-    @UIField(order = 78)
+    @UIField(order = 460)
     @UIFieldShowOnCondition("return ['Slat', 'WindowCovering'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1731,7 +1742,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: TargetTiltAngle (degrees, -90 to 90).
      * Used by (Optional): Slat, WindowCovering (if it has tiltable slats).
      */
-    @UIField(order = 79)
+    @UIField(order = 465)
     @UIFieldShowOnCondition("return ['Slat', 'WindowCovering'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1749,7 +1760,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: Volume (percentage 0-100).
      * Used by (Optional): SmartSpeaker, Speaker, TelevisionSpeaker, Microphone, Doorbell. 'mute' is required.
      */
-    @UIField(order = 80)
+    @UIField(order = 470)
     @UIFieldShowOnCondition("return ['SmartSpeaker', 'Speaker', 'TelevisionSpeaker', 'Microphone', 'Doorbell'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
@@ -1768,7 +1779,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * This field would typically be on an InputSource entity, but placed here if TV manages input names directly.
      * Used by (Optional): Television (via linked InputSource services), SmartSpeaker.
      */
-    @UIField(order = 84)
+    @UIField(order = 475)
     @UIFieldShowOnCondition("return ['Television', 'SmartSpeaker'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Text, rawInput = true)
     @UIFieldGroup("OPT_CHAR")
@@ -1786,7 +1797,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: InputDeviceType (String enum).
      * Used by (Optional): Television (via linked InputSource services).
      */
-    @UIField(order = 84)
+    @UIField(order = 480)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
     @UIFieldVariableSelection(varType = Text, rawInput = true)
     @UIFieldGroup("OPT_CHAR")
@@ -1804,7 +1815,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: InputSourceType (String enum).
      * Used by (Optional): Television (via linked InputSource services).
      */
-    @UIField(order = 84)
+    @UIField(order = 485)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
     @UIFieldVariableSelection(varType = Text, rawInput = true)
     @UIFieldGroup("OPT_CHAR")
@@ -1822,7 +1833,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: SleepDiscoveryMode (0 = Not Discoverable, 1 = Always Discoverable).
      * Used by (Optional): Television.
      */
-    @UIField(order = 85)
+    @UIField(order = 490)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
@@ -1840,7 +1851,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: RemoteKey (various enum values like PlayPause, ArrowUp, Select, etc.).
      * Used by (Optional): Television.
      */
-    @UIField(order = 86)
+    @UIField(order = 495)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
     @UIFieldVariableSelection(varType = Text)
     @UIFieldGroup("OPT_CHAR")
@@ -1858,7 +1869,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: PowerModeSelection (0=Show, 1=Hide). (Table calls it PowerMode for TV menu)
      * Used by (Optional): Television.
      */
-    @UIField(order = 87)
+    @UIField(order = 500)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
@@ -1876,7 +1887,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: ClosedCaptions (0 = Disabled, 1 = Enabled).
      * Used by (Optional): Television.
      */
-    @UIField(order = 88)
+    @UIField(order = 505)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
@@ -1894,7 +1905,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: VolumeControlType (0 = None, 1 = Relative, 2 = Absolute, 3 = Relative with Current).
      * Used by (Optional): Television, TelevisionSpeaker.
      */
-    @UIField(order = 89)
+    @UIField(order = 510)
     @UIFieldShowOnCondition("return ['Television', 'TelevisionSpeaker'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -1912,7 +1923,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: VolumeSelector (0 = Increments, 1 = Decrement).
      * Used by (Optional): Television, TelevisionSpeaker (if VolumeControlType is Relative).
      */
-    @UIField(order = 90)
+    @UIField(order = 515)
     @UIFieldShowOnCondition("return ['Television', 'TelevisionSpeaker'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
@@ -1930,7 +1941,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: PictureMode (String enum).
      * Used by (Optional): Television.
      */
-    @UIField(order = 90)
+    @UIField(order = 520)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'")
     @UIFieldVariableSelection(varType = Text)
     @UIFieldGroup("OPT_CHAR")
@@ -1948,7 +1959,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: TargetVisibilityState (0 = Shown, 1 = Hidden).
      * Used by (Optional): Television (via linked InputSource services).
      */
-    @UIField(order = 90)
+    @UIField(order = 525)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Television'") // Relates to InputSource
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
@@ -1966,7 +1977,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CurrentRelativeHumidity (percentage 0-100).
      * Used by (Optional): Thermostat.
      */
-    @UIField(order = 94)
+    @UIField(order = 530)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Thermostat'")
     @UIFieldVariableSelection(varType = Percentage)
     @UIFieldGroup("OPT_CHAR")
@@ -1984,7 +1995,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CurrentHeatingCoolingState (0 = Off, 1 = Heat, 2 = Cool).
      * Used by (Optional): Thermostat. (Required for HeaterCooler, handled by a separate field for that)
      */
-    @UIField(order = 94)
+    @UIField(order = 535)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Thermostat'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -2003,7 +2014,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: IsConfigured (0 = Not Configured, 1 = Configured).
      * Used by (Optional): Valve.
      */
-    @UIField(order = 96)
+    @UIField(order = 540)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Valve'")
     @UIFieldVariableSelection(varType = Bool)
     @UIFieldGroup("OPT_CHAR")
@@ -2021,16 +2032,14 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: ServiceLabelIndex (UInt8).
      * Used by (Optional): Valve (especially when grouped, like in IrrigationSystem).
      */
-    @UIField(order = 97)
+    @UIField(order = 545)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'Valve'")
-    @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
-    // TODO
-    public String getServiceLabelIndex() {
-        return getJsonData("sli");
+    public int getServiceIndex() {
+        return getJsonData("sli", 0);
     }
 
-    public void setServiceLabelIndex(String value) {
+    public void setServiceIndex(int value) {
         setJsonData("sli", value);
     }
 
@@ -2039,7 +2048,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: HoldPosition (Write any value to hold).
      * Used by (Optional): WindowCovering, Door, Window.
      */
-    @UIField(order = 98)
+    @UIField(order = 550)
     @UIFieldShowOnCondition("return ['WindowCovering', 'Door', 'Window'].includes(context.get('accessoryType'))")
     @UIFieldVariableSelection(varType = Float) // Or Bool as it's a trigger
     @UIFieldGroup("OPT_CHAR")
@@ -2057,7 +2066,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CurrentHorizontalTiltAngle (degrees, -90 to 90).
      * Used by (Optional): WindowCovering.
      */
-    @UIField(order = 99)
+    @UIField(order = 555)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'WindowCovering'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -2075,7 +2084,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: TargetHorizontalTiltAngle (degrees, -90 to 90).
      * Used by (Optional): WindowCovering.
      */
-    @UIField(order = 100)
+    @UIField(order = 560)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'WindowCovering'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -2093,7 +2102,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: CurrentVerticalTiltAngle (degrees, -90 to 90).
      * Used by (Optional): WindowCovering.
      */
-    @UIField(order = 101)
+    @UIField(order = 565)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'WindowCovering'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -2117,7 +2126,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: TargetVerticalTiltAngle (degrees, -90 to 90).
      * Used by (Optional): WindowCovering.
      */
-    @UIField(order = 102)
+    @UIField(order = 570)
     @UIFieldShowOnCondition("return context.get('accessoryType') == 'WindowCovering'")
     @UIFieldVariableSelection(varType = Float)
     @UIFieldGroup("OPT_CHAR")
@@ -2135,7 +2144,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: Manufacturer (String). Part of the Accessory Information service.
      * Used by (Optional): All accessory types.
      */
-    @UIField(order = 110)
+    @UIField(order = 575)
     @UIFieldGroup(value = "CMN_CHAR", order = 200, borderColor = "#395D96")
     public String getManufacturer() {
         return getJsonData("man");
@@ -2150,7 +2159,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: Model (String). Part of the Accessory Information service.
      * Used by (Optional): All accessory types.
      */
-    @UIField(order = 111)
+    @UIField(order = 580)
     @UIFieldGroup("CMN_CHAR")
     public String getModel() {
         return getJsonData("mod");
@@ -2165,7 +2174,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: SerialNumber (String). Part of the Accessory Information service.
      * Used by (Optional): All accessory types.
      */
-    @UIField(order = 112)
+    @UIField(order = 585)
     @UIFieldGroup("CMN_CHAR")
     public String getSerialNumber() {
         return getJsonData("sn", "none");
@@ -2180,7 +2189,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: FirmwareRevision (String). Part of the Accessory Information service.
      * Used by (Optional): All accessory types.
      */
-    @UIField(order = 113)
+    @UIField(order = 590)
     @UIFieldGroup("CMN_CHAR")
     public String getFirmwareRevision() {
         return getJsonData("fr", "1");
@@ -2197,7 +2206,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
      * Characteristic: HardwareRevision (String). Part of the Accessory Information service.
      * Used by (Optional): All accessory types.
      */
-    @UIField(order = 114)
+    @UIField(order = 595)
     @UIFieldGroup("CMN_CHAR")
     public String getHardwareRevision() {
         return getJsonData("hr", "");
@@ -2253,7 +2262,7 @@ public final class HomekitEndpointEntity extends DeviceSeriesEntity<HomekitEntit
         setJsonData("sudfe", value);
     }
 
-    @UIField(order = 110)
+    @UIField(order = 600)
     @UIFieldShowOnCondition("return ['ColorTemperature', 'Switch', 'WindowCovering', 'Door', 'Window'].includes(context.get('accessoryType'))")
     @UIFieldGroup("OPT_CHAR")
     public boolean getInverted() {
