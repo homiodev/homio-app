@@ -66,8 +66,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Component;
 
 import java.lang.annotation.Annotation;
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.time.Duration;
 import java.util.*;
 import java.util.function.Consumer;
@@ -289,30 +287,7 @@ public class ContextImpl implements Context {
                                 ui().handleResponse(
                                         new BeansItemsDiscovery(ItemDiscoverySupport.class)
                                                 .handleAction(this, null)));
-        setting()
-                .listenValue(
-                        SystemDatabaseSetting.class,
-                        "db",
-                        params -> {
-                            String databaseURL = params.getString("URL");
-                            try (Connection conn = DriverManager.getConnection(databaseURL)) {
-                                if (conn != null && !conn.isClosed()) {
-                                    ui().dialog()
-                                            .sendConfirmation(
-                                                    "change-db",
-                                                    "TITLE.CHANGE_DB",
-                                                    () -> {
-                                                        // here we need migrate all data from an existed database to a new one
-                                                        HardwareUtils.migrateDatabase(this, databaseURL);
-                                                        setting().setEnv("db-url", databaseURL);
-                                                    },
-                                                    List.of("TITLE.CHANGE_DB_DESC"),
-                                                    null);
-                                }
-                            } catch (Exception e) {
-                                ui().toastr().error("Unable to connect to database: " + e.getMessage());
-                            }
-                        });
+        setting().listenValue(SystemDatabaseSetting.class, "db", params -> HardwareUtils.fireMigrationWorkflow(params, this));
         INSTANCE = this;
     }
 

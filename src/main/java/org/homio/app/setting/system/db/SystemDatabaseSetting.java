@@ -30,6 +30,11 @@ public class SystemDatabaseSetting
     }
 
     @Override
+    public @Nullable String getConfirmTitle() {
+        return "TITLE.NEW_DATABASE";
+    }
+
+    @Override
     public @Nullable String getConfirmMsg() {
         return "";
     }

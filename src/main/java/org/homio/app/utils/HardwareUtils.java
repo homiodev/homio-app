@@ -1,24 +1,31 @@
 package org.homio.app.utils;
 
-import static java.util.Objects.requireNonNull;
+import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
+import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.Logger;
+import org.homio.api.Context;
+import org.homio.api.fs.archive.ArchiveUtil;
+import org.homio.api.model.Icon;
+import org.homio.api.ui.field.action.ActionInputParameter;
+import org.homio.api.util.CommonUtils;
+import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.manager.common.impl.ContextSettingImpl;
+import org.json.JSONObject;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ApplicationContext;
 
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.sql.*;
-import java.util.Collections;
-import java.util.Properties;
-import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
-import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.Logger;
-import org.homio.api.fs.archive.ArchiveUtil;
-import org.homio.api.util.CommonUtils;
-import org.homio.app.manager.common.ContextImpl;
-import org.homio.app.manager.common.impl.ContextSettingImpl;
-import org.springframework.boot.SpringApplication;
-import org.springframework.context.ApplicationContext;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static java.util.Objects.requireNonNull;
+import static org.homio.api.ui.field.action.ActionInputParameter.message;
+import static org.homio.api.util.CommonUtils.getConfigPath;
 
 @Log4j2
 public final class HardwareUtils {
@@ -72,8 +79,7 @@ public final class HardwareUtils {
     public static void setDatabaseProperties(Logger log) {
         Properties properties = ContextSettingImpl.getHomioProperties();
 
-        String dbUrl = properties.getProperty("db-url", "jdbc:sqlite:" + CommonUtils.getConfigPath().resolve("data.db") +
-                                                        "?user=postgres&password=password");
+        String dbUrl = properties.getProperty("db-url", "jdbc:sqlite:" + getConfigPath().resolve("data.db"));
 
         System.setProperty("spring.datasource.url", dbUrl.split("\\?")[0]);
         String databaseType = dbUrl.split("\\?")[0].split(":")[1];
@@ -115,8 +121,11 @@ public final class HardwareUtils {
         System.out.println("Use db url: " + dbUrl);
     }
 
-    public static void migrateDatabase(ContextImpl context, String newDbUrl) {
-        String oldDbUrl = context.setting().getEnvRequire("db-url");
+    public static void migrateDatabase(ContextImpl context, String newDbUrl, boolean copyVariableBackup, Set<String> tables) {
+        String oldDbUrl = context.setting().getEnv("db-url");
+        if (oldDbUrl == null) {
+            oldDbUrl = "jdbc:sqlite:%s".formatted(getConfigPath().resolve("data.db"));
+        }
         try (Connection oldConn = DriverManager.getConnection(oldDbUrl);
              Connection newConn = DriverManager.getConnection(newDbUrl);
              Statement newStmt = newConn.createStatement();
@@ -134,25 +143,46 @@ public final class HardwareUtils {
             newStmt.execute("SET session_replication_role = 'replica'");
 
             // Migrate tables
-            for (String table : new String[]{"devices", "scripts", "settings", "widgets", "variable_backup", "widget_series", "widget_tabs", "workspace_group", "workspace_variable", "workspaces"}) {
+            Set<String> timestampColumns = Set.of("creationtime", "updatetime");
+            for (String table : tables) {
+                if (!copyVariableBackup && table.equals("variable_backup")) {
+                    continue;
+                }
                 String selectSQL = "SELECT * FROM " + table;
+                ResultSet rs = oldStmt.executeQuery("SELECT COUNT(*) FROM " + table);
+                if (rs.next()) {
+                    int count = rs.getInt(1);
+                    log.info("Migrating db table: {}. Rows count: {}", table, count);
+                } else {
+                    continue;
+                }
+                rs.close();
                 try (ResultSet oldResultSet = oldStmt.executeQuery(selectSQL);
                      PreparedStatement insertStmt = newConn.prepareStatement(generateInsertSQL(table, oldResultSet))) {
 
                     int batchSize = 0;
+
                     while (oldResultSet.next()) {
                         for (int i = 1; i <= oldResultSet.getMetaData().getColumnCount(); i++) {
-                            insertStmt.setObject(i, oldResultSet.getObject(i));
+                            Object value = oldResultSet.getObject(i);
+                            String columnName = oldResultSet.getMetaData().getColumnName(i).toLowerCase();
+
+                            if (value instanceof Long && timestampColumns.contains(columnName)) {
+                                value = new Timestamp((Long) value);
+                            }
+
+                            insertStmt.setObject(i, value);
                         }
                         insertStmt.addBatch();
                         batchSize++;
 
-                        if (batchSize % 1000 == 0) { // Execute batch every 1000 rows
+                        if (batchSize % 1000 == 0) {
                             insertStmt.executeBatch();
                             batchSize = 0;
                         }
                     }
-                    insertStmt.executeBatch(); // Execute remaining records;
+                    insertStmt.executeBatch();
+                    log.info("Migrating db table finished: {}", table);
                 }
             }
 
@@ -161,10 +191,12 @@ public final class HardwareUtils {
 
             newConn.commit(); // Commit changes
             context.setting().setEnv("db-url", newDbUrl);
+            log.info("DB migrated successfully");
 
             // Restart application
             HardwareUtils.exitApplication(context.getApplicationContext(), 5);
         } catch (Exception e) {
+            log.error("Unable to migrate to new database", e);
             context.ui().toastr().error("Error during DB migration: " + e.getMessage());
         }
     }
@@ -183,5 +215,62 @@ public final class HardwareUtils {
         sql.append(")");
 
         return sql.toString();
+    }
+
+    @SneakyThrows
+    public static Map<String, Integer> countTableSizes(Context context) {
+        Map<String, Integer> tables = new HashMap<>();
+        String oldDbUrl = context.setting().getEnv("db-url");
+        if (oldDbUrl == null) {
+            oldDbUrl = "jdbc:sqlite:%s".formatted(getConfigPath().resolve("data.db"));
+        }
+        try (Connection oldConn = DriverManager.getConnection(oldDbUrl);
+             Statement oldStmt = oldConn.createStatement()) {
+
+            // Migrate tables
+            for (String table : new String[]{"devices", "scripts", "settings", "widgets", "variable_backup", "widget_series", "widget_tabs", "workspace_group", "workspace_variable", "workspaces"}) {
+                ResultSet rs = oldStmt.executeQuery("SELECT COUNT(*) FROM " + table);
+                if (rs.next()) {
+                    int count = rs.getInt(1);
+                    tables.put(table, count);
+                }
+            }
+        }
+        return tables;
+    }
+
+    public static void fireMigrationWorkflow(JSONObject params, ContextImpl context) {
+        String databaseURL = params.getString("URL");
+        try (Connection conn = DriverManager.getConnection(databaseURL)) {
+            if (conn != null && !conn.isClosed()) {
+                var tableSizes = HardwareUtils.countTableSizes(context)
+                        .entrySet().stream().filter(s -> s.getValue() > 0)
+                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                context.ui().dialog().sendDialogRequest(
+                        "change-db",
+                        "TITLE.CHANGE_DB",
+                        (responseType, pressedButton, parameters) -> {
+                            var copyVariableBackup = parameters.get("TITLE.COPY_VARIABLE_BACKUP").asBoolean(true);
+                            HardwareUtils.migrateDatabase(context, databaseURL, copyVariableBackup, tableSizes.keySet());
+                        },
+                        dialogModel -> {
+                            dialogModel.disableKeepOnUi();
+                            dialogModel.appearance(new Icon("fas fa-database", "#C926C9"), null);
+                            List<ActionInputParameter> inputs = new ArrayList<>();
+                            inputs.add(message("TITLE.CHANGE_DB_DESC"));
+                            if (tableSizes.containsKey("variable_backup") && tableSizes.get("variable_backup") > 100) {
+                                inputs.add(ActionInputParameter.bool("copy_variable_backup", true));
+                            }
+                            for (Map.Entry<String, Integer> entry : tableSizes.entrySet()) {
+                                inputs.add(message("Table '" + entry.getKey() + "' row count: " + entry.getValue()));
+                            }
+                            dialogModel.submitButton("TITLE.START_MIGRATION", button -> {
+                            }).group("General", inputs);
+                        });
+            }
+        } catch (Exception e) {
+            log.error("Unable connect to db: {}", databaseURL, e);
+            context.ui().toastr().error("Unable to connect to database: " + e.getMessage());
+        }
     }
 }
