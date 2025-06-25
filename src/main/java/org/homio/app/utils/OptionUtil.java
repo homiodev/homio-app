@@ -2,13 +2,8 @@ package org.homio.app.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.SneakyThrows;
+import lombok.*;
 import lombok.extern.log4j.Log4j2;
-import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.homio.api.Context;
@@ -20,7 +15,6 @@ import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.OptionModel;
-import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.selection.SelectionConfiguration;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent;
 import org.homio.api.ui.field.selection.dynamic.DynamicParameterFields;
@@ -38,12 +32,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
@@ -69,7 +58,8 @@ public final class OptionUtil {
     return groupingOptions(filterOptions(options));
   }
 
-  public static void assembleOptionsForEntityByClassSelection(Context context, Object classEntityForDynamicOptionLoader,
+  public static void assembleOptionsForEntityByClassSelection(Context context,
+                                                              Object classEntityForDynamicOptionLoader,
                                                               List<OptionModel> list,
                                                               Class<? extends HasEntityIdentifier> sourceClassType) {
     for (Class<? extends HasEntityIdentifier> foundTargetType : context.getClassesWithParent(sourceClassType)) {
@@ -155,10 +145,12 @@ public final class OptionUtil {
         optionModel.setIcon(conf.getSelectionIcon().getIcon());
         optionModel.setColor(conf.getSelectionIcon().getColor());
         description = Lang.getServerMessage(conf.getSelectionDescription());
-      } else if (baseEntity.getClass().isAnnotationPresent(UISidebarChildren.class)) {
-        UISidebarChildren sc = baseEntity.getClass().getAnnotation(UISidebarChildren.class);
-        optionModel.setIcon(sc.icon());
-        optionModel.setColor(sc.color());
+      } else {
+        var route = CommonUtils.getClassRoute(baseEntity.getClass());
+        if(route != null) {
+          optionModel.setIcon(route.icon());
+          optionModel.setColor(route.color());
+        }
       }
       if (StringUtils.isEmpty(description) && baseEntity instanceof DeviceBaseEntity dbe) {
         description = dbe.getDescription();

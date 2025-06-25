@@ -9,10 +9,10 @@ import org.homio.api.Context;
 import org.homio.api.ContextHardware;
 import org.homio.api.ContextHardware.ProcessStat;
 import org.homio.api.entity.CreateSingleEntity;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.device.DeviceEndpointsBehaviourContractStub;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.log.HasEntitySourceLog;
-import org.homio.api.entity.types.MediaEntity;
 import org.homio.api.entity.version.HasFirmwareVersion;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.model.Icon;
@@ -24,10 +24,10 @@ import org.homio.api.repository.GitHubProject;
 import org.homio.api.repository.GitHubProject.VersionedFile;
 import org.homio.api.service.DependencyExecutableInstaller;
 import org.homio.api.state.StringType;
-import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.item.UIInfoItemBuilder.InfoType;
+import org.homio.api.ui.route.UIRouteMedia;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.video.ffmpeg.FFMPEGImpl;
 import org.homio.hquery.ProgressBar;
@@ -37,11 +37,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
@@ -53,8 +49,8 @@ import static org.homio.app.manager.common.impl.ContextMediaImpl.FFMPEG_LOCATION
 @Log4j2
 @Entity
 @CreateSingleEntity
-@UISidebarChildren(icon = "fas fa-podcast", color = "#2DA844", allowCreateItem = false)
-public class FFMPEGEntity extends MediaEntity implements
+@UIRouteMedia(icon = "fas fa-podcast", color = "#2DA844", allowCreateItem = false)
+public class FFMPEGEntity extends DeviceBaseEntity implements
   HasEntityLog,
   HasEntitySourceLog,
   HasFirmwareVersion,

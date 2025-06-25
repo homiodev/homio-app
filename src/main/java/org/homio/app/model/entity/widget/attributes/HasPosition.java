@@ -122,7 +122,7 @@ public interface HasPosition<T> extends HasJsonData {
 
   private void setCoordinate(int xb, String key, String jsonKey) {
     if (getParent() == null) {
-      addJsonDataMap(jsonKey + "p", Integer.class, m -> m.put(key, xb));
+      updateJsonDataMap(jsonKey + "p", Integer.class, m -> m.put(key, xb));
     } else {
       setJsonData(jsonKey, xb);
     }

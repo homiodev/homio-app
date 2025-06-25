@@ -8,8 +8,8 @@ import org.homio.api.Context;
 import org.homio.api.model.OptionModel;
 import org.homio.api.service.ssh.SshBaseEntity;
 import org.homio.api.service.ssh.SshProviderService;
-import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.route.UIRouteIdentity;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.ssh.SshRawWebSocketEntity.RawWebSocketService;
 import org.java_websocket.client.WebSocketClient;
@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Entity
-@UISidebarChildren(icon = "fas fa-draw-polygon", color = "#CC0092")
+@UIRouteIdentity(icon = "fas fa-draw-polygon", color = "#CC0092")
 public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, RawWebSocketService> {
 
   @Override
@@ -57,11 +57,6 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
   @Override
   public long getEntityServiceHashCode() {
     return getRawWebSocketAddress().hashCode();
-  }
-
-  @Override
-  public @NotNull Class<RawWebSocketService> getEntityServiceItemClass() {
-    return RawWebSocketService.class;
   }
 
   @Override

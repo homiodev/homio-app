@@ -10,8 +10,8 @@ import org.jetbrains.annotations.NotNull;
 public class WorkspaceGroupEntityCompactModeSetting implements SettingPluginToggle {
 
   @Override
-  public Class<? extends BaseEntity> availableForEntity() {
-    return WorkspaceGroup.class;
+  public String availableForRoute() {
+    return WorkspaceGroup.class.getSimpleName();
   }
 
   @Override

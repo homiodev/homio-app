@@ -1,4 +1,11 @@
 spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 100
+      minimum-idle: 2
+      idle-timeout: 60000
+      connection-timeout: 60000
+      max-lifetime: 1800000
   data.jpa.repositories.bootstrap-mode: lazy
   servlet:
     multipart:

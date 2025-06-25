@@ -16,7 +16,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.entity.UserEntity;
-import org.homio.api.entity.types.IdentityEntity;
 import org.homio.api.model.Icon;
 import org.homio.api.ui.field.action.ActionInputParameter;
 import org.homio.api.util.HardwareUtils;
@@ -49,7 +48,7 @@ public class JwtTokenProvider implements ContextCreated {
   private byte[] securityId;
 
   private static void addCreateGuestAccessToken(ContextImpl context) {
-    context.ui().addHeaderMenuButton("access", new Icon("fas fa-key"), IdentityEntity.class);
+    context.ui().addHeaderMenuButton("access", new Icon("fas fa-key"), "identity");
     context
         .ui()
         .headerButtonBuilder("add-access")

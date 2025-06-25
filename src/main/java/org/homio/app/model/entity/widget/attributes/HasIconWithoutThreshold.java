@@ -9,32 +9,32 @@ import org.homio.api.ui.field.UIFieldIconPicker;
 
 public interface HasIconWithoutThreshold extends HasJsonData {
 
-  static void randomColor(HasJsonData widget) {
-    String randomColor = UI.Color.random();
-    if (!widget.getJsonData().has("iconColor")) {
-      widget.setJsonData("iconColor", randomColor);
+    static void randomColor(HasJsonData widget) {
+        String randomColor = UI.Color.random();
+        if (!widget.getJsonData().has("iconColor")) {
+            widget.setJsonData("iconColor", randomColor);
+        }
     }
-  }
 
-  @UIField(order = 1)
-  @UIFieldIconPicker(allowEmptyIcon = true, simple = false)
-  @UIFieldGroup(value = "ICON", order = 20, borderColor = "#009688")
-  default String getWidgetIcon() {
-    return getJsonData("icon", "fas fa-adjust");
-  }
+    @UIField(order = 1)
+    @UIFieldIconPicker(allowEmptyIcon = true, asObject = true)
+    @UIFieldGroup(value = "ICON", order = 20, borderColor = "#009688")
+    default String getWidgetIcon() {
+        return getJsonData("icon", "fas fa-adjust");
+    }
 
-  default void setWidgetIcon(String value) {
-    setJsonData("icon", value);
-  }
+    default void setWidgetIcon(String value) {
+        setJsonData("icon", value);
+    }
 
-  @UIField(order = 2)
-  @UIFieldColorPicker
-  @UIFieldGroup("ICON")
-  default String getWidgetIconColor() {
-    return getJsonData("iconColor", UI.Color.WHITE);
-  }
+    @UIField(order = 2)
+    @UIFieldColorPicker
+    @UIFieldGroup("ICON")
+    default String getWidgetIconColor() {
+        return getJsonData("iconColor", UI.Color.WHITE);
+    }
 
-  default void setWidgetIconColor(String value) {
-    setJsonData("iconColor", value);
-  }
+    default void setWidgetIconColor(String value) {
+        setJsonData("iconColor", value);
+    }
 }

@@ -18,8 +18,6 @@
         <homio-api.version>1.3.3-SNAPSHOT</homio-api.version>
         <homio-primary-addons.version>1.3.3-SNAPSHOT</homio-primary-addons.version>
         <start-class>org.homio.app.HomioApplication</start-class>
-        <!-- Do not use 5.2  reports wire version 6, but this version of the driver requires at least 7 (MongoDB 3.6)-->
-        <mongodb.version>5.1.3</mongodb.version>
     </properties>
 
     <build>
@@ -33,9 +31,6 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <layers>
-                        <includeLayerTools>false</includeLayerTools>
-                    </layers>
                     <arguments>
                         <argument>--add-opens java.base/java.net=ALL-UNNAMED</argument>
                         <argument>--add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED</argument>
@@ -242,6 +237,12 @@
             <groupId>net.engio</groupId>
             <artifactId>mbassador</artifactId>
             <version>1.3.2</version>
+        </dependency>
+
+        <dependency>
+            <artifactId>addon-homekit</artifactId>
+            <groupId>org.homio.addon</groupId>
+            <version>1.0.0</version>
         </dependency>
 
         <dependency>

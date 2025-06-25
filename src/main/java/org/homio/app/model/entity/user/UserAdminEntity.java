@@ -5,12 +5,12 @@ import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.setting.SettingPlugin;
-import org.homio.api.ui.UISidebarChildren;
+import org.homio.api.ui.route.UIRouteIdentity;
 import org.jetbrains.annotations.NotNull;
 
 @Entity
 @CreateSingleEntity
-@UISidebarChildren(icon = "fas fa-chalkboard-user", color = "#B5094E", allowCreateItem = false)
+@UIRouteIdentity(icon = "fas fa-chalkboard-user", color = "#B5094E", allowCreateItem = false)
 public final class UserAdminEntity extends UserBaseEntity {
 
   @Override

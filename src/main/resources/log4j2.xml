@@ -81,6 +81,7 @@
 
     </Appenders>
     <Loggers>
+        <!-- Existing Homio Loggers -->
         <Logger additivity="false" level="info" name="org.homio.addon.z2m">
             <AppenderRef ref="zigBeeLog"/>
             <AppenderRef ref="appLog"/>
@@ -122,6 +123,32 @@
         <logger level="info" name="com.ssh">
             <AppenderRef ref="Console"/>
         </logger>
+
+        <!-- HAP-Java Logging Configuration - START -->
+        <!-- Set level to TRACE for maximum detail (equivalent to JUL FINEST) -->
+        <!-- Set additivity="false" if you don't want these logs to also go to the Root logger's appenders -->
+        <!-- If you want them in appLog and Console like others, keep additivity or add AppenderRefs -->
+
+        <!--<Logger name="io.github.hapjava" level="TRACE" additivity="false">
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>-->
+        <!-- You can also set levels for more specific HAP-Java sub-packages if needed, -->
+        <!-- but the parent io.github.hapjava should cover them. -->
+        <!-- Example of specific sub-packages if the above isn't enough:
+        <Logger name="io.github.hapjava.server.impl.pairing" level="TRACE" additivity="false">
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+        <Logger name="io.github.hapjava.server.impl.http" level="TRACE" additivity="false">
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+        <Logger name="javax.jmdns" level="DEBUG" additivity="false">
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+        -->
 
         <Root level="info">
             <AppenderRef ref="appLog"/>

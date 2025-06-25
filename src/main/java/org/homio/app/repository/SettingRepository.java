@@ -61,9 +61,9 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
       plugin = ContextSettingImpl.settingPluginsByPluginKey.get(entity.getEntityID());
     }
     if (plugin != null) {
-      Class<? extends BaseEntity> availableForEntity = plugin.availableForEntity();
+      var availableForEntity = plugin.availableForRoute();
       if (availableForEntity != null) {
-        entity.setPages(Collections.singleton(availableForEntity.getSimpleName()));
+        entity.setPages(Collections.singleton(availableForEntity));
       }
       entity.setDefaultValue(plugin.getDefaultValue());
       entity.setOrder(plugin.order());

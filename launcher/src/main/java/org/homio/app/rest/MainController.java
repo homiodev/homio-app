@@ -115,11 +115,11 @@ public class MainController {
   @SneakyThrows
   private static Path getHomioPropertiesLocation() {
     Path propertiesFile = (SystemUtils.IS_OS_WINDOWS ? SystemUtils.getUserHome().toPath().resolve("homio") :
-      createDirectoriesIfNotExists(Paths.get("/opt/homio"))).resolve("homio.properties");
+      createDirectoriesIfNotExists(Paths.get("/opt/homio/config"))).resolve("homio.properties");
     if (!Files.exists(propertiesFile)) {
       ApplicationHome applicationHome = new ApplicationHome();
       Path jarLocation = applicationHome.getDir().toPath();
-      return jarLocation.resolve("homio.properties");
+      return jarLocation.resolve("config").resolve("homio.properties");
     }
     return propertiesFile;
   }

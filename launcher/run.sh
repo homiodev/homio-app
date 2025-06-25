@@ -29,12 +29,12 @@ fi
 
 root_path="/opt/homio"
 
-if [[ -f "homio.properties" ]]; then
+if [[ -f "config/homio.properties" ]]; then
     while IFS="=" read -r key value; do
         if [[ "$key" == "rootPath" && -d "$value" ]]; then
             root_path="$value"
         fi
-    done < "homio.properties"
+    done < "config/homio.properties"
 fi
 
 sudo mkdir -p $root_path
