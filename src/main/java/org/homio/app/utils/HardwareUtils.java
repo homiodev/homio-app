@@ -77,7 +77,7 @@ public final class HardwareUtils {
     }
 
     public static void setDatabaseProperties(Logger log) {
-        Properties properties = ContextSettingImpl.getHomioProperties();
+        var properties = ContextSettingImpl.getHomioProperties();
 
         String dbUrl = properties.getProperty("db-url", "jdbc:sqlite:" + getConfigPath().resolve("data.db"));
 
@@ -143,21 +143,14 @@ public final class HardwareUtils {
             newStmt.execute("SET session_replication_role = 'replica'");
 
             // Migrate tables
-            Set<String> timestampColumns = Set.of("creationtime", "updatetime");
             for (String table : tables) {
                 if (!copyVariableBackup && table.equals("variable_backup")) {
                     continue;
                 }
-                String selectSQL = "SELECT * FROM " + table;
-                ResultSet rs = oldStmt.executeQuery("SELECT COUNT(*) FROM " + table);
-                if (rs.next()) {
-                    int count = rs.getInt(1);
-                    log.info("Migrating db table: {}. Rows count: {}", table, count);
-                } else {
-                    continue;
-                }
-                rs.close();
-                try (ResultSet oldResultSet = oldStmt.executeQuery(selectSQL);
+                log.info("Migrating table: {}", table);
+                // clean existed data
+                newStmt.execute("TRUNCATE " + table + " CASCADE");
+                try (ResultSet oldResultSet = oldStmt.executeQuery("SELECT * FROM " + table);
                      PreparedStatement insertStmt = newConn.prepareStatement(generateInsertSQL(table, oldResultSet))) {
 
                     int batchSize = 0;
@@ -166,9 +159,14 @@ public final class HardwareUtils {
                         for (int i = 1; i <= oldResultSet.getMetaData().getColumnCount(); i++) {
                             Object value = oldResultSet.getObject(i);
                             String columnName = oldResultSet.getMetaData().getColumnName(i).toLowerCase();
-
-                            if (value instanceof Long && timestampColumns.contains(columnName)) {
-                                value = new Timestamp((Long) value);
+                            int columnType = oldResultSet.getMetaData().getColumnType(i);
+                            switch (columnType) {
+                                case Types.TIMESTAMP:
+                                    value = value instanceof Timestamp ? value : new Timestamp((Long) value);
+                                    break;
+                                case Types.BOOLEAN:
+                                    value = value instanceof Number n ? n.intValue() == 1 : (boolean) value;
+                                    break;
                             }
 
                             insertStmt.setObject(i, value);
@@ -182,7 +180,6 @@ public final class HardwareUtils {
                         }
                     }
                     insertStmt.executeBatch();
-                    log.info("Migrating db table finished: {}", table);
                 }
             }
 
@@ -250,7 +247,7 @@ public final class HardwareUtils {
                         "change-db",
                         "TITLE.CHANGE_DB",
                         (responseType, pressedButton, parameters) -> {
-                            var copyVariableBackup = parameters.get("TITLE.COPY_VARIABLE_BACKUP").asBoolean(true);
+                            var copyVariableBackup = parameters.path("copy_variable_backup").asBoolean(true);
                             HardwareUtils.migrateDatabase(context, databaseURL, copyVariableBackup, tableSizes.keySet());
                         },
                         dialogModel -> {

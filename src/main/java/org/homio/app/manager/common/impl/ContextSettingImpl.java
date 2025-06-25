@@ -78,7 +78,7 @@ public class ContextSettingImpl implements ContextSetting {
             try {
                 homioProperties.load(Files.newInputStream(propertiesLocation));
             } catch (Exception ignore) {
-                homioProperties.store(Files.newOutputStream(propertiesLocation), null);
+                homioProperties.store(Files.newOutputStream(propertiesLocation));
             }
         }
         return homioProperties;
@@ -229,9 +229,9 @@ public class ContextSettingImpl implements ContextSetting {
     @Override
     @SneakyThrows
     public void setEnv(@NotNull String key, @NotNull Object value) {
-        Properties properties = getHomioProperties();
-        properties.setProperty(key, value.toString());
-        properties.store(Files.newOutputStream(propertiesLocation), null);
+        var properties = getHomioProperties();
+        properties.put(key, value.toString());
+        properties.store(Files.newOutputStream(propertiesLocation));
     }
 
     @Override
@@ -428,7 +428,7 @@ public class ContextSettingImpl implements ContextSetting {
         });
     }
 
-    public static class CommentedProperties extends Properties {
+    public static class CommentedProperties extends LinkedHashMap<String, String> {
 
         private final Map<String, String> comments = new LinkedHashMap<>();
 
@@ -436,12 +436,14 @@ public class ContextSettingImpl implements ContextSetting {
             comments.put(key, comment);
         }
 
-        @Override
-        public String getProperty(String key) {
-            return StringUtils.defaultIfEmpty(super.getProperty(key), System.getProperty(key));
+        public String getProperty(String key, String defaultValue) {
+            return StringUtils.defaultIfEmpty(get(key), defaultValue);
         }
 
-        @Override
+        public String getProperty(String key) {
+            return StringUtils.defaultIfEmpty(get(key), System.getProperty(key));
+        }
+
         public synchronized void load(InputStream inStream) throws IOException {
             BufferedReader reader = new BufferedReader(new InputStreamReader(inStream, StandardCharsets.UTF_8));
             String line;
@@ -464,7 +466,7 @@ public class ContextSettingImpl implements ContextSetting {
                     String key = line.substring(0, index).trim();
                     String value = line.substring(index + 1).trim();
                     currentKey = key;
-                    super.setProperty(key, value);
+                    put(key, value);
                 }
             }
 
@@ -473,20 +475,13 @@ public class ContextSettingImpl implements ContextSetting {
             }
         }
 
-        @Override
-        public synchronized void store(Writer writer, String comments) throws IOException {
-            BufferedWriter bw = new BufferedWriter(writer);
-            if (comments != null) {
-                bw.write("# ");
-                bw.write(comments);
-                bw.write(System.lineSeparator());
-            }
+        public synchronized void store(OutputStream writer) throws IOException {
+            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(writer, StandardCharsets.UTF_8));
+            for (Map.Entry<String, String> entry : entrySet()) {
+                String key = entry.getKey();
+                String value = entry.getValue();
 
-            for (Map.Entry<Object, Object> entry : entrySet()) {
-                String key = (String) entry.getKey();
-                String value = (String) entry.getValue();
-
-                if (comments != null && this.comments.containsKey(key)) {
+                if (this.comments.containsKey(key)) {
                     bw.write("# ");
                     bw.write(this.comments.get(key));
                     bw.write(System.lineSeparator());
