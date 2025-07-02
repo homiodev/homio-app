@@ -4,9 +4,15 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import lombok.SneakyThrows;
+import lombok.*;
 import lombok.extern.log4j.Log4j2;
+import nl.martijndwars.webpush.Utils;
 import org.apache.commons.lang3.StringUtils;
+import org.bouncycastle.jce.ECNamedCurveTable;
+import org.bouncycastle.jce.interfaces.ECPrivateKey;
+import org.bouncycastle.jce.interfaces.ECPublicKey;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
 import org.homio.api.Context;
 import org.homio.api.entity.CreateSingleEntity;
 import org.homio.api.entity.device.DeviceBaseEntity;
@@ -38,6 +44,12 @@ import java.io.IOException;
 import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.SecureRandom;
+import java.security.Security;
+import java.security.spec.ECGenParameterSpec;
+import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -213,5 +225,65 @@ public class LocalBoardEntity extends DeviceBaseEntity
                                 return null;
                             });
                 }));
+    }
+
+    @Override
+    public void beforePersist() {
+        try {
+            Security.addProvider(new BouncyCastleProvider());
+            KeyPairGenerator keyGen = KeyPairGenerator.getInstance("EC", "BC");
+            keyGen.initialize(new ECGenParameterSpec("secp256r1"));
+            KeyPair keyPair = keyGen.generateKeyPair();
+
+            String publicKey = Base64.getUrlEncoder().withoutPadding().encodeToString(
+                    Utils.encode((ECPublicKey) keyPair.getPublic())
+            );
+
+            String privateKey = Base64.getUrlEncoder().withoutPadding().encodeToString(
+                    Utils.encode((ECPrivateKey) keyPair.getPrivate())
+            );
+
+            setJsonData("vapid_pub", publicKey);
+            setJsonData("vapid_private", privateKey);
+        } catch (Exception ex) {
+            log.error("Failed to generate VAPID key", ex);
+        }
+    }
+
+    @JsonIgnore
+    public String getVapidPublicKey() {
+        return "BEk9iXWlOuZPpclq2aZGYtMmhcXeRjeA0He4bMIJXNVOniIQqCtWKLMWip1coTggt1UDuW0L5pS6byCHnlNqtP0";
+        // return  getJsonData("vapid_pub");
+    }
+
+    @JsonIgnore
+    public String getVapidPrivateKey() {
+        return "39QynO3lQN6lzKt5-J2hdD8bZVPChaHCLWx-5cgX3hI";
+        // return getJsonData("vapid_private");
+    }
+
+    @JsonIgnore
+    public PushSubscription getVapidSubscription() {
+        return getJsonData("vapid_sub", PushSubscription.class, false);
+    }
+
+    public void setVapidSubscription(PushSubscription subscription) {
+        setJsonDataObject("vapid_sub", subscription);
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PushSubscription {
+        private String endpoint;
+        private Keys keys;
+
+        @Getter
+        @Setter
+        public static class Keys {
+            private String p256dh;
+            private String auth;
+        }
     }
 }

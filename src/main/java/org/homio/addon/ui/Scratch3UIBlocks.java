@@ -1,5 +1,6 @@
 package org.homio.addon.ui;
 
+import java.util.function.BiConsumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -14,9 +15,8 @@ import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.setting.SendBroadcastSetting;
 import org.homio.app.workspace.WorkspaceService;
 import org.homio.app.workspace.block.core.Scratch3EventsBlocks;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
-
-import java.util.function.BiConsumer;
 
 @Log4j2
 @Getter
@@ -29,48 +29,65 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
   private final Scratch3EventsBlocks scratch3EventsBlocks;
 
   public Scratch3UIBlocks(
-    Context context,
-    Scratch3EventsBlocks scratch3EventsBlocks,
-    WorkspaceService workspaceService) {
+      Context context,
+      Scratch3EventsBlocks scratch3EventsBlocks,
+      WorkspaceService workspaceService) {
     super("#7C4B96", context, null, "ui");
     this.scratch3EventsBlocks = scratch3EventsBlocks;
 
     this.popupType = menuStatic("popupType", PopupType.class, PopupType.INFO);
 
     blockCommand(10, "popup", "Popup [MSG] [TYPE]", this::showPopupHandler,
-      block -> {
-        block.addArgument("MSG", "message");
-        block.addArgument("TYPE", this.popupType);
-      });
+        block -> {
+          block.addArgument("MSG", "message");
+          block.addArgument("TYPE", this.popupType);
+        });
 
     blockCommand(40, "top_header", "Top header [MSG]/[COLOR] for [DURATION] sec. | Click event [BROADCAST]", this::topHeaderHandler,
-      block -> {
-        block.addArgument("MSG", "message");
-        block.addArgument("COLOR", ArgumentType.color, COLOR);
-        block.addArgument("DURATION", 60);
-        block.addArgument("BROADCAST", ArgumentType.broadcast);
-      });
+        block -> {
+          block.addArgument("MSG", "message");
+          block.addArgument("COLOR", ArgumentType.color, COLOR);
+          block.addArgument("DURATION", 60);
+          block.addArgument("BROADCAST", ArgumentType.broadcast);
+        });
 
     blockCommand(50, "top_img_header", "Top header [MSG][COLOR]/[ICON] | Click event [BROADCAST]", this::topImageHeaderHandler,
-      block -> {
-        block.addArgument("MSG", "message");
-        block.addArgument("COLOR", ArgumentType.color, COLOR);
+        block -> {
+          block.addArgument("MSG", "message");
+          block.addArgument("COLOR", ArgumentType.color, COLOR);
         block.addArgument("ICON", ArgumentType.icon, "cog");
-        block.addArgument("BROADCAST", ArgumentType.broadcast);
-      });
+          block.addArgument("BROADCAST", ArgumentType.broadcast);
+        });
+
+      blockCommand(
+              100,
+              "push_notification",
+              "Push notification [TITLE] / [MESSAGE]",
+              this::pushNotification,
+              block -> {
+                  block.addArgument("TITLE", "Title");
+                  block.addArgument("MESSAGE", "Message");
+              });
 
     context.setting().listenValue(SendBroadcastSetting.class, "listen-ui-header-click",
-      json -> {
-        String workspaceEntityID = json.getString("entityID");
+            json -> {
+              String workspaceEntityID = json.getString("entityID");
         WorkspaceBlock workspaceBlock = workspaceService.getWorkspaceBlockById(workspaceEntityID);
-        if (workspaceBlock != null) {
-          String broadcastID = workspaceBlock.getInputString("BROADCAST");
-          scratch3EventsBlocks.fireBroadcastEvent(broadcastID);
-        }
-      });
+              if (workspaceBlock != null) {
+                String broadcastID = workspaceBlock.getInputString("BROADCAST");
+                scratch3EventsBlocks.fireBroadcastEvent(broadcastID);
+              }
+            });
   }
 
-  private void topImageHeaderHandler(WorkspaceBlock workspaceBlock) {
+    private void pushNotification(@NotNull WorkspaceBlock workspaceBlock) {
+      context.ui().notification().sendPushNotification(
+              workspaceBlock.getInputString("TITLE"),
+              workspaceBlock.getInputString("MESSAGE")
+      );
+    }
+
+    private void topImageHeaderHandler(WorkspaceBlock workspaceBlock) {
     createHeaderEntity(workspaceBlock, false);
   }
 
@@ -80,32 +97,34 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
 
   private void createHeaderEntity(WorkspaceBlock workspaceBlock, boolean isFetchDuration) {
     workspaceBlock.handleAndRelease(
-      () -> {
-        String title = workspaceBlock.getInputString("MSG");
-        String color = workspaceBlock.getInputString("COLOR");
-        // TODO: ????? String broadcast = workspaceBlock.getInputString("BROADCAST");
-        HeaderButtonBuilder headerButtonBuilder =
-          context
-            .ui()
-            .headerButtonBuilder(workspaceBlock.getId())
-            .title(title)
-            .border(3, color)
-            .clickAction(SendBroadcastSetting.class);
+        () -> {
+          String title = workspaceBlock.getInputString("MSG");
+          String color = workspaceBlock.getInputString("COLOR");
+          // TODO: ????? String broadcast = workspaceBlock.getInputString("BROADCAST");
+          HeaderButtonBuilder headerButtonBuilder =
+              context
+                  .ui()
+                  .headerButtonBuilder(workspaceBlock.getId())
+                  .title(title)
+                  .border(3, color)
+                  .clickAction(SendBroadcastSetting.class);
 
-        if (isFetchDuration) {
-          headerButtonBuilder.duration(workspaceBlock.getInputInteger("DURATION")).build();
-        } else {
-          headerButtonBuilder.icon(new Icon("fas fa-" + workspaceBlock.getInputString("ICON"))).build();
-        }
-      },
-      () -> context.ui().removeHeaderButton(workspaceBlock.getId()));
+          if (isFetchDuration) {
+            headerButtonBuilder.duration(workspaceBlock.getInputInteger("DURATION")).build();
+          } else {
+            headerButtonBuilder
+                .icon(new Icon("fas fa-" + workspaceBlock.getInputString("ICON")))
+                .build();
+          }
+        },
+        () -> context.ui().removeHeaderButton(workspaceBlock.getId()));
   }
 
   private void showPopupHandler(WorkspaceBlock workspaceBlock) {
     workspaceBlock
-      .getMenuValue("TYPE", this.popupType)
-      .popupHandler
-      .accept(context, workspaceBlock.getInputString("MSG"));
+        .getMenuValue("TYPE", this.popupType)
+        .popupHandler
+        .accept(context, workspaceBlock.getInputString("MSG"));
   }
 
   @RequiredArgsConstructor

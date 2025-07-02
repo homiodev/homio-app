@@ -17,6 +17,7 @@ import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.impl.ContextServiceImpl;
 import org.homio.app.manager.common.impl.ContextServiceImpl.RouteProxyImpl;
 import org.homio.app.manager.common.impl.ContextUIImpl;
+import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.app.rest.ConsoleController.ConsoleTab;
 import org.jetbrains.annotations.NotNull;
@@ -199,6 +200,7 @@ public class RouteController {
         bootstrapContext.notifications = ((ContextUIImpl) context.ui()).getNotifications();
         bootstrapContext.consoleTabs = consoleController.getTabs();
         bootstrapContext.customImages = ContextUIImpl.customImages;
+        bootstrapContext.vapidPublicKey = LocalBoardEntity.getEntity(context).getVapidPublicKey();
 
         String eTag = String.valueOf(bootstrapContext.hashCode());
         if (webRequest.checkNotModified(eTag)) {
@@ -350,6 +352,7 @@ public class RouteController {
         public ContextUIImpl.NotificationResponse notifications;
         public Set<ConsoleTab> consoleTabs;
         public Map<String, String> customImages;
+        public String vapidPublicKey;
     }
 
     public record SidebarMenuItem(String href, String icon, String bg, String label, int order) {

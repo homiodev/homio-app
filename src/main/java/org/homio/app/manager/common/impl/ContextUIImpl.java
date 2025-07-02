@@ -25,10 +25,13 @@ import java.util.stream.Collectors;
 import lombok.*;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
+import nl.martijndwars.webpush.Notification;
+import nl.martijndwars.webpush.PushService;
 import org.apache.commons.io.output.TeeOutputStream;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
+import org.apache.http.HttpResponse;
 import org.homio.api.ContextUI;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.console.ConsolePluginComplexLines;
@@ -65,6 +68,7 @@ import org.homio.app.builder.ui.UIInputBuilderImpl;
 import org.homio.app.builder.ui.UIInputEntityActionHandler;
 import org.homio.app.config.WebSocketConfig;
 import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.app.model.entity.widget.WidgetEntity;
 import org.homio.app.model.entity.widget.impl.extra.WidgetCustomEntity;
 import org.homio.app.model.rest.DynamicUpdateRequest;
@@ -1025,7 +1029,42 @@ public class ContextUIImpl implements ContextUI {
         }
     }
 
+
     public class ContextUINotificationImpl implements ContextUINotification {
+
+        @SneakyThrows
+        @Override
+        public void sendPushNotification(@NotNull String title, @NotNull String message) {
+            var board = LocalBoardEntity.getEntity(context);
+            PushService pushService = new PushService()
+                    .setSubject("https://homio.org")
+                    .setPublicKey(board.getVapidPublicKey())
+                    .setPrivateKey(board.getVapidPrivateKey());
+
+            var sub = board.getVapidSubscription();
+            if(sub != null) {
+                Notification notification = new Notification(
+                        sub.getEndpoint(),
+                        sub.getKeys().getP256dh(),
+                        sub.getKeys().getAuth(),
+                        """
+                        {
+                            "notification": {
+                                "title": "%s",
+                                "body": "%s",
+                                "icon": ""
+                            }
+                        }
+                        """.formatted(title, message)
+                );
+                var response = pushService.send(notification);
+                if(response.getStatusLine().getStatusCode() != 200) {
+                    log.warn("Unable to send push notification: {}", response.getStatusLine());
+                }
+            } else {
+                context.ui().toastr().error("Unable to send push notification: no subscription");
+            }
+        }
 
         @Override
         public void removeEmptyBlock(@NotNull String entityID) {

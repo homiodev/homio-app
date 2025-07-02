@@ -8,6 +8,7 @@ import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.ssh.SshGenericEntity.buildSshKeyPair;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.pivovarit.function.ThrowingConsumer;
 import com.sshtools.client.SshClient;
 import com.sshtools.client.SshClientContext;
 import com.sshtools.synergy.ssh.Connection;
@@ -37,6 +38,7 @@ import org.homio.api.util.CommonUtils;
 import org.homio.api.util.HardwareUtils;
 import org.homio.api.util.Lang;
 import org.homio.app.ssh.SshCloudEntity;
+import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.http.HttpEntity;
@@ -188,46 +190,55 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
   public void handleSync(Context context, ObjectNode params) {
     context.user().assertAdminAccess();
     if (params == null) {
+      log.error("Wrong sync request parameters");
       return;
     }
-    RestTemplate restTemplate = new RestTemplate();
-    SyncRequest syncRequest =
-        new SyncRequest(
-            params.get("email").asText(),
-            params.get("password").asText(),
-            params.get("passphrase").asText(),
-            HardwareUtils.APP_ID,
-            true);
-    String url = entity.getSyncUrl();
-    HttpHeaders headers = new HttpHeaders();
-    headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<SyncRequest> request = new HttpEntity<>(syncRequest, headers);
+    context.bgp().runWithProgress("sync-cloud").execute(new ThrowingConsumer<ProgressBar, Exception>() {
+      @Override
+      public void accept(ProgressBar progressBar) throws Exception {
+        progressBar.accept(10D, "Connecting to coud");
+        RestTemplate restTemplate = new RestTemplate();
+        SyncRequest syncRequest =
+                new SyncRequest(
+                        params.get("email").asText(),
+                        params.get("password").asText(),
+                        params.get("passphrase").asText(),
+                        HardwareUtils.APP_ID,
+                        true);
+        String url = entity.getSyncUrl();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<SyncRequest> request = new HttpEntity<>(syncRequest, headers);
 
-    try {
-      ResponseEntity<LoginResponse> response =
-          restTemplate.exchange(url, HttpMethod.POST, request, LoginResponse.class);
-      LoginResponse loginResponse = response.getBody();
-      if (response.getStatusCode() == HttpStatus.OK && loginResponse != null) {
-        entity.setUser(syncRequest.email);
-        entity.uploadAndSavePrivateKey(
-            context, loginResponse.getPrivateKey(), syncRequest.passphrase);
-      } else {
-        log.error("Wrong status response from cloud server: {}", response.getStatusCode());
+        try {
+          ResponseEntity<LoginResponse> response =
+                  restTemplate.exchange(url, HttpMethod.POST, request, LoginResponse.class);
+          LoginResponse loginResponse = response.getBody();
+          if (response.getStatusCode() == HttpStatus.OK && loginResponse != null) {
+            entity.setUser(syncRequest.email);
+            entity.uploadAndSavePrivateKey(
+                    context, loginResponse.getPrivateKey(), syncRequest.passphrase);
+          } else {
+            log.error("Wrong status response from cloud server: {}", response.getStatusCode());
+          }
+        } catch (RestClientResponseException ce) {
+          log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ce));
+          context.ui().toastr().error(getClientError(ce));
+        } catch (Exception ex) {
+          log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ex));
+          if (ex.getCause() instanceof UnknownHostException) {
+            context
+                    .ui()
+                    .toastr()
+                    .error(Lang.getServerMessage("ERROR.CLOUD_UNKNOWN_HOST", ex.getCause().getMessage()));
+          } else {
+            context.ui().toastr().error("W.ERROR.SYNC");
+          }
+        } finally{
+          progressBar.done();
+        }
       }
-    } catch (RestClientResponseException ce) {
-      log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ce));
-      context.ui().toastr().error(getClientError(ce));
-    } catch (Exception ex) {
-      log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ex));
-      if (ex.getCause() instanceof UnknownHostException) {
-        context
-            .ui()
-            .toastr()
-            .error(Lang.getServerMessage("ERROR.CLOUD_UNKNOWN_HOST", ex.getCause().getMessage()));
-      } else {
-        context.ui().toastr().error("W.ERROR.SYNC");
-      }
-    }
+    });
   }
 
   private Consumer<NotificationBlockBuilder> getSyncHandler(@Nullable Exception ex) {

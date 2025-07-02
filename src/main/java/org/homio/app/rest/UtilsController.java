@@ -27,11 +27,7 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import lombok.SneakyThrows;
+import lombok.*;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.homio.api.ContextUI;
@@ -49,6 +45,7 @@ import org.homio.app.js.assistant.model.Completion;
 import org.homio.app.js.assistant.model.CompletionRequest;
 import org.homio.app.manager.ScriptService;
 import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.app.model.entity.ScriptEntity;
 import org.homio.app.model.entity.user.UserGuestEntity;
 import org.homio.app.model.entity.widget.impl.extra.WidgetFrameEntity;
@@ -94,6 +91,17 @@ public class UtilsController {
         .bgp()
         .addLowPriorityRequest(
             "drop-expire-links", () -> otaRequests.values().removeIf(OtaLink::isLinkExpired));
+  }
+
+  @SneakyThrows
+  @PostMapping("/push-notification")
+  public void saveNotificationSubscription(
+      @RequestBody LocalBoardEntity.PushSubscription subscription) {
+    var board = LocalBoardEntity.getEntity(context);
+    if (board.getVapidSubscription() == null) {
+      board.setVapidSubscription(subscription);
+      context.db().save(board);
+    }
   }
 
   @SneakyThrows
