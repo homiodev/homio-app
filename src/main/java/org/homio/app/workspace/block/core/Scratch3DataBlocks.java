@@ -36,7 +36,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     workspaceBlock.handleNext(next -> {
       // we need full variable entityID
       String variableId = workspaceBlock.getFieldId("VARIABLE");
-      Lock lock = workspaceBlock.getLockManager().getLock(workspaceBlock, variableId);
+      Lock lock = workspaceBlock.getLockManager().createLock(workspaceBlock, variableId);
       workspaceBlock.subscribeToLock(lock, next::handle);
     });
   }
@@ -45,7 +45,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     workspaceBlock.handleNext(next -> {
       WhenValueOperator operator = WhenValueOperator.getByOp(workspaceBlock.getField("OPERATOR"));
       String variableId = workspaceBlock.getFieldId("VARIABLE");
-      Lock lock = workspaceBlock.getLockManager().getLock(workspaceBlock, variableId);
+      Lock lock = workspaceBlock.getLockManager().createLock(workspaceBlock, variableId);
       workspaceBlock.subscribeToLock(lock, o -> operator.checkFn.apply(workspaceBlock, o), next::handle);
     });
   }

@@ -103,21 +103,19 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
   }
 
   @Override
-  public void addOpenDialogSelectableButtonFromClass(
-    @NotNull String name,
-    @Nullable Icon icon,
-    @NotNull Class<?> entityClass,
-    @NotNull UIActionHandler action) {
+  public void addOpenDialogSelectableButtonFromClassInstance(@NotNull String name, @Nullable Icon icon, @NotNull Object entityInstance, @NotNull UIActionHandler action) {
+    var entityClass = entityInstance.getClass();
     ItemController.baseEntitySimpleClasses.put(entityClass.getSimpleName(), entityClass);
-    ContextImpl.FIELD_FETCH_TYPE.put(entityClass.getSimpleName(), CommonUtils.newInstance(entityClass));
+    ContextImpl.FIELD_FETCH_TYPE.put(entityClass.getSimpleName(), entityInstance);
     ((UIButtonItemBuilderImpl) addSelectableButton(name, icon, action))
-      .setActionReferenceV2(entityClass.getSimpleName());
+            .setActionReferenceV2(entityClass.getSimpleName());
   }
 
   public UIInputBuilder.DialogEntity<UIButtonItemBuilder> addOpenDialogSelectableButtonInternal(
-    String name, Icon icon, UIActionHandler action) {
+    @NotNull String name, @Nullable Icon icon, @Nullable UIActionHandler action) {
     var uiDialogLayoutBuilder = new UIDialogLayoutBuilderImpl(name);
     var dialogEntityBuilder = addEntity(uiDialogLayoutBuilder);
+    uiDialogLayoutBuilder.setTitle(name, icon);
     var entityBuilder = ((UIButtonItemBuilderImpl) addSelectableButton(name, icon, action))
       .setActionReference(dialogEntityBuilder.getEntityID());
     return new UIInputBuilder.DialogEntity<>() {

@@ -49,6 +49,19 @@ public class LockImpl implements Lock {
   }
 
   @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    LockImpl lock = (LockImpl) o;
+    return Objects.equals(key, lock.key);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(key);
+  }
+
+  @Override
   @SneakyThrows
   public boolean await(WorkspaceBlock workspaceBlock, int timeout, TimeUnit timeUnit) {
     try {

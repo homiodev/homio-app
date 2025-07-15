@@ -35,7 +35,7 @@ public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
         Lock lock =
           workspaceBlock
             .getLockManager()
-            .getLock(workspaceBlock, broadcastRefEntityID);
+            .createLock(workspaceBlock, broadcastRefEntityID);
 
         workspaceBlock.subscribeToLock(lock, next::handle);
       });

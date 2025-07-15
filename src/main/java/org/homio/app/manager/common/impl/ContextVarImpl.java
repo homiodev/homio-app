@@ -361,7 +361,7 @@ public class ContextVarImpl implements ContextVar {
             throw new IllegalStateException("Unable to remove linked variable: " + vid);
         }
         if (context.user().isAdminLoggedUser() || isServiceOwnerOfVariable(variable, callService)) {
-            // execute remove from external thread if removeVariable calls from within another transaction
+            // execute remove from an external thread if removeVariable calls from within another transaction
             new Thread(() -> {
                 if (variable.isBackup()) {
                     variableBackupRepository.delete(variable);
@@ -481,7 +481,7 @@ public class ContextVarImpl implements ContextVar {
     }
 
     private Object convertBigDecimal(BigDecimal value) {
-        // using unary operation will lead that return value would be always as float for some reason
+        // using unary operation will lead that the return value would be always as float for some reason
         if (value.scale() == 0) {
             return value.longValueExact();
         } else {
@@ -750,7 +750,7 @@ public class ContextVarImpl implements ContextVar {
         private final Function<Object, Object> valueConverter;
         public long lastBackupTimestamp = System.currentTimeMillis();
         private WorkspaceVariable variable;
-        // fire every link listener in separate thread
+        // fire every link listener in a separate thread
         private ThrowingConsumer<Object, Exception> linkListener;
         private @Nullable
         @Setter TransformVariableContext transformVariableContext;
@@ -858,6 +858,13 @@ public class ContextVarImpl implements ContextVar {
                 entity.setIcon(value.getIcon());
                 entity.setIconColor(value.getColor());
             }
+            return this;
+        }
+
+        @NotNull
+        @Override
+        public GeneralVariableMetaBuilder setDecimalScale(int scale) {
+            entity.setScale(scale);
             return this;
         }
 

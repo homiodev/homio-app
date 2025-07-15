@@ -43,6 +43,7 @@ import org.homio.api.util.CommonUtils;
 import org.homio.api.util.SecureString;
 import org.homio.app.builder.ui.UIInputBuilderImpl;
 import org.homio.app.builder.ui.layout.UIDialogLayoutBuilderImpl;
+import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.UIFieldClickToEdit;
 import org.homio.app.model.entity.widget.*;
 import org.homio.app.model.rest.EntityUIMetaData;
@@ -119,7 +120,11 @@ public class UIFieldUtils {
         if (entityClassByType == null) {
             return Collections.emptyList();
         }
-        Object instance = CommonUtils.newInstance(entityClassByType);
+        // try fetch instance from some UI Dialogs that registered via: addOpenDialogSelectableButtonFromClassInstance
+        Object instance = ContextImpl.FIELD_FETCH_TYPE.get(entityClassByType.getSimpleName());
+        if(instance == null) {
+            instance = CommonUtils.newInstance(entityClassByType);
+        }
         if (instance instanceof BaseEntity be) {
             be.setEntityID("FETCH_UI_FIELD_SPECIFICATIONS");
             be.setContext(context);

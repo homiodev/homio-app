@@ -7,7 +7,8 @@ import org.homio.app.model.entity.widget.WidgetEntityAndSeries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-@Entity
+//TODO: Actually i dont remember why i created this widget for
+//@Entity
 public class WidgetButtonsEntity
   extends WidgetEntityAndSeries<WidgetButtonsEntity, WidgetButtonsSeriesEntity> {
 

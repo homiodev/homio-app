@@ -53,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.repeat;
@@ -82,9 +83,10 @@ public class ContextAddonImpl {
     log.info("Initialize addons...");
     ArrayList<AddonEntrypoint> addonEntrypoints = new ArrayList<>(applicationContext.getBeansOfType(AddonEntrypoint.class).values());
     Collections.sort(addonEntrypoints);
-    log.info("Found addons: {}",
-      addonEntrypoints.stream().map(AddonEntrypoint::getAddonID)
-        .collect(Collectors.joining("\n", "\n-------\n", "\n-------")));
+    log.info("Found addons:\n{}",
+            IntStream.range(0, addonEntrypoints.size())
+                    .mapToObj(i -> (i + 1) + ". " + addonEntrypoints.get(i).getAddonID())
+                    .collect(Collectors.joining("\n", "\n-------\n", "\n-------")));
     for (AddonEntrypoint entrypoint : addonEntrypoints) {
       //this.addons.put("addon-" + entrypoint.getAddonID(), new InternalAddonContext(entrypoint, null));
       fireAddonEntrypoint(entrypoint);

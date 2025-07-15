@@ -66,7 +66,7 @@ public class Scratch3DeviceBlocks extends Scratch3ExtensionBlocks {
       if (device.getStatus().isOnline()) {
         next.handle();
       } else {
-        var readyLock = workspaceBlock.getLockManager().getLock(workspaceBlock, "device-ready-" + device.getIeeeAddress());
+        var readyLock = workspaceBlock.getLockManager().createLock(workspaceBlock, "device-ready-" + device.getIeeeAddress());
         if (readyLock.await(workspaceBlock)) {
           if (device.getStatus().isOnline()) {
             next.handle();
@@ -81,7 +81,7 @@ public class Scratch3DeviceBlocks extends Scratch3ExtensionBlocks {
   private void whenValueChange(@NotNull WorkspaceBlock workspaceBlock) {
     workspaceBlock.handleNext(next -> {
       DeviceEndpoint endpoint = getDeviceEndpoint(workspaceBlock);
-      Lock lock = workspaceBlock.getLockManager().getLock(workspaceBlock);
+      Lock lock = workspaceBlock.getLockManager().createLock(workspaceBlock);
 
       endpoint.addChangeListener(workspaceBlock.getId(), state -> lock.signalAll());
       workspaceBlock.onRelease(() -> endpoint.removeChangeListener(workspaceBlock.getId()));
@@ -96,7 +96,7 @@ public class Scratch3DeviceBlocks extends Scratch3ExtensionBlocks {
       if (StringUtils.isEmpty(value)) {
         workspaceBlock.logErrorAndThrow("Value must be not empty");
       }
-      Lock lock = workspaceBlock.getLockManager().getLock(workspaceBlock);
+      Lock lock = workspaceBlock.getLockManager().createLock(workspaceBlock);
 
       endpoint.addChangeListener(workspaceBlock.getId(), state -> {
         if (state.stringValue().equals(value)) {
@@ -118,9 +118,9 @@ public class Scratch3DeviceBlocks extends Scratch3ExtensionBlocks {
         workspaceBlock.logErrorAndThrow("Duration must be greater than 1 seconds. Value: {}", secondsToWait);
       }
       DeviceEndpoint endpoint = getDeviceEndpoint(workspaceBlock);
-      Lock eventOccurredLock = workspaceBlock.getLockManager().getLock(workspaceBlock);
+      Lock eventOccurredLock = workspaceBlock.getLockManager().createLock(workspaceBlock);
 
-      // add listener on target endpoint for any changes and wake up lock
+      // add listener on target endpoint for any changes and wake-up lock
       endpoint.addChangeListener(workspaceBlock.getId(), state -> eventOccurredLock.signalAll());
 
       // thread context that will be started when endpoint's listener fire event
@@ -162,6 +162,6 @@ public class Scratch3DeviceBlocks extends Scratch3ExtensionBlocks {
     if (entities.size() > 1) {
       throw new NotFoundException("Found multiple entities with id: " + ieeeAddress);
     }
-    return entities.iterator().next();
+    return entities.getFirst();
   }
 }

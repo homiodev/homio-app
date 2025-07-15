@@ -24,6 +24,8 @@ import org.homio.api.workspace.scratch.Scratch3Block;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.service.FileSystemService;
 import org.homio.app.workspace.WorkspaceService.WorkspaceTabHolder;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.core.io.FileSystemResource;
@@ -54,10 +56,10 @@ import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 public class WorkspaceBlockImpl implements WorkspaceBlock {
 
   @Getter
-  private final String id;
+  private final @NotNull String id;
 
   @Getter
-  private final WorkspaceTabHolder workspaceTabHolder;
+  private final @NotNull WorkspaceTabHolder workspaceTabHolder;
 
   @Getter
   private String extensionId;
@@ -72,10 +74,10 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
   private WorkspaceBlockImpl parent;
 
   @Getter
-  private Map<String, JSONArray> inputs = new HashMap<>();
+  private @NotNull Map<String, JSONArray> inputs = new HashMap<>();
 
   @Getter
-  private Map<String, JSONArray> fields = new HashMap<>();
+  private @NotNull Map<String, JSONArray> fields = new HashMap<>();
 
   @Getter
   private boolean shadow;
@@ -83,7 +85,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
   @Getter
   private boolean topLevel;
 
-  private Map<String, State> values = new HashMap<>();
+  private @NotNull Map<String, State> values = new HashMap<>();
 
   private AtomicReference<State> lastChildValue;
 
@@ -93,7 +95,13 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
   private ContextBGP.ThreadContext<?> threadContext;
 
-  WorkspaceBlockImpl(String id, WorkspaceTabHolder workspaceTabHolder) {
+  @Getter
+  private @Nullable String procedureCode;
+
+  @Getter
+  private @NotNull List<String> procedureArgumentIds = List.of();
+
+  WorkspaceBlockImpl(@NotNull String id, @NotNull WorkspaceTabHolder workspaceTabHolder) {
     this.id = id;
     this.workspaceTabHolder = workspaceTabHolder;
   }
@@ -506,10 +514,10 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     return null;
   }
 
-  public void addLock(LockImpl broadcastLock) {
-    broadcastLock.addSignalListener(
+  public void addLock(@NotNull LockImpl lock) {
+    lock.addSignalListener(
       value -> {
-        if (value instanceof Collection col && ((Collection) value).size() > 1) {
+        if (value instanceof Collection<?> col && ((Collection<?>) value).size() > 1) {
           String key = null;
           for (Object item : col) {
             if (key == null) {
@@ -524,7 +532,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
       });
   }
 
-  public void setThreadContext(ContextBGP.ThreadContext<?> threadContext) {
+  public void setThreadContext(@NotNull ContextBGP.ThreadContext<?> threadContext) {
     this.threadContext = threadContext;
     threadContext.setMetadata("workspace", id);
     threadContext.setMetadata("activeWorkspaceId", id);

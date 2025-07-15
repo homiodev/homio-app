@@ -1,7 +1,11 @@
 package org.homio.app.console;
 
+import static java.lang.String.format;
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+
 import com.fazecast.jSerialComm.SerialPort;
 import com.pivovarit.function.ThrowingSupplier;
+import java.util.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,7 +17,9 @@ import org.homio.api.ContextVar;
 import org.homio.api.console.ConsolePluginTable;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.state.DecimalType;
+import org.homio.api.state.State;
 import org.homio.api.ui.field.UIField;
+import org.homio.api.util.HardwareUtils;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.app.service.device.LocalBoardService;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
@@ -22,11 +28,6 @@ import org.homio.hquery.hardware.other.MachineInfo;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
-
-import java.util.*;
-
-import static java.lang.String.format;
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 @Component
 @RequiredArgsConstructor
@@ -56,9 +57,11 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
                 context.setting().getEnv("spring.datasource.url"))));
 
         LocalBoardService service = getService();
-        list.add(new HardwarePluginEntity("Cpu load", service.getCpuUsageVar().getValue()));
+        list.add(new HardwarePluginEntity("ID", HardwareUtils.APP_ID));
+        list.add(new HardwarePluginEntity("Run counts", HardwareUtils.RUN_COUNT));
+        list.add(new HardwarePluginEntity("Cpu load", decimalToString(service.getCpuUsageVar())));
         list.add(new HardwarePluginEntity("Cpu temperature", onLinux(() -> decimalToString(service.getCpuTemp()))));
-        list.add(new HardwarePluginEntity("Ram memory", service.getMemoryVar().getValue()));
+        list.add(new HardwarePluginEntity("Ram memory", decimalToString(service.getMemoryVar())));
         list.add(new HardwarePluginEntity("Disk memory", toString(machineHardwareRepository.getDiscCapacity())));
         list.add(new HardwarePluginEntity("Network TX", onLinux(() -> decimalToString(service.getNetTXVar()))));
         list.add(new HardwarePluginEntity("Network RX", onLinux(() -> decimalToString(service.getNetRXVar()))));
@@ -109,10 +112,9 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
     @Override
     public @Nullable Collection<TableCell> getUpdatableValues() {
         Set<TableCell> cells = new HashSet<>();
-
         LocalBoardService service = getService();
-        cells.add(new TableCell("Cpu load", "value", Objects.toString(service.getCpuUsageVar().getValue(), "-")));
-        cells.add(new TableCell("Ram memory", "value", Objects.toString(service.getMemoryVar().getValue(), "-")));
+        cells.add(new TableCell("Cpu load", "value", decimalToString(service.getCpuUsageVar())));
+        cells.add(new TableCell("Ram memory", "value", decimalToString(service.getMemoryVar())));
         cells.add(new TableCell("Uptime", "value", machineHardwareRepository.getUptime()));
         if (SystemUtils.IS_OS_LINUX) {
             cells.add(new TableCell("Cpu temperature", "value", decimalToString(service.getCpuTemp())));
@@ -124,8 +126,11 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
     }
 
     private Object decimalToString(ContextVar.Variable variable) {
-        DecimalType value = (DecimalType) variable.getValue();
-        return value == null ? null : value.toUIString();
+        State state = variable.getValue();
+        if(state instanceof DecimalType dt) {
+            return dt.toUIString();
+        }
+        return "-";
     }
 
     private Object adminOnly(Object object) {
@@ -143,7 +148,7 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
     }
 
     @Override
-    public Class<HardwarePluginEntity> getEntityClass() {
+    public @NotNull Class<HardwarePluginEntity> getEntityClass() {
         return HardwarePluginEntity.class;
     }
 

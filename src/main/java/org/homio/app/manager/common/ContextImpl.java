@@ -1,5 +1,6 @@
 package org.homio.app.manager.common;
 
+import com.pivovarit.function.ThrowingRunnable;
 import jakarta.persistence.EntityManagerFactory;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -17,6 +18,7 @@ import org.homio.api.exception.ServerException;
 import org.homio.api.model.OptionModel;
 import org.homio.api.service.discovery.ItemDiscoverySupport;
 import org.homio.api.util.CommonUtils;
+import org.homio.api.util.Lang;
 import org.homio.app.LogService;
 import org.homio.app.auth.JwtTokenProvider;
 import org.homio.app.builder.widget.ContextWidgetImpl;
@@ -42,6 +44,7 @@ import org.homio.app.service.scan.BeansItemsDiscovery;
 import org.homio.app.setting.ScanDevicesSetting;
 import org.homio.app.setting.WorkspaceGroupEntityCompactModeSetting;
 import org.homio.app.setting.system.SystemClearCacheButtonSetting;
+import org.homio.app.setting.system.SystemLanguageSetting;
 import org.homio.app.setting.system.SystemShowEntityStateSetting;
 import org.homio.app.setting.system.SystemSoftRestartButtonSetting;
 import org.homio.app.setting.system.db.SystemDatabaseSetting;

@@ -1,4 +1,5 @@
 {
+  "RELOAD_TO_APPLY": "Reload page to apply changes",
   "CHROMECAST": {
     "APPLICATION": "Application: {{VALUE}}",
     "NEW_DEVICE_QUESTION": "Do you want create new chromecast device?"
@@ -25,6 +26,7 @@
   "INTERNET_STATUS_UP": "Internet status: UP",
   "INTERNET_STATUS_DOWN": "Internet status: DOWN",
   "ERROR": {
+    "EXISTS_VARIABLE": "Variable '{{VALUE}}' already exists",
     "NO_WEBDRIVER": "No WebDriver found",
     "NO_FONT_FOUND": "No font name {{VALUE}} found",
     "PRIVATE_KEY_NOT_FOUND": "Private key not found",
@@ -76,6 +78,7 @@
   },
   "TMATE_DESCRIPTION": "Tmate is <a href=\"https://tmate.io\" target=\"_blank\"></a> service that creates web-socket session with unique id to connect to device",
   "CLOUD": {
+    "SYNC_MSG": "Authenticate to {{VALUE}} to able to access device from internet",
     "DURATION": "Session time {{VALUE}}",
     "IN": "Income {{VALUE}}",
     "OUT": "Outcome {{VALUE}}"

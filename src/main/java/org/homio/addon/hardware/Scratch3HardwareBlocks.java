@@ -80,7 +80,7 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
   private void fireHardwareHatEvent(WorkspaceBlock workspaceBlock) {
     workspaceBlock.handleNext(next -> {
       String eventName = workspaceBlock.getMenuValue(EVENT, this.hardwareEventsMenu);
-      Lock lock = workspaceBlock.getLockManager().getLock(workspaceBlock, eventName);
+      Lock lock = workspaceBlock.getLockManager().createLock(workspaceBlock, eventName);
       workspaceBlock.subscribeToLock(lock, next::handle);
     });
   }
@@ -90,7 +90,7 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
       String settingName = workspaceBlock.getMenuValue(SETTING, this.settingsMenu);
       String value = workspaceBlock.getInputString(VALUE);
 
-      Lock lock = workspaceBlock.getLockManager().getLock(workspaceBlock, settingName);
+      Lock lock = workspaceBlock.getLockManager().createLock(workspaceBlock, settingName);
       workspaceBlock.subscribeToLock(lock, lockValue -> isEmpty(value) || value.equals(lockValue), next::handle);
     });
   }

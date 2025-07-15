@@ -8,7 +8,6 @@ import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.ssh.SshGenericEntity.buildSshKeyPair;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.pivovarit.function.ThrowingConsumer;
 import com.sshtools.client.SshClient;
 import com.sshtools.client.SshClientContext;
 import com.sshtools.synergy.ssh.Connection;
@@ -38,7 +37,6 @@ import org.homio.api.util.CommonUtils;
 import org.homio.api.util.HardwareUtils;
 import org.homio.api.util.Lang;
 import org.homio.app.ssh.SshCloudEntity;
-import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.http.HttpEntity;
@@ -46,7 +44,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
@@ -159,20 +156,17 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
                 builder.addInfo(
                     "st",
                     new Icon("fas fa-clock"),
-                    Lang.getServerMessage(
                         "CLOUD.DURATION",
                         humanReadableDuration(
-                            System.currentTimeMillis() - connection.getStartTime().getTime())));
+                            System.currentTimeMillis() - connection.getStartTime().getTime()));
                 builder.addInfo(
                     "in",
                     new Icon("fas fa-arrow-down"),
-                    Lang.getServerMessage(
-                        "CLOUD.IN", getHumanReadableByteCount(connection.getTotalBytesIn())));
+                        "CLOUD.IN", getHumanReadableByteCount(connection.getTotalBytesIn()));
                 builder.addInfo(
                     "out",
                     new Icon("fas fa-arrow-up"),
-                    Lang.getServerMessage(
-                        "CLOUD.OUT", getHumanReadableByteCount(connection.getTotalBytesOut())));
+                        "CLOUD.OUT", getHumanReadableByteCount(connection.getTotalBytesOut()));
               }
 
               Consumer<NotificationBlockBuilder> syncHandler = getSyncHandler(ex);
@@ -193,50 +187,46 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
       log.error("Wrong sync request parameters");
       return;
     }
-    context.bgp().runWithProgress("sync-cloud").execute(new ThrowingConsumer<ProgressBar, Exception>() {
-      @Override
-      public void accept(ProgressBar progressBar) throws Exception {
-        progressBar.accept(10D, "Connecting to coud");
-        RestTemplate restTemplate = new RestTemplate();
-        SyncRequest syncRequest =
-                new SyncRequest(
-                        params.get("email").asText(),
-                        params.get("password").asText(),
-                        params.get("passphrase").asText(),
-                        HardwareUtils.APP_ID,
-                        true);
-        String url = entity.getSyncUrl();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<SyncRequest> request = new HttpEntity<>(syncRequest, headers);
+    context.bgp().runWithProgress("sync-cloud").execute(progressBar -> {
+      progressBar.accept(10D, "Connecting to cloud");
+      var restTemplate = new RestTemplate();
+      var syncRequest =
+              new SyncRequest(
+                      params.get("email").asText(),
+                      params.get("password").asText(),
+                      params.get("passphrase").asText(),
+                      HardwareUtils.APP_ID,
+                      true);
+      String url = entity.getSyncUrl();
+      HttpHeaders headers = new HttpHeaders();
+      headers.setContentType(MediaType.APPLICATION_JSON);
+      HttpEntity<SyncRequest> request = new HttpEntity<>(syncRequest, headers);
 
-        try {
-          ResponseEntity<LoginResponse> response =
-                  restTemplate.exchange(url, HttpMethod.POST, request, LoginResponse.class);
-          LoginResponse loginResponse = response.getBody();
-          if (response.getStatusCode() == HttpStatus.OK && loginResponse != null) {
-            entity.setUser(syncRequest.email);
-            entity.uploadAndSavePrivateKey(
-                    context, loginResponse.getPrivateKey(), syncRequest.passphrase);
-          } else {
-            log.error("Wrong status response from cloud server: {}", response.getStatusCode());
-          }
-        } catch (RestClientResponseException ce) {
-          log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ce));
-          context.ui().toastr().error(getClientError(ce));
-        } catch (Exception ex) {
-          log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ex));
-          if (ex.getCause() instanceof UnknownHostException) {
-            context
-                    .ui()
-                    .toastr()
-                    .error(Lang.getServerMessage("ERROR.CLOUD_UNKNOWN_HOST", ex.getCause().getMessage()));
-          } else {
-            context.ui().toastr().error("W.ERROR.SYNC");
-          }
-        } finally{
-          progressBar.done();
+      try {
+        var response = restTemplate.exchange(url, HttpMethod.POST, request, LoginResponse.class);
+        var loginResponse = response.getBody();
+        if (loginResponse != null && response.getStatusCode() == HttpStatus.OK) {
+          entity.setUser(syncRequest.email);
+          entity.uploadAndSavePrivateKey(
+                  context, loginResponse.getPrivateKey(), syncRequest.passphrase);
+        } else {
+          log.error("Wrong status response from cloud server: {}", response.getStatusCode());
         }
+      } catch (RestClientResponseException ce) {
+        log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ce));
+        context.ui().toastr().error(getClientError(ce));
+      } catch (Exception ex) {
+        log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ex));
+        if (ex.getCause() instanceof UnknownHostException) {
+          context
+                  .ui()
+                  .toastr()
+                  .error(Lang.getServerMessage("ERROR.CLOUD_UNKNOWN_HOST", ex.getCause().getMessage()));
+        } else {
+          context.ui().toastr().error("W.ERROR.SYNC");
+        }
+      } finally{
+        progressBar.done();
       }
     });
   }
@@ -268,7 +258,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
             dialogModel -> {
               dialogModel.disableKeepOnUi();
               List<ActionInputParameter> inputs = new ArrayList<>();
-              inputs.add(ActionInputParameter.message("CLOUD.SYNC_MSG"));
+              inputs.add(ActionInputParameter.message("CLOUD.SYNC_MSG", entity.getSyncUrl()));
               inputs.add(
                   ActionInputParameter.text(
                       "email", context.user().getLoggedInUserRequire().getEmail()));
@@ -282,7 +272,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
   private Consumer<NotificationBlockBuilder> buildNotSyncHandler() {
     return builder ->
         builder
-            .addInfo("sync", null, "CLOUD.NOT_SYNC")
+            .addInfo("Sync", null, "CLOUD.NOT_SYNC")
             .setTextColor(Color.RED)
             .setRightButton(
                 new Icon("fas fa-right-to-bracket"), "Sync", (context, params) -> openSyncDialog());
