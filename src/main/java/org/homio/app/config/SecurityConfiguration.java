@@ -147,8 +147,8 @@ public class SecurityConfiguration {
 
   @Bean
   public DaoAuthenticationProvider authenticationProvider() {
-    CacheAuthenticationProvider authProvider = new CacheAuthenticationProvider();
-    authProvider.setUserDetailsService(userEntityDetailsService);
+    CacheAuthenticationProvider authProvider =
+        new CacheAuthenticationProvider(userEntityDetailsService);
     authProvider.setPasswordEncoder(passwordEncoder);
     return authProvider;
   }

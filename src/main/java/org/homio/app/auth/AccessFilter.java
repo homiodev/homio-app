@@ -31,7 +31,6 @@ public class AccessFilter extends OncePerRequestFilter {
   protected void doFilterInternal(
       HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain chain)
       throws ServletException, IOException {
-    // log.info("Request: {}. Host: {}", request.getRequestURI(), request.getHeader("Host"));
     if (request.getRequestURI().startsWith("/rest/route/proxy")
         || request.getRequestURI().endsWith(".css")
         || request.getRequestURI().endsWith(".js")
@@ -44,6 +43,7 @@ public class AccessFilter extends OncePerRequestFilter {
       chain.doFilter(request, response);
       return;
     }
+    log.info("Request: {}. Host: {}", request.getRequestURI(), request.getHeader("Host"));
     if (request.getRequestURI().equals("/")) {
       response.setContentType("text/html");
       response
@@ -90,6 +90,8 @@ public class AccessFilter extends OncePerRequestFilter {
       SecurityContextHolder.clearContext();
       response.setHeader("Access-Control-Allow-Origin", "*");
       response.sendError(419, ex.getMessage());
+    } finally {
+      log.info("Response: {} - {}", request.getRequestURI(), response.getStatus());
     }
   }
 }

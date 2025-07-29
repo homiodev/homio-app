@@ -12,10 +12,14 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
+import org.springframework.security.authorization.AuthorizationManager;
+import org.springframework.security.config.annotation.web.socket.EnableWebSocketSecurity;
+import org.springframework.security.messaging.access.intercept.MessageMatcherDelegatingAuthorizationManager;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
 @Configuration
 @Order(Ordered.HIGHEST_PRECEDENCE + 99)
+@EnableWebSocketSecurity
 public class WebSocketAuthenticationSecurityConfig implements WebSocketMessageBrokerConfigurer {
 
   @Override
@@ -28,10 +32,12 @@ public class WebSocketAuthenticationSecurityConfig implements WebSocketMessageBr
     return new ChannelInterceptor() {
       @Override
       public Message<?> preSend(Message<?> message, MessageChannel channel) {
-        final StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+        final StompHeaderAccessor accessor =
+            MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
         if (StompCommand.CONNECT == (accessor != null ? accessor.getCommand() : null)) {
-          String token = jwtTokenProvider.resolveToken(accessor.getFirstNativeHeader("Authorization"));
+          String token =
+              jwtTokenProvider.resolveToken(accessor.getFirstNativeHeader("Authorization"));
           if (token != null && jwtTokenProvider.validateToken(token)) {
             accessor.setUser(jwtTokenProvider.getAuthentication(token));
           }
@@ -39,5 +45,18 @@ public class WebSocketAuthenticationSecurityConfig implements WebSocketMessageBr
         return message;
       }
     };
+  }
+
+  @Bean
+  public AuthorizationManager<Message<?>> messageAuthorizationManager(
+      MessageMatcherDelegatingAuthorizationManager.Builder messages) {
+    messages.anyMessage().authenticated();
+    return messages.build();
+  }
+
+  // disable csrf for web-sockets
+  @Bean
+  public ChannelInterceptor csrfChannelInterceptor() {
+    return new ChannelInterceptor() {};
   }
 }

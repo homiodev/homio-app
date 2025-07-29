@@ -1,10 +1,17 @@
 package org.homio.app.ssh;
 
+import static com.sshtools.common.publickey.SshKeyPairGenerator.*;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.trimToNull;
+import static org.homio.api.ui.field.action.UIActionInput.Type.*;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.sshtools.client.SshClient;
 import com.sshtools.common.publickey.*;
 import com.sshtools.common.ssh.components.SshKeyPair;
 import jakarta.persistence.Entity;
+import java.util.Objects;
+import java.util.Set;
 import lombok.SneakyThrows;
 import org.homio.api.Context;
 import org.homio.api.entity.BaseEntity;
@@ -29,14 +36,6 @@ import org.homio.app.ssh.SshGenericEntity.GenericWebSocketService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
-
-import java.util.Objects;
-import java.util.Set;
-
-import static com.sshtools.common.publickey.SshKeyPairGenerator.*;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.apache.commons.lang3.StringUtils.trimToNull;
-import static org.homio.api.ui.field.action.UIActionInput.Type.*;
 
 @Entity
 @SuppressWarnings("unused")
@@ -284,7 +283,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
   }
 
   @UIContextMenuAction(value = "UPLOAD_PRIVATE_KEY", icon = "fas fa-upload", inputs = {
-    @UIActionInput(name = "privateKey", type = textarea),
+    @UIActionInput(name = "privateKey", type = textareafile),
     @UIActionInput(name = "passphrase", type = text)
   })
   public ActionResponseModel uploadPrivateKey(Context context, JSONObject params) {

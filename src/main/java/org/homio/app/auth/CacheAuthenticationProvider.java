@@ -20,10 +20,11 @@ public class CacheAuthenticationProvider extends DaoAuthenticationProvider {
 
   private final LoadingCache<String, Integer> attemptsCache;
 
-  public CacheAuthenticationProvider() {
+  public CacheAuthenticationProvider(UserEntityDetailsService userEntityDetailsService) {
+    super(userEntityDetailsService);
     this.attemptsCache = CacheBuilder.newBuilder().
       expireAfterWrite(10, TimeUnit.MINUTES).build(new CacheLoader<>() {
-        public @NotNull Integer load(String ignore) {
+        public @NotNull Integer load(@NotNull String ignore) {
           return 0;
         }
       });

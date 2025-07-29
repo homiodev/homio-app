@@ -31,11 +31,10 @@ public class ExtRequestMappingHandlerMapping extends RequestMappingHandlerMappin
   }
 
   @Override
-  protected void registerHandlerMethod(Object handler, Method method, RequestMappingInfo mapping) {
+  protected void registerHandlerMethod(@NotNull Object handler, @NotNull Method method, @NotNull RequestMappingInfo mapping) {
     if (controllerToMethodRegisterInfo.containsKey(handler)) {
       controllerToMethodRegisterInfo.get(handler).add(mapping);
     }
     super.registerHandlerMethod(handler, method, mapping);
   }
-
 }

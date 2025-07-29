@@ -1,5 +1,6 @@
 package org.homio.app.config;
 
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
@@ -19,8 +20,6 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 import org.springframework.web.socket.messaging.StompSubProtocolErrorHandler;
 import org.springframework.web.socket.server.support.OriginHandshakeInterceptor;
-
-import java.util.List;
 
 @Log4j2
 @Configuration
@@ -49,7 +48,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSoc
       }
     });
 
-    registry.addEndpoint(WEB_SOCKET_ENDPOINT).setAllowedOrigins("*");
+    registry.addEndpoint(WEB_SOCKET_ENDPOINT).setAllowedOriginPatterns("*");
   }
 
   public void addArgumentResolvers(List<HandlerMethodArgumentResolver> argumentResolvers) {
@@ -78,6 +77,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSoc
         }
       }, "/tttt")
       .addInterceptors(new OriginHandshakeInterceptor())
-      .setAllowedOrigins("*");
+      .setAllowedOriginPatterns("*");
   }
 }

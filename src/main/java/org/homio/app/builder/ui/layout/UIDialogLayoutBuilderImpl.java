@@ -1,6 +1,15 @@
 package org.homio.app.builder.ui.layout;
 
+import static org.homio.api.ui.field.action.ActionInputParameter.NAME_PATTERN;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -22,16 +31,6 @@ import org.homio.app.builder.ui.UISelectBoxItemBuilderImpl;
 import org.homio.app.builder.ui.UISliderItemBuilderImpl;
 import org.homio.app.builder.ui.UITextInputItemBuilderImpl;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
-import static org.homio.api.ui.field.action.ActionInputParameter.NAME_PATTERN;
 
 @Getter
 @Accessors(chain = true)
@@ -133,6 +132,8 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
       case json -> addInput(input.name(), input.value(), UITextInputItemBuilder.InputType.JSON, input.required());
       case textarea ->
         addInput(input.name(), input.value(), UITextInputItemBuilder.InputType.TextArea, input.required());
+      case textareafile ->
+              addInput(input.name(), input.value(), UITextInputItemBuilder.InputType.TextAreaFile, input.required());
       case password ->
         addInput(input.name(), input.value(), UITextInputItemBuilder.InputType.Password, input.required());
       case number -> addEntity(input.name(),

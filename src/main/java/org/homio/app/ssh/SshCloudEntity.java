@@ -1,9 +1,14 @@
 package org.homio.app.ssh;
 
+import static org.homio.api.ui.field.action.UIActionInput.Type.*;
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+import static org.homio.app.ssh.SshGenericEntity.*;
+
 import com.sshtools.client.SshClient;
 import com.sshtools.common.publickey.SshPrivateKeyFile;
 import com.sshtools.common.publickey.SshPrivateKeyFileFactory;
 import jakarta.persistence.Entity;
+import java.util.Set;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
@@ -31,13 +36,6 @@ import org.homio.app.service.cloud.CloudService;
 import org.homio.app.service.cloud.SshTunnelCloudProviderService;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
-
-import java.util.Set;
-
-import static org.homio.api.ui.field.action.UIActionInput.Type.text;
-import static org.homio.api.ui.field.action.UIActionInput.Type.textarea;
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-import static org.homio.app.ssh.SshGenericEntity.*;
 
 @Log4j2
 @Entity
@@ -251,7 +249,7 @@ public class SshCloudEntity extends DeviceBaseEntity implements
 
     @SneakyThrows
     @UIContextMenuAction(value = "UPLOAD_PRIVATE_KEY", icon = "fas fa-upload", inputs = {
-            @UIActionInput(name = "privateKey", type = textarea),
+            @UIActionInput(name = "privateKey", type = textareafile),
             @UIActionInput(name = "passphrase", type = text)
     })
     public ActionResponseModel uploadPrivateKey(Context context, JSONObject params) {
