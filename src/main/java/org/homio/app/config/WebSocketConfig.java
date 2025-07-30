@@ -29,8 +29,8 @@ import org.springframework.web.socket.server.support.OriginHandshakeInterceptor;
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSocketConfigurer {
 
   public static final String DESTINATION_PREFIX = "/homio-dest-ws";
-  public static final String CUSTOM_WEB_SOCKET_ENDPOINT = "/cws";
-  static final String WEB_SOCKET_ENDPOINT = "/hws";
+  public static final String CUSTOM_WEB_SOCKET_ENDPOINT = "/rest/wsc";
+  public static final String WEB_SOCKET_ENDPOINT = "/rest/wsh";
 
   @Override
   public void configureMessageBroker(MessageBrokerRegistry config) {
@@ -40,13 +40,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSoc
 
   @Override
   public void registerStompEndpoints(StompEndpointRegistry registry) {
-    registry.setErrorHandler(new StompSubProtocolErrorHandler() {
-      @Override
-      public Message<byte[]> handleClientMessageProcessingError(Message<byte[]> clientMessage, @NotNull Throwable ex) {
-        log.error("WebSocket error: <{}>", ex.getMessage());
-        return null; // WebSocket avoid response error messages to client
-      }
-    });
+    registry.setErrorHandler(
+        new StompSubProtocolErrorHandler() {
+          @Override
+          public Message<byte[]> handleClientMessageProcessingError(
+              @NotNull Message<byte[]> clientMessage, @NotNull Throwable ex) {
+            log.error("WebSocket error: <{}>", ex.getMessage());
+            return null; // WebSocket avoid response error messages to client
+          }
+        });
 
     registry.addEndpoint(WEB_SOCKET_ENDPOINT).setAllowedOriginPatterns("*");
   }
@@ -57,26 +59,33 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSoc
 
   @Override
   public void registerWebSocketHandlers(WebSocketHandlerRegistry webSocketHandlerRegistry) {
-    webSocketHandlerRegistry.addHandler(new AbstractWebSocketHandler() {
-        @Override
-        public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
-          super.handleTransportError(session, exception);
-          log.error("WebSocket transport error: <{}>", exception.getMessage());
-        }
+    webSocketHandlerRegistry
+        .addHandler(
+            new AbstractWebSocketHandler() {
+              @Override
+              public void handleTransportError(
+                  @NotNull WebSocketSession session, @NotNull Throwable exception)
+                  throws Exception {
+                super.handleTransportError(session, exception);
+                log.error("WebSocket transport error: <{}>", exception.getMessage());
+              }
 
-        @Override
-        public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-          super.afterConnectionClosed(session, status);
-          log.warn("WebSocket connection closed: <{}>", session.getId());
-        }
+              @Override
+              public void afterConnectionClosed(
+                  @NotNull WebSocketSession session, @NotNull CloseStatus status) throws Exception {
+                super.afterConnectionClosed(session, status);
+                log.warn("WebSocket connection closed: <{}>", session.getId());
+              }
 
-        @Override
-        public void afterConnectionEstablished(@NotNull WebSocketSession session) throws Exception {
-          super.afterConnectionEstablished(session);
-          log.info("WebSocket connection established: <{}>", session.getId());
-        }
-      }, "/tttt")
-      .addInterceptors(new OriginHandshakeInterceptor())
-      .setAllowedOriginPatterns("*");
+              @Override
+              public void afterConnectionEstablished(@NotNull WebSocketSession session)
+                  throws Exception {
+                super.afterConnectionEstablished(session);
+                log.info("WebSocket connection established: <{}>", session.getId());
+              }
+            },
+            "/tttt")
+        .addInterceptors(new OriginHandshakeInterceptor())
+        .setAllowedOriginPatterns("*");
   }
 }

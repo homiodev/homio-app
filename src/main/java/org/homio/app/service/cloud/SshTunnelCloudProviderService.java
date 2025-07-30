@@ -2,6 +2,7 @@ package org.homio.app.service.cloud;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.uncapitalize;
 import static org.homio.api.ContextSetting.SERVER_PORT;
 import static org.homio.api.util.CommonUtils.getHumanReadableByteCount;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
@@ -13,7 +14,6 @@ import com.sshtools.client.SshClientContext;
 import com.sshtools.synergy.ssh.Connection;
 import java.net.ConnectException;
 import java.net.UnknownHostException;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -23,9 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.api.Context;
-import org.homio.api.ContextBGP;
 import org.homio.api.ContextUI.NotificationBlockBuilder;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
@@ -58,7 +56,6 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
   private SshCloudEntity entity;
   private final Consumer<NotificationBlockBuilder> NOT_SYNC_HANDLER = buildNotSyncHandler();
   private SshClient ssh;
-  private ContextBGP.ThreadContext<Void> metric;
 
   private static String humanReadableDuration(long millis) {
     long seconds = millis / 1000;
@@ -91,17 +88,18 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
               .withIdentities(buildSshKeyPair(entity))
               .withConnectTimeout(entity.getConnectionTimeout() * 1000L)
               .build();
+
+      ssh.getContext().setKeepAliveInterval(entity.getKeepAliveInterval());
+      ssh.getContext().setSocketOptionKeepAlive(entity.getSocketOptionKeepAlive());
+      ssh.getContext().setIdleAuthenticationTimeoutSeconds(entity.getIdleAuthenticationTimeout());
+      ssh.getContext().setIdleConnectionTimeoutSeconds(entity.getIdleConnectionTimeout());
+
       log.info("SSH cloud: allow forwarding");
       ssh.getContext().getForwardingPolicy().allowForwarding();
       log.info("SSH cloud: start remote forwarding");
       onSuccess.run();
-      ssh.startRemoteForwarding(entity.getHostname(), 80, "127.0.0.1", SERVER_PORT);
-      metric =
-          context
-              .bgp()
-              .builder("ssh-tunnel-" + entity.getEntityID())
-              .interval(Duration.ofSeconds(10))
-              .execute(() -> updateNotificationBlock());
+      int destPort = ssh.startRemoteForwarding(entity.getHostname(), 80, "127.0.0.1", SERVER_PORT);
+      log.info("SSH cloud: remote forwarding started. Destination port: {}", destPort);
       log.info("SSH cloud: wait for disconnect");
       entity.setStatusOnline();
       ssh.getConnection().getDisconnectFuture().waitForever();
@@ -110,7 +108,6 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
       throw new ConnectException(
           Lang.getServerMessage("ERROR.CLOUD_CONNECTION", entity.getHostname()));
     } finally {
-      ContextBGP.cancel(metric);
       if (ssh != null) {
         ssh.close();
       }
@@ -134,8 +131,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
   @Override
   public void updateNotificationBlock(@Nullable Exception ex) {
     // login if no private key found
-    String name =
-        format("Cloud: ${SELECTION.%s}", StringUtils.uncapitalize(getClass().getSimpleName()));
+    String name = format("Cloud: ${SELECTION.%s}", uncapitalize(getClass().getSimpleName()));
     context
         .ui()
         .notification()
@@ -143,37 +139,40 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
             "cloud",
             name,
             new Icon("fas fa-cloud", "#5C7DAC"),
-            builder -> {
-              builder.setStatus(entity.getStatus()).linkToEntity(entity);
-              if (!entity.getStatus().isOnline()) {
-                String info =
-                    defaultIfEmpty(
-                        entity.getStatusMessage(),
-                        defaultIfEmpty(CommonUtils.getErrorMessage(ex), "Unknown error"));
-                builder.addInfo(info, new Icon("fas fa-exclamation")).setTextColor(Color.RED);
-              } else if (ssh != null) {
-                Connection<SshClientContext> connection = ssh.getConnection();
-                builder.addInfo(
-                    "st",
-                    new Icon("fas fa-clock"),
-                        "CLOUD.DURATION",
-                        humanReadableDuration(
-                            System.currentTimeMillis() - connection.getStartTime().getTime()));
-                builder.addInfo(
-                    "in",
-                    new Icon("fas fa-arrow-down"),
-                        "CLOUD.IN", getHumanReadableByteCount(connection.getTotalBytesIn()));
-                builder.addInfo(
-                    "out",
-                    new Icon("fas fa-arrow-up"),
-                        "CLOUD.OUT", getHumanReadableByteCount(connection.getTotalBytesOut()));
-              }
+            builder -> updateBlock(ex, builder));
+  }
 
-              Consumer<NotificationBlockBuilder> syncHandler = getSyncHandler(ex);
-              if (syncHandler != null) {
-                syncHandler.accept(builder);
-              }
-            });
+  private void updateBlock(@Nullable Exception ex, NotificationBlockBuilder builder) {
+    builder.setStatus(entity.getStatus()).linkToEntity(entity);
+    if (!entity.getStatus().isOnline()) {
+      String info =
+          defaultIfEmpty(
+              entity.getStatusMessage(),
+              defaultIfEmpty(CommonUtils.getErrorMessage(ex), "Unknown error"));
+      builder.addInfo(info, new Icon("fas fa-exclamation")).setTextColor(Color.RED);
+    } else if (ssh != null) {
+      Connection<SshClientContext> connection = ssh.getConnection();
+      builder.addInfo(
+          "st",
+          new Icon("fas fa-clock"),
+          "CLOUD.DURATION",
+          humanReadableDuration(System.currentTimeMillis() - connection.getStartTime().getTime()));
+      builder.addInfo(
+          "in",
+          new Icon("fas fa-arrow-down"),
+          "CLOUD.IN",
+          getHumanReadableByteCount(connection.getTotalBytesIn()));
+      builder.addInfo(
+          "out",
+          new Icon("fas fa-arrow-up"),
+          "CLOUD.OUT",
+          getHumanReadableByteCount(connection.getTotalBytesOut()));
+    }
+
+    Consumer<NotificationBlockBuilder> syncHandler = getSyncHandler(ex);
+    if (syncHandler != null) {
+      syncHandler.accept(builder);
+    }
   }
 
   @Override
@@ -187,48 +186,56 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
       log.error("Wrong sync request parameters");
       return;
     }
-    context.bgp().runWithProgress("sync-cloud").execute(progressBar -> {
-      progressBar.accept(10D, "Connecting to cloud");
-      var restTemplate = new RestTemplate();
-      var syncRequest =
-              new SyncRequest(
+    context
+        .bgp()
+        .runWithProgress("sync-cloud")
+        .execute(
+            progressBar -> {
+              progressBar.accept(10D, "Connecting to cloud");
+              var restTemplate = new RestTemplate();
+              var syncRequest =
+                  new SyncRequest(
                       params.get("email").asText(),
                       params.get("password").asText(),
                       params.get("passphrase").asText(),
                       HardwareUtils.APP_ID,
                       true);
-      String url = entity.getSyncUrl();
-      HttpHeaders headers = new HttpHeaders();
-      headers.setContentType(MediaType.APPLICATION_JSON);
-      HttpEntity<SyncRequest> request = new HttpEntity<>(syncRequest, headers);
+              String url = entity.getSyncUrl();
+              HttpHeaders headers = new HttpHeaders();
+              headers.setContentType(MediaType.APPLICATION_JSON);
+              HttpEntity<SyncRequest> request = new HttpEntity<>(syncRequest, headers);
 
-      try {
-        var response = restTemplate.exchange(url, HttpMethod.POST, request, LoginResponse.class);
-        var loginResponse = response.getBody();
-        if (loginResponse != null && response.getStatusCode() == HttpStatus.OK) {
-          entity.setUser(syncRequest.email);
-          entity.uploadAndSavePrivateKey(
-                  context, loginResponse.getPrivateKey(), syncRequest.passphrase);
-        } else {
-          log.error("Wrong status response from cloud server: {}", response.getStatusCode());
-        }
-      } catch (RestClientResponseException ce) {
-        log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ce));
-        context.ui().toastr().error(getClientError(ce));
-      } catch (Exception ex) {
-        log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ex));
-        if (ex.getCause() instanceof UnknownHostException) {
-          context
-                  .ui()
-                  .toastr()
-                  .error(Lang.getServerMessage("ERROR.CLOUD_UNKNOWN_HOST", ex.getCause().getMessage()));
-        } else {
-          context.ui().toastr().error("W.ERROR.SYNC");
-        }
-      } finally{
-        progressBar.done();
-      }
-    });
+              try {
+                var response =
+                    restTemplate.exchange(url, HttpMethod.POST, request, LoginResponse.class);
+                var loginResponse = response.getBody();
+                if (loginResponse != null && response.getStatusCode() == HttpStatus.OK) {
+                  entity.setUser(syncRequest.email);
+                  entity.uploadAndSavePrivateKey(
+                      context, loginResponse.getPrivateKey(), syncRequest.passphrase);
+                } else {
+                  log.error(
+                      "Wrong status response from cloud server: {}", response.getStatusCode());
+                }
+              } catch (RestClientResponseException ce) {
+                log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ce));
+                context.ui().toastr().error(getClientError(ce));
+              } catch (Exception ex) {
+                log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ex));
+                if (ex.getCause() instanceof UnknownHostException) {
+                  context
+                      .ui()
+                      .toastr()
+                      .error(
+                          Lang.getServerMessage(
+                              "ERROR.CLOUD_UNKNOWN_HOST", ex.getCause().getMessage()));
+                } else {
+                  context.ui().toastr().error("W.ERROR.SYNC");
+                }
+              } finally {
+                progressBar.done();
+              }
+            });
   }
 
   private Consumer<NotificationBlockBuilder> getSyncHandler(@Nullable Exception ex) {

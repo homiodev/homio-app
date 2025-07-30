@@ -1,8 +1,19 @@
 package org.homio.app.ssh;
 
+import static java.lang.String.format;
+import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
+
 import com.sshtools.client.SessionChannelNG;
 import com.sshtools.client.SshClient;
 import com.sshtools.client.tasks.ShellTask;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -33,20 +44,6 @@ import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.BinaryWebSocketHandler;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
-import static java.lang.String.format;
-import static org.homio.api.ContextSetting.SERVER_PORT;
-import static org.homio.api.util.HardwareUtils.MACHINE_IP_ADDRESS;
-import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
-
 @Log4j2
 @Service
 public class SSHServerEndpoint extends BinaryWebSocketHandler implements DynamicWebSocketHandler {
@@ -54,7 +51,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
   private static final String TOKEN = "token";
   private static final String COLS = "cols";
   private static final String WEBSSH_PATH = CUSTOM_WEB_SOCKET_ENDPOINT + "/webssh";
-  private static final String FORMAT = "ws://%s:%s%s?%s=${TOKEN}&Authentication=${BEARER}&%s=${COLS}";
+  private static final String URL_FORMAT = "${WS_URL}%s?token=${TOKEN}&Authorization=${AUTHORIZATION}&cols=${COLS}";
 
   private static final PassiveExpiringMap<String, SessionContext> sessionByToken = new PassiveExpiringMap<>(24, TimeUnit.HOURS);
   private static final PassiveExpiringMap<String, SessionContext> sessionBySessionId = new PassiveExpiringMap<>(24, TimeUnit.HOURS);
@@ -102,7 +99,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
 
     String token = UUID.randomUUID().toString();
 
-    String url = format(FORMAT, MACHINE_IP_ADDRESS, SERVER_PORT, WEBSSH_PATH, TOKEN, COLS);
+    String url = format(URL_FORMAT, WEBSSH_PATH);
     SshSession<SshGenericEntity> session = new SshSession<>(token, url, entity);
     sessionByToken.put(token, new SessionContext(session));
 

@@ -2,6 +2,8 @@ package org.homio.app.notification;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.pivovarit.function.ThrowingBiFunction;
+import java.util.*;
+import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -26,9 +28,6 @@ import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
-import java.util.function.Consumer;
-
 @Getter
 @Setter
 @RequiredArgsConstructor
@@ -39,6 +38,7 @@ public class NotificationBlock {
     private final @Nullable Icon icon;
     @JsonIgnore
     private final @NotNull Map<String, Info> infoItemMap = Collections.synchronizedMap(new LinkedHashMap<>());
+    @JsonIgnore
     private @Nullable Consumer<NotificationBlockBuilder> refreshBlockBuilder;
     private @Nullable String nameColor;
     private @Nullable String version;
@@ -52,13 +52,10 @@ public class NotificationBlock {
     private @Nullable Collection<UIInputEntity> contextMenuActions;
     @JsonIgnore
     private @NotNull Map<String, Collection<UIInputEntity>> keyValueActions = new HashMap<>();
-
     @JsonIgnore
     private @Nullable ThrowingBiFunction<ProgressBar, String, ActionResponseModel, Exception> updateHandler;
-
     @JsonIgnore
     private Runnable fireOnFetchHandler;
-
     @JsonIgnore
     private String email;
 

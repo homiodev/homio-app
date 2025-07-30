@@ -1,8 +1,5 @@
 package org.homio.app.config;
 
-import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
-import static org.homio.app.config.WebSocketConfig.WEB_SOCKET_ENDPOINT;
-
 import jakarta.servlet.DispatcherType;
 import java.util.ArrayList;
 import java.util.List;
@@ -68,20 +65,13 @@ public class SecurityConfiguration {
         !!! HOMIO security disabled !!!
         -----------------------------------
         """);
-      http.authorizeHttpRequests(
-          authorize ->
-              authorize
-                  .requestMatchers(
-                      WEB_SOCKET_ENDPOINT, CUSTOM_WEB_SOCKET_ENDPOINT + "/**", "/rest/**")
-                  .permitAll());
+      http.authorizeHttpRequests(authorize -> authorize.requestMatchers("/rest/**").permitAll());
     } else {
       http.authorizeHttpRequests(
           authorize -> {
             List<String> paths =
                 new ArrayList<>(
                     List.of(
-                        WEB_SOCKET_ENDPOINT,
-                        CUSTOM_WEB_SOCKET_ENDPOINT + "/**",
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/rest/i18n/**",

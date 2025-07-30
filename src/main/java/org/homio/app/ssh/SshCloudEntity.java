@@ -115,18 +115,60 @@ public class SshCloudEntity extends DeviceBaseEntity implements
     }
 
     @UIField(order = 5)
-    @UIFieldSlider(min = 1, max = 60)
+    @UIFieldSlider(min = 1, max = 60, header = "sec")
     @UIFieldGroup("SSH")
     public int getConnectionTimeout() {
         return getJsonData("ci", 10);
     }
 
-    public SshCloudEntity setConnectionTimeout(int value) {
+    public void setConnectionTimeout(int value) {
         setJsonData("ci", value);
-        return this;
     }
 
     @UIField(order = 6)
+    @UIFieldSlider(min = 1, max = 60, header = "sec")
+    @UIFieldGroup("SSH")
+    public int getKeepAliveInterval() {
+        return getJsonData("kai", 20);
+    }
+
+    public void setKeepAliveInterval(int value) {
+        setJsonData("kai", value);
+    }
+
+    @UIField(order = 7)
+    @UIFieldGroup("SSH")
+    public boolean getSocketOptionKeepAlive() {
+        return getJsonData("kai", true);
+    }
+
+    public void setSocketOptionKeepAlive(boolean value) {
+        setJsonData("kai", value);
+    }
+
+    @UIField(order = 8)
+    @UIFieldSlider(min = 1, max = 60, header = "sec")
+    @UIFieldGroup("SSH")
+    public int getIdleAuthenticationTimeout() {
+        return getJsonData("iat", 30);
+    }
+
+    public void setIdleAuthenticationTimeout(int value) {
+        setJsonData("kai", value);
+    }
+
+    @UIField(order = 9)
+    @UIFieldSlider(min = 1, max = 1200, header = "sec")
+    @UIFieldGroup("SSH")
+    public int getIdleConnectionTimeout() {
+        return getJsonData("kai", 600);
+    }
+
+    public void setIdleConnectionTimeout(int value) {
+        setJsonData("kai", value);
+    }
+
+    @UIField(order = 10)
     @UIFieldGroup("SSH")
     public String getSyncUrl() {
         return getJsonData("sync");
@@ -137,7 +179,7 @@ public class SshCloudEntity extends DeviceBaseEntity implements
         return this;
     }
 
-    @UIField(order = 7)
+    @UIField(order = 11)
     @UIFieldGroup("SSH")
     public boolean isEnableWatchdog() {
         return getJsonData("ew", true);

@@ -1,6 +1,18 @@
 package org.homio.app.manager.common.impl;
 
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
+
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
@@ -24,19 +36,6 @@ import org.springframework.web.socket.server.HandshakeInterceptor;
 import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
 import org.springframework.web.socket.server.support.WebSocketHandlerMapping;
 import org.springframework.web.socket.server.support.WebSocketHttpRequestHandler;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
-import java.util.function.Function;
-
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
 
 @Log4j2
 public class ContextServiceImpl implements ContextService {
@@ -111,7 +110,7 @@ public class ContextServiceImpl implements ContextService {
   @SneakyThrows
   public void registerWebSocketEndpoint(String path, DynamicWebSocketHandler webSocketHandler) {
     if (!path.startsWith(CUSTOM_WEB_SOCKET_ENDPOINT)) {
-      throw new IllegalArgumentException("Custom ws path must starts with '/cws'");
+      throw new IllegalArgumentException("Custom ws path must starts with '" + CUSTOM_WEB_SOCKET_ENDPOINT + "'");
     }
     if (WS_HANDLERS.add(path)) {
       WebSocketHandlerMapping webSocketHandlerMapping = context.getBean("webSocketHandlerMapping", WebSocketHandlerMapping.class);

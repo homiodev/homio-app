@@ -1,6 +1,20 @@
 package org.homio.app.manager.common.impl;
 
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.homio.app.manager.common.impl.ContextUIImpl.GlobalSendType.setting;
+import static org.homio.app.model.entity.SettingEntity.getKey;
+import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;
+
 import com.pivovarit.function.ThrowingConsumer;
+import java.io.*;
+import java.lang.reflect.Modifier;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -23,6 +37,7 @@ import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.ContextImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.app.repository.SettingRepository;
+import org.homio.app.setting.system.SystemLogRequestsSetting;
 import org.homio.app.setting.system.SystemPlaceSetting;
 import org.homio.app.setting.system.proxy.SystemProxyAddressSetting;
 import org.jetbrains.annotations.NotNull;
@@ -30,21 +45,6 @@ import org.jetbrains.annotations.Nullable;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.core.env.ConfigurableEnvironment;
-
-import java.io.*;
-import java.lang.reflect.Modifier;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.homio.app.manager.common.impl.ContextUIImpl.GlobalSendType.setting;
-import static org.homio.app.model.entity.SettingEntity.getKey;
-import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;
 
 @SuppressWarnings("unused")
 @Log4j2
@@ -55,6 +55,7 @@ public class ContextSettingImpl implements ContextSetting {
     public static final Map<String, UserSettings> settings = new HashMap<>();
     private static final Map<SettingPlugin, String> settingTransientState = new HashMap<>();
     private static final Map<String, Function<String, String>> settingValuePostProcessors = new HashMap<>();
+    public static boolean IS_ENABLE_REQUEST_LOGS;
     @Getter
     private static Path propertiesLocation;
     private static CommentedProperties homioProperties;
@@ -310,6 +311,7 @@ public class ContextSettingImpl implements ContextSetting {
         List<Class<? extends SettingPlugin>> settingClasses = classFinder.getClassesWithParent(SettingPlugin.class);
         addSettingsFromSystem(settingClasses);
         configureProxy();
+        listenValueAndGet(SystemLogRequestsSetting.class, "slr", value -> ContextSettingImpl.IS_ENABLE_REQUEST_LOGS = value);
     }
 
     public void addSettingsFromClassLoader(AddonContext addonContext) {

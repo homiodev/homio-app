@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.app.manager.common.ContextImpl;
+import org.homio.app.manager.common.impl.ContextSettingImpl;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
@@ -31,7 +32,7 @@ public class AccessFilter extends OncePerRequestFilter {
   protected void doFilterInternal(
       HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain chain)
       throws ServletException, IOException {
-    if (request.getRequestURI().startsWith("/rest/route/proxy")
+    /*if (request.getRequestURI().startsWith("/rest/route/proxy")
         || request.getRequestURI().endsWith(".css")
         || request.getRequestURI().endsWith(".js")
         || request.getRequestURI().endsWith(".json")
@@ -42,8 +43,14 @@ public class AccessFilter extends OncePerRequestFilter {
         || request.getRequestURI().endsWith(".html")) {
       chain.doFilter(request, response);
       return;
+    }*/
+    if (ContextSettingImpl.IS_ENABLE_REQUEST_LOGS) {
+      log.info(
+          "[{}] request: {}. Host: {}",
+          request.getMethod(),
+          request.getRequestURI(),
+          request.getHeader("Host"));
     }
-    log.info("Request: {}. Host: {}", request.getRequestURI(), request.getHeader("Host"));
     if (request.getRequestURI().equals("/")) {
       response.setContentType("text/html");
       response
@@ -91,7 +98,13 @@ public class AccessFilter extends OncePerRequestFilter {
       response.setHeader("Access-Control-Allow-Origin", "*");
       response.sendError(419, ex.getMessage());
     } finally {
-      log.info("Response: {} - {}", request.getRequestURI(), response.getStatus());
+      if (ContextSettingImpl.IS_ENABLE_REQUEST_LOGS) {
+        log.info(
+            "[{}] response: {} - {}",
+            request.getMethod(),
+            request.getRequestURI(),
+            response.getStatus());
+      }
     }
   }
 }

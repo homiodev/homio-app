@@ -1,5 +1,7 @@
 package org.homio.app.manager.common.impl;
 
+import static java.lang.System.currentTimeMillis;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
@@ -14,7 +16,6 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -151,7 +152,12 @@ public class ContextUIImpl implements ContextUI {
   }
 
   public void onContextCreated() {
-    // run hourly script to drop not used dynamicUpdateRegisters
+    threadDropOutdatedDynamicContext();
+    threadSendUIUpdates();
+    threadUpdatesNotifications();
+  }
+
+  private void threadDropOutdatedDynamicContext() {
     context
         .bgp()
         .addLowPriorityRequest(
@@ -159,67 +165,99 @@ public class ContextUIImpl implements ContextUI {
             () ->
                 this.dynamicUpdateRegisters
                     .values()
-                    .removeIf(
-                        v ->
-                            TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - v.timeout)
-                                > 5));
+                    .removeIf(v -> MILLISECONDS.toMinutes(currentTimeMillis() - v.timeout) > 5));
+  }
 
+  private void threadSendUIUpdates() {
     context
         .bgp()
         .builder("send-ui-updates")
         .interval(Duration.ofSeconds(1))
         .execute(
             () -> {
-              for (Iterator<SendUpdateContext> iterator = sendToUIMap.values().iterator();
-                  iterator.hasNext(); ) {
-                SendUpdateContext context = iterator.next();
-
-                try {
-                  sendDynamicUpdateSupplied(
-                      new DynamicUpdateRequest(context.dynamicUpdateID(), null),
-                      context.handler::get);
-                } catch (Exception ex) {
-                  log.warn(
-                      "Unable to send dynamic update for: {}. {}",
-                      context.dynamicUpdateID,
-                      CommonUtils.getErrorMessage(ex));
-                }
-                iterator.remove();
-              }
-              // update tree separately because mqtt updates much faster
-              try {
-                treeNodeLock.lock();
-                for (Entry<String, TreeNode> entry : treeNodesSendToUIMap.entrySet()) {
-                  try {
-                    sendDynamicUpdateSupplied(
-                        new DynamicUpdateRequest(entry.getKey(), null),
-                        () -> OBJECT_MAPPER.createObjectNode().putPOJO("value", entry.getValue()));
-                  } catch (Exception ex) {
-                    log.warn(
-                        "Unable to send dynamic update for: {}. {}",
-                        entry.getKey(),
-                        CommonUtils.getErrorMessage(ex));
-                  }
-                }
-                treeNodesSendToUIMap.clear();
-              } finally {
-                treeNodeLock.unlock();
-              }
-
-              for (Iterator<Entry<String, Object>> iterator =
-                      refreshConsolePlugin.entrySet().iterator();
-                  iterator.hasNext(); ) {
-                Entry<String, Object> entry = iterator.next();
-                ConsolePlugin<?> plugin = consolePluginsMap.get(entry.getKey());
-                if (plugin != null) {
-                  Object value = entry.getValue() == EMPTY ? null : entry.getValue();
-                  sendGlobal(GlobalSendType.redrawConsole, entry.getKey(), value, null, null);
-                }
-                iterator.remove();
-              }
-
+              updateUI();
+              // update a tree separately because mqtt updates much faster
+              updateUITreeNodes();
+              updateConsole();
               ContextUIImpl.consolePluginsMap.forEach(this::updateConsoleUI);
               ContextUIImpl.consoleRemovablePluginsMap.forEach(this::updateConsoleUI);
+            });
+  }
+
+  private void updateConsole() {
+    for (Iterator<Entry<String, Object>> iterator = refreshConsolePlugin.entrySet().iterator();
+        iterator.hasNext(); ) {
+      Entry<String, Object> entry = iterator.next();
+      ConsolePlugin<?> plugin = consolePluginsMap.get(entry.getKey());
+      if (plugin != null) {
+        Object value = entry.getValue() == EMPTY ? null : entry.getValue();
+        sendGlobal(GlobalSendType.redrawConsole, entry.getKey(), value, null, null);
+      }
+      iterator.remove();
+    }
+  }
+
+  private void updateUI() {
+    for (Iterator<SendUpdateContext> iterator = sendToUIMap.values().iterator();
+        iterator.hasNext(); ) {
+      SendUpdateContext context = iterator.next();
+
+      try {
+        sendDynamicUpdateSupplied(
+            new DynamicUpdateRequest(context.dynamicUpdateID(), null), context.handler::get);
+      } catch (Exception ex) {
+        log.warn(
+            "Unable to send dynamic update for: {}. {}",
+            context.dynamicUpdateID,
+            CommonUtils.getErrorMessage(ex));
+      }
+      iterator.remove();
+    }
+  }
+
+  private void updateUITreeNodes() {
+    try {
+      treeNodeLock.lock();
+      for (Entry<String, TreeNode> entry : treeNodesSendToUIMap.entrySet()) {
+        try {
+          sendDynamicUpdateSupplied(
+              new DynamicUpdateRequest(entry.getKey(), null),
+              () -> OBJECT_MAPPER.createObjectNode().putPOJO("value", entry.getValue()));
+        } catch (Exception ex) {
+          log.warn(
+              "Unable to send dynamic update for: {}. {}",
+              entry.getKey(),
+              CommonUtils.getErrorMessage(ex));
+        }
+      }
+      treeNodesSendToUIMap.clear();
+    } finally {
+      treeNodeLock.unlock();
+    }
+  }
+
+  private void threadUpdatesNotifications() {
+    context
+        .bgp()
+        .builder("ws-notifications")
+        .interval(Duration.ofSeconds(10))
+        .execute(
+            () -> {
+              for (Entry<String, NotificationBlock> ne : blockNotifications.entrySet()) {
+                var notificationBlock = ne.getValue();
+                int currentBlock = OBJECT_MAPPER.writeValueAsString(notificationBlock).hashCode();
+                var refreshBlockBuilder = notificationBlock.getRefreshBlockBuilder();
+                if (refreshBlockBuilder != null) {
+                  notificationBlock.getInfoItems().clear();
+                  refreshBlockBuilder.accept(
+                      new NotificationBlockBuilderImpl(notificationBlock, context));
+                  int newBlock = OBJECT_MAPPER.writeValueAsString(notificationBlock).hashCode();
+                  if (newBlock != currentBlock) {
+                    sendGlobal(
+                        GlobalSendType.notification, ne.getKey(), notificationBlock, null, null);
+                  }
+                }
+              }
             });
   }
 
@@ -250,7 +288,7 @@ public class ContextUIImpl implements ContextUI {
       }
       dynamicUpdateRegisters.put(request, new DynamicUpdateContext());
     } else {
-      duc.timeout = System.currentTimeMillis(); // refresh timer
+      duc.timeout = currentTimeMillis(); // refresh timer
       duc.registerCounter.incrementAndGet();
     }
     UiUpdateListener uiUpdateListener =
@@ -294,7 +332,7 @@ public class ContextUIImpl implements ContextUI {
     if (context != null) {
       Object value = supplier.get();
       if (value != null) {
-        if (System.currentTimeMillis() - context.timeout > 60000) {
+        if (currentTimeMillis() - context.timeout > 60000) {
           dynamicUpdateRegisters.remove(request);
         } else {
           sendGlobal(
@@ -573,7 +611,7 @@ public class ContextUIImpl implements ContextUI {
   }
 
   public NotificationResponse getNotifications() {
-    long time = System.currentTimeMillis();
+    long time = currentTimeMillis();
     headerButtonNotifications
         .entrySet()
         .removeIf(
@@ -835,7 +873,7 @@ public class ContextUIImpl implements ContextUI {
   private static class DynamicUpdateContext {
 
     private final AtomicInteger registerCounter = new AtomicInteger(0);
-    private long timeout = System.currentTimeMillis();
+    private long timeout = currentTimeMillis();
   }
 
   private record NotificationBlockBuilderImpl(
@@ -1072,9 +1110,7 @@ public class ContextUIImpl implements ContextUI {
       if (builder != null) {
         builder.accept(new NotificationBlockBuilderImpl(notificationBlock, context));
       }
-      if (notificationBlock.getUpdateHandler() != null) {
-        notificationBlock.setRefreshBlockBuilder(builder);
-      }
+      notificationBlock.setRefreshBlockBuilder(builder);
       blockNotifications.put(entityID, notificationBlock);
       sendGlobal(GlobalSendType.notification, entityID, notificationBlock, null, null);
     }
@@ -1223,7 +1259,7 @@ public class ContextUIImpl implements ContextUI {
       public void add(String value, boolean error) {
         var complexString =
             ConsolePluginComplexLines.ComplexString.of(
-                value, System.currentTimeMillis(), error ? UI.Color.PRIMARY_COLOR : null, null);
+                value, currentTimeMillis(), error ? UI.Color.PRIMARY_COLOR : null, null);
         inlineConsoleLogCache.get(name).add(complexString);
         var addAction =
             OBJECT_MAPPER
@@ -1289,14 +1325,16 @@ public class ContextUIImpl implements ContextUI {
       if (entityInstance != null) {
         var entityClass = entityInstance.getClass();
         ItemController.baseEntitySimpleClasses.put(entityClass.getSimpleName(), entityClass);
-        ContextImpl.FIELD_FETCH_TYPE.put(entityClass.getSimpleName(), CommonUtils.newInstance(entityClass));
+        ContextImpl.FIELD_FETCH_TYPE.put(
+            entityClass.getSimpleName(), CommonUtils.newInstance(entityClass));
       }
 
       dialogRequest.computeIfAbsent(
           dialogModel.getEntityID(),
           key -> {
             if (StringUtils.isNotEmpty(dialogModel.getHeaderButtonAttachTo())) {
-              var notificationModel = headerButtonNotifications.get(dialogModel.getHeaderButtonAttachTo());
+              var notificationModel =
+                  headerButtonNotifications.get(dialogModel.getHeaderButtonAttachTo());
               if (notificationModel != null) {
                 notificationModel.getDialogs().add(dialogModel);
               }

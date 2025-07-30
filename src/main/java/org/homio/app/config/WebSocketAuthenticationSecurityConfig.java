@@ -1,6 +1,8 @@
 package org.homio.app.config;
 
+import lombok.extern.log4j.Log4j2;
 import org.homio.app.auth.JwtTokenProvider;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -17,6 +19,7 @@ import org.springframework.security.config.annotation.web.socket.EnableWebSocket
 import org.springframework.security.messaging.access.intercept.MessageMatcherDelegatingAuthorizationManager;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
+@Log4j2
 @Configuration
 @Order(Ordered.HIGHEST_PRECEDENCE + 99)
 @EnableWebSocketSecurity
@@ -31,15 +34,25 @@ public class WebSocketAuthenticationSecurityConfig implements WebSocketMessageBr
   public ChannelInterceptor authChannelInterceptorAdapter(JwtTokenProvider jwtTokenProvider) {
     return new ChannelInterceptor() {
       @Override
-      public Message<?> preSend(Message<?> message, MessageChannel channel) {
-        final StompHeaderAccessor accessor =
+      public @NotNull Message<?> preSend(
+          @NotNull Message<?> message, @NotNull MessageChannel channel) {
+        StompHeaderAccessor accessor =
             MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
-        if (StompCommand.CONNECT == (accessor != null ? accessor.getCommand() : null)) {
-          String token =
-              jwtTokenProvider.resolveToken(accessor.getFirstNativeHeader("Authorization"));
+        if (accessor != null && StompCommand.CONNECT == accessor.getCommand()) {
+          log.info("STOMP CONNECT frame received. Attempting authentication.");
+          String auth = accessor.getFirstNativeHeader("Authorization");
+          String token = jwtTokenProvider.resolveToken(auth);
+
           if (token != null && jwtTokenProvider.validateToken(token)) {
+            log.info("Token is valid. Setting user in STOMP accessor.");
             accessor.setUser(jwtTokenProvider.getAuthentication(token));
+          } else {
+            // This is critical! If auth fails, the connection might hang.
+            log.warn("STOMP CONNECT failed: Invalid or missing token.");
+            // You might need to explicitly throw an exception here to terminate the connection
+            // cleanly.
+            // For example: throw new MessagingException("Authentication failed");
           }
         }
         return message;
