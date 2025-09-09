@@ -1,5 +1,13 @@
 package org.homio.app.workspace;
 
+import static org.homio.api.ContextVar.GROUP_BROADCAST;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -12,19 +20,7 @@ import org.homio.app.model.var.WorkspaceGroup;
 import org.homio.app.model.var.WorkspaceVariable;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import static org.homio.api.ContextVar.GROUP_BROADCAST;
+import org.springframework.web.bind.annotation.*;
 
 @Log4j2
 @RestController
@@ -34,6 +30,23 @@ public class WorkspaceController {
 
   private final ContextImpl context;
   private final WorkspaceService workspaceService;
+
+  @SneakyThrows
+  @GetMapping("/http/{path}")
+  public String handleNetScratch(
+      @PathVariable("path") String path, @RequestParam Map<String, String> params) {
+    var locks = context.network().getScratchHttpRequests().get(path);
+    if (locks == null) {
+      throw new NotFoundException("Unable to find lock for path: " + path);
+    }
+    CompletableFuture<String> requestFuture = null;
+    if (locks.answerLockRef() != null) {
+      requestFuture = new CompletableFuture<>();
+      locks.answerLockRef().set(requestFuture);
+    }
+    locks.lock().signalAll(params);
+    return requestFuture == null ? null : requestFuture.get(60, TimeUnit.SECONDS);
+  }
 
   @GetMapping("/extension")
   public List<Scratch3ExtensionImpl> getExtensions() {
@@ -55,10 +68,9 @@ public class WorkspaceController {
   public String getWorkspaceVariables() {
     JSONObject result = new JSONObject();
 
-    Map<String, WorkspaceGroup> groups = context.db()
-      .findAll(WorkspaceGroup.class)
-      .stream()
-      .collect(Collectors.toMap(WorkspaceGroup::getEntityID, g -> g));
+    Map<String, WorkspaceGroup> groups =
+        context.db().findAll(WorkspaceGroup.class).stream()
+            .collect(Collectors.toMap(WorkspaceGroup::getEntityID, g -> g));
     WorkspaceGroup broadcasts = groups.remove(GROUP_BROADCAST);
     JSONObject broadcastsVariables = new JSONObject();
     result.put(GROUP_BROADCAST, broadcastsVariables);
@@ -86,8 +98,7 @@ public class WorkspaceController {
   }
 
   @PostMapping("/variable")
-  public void saveVariables(@RequestBody String ignore) {
-  }
+  public void saveVariables(@RequestBody String ignore) {}
 
   @GetMapping("/tab")
   public List<OptionModel> getWorkspaceTabs() {

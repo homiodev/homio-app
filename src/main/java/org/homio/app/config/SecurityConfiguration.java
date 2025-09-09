@@ -81,6 +81,7 @@ public class SecurityConfiguration {
                         "/rest/frame/**",
                         "rest/resource/**",
                         "/rest/media/stream/**", // requires for video widget
+                        "/rest/workspace/http/**",
                         // "/rest/media/image/**",
                         // "/rest/media/video/**",
                         "/rest/media/video/playback/**",
